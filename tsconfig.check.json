@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "exclude": [],
+  "include": [
+    "server",
+    "shared",
+    "tools/ticket-board"
+  ]
+}

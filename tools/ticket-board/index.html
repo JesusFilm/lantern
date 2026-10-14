@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Roadmap tickets</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);--bg:#f5f6f8;--ink:#202938;--panel:#fff;--line:#cdd3db;--muted:#526073;--accent:#284cd0;--soft:#edf0ff}
+[hidden]{display:none!important}a{color:var(--accent);text-underline-offset:3px}button{font:inherit;color:inherit;cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #d27814;outline-offset:4px}
+h1,h2,h3,p{margin-top:0}h1{font-size:clamp(1.65rem,3.3vw,2.75rem);line-height:1.15;margin-bottom:12px}h2{line-height:1.25}.muted{color:var(--muted)}
+.workspace{max-width:1700px;margin:auto;padding:34px 28px 50px}.intro{max-width:780px;margin-bottom:12px}
+.badge{display:inline-block;border:1px solid var(--line);background:var(--soft);font:600 11px/1.5 system-ui,sans-serif;border-radius:4px;padding:3px 7px;white-space:normal}
+.badge[data-status=needs-triage]{background:#ece3fa;color:#493069;border-color:#b4a0ce}.badge[data-status=needs-info]{background:#fff0cb;color:#664600;border-color:#c6aa69}.badge[data-status=ready-for-agent]{background:#dfefe6;color:#214c3b;border-color:#8ab6a0}.badge[data-status=ready-for-human]{background:#e2eafc;color:#29467c;border-color:#a0b2d5}.badge[data-status=wontfix]{background:#ece9e5;color:#554c43;border-color:#b9b1a7}
+.badge[data-status=Planning]{background:#fff0cb;color:#664600}.badge[data-status=Specification]{background:#e2eafc;color:#29467c}.badge[data-status=Delivery]{background:#ece3fa;color:#493069}.badge[data-status=Verify]{background:#e0f2f3;color:#22535a}.badge[data-status=Learn]{background:#fff0df;color:#714119}.badge[data-status=Complete]{background:#dfefe6;color:#214c3b}
+.ticket-id{font:11px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted)}.ticket-title{display:block;font-weight:700;line-height:1.35;margin:12px 0 8px}.ticket-summary{display:block;color:var(--muted);font-size:13px;line-height:1.5}
+.feature-group{display:grid;grid-template-columns:190px minmax(0,1fr);gap:24px;border-top:1px solid var(--line);padding:26px 0}.feature-heading h2{font-size:20px;letter-spacing:-.03em;margin:0 0 8px}.feature-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}.feature-ticket{display:block;width:100%;padding:20px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;min-height:170px}.feature-ticket:hover{border-color:var(--accent);box-shadow:0 3px 12px #25325210}.feature-ticket .badge{margin:12px 0 0}.feature-ticket .ticket-title{font-size:17px}
+dialog{height:calc(100dvh - 24px);max-height:calc(100dvh - 24px);width:650px;max-width:calc(100vw - 24px);margin:12px 12px 12px auto;border:1px solid var(--line);border-radius:12px;padding:0;background:var(--panel);color:var(--ink);overflow:auto}dialog::backdrop{background:#111820a6}.dialog-toolbar{display:flex;justify-content:flex-end;align-items:center;gap:16px;position:sticky;top:0;background:var(--panel);border-bottom:1px solid var(--line);padding:12px 24px;z-index:1}.close-button{border:1px solid var(--line);background:var(--soft);padding:6px 12px;border-radius:5px}.dialog-content{padding:25px 28px}.dialog-content h2{font-size:26px;line-height:1.2;margin:10px 0 18px}
+.metadata{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:16px;margin:20px 0 26px}.metadata h3{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 12px}.metadata dl{display:grid;grid-template-columns:100px minmax(0,1fr);gap:9px 14px;font-size:13px;margin:0}.metadata dt{font-weight:600;color:var(--muted)}.metadata dd{margin:0;overflow-wrap:anywhere}
+.detail-body{font-size:15px;line-height:1.65;overflow-wrap:anywhere}.detail-body h3{font-size:19px;margin-top:25px;margin-bottom:10px}.detail-body h4{font-size:16px;margin-top:20px}.detail-body li{margin-bottom:6px}.detail-body ul{padding-left:24px}.detail-body code{background:var(--soft);padding:2px 4px;font:12px ui-monospace,SFMono-Regular,Consolas,monospace}.detail-body pre{white-space:pre-wrap;overflow-wrap:anywhere;background:var(--soft);padding:14px;border-radius:4px;font:12px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}
+.filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;background:var(--bg);padding:12px 0;margin-bottom:12px;border-bottom:1px solid var(--line)}.filters label{display:grid;gap:5px;font-size:12px;color:var(--muted);font-weight:600}.filters input,.filters select{font:inherit;font-size:14px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:9px 10px;min-height:40px}.filters .search-field{flex:1;min-width:200px}.filters select{max-width:100%}.clear-filters{font-size:13px;background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:9px 14px;min-height:40px}.empty-state{padding:38px 0;text-align:center;color:var(--muted)}
+.load-error{background:#fff0cb;color:#664600;border:1px solid #c6aa69;padding:12px;border-radius:6px;margin:12px 0}.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.skip-link{position:fixed;top:-100px;left:12px;z-index:20;background:var(--panel);padding:10px}.skip-link:focus{top:8px}
+@media(max-width:1200px){.feature-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:850px){.workspace{padding:25px 18px 50px}.feature-group{grid-template-columns:1fr;gap:8px}}
+@media(max-width:520px){.workspace{padding:22px 12px 50px}.feature-cards{grid-template-columns:1fr}.feature-ticket{min-height:0}.dialog-content{padding:20px 18px}.dialog-toolbar{padding:12px 18px}.feature-group{padding:20px 0}.filters label{width:100%}.filters .search-field{min-width:0}.filters input,.filters select{width:100%}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+.kind-badge{display:inline-block;margin:12px 7px 0 0;padding:3px 7px;border:1px solid #a8b7d0;border-radius:4px;background:#edf0ff;color:#284b7b;font:600 11px/1.5 system-ui,sans-serif}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to tickets</a>
+<main class="workspace" id="main" tabindex="-1">
+<header class="intro"><h1>Roadmap</h1></header>
+<form class="filters" id="filters" aria-label="Filter roadmap">
+<label class="search-field">Search roadmap<input type="search" id="search-filter" placeholder="Title, description, or ticket ID" autocomplete="off"></label>
+<label>Item type<select id="kind-filter"><option value="">All items</option><option value="milestone">Milestones</option><option value="ticket">Tickets</option></select></label>
+<label>Milestone progress<select id="progress-filter"><option value="">All stages</option><option>Planning</option><option>Specification</option><option>Delivery</option><option>Verify</option><option>Learn</option><option>Complete</option></select></label>
+<label>Ticket status<select id="label-filter"><option value="">All ticket statuses</option></select></label>
+<label>Feature slice<select id="slice-filter"><option value="">All slices</option></select></label>
+<button type="button" class="clear-filters" id="clear-filters">Clear filters</button>
+</form>
+<div id="load-error" class="load-error" role="alert" hidden></div>
+<div id="state" class="visually-hidden" role="status" aria-live="polite"></div>
+<div id="board"><p class="muted">Loading tickets…</p></div>
+<noscript>Enable JavaScript to read the tickets.</noscript>
+</main>
+<dialog id="ticket-dialog" aria-labelledby="dialog-title"><div class="dialog-toolbar"><button class="close-button" type="button" id="close-dialog" autofocus>Close</button></div><div class="dialog-content" id="dialog-content"></div></dialog>
+<script>
+'use strict';
+let tickets=[];
+let selected=null;
+let lastPayload='';
+let loading=false;
+const board=document.getElementById('board');
+const dialog=document.getElementById('ticket-dialog');
+const searchFilter=document.getElementById('search-filter');
+const progressFilter=document.getElementById('progress-filter');
+const labelFilter=document.getElementById('label-filter');
+const kindFilter=document.getElementById('kind-filter');
+const sliceFilter=document.getElementById('slice-filter');
+const loadError=document.getElementById('load-error');
+function node(tag,className,text){const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=text;return el;}
+function badge(status){const el=node('span','badge',status);el.dataset.status=status;return el;}
+function kindBadge(kind){return node('span','kind-badge',kind==='milestone'?'Milestone':'Ticket');}
+function details(ticket){
+  const wrap=node('article','ticket-detail');
+  wrap.append(node('span','ticket-id',ticket.id));
+  const title=node('h2','',ticket.title);title.id='dialog-title';wrap.append(title);
+  const metadata=node('section','metadata');metadata.setAttribute('aria-label','Ticket metadata');metadata.append(node('h3','','Metadata'));
+  const fields=node('dl');
+  Object.entries(ticket.metadata).forEach(([name,value])=>{fields.append(node('dt','',name.toLowerCase()==='status'?(ticket.kind==='milestone'?'Progress':'Ticket status'):name));const dd=node('dd');dd.append(name.toLowerCase()==='status'?badge(value):node('span','',value));fields.append(dd);});
+  if(fields.children.length){metadata.append(fields);wrap.append(metadata);}
+  const body=node('div','detail-body');body.innerHTML=ticket.bodyHtml;wrap.append(body);
+  return wrap;
+}
+function openTicket(ticket){
+  selected=ticket.key;
+  document.getElementById('dialog-content').replaceChildren(details(ticket));
+  if(!dialog.open)dialog.showModal();
+  dialog.scrollTop=0;
+}
+function card(ticket){
+  const button=node('button','feature-ticket');button.type='button';button.dataset.ticket=ticket.key;
+  button.setAttribute('aria-label',(ticket.kind==='milestone'?'Milestone ':'Ticket ')+ticket.id+': '+ticket.title+'; '+ticket.status+'. Read full description.');
+  button.append(node('span','ticket-id',ticket.id),node('span','ticket-title',ticket.title),node('span','ticket-summary',ticket.summary),kindBadge(ticket.kind),badge(ticket.status));
+  button.addEventListener('click',()=>openTicket(ticket));return button;
+}
+function filteredTickets(){
+  const query=searchFilter.value.trim().toLowerCase();
+  return tickets.filter(ticket=>(!kindFilter.value||ticket.kind===kindFilter.value)&&(!progressFilter.value||(ticket.kind==='milestone'&&ticket.status===progressFilter.value))&&(!labelFilter.value||(ticket.kind==='ticket'&&ticket.status===labelFilter.value))&&(!sliceFilter.value||ticket.slice===sliceFilter.value)&&(!query||(ticket.id+' '+ticket.title+' '+ticket.slice+' '+ticket.source).toLowerCase().includes(query)));
+}
+function render(){
+  const visible=filteredTickets();
+  const groups=node('div','feature-groups');
+  [...new Set(visible.map(ticket=>ticket.slice))].forEach((slice,i)=>{
+    const group=node('section','feature-group');const heading=node('div','feature-heading');
+    const title=node('h2','',slice);title.id='slice-'+i;heading.append(title);group.setAttribute('aria-labelledby',title.id);
+    const cards=node('div','feature-cards');visible.filter(ticket=>ticket.slice===slice).forEach(ticket=>cards.append(card(ticket)));
+    group.append(heading,cards);groups.append(group);
+  });
+  board.replaceChildren(visible.length?groups:node('div','empty-state',tickets.length?'No roadmap items match these filters. Try another type, stage, status or slice, or clear the filters.':'No milestones or tickets yet.'));
+  document.getElementById('state').textContent=visible.length+' of '+tickets.length+' roadmap items';
+}
+function updateOptions(select,values,placeholder){
+  const chosen=select.value;
+  select.replaceChildren(node('option','',placeholder));select.firstElementChild.value='';
+  values.forEach(value=>{const option=node('option','',value);option.value=value;select.append(option);});
+  select.value=values.includes(chosen)?chosen:'';
+}
+function acceptPayload(payload){
+  const serialized=JSON.stringify(payload);
+  if(serialized===lastPayload)return;
+  lastPayload=serialized;tickets=payload.tickets;
+  updateOptions(labelFilter,[...new Set(tickets.filter(t=>t.kind==='ticket').map(t=>t.status))].sort(),'All ticket statuses');
+  updateOptions(sliceFilter,[...new Set(tickets.map(t=>t.slice))].sort(),'All slices');
+  render();
+  if(dialog.open){
+    const ticket=tickets.find(t=>t.key===selected);
+    if(ticket){const scroll=dialog.scrollTop;document.getElementById('dialog-content').replaceChildren(details(ticket));dialog.scrollTop=scroll;}
+    else dialog.close();
+  }
+}
+async function loadTickets(){
+  if(loading)return;loading=true;
+  try{
+    const response=await fetch('/api/tickets',{cache:'no-store'});
+    if(!response.ok)throw new Error('read failed');
+    acceptPayload(await response.json());loadError.hidden=true;
+  }catch{
+    loadError.textContent='Cannot refresh tickets. Check that the local ticket server is running. Displayed tickets may be out of date.';loadError.hidden=false;
+  }finally{loading=false;}
+}
+function applyFilters(){if(dialog.open)dialog.close();render();}
+searchFilter.addEventListener('input',applyFilters);
+labelFilter.addEventListener('change',()=>{if(labelFilter.value){kindFilter.value='ticket';progressFilter.value='';}applyFilters();});
+kindFilter.addEventListener('change',()=>{if(kindFilter.value==='milestone')labelFilter.value='';if(kindFilter.value==='ticket')progressFilter.value='';applyFilters();});
+progressFilter.addEventListener('change',()=>{if(progressFilter.value){kindFilter.value='milestone';labelFilter.value='';}applyFilters();});
+sliceFilter.addEventListener('change',applyFilters);
+document.getElementById('filters').addEventListener('submit',event=>event.preventDefault());
+document.getElementById('clear-filters').addEventListener('click',()=>{searchFilter.value='';kindFilter.value='';progressFilter.value='';labelFilter.value='';sliceFilter.value='';applyFilters();});
+document.getElementById('close-dialog').addEventListener('click',()=>dialog.close());
+loadTickets();
+window.setInterval(()=>{if(!document.hidden)loadTickets();},5000);
+window.addEventListener('focus',loadTickets);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadTickets();});
+</script>
+</body>
+</html>
