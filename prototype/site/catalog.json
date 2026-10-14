@@ -156,5 +156,25 @@
         "basedOn": "refine1"
       }
     ]
+  },
+  {
+    "id": "guide-clarity",
+    "title": "08 \u00b7 Guide clarity comparisons",
+    "kind": "comparison",
+    "summary": "Two approaches to topic/step hierarchy, weak and stronger examples, and prominent explanations. Both remove redundant subtitles and counters.",
+    "options": [
+      {
+        "id": "refine3",
+        "label": "Refine 3 \u00b7 Grouped navigation",
+        "src": "interactive/refine3/index.html",
+        "basedOn": "refine2"
+      },
+      {
+        "id": "refine4",
+        "label": "Refine 4 \u00b7 Lesson outline",
+        "src": "interactive/refine4/index.html",
+        "basedOn": "refine2"
+      }
+    ]
   }
 ]
