@@ -23,3 +23,13 @@ Verification is limited to a short browser smoke walkthrough and viewer checks, 
 User selected 02 styling/sidebar as a starting point only; screen contents and mechanisms remain unapproved. `?variant=base` starts with dated position-focus documents and an empty current document. A spacious editor uses identical objective/SMART-goal fields for core, personal-development and leadership-initiative concerns. Guide content is separate. Workflow stages, inline teaching, notes, gaps, inbox and department are omitted from this base pending incremental design. Prior variants remain unchanged. This is a design proposal, not production scope approval.
 
 Read-first refinement: documents now open in a compact objective/goal layout. Each text field is edited in a spacious dialog, including document title/dates. Save applies changes to memory; Cancel/Escape discards the dialog draft. Adding objectives/goals also uses dialogs. Browser smoke verified read mode, cancel/save, goal creation, optional objectives and metadata editing.
+
+## Read layout review — Base 1, 2, 3
+
+The user requested three small-team alternatives exploring spacing, margins, typography and button placement. Base and its three refinements use the supplied Jordan Davis state: empty 2026 document and populated 2025 document with two core objectives, personal development and leadership initiative. Obvious gibberish was replaced with basic illustrative goals; the second placeholder objective was given a basic devotional-experience description. No new SMART deadlines or targets were inferred for the supplied development/leadership content. The original 02/04/09 retain their earlier examples.
+
+- `?variant=base1`: balanced columns.
+- `?variant=base2`: stacked document.
+- `?variant=base3`: structured rows.
+
+Each variant is independent and retains dialog-based editing with in-memory state. Open the 2025 document to compare the fuller reading layout. The review notes live within each variant directory. No winning refinement has been chosen.
