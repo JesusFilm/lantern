@@ -142,5 +142,19 @@
         "basedOn": "base2"
       }
     ]
+  },
+  {
+    "id": "guide-refinement",
+    "title": "07 \u00b7 Guide and account refinement",
+    "kind": "standalone",
+    "summary": "Refine 2 extends Refine 1 with short objective lessons, one SMART quality at a time, a simple example and a read-first account profile.",
+    "options": [
+      {
+        "id": "refine2",
+        "label": "Refine 2 \u00b7 Guide & account",
+        "src": "interactive/refine2/index.html",
+        "basedOn": "refine1"
+      }
+    ]
   }
 ]
