@@ -21,3 +21,5 @@ Verification is limited to a short browser smoke walkthrough and viewer checks, 
 ## Focused base — fourth option
 
 User selected 02 styling/sidebar as a starting point only; screen contents and mechanisms remain unapproved. `?variant=base` starts with dated position-focus documents and an empty current document. A spacious editor uses identical objective/SMART-goal fields for core, personal-development and leadership-initiative concerns. Guide content is separate. Workflow stages, inline teaching, notes, gaps, inbox and department are omitted from this base pending incremental design. Prior variants remain unchanged. This is a design proposal, not production scope approval.
+
+Read-first refinement: documents now open in a compact objective/goal layout. Each text field is edited in a spacious dialog, including document title/dates. Save applies changes to memory; Cancel/Escape discards the dialog draft. Adding objectives/goals also uses dialogs. Browser smoke verified read mode, cancel/save, goal creation, optional objectives and metadata editing.
