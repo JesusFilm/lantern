@@ -17,3 +17,7 @@ Choose through the landing cards, the bottom style buttons/arrows, or direct URL
 Explore: My work → Position focus (edit, goals, notes, gaps, optional development) → discussion/review → Inbox → Department → Guide → Account. Refer to the original image pairs in `references/` to compare intent and implementation. Static source can also be opened directly from each variant's `index.html`.
 
 Verification is limited to a short browser smoke walkthrough and viewer checks, appropriate for throwaway design exploration. No production test suite, backend or migration work is included. Retain the branch as design evidence; revise/rewrite chosen behavior in the real app only after a selection is made. To retire hosting, unregister `lantern-prototypes` before removing the disposable worktree.
+
+## Focused base — fourth option
+
+User selected 02 styling/sidebar as a starting point only; screen contents and mechanisms remain unapproved. `?variant=base` starts with dated position-focus documents and an empty current document. A spacious editor uses identical objective/SMART-goal fields for core, personal-development and leadership-initiative concerns. Guide content is separate. Workflow stages, inline teaching, notes, gaps, inbox and department are omitted from this base pending incremental design. Prior variants remain unchanged. This is a design proposal, not production scope approval.
