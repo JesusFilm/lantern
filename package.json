@@ -16,7 +16,8 @@
     "db:stop": "docker compose stop database",
     "tickets": "tsx watch tools/ticket-board/index.ts",
     "tickets:test": "node --import tsx --test tools/ticket-board/tickets.test.ts",
-    "predev": "npm run db:start"
+    "predev": "npm run db:start",
+    "prototype:layouts": "python3 -m http.server 4395 --bind 127.0.0.1 --directory client/prototype-layouts"
   },
   "dependencies": {
     "express": "^5.3.0",
