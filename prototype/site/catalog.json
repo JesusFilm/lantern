@@ -1,0 +1,146 @@
+[
+  {
+    "id": "guide",
+    "title": "01 \u00b7 Guide preview",
+    "kind": "standalone",
+    "summary": "The initial instructional guide and engineering example. Its reader-like layout prompted the move toward a work application.",
+    "options": [
+      {
+        "id": "guide",
+        "label": "Original guide",
+        "src": "guide-preview/index.html"
+      }
+    ]
+  },
+  {
+    "id": "concepts",
+    "title": "02 \u00b7 Visual concepts",
+    "kind": "comparison",
+    "summary": "Ten image pairs exploring an application screen and its support guide. Options 02, 04 and 09 progressed to interactive prototypes.",
+    "options": [
+      {
+        "id": "concept-01",
+        "label": "01 \u00b7 Precision workspace",
+        "src": "visual-concepts/index.html?embedded=1#style-01"
+      },
+      {
+        "id": "concept-02",
+        "label": "02 \u00b7 Navy operations",
+        "src": "visual-concepts/index.html?embedded=1#style-02"
+      },
+      {
+        "id": "concept-03",
+        "label": "03 \u00b7 Horizontal studio",
+        "src": "visual-concepts/index.html?embedded=1#style-03"
+      },
+      {
+        "id": "concept-04",
+        "label": "04 \u00b7 Swiss grid",
+        "src": "visual-concepts/index.html?embedded=1#style-04"
+      },
+      {
+        "id": "concept-05",
+        "label": "05 \u00b7 Night command",
+        "src": "visual-concepts/index.html?embedded=1#style-05"
+      },
+      {
+        "id": "concept-06",
+        "label": "06 \u00b7 Blue clarity",
+        "src": "visual-concepts/index.html?embedded=1#style-06"
+      },
+      {
+        "id": "concept-07",
+        "label": "07 \u00b7 Warm workbench",
+        "src": "visual-concepts/index.html?embedded=1#style-07"
+      },
+      {
+        "id": "concept-08",
+        "label": "08 \u00b7 Modular board",
+        "src": "visual-concepts/index.html?embedded=1#style-08"
+      },
+      {
+        "id": "concept-09",
+        "label": "09 \u00b7 Graphite navigator",
+        "src": "visual-concepts/index.html?embedded=1#style-09"
+      },
+      {
+        "id": "concept-10",
+        "label": "10 \u00b7 Plum focus",
+        "src": "visual-concepts/index.html?embedded=1#style-10"
+      }
+    ]
+  },
+  {
+    "id": "layouts",
+    "title": "03 \u00b7 Interactive layouts",
+    "kind": "comparison",
+    "summary": "Three selected concepts built into clickable applications. Navy operations supplied the styling and sidebar for the next phase.",
+    "options": [
+      {
+        "id": "02",
+        "label": "02 \u00b7 Navy operations",
+        "src": "interactive/02/index.html"
+      },
+      {
+        "id": "04",
+        "label": "04 \u00b7 Swiss grid",
+        "src": "interactive/04/index.html"
+      },
+      {
+        "id": "09",
+        "label": "09 \u00b7 Graphite navigator",
+        "src": "interactive/09/index.html"
+      }
+    ]
+  },
+  {
+    "id": "base",
+    "title": "04 \u00b7 Focused base",
+    "kind": "standalone",
+    "summary": "A reduced application with dated position focuses, separate guidance, and a compact read view with field-editing dialogs. Earlier editing iterations are retained in Git history.",
+    "options": [
+      {
+        "id": "base",
+        "label": "Base",
+        "src": "interactive/base/index.html"
+      }
+    ]
+  },
+  {
+    "id": "base-comparison",
+    "title": "05 \u00b7 Base comparisons",
+    "kind": "comparison",
+    "summary": "Three alternatives exploring spacing, typography and controls using the same mixed-length sample content.",
+    "options": [
+      {
+        "id": "base1",
+        "label": "Base 1 \u00b7 Balanced columns",
+        "src": "interactive/base1/index.html"
+      },
+      {
+        "id": "base2",
+        "label": "Base 2 \u00b7 Stacked document",
+        "src": "interactive/base2/index.html"
+      },
+      {
+        "id": "base3",
+        "label": "Base 3 \u00b7 Structured rows",
+        "src": "interactive/base3/index.html"
+      }
+    ]
+  },
+  {
+    "id": "refinements",
+    "title": "06 \u00b7 Objective creation refinement",
+    "kind": "standalone",
+    "summary": "Refine 1 builds on Base 2. One Add Objective dialog includes a prominent objective-type choice that always defaults to Normal.",
+    "options": [
+      {
+        "id": "refine1",
+        "label": "Refine 1 \u00b7 Based on Base 2",
+        "src": "interactive/refine1/index.html",
+        "basedOn": "base2"
+      }
+    ]
+  }
+]

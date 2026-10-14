@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lantern · Paired layout carousel</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#15191e;color:#f0f3f6;font:15px/1.5 system-ui,sans-serif}header{position:sticky;top:0;z-index:2;background:#20262df5;border-bottom:1px solid #49505a;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}h1{font-size:18px;margin:0}nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}button,select{font:inherit;padding:9px 14px;border:1px solid #626d7a;border-radius:6px;background:#303943;color:white;cursor:pointer}button:hover{background:#44515e}button:focus-visible,select:focus-visible,a:focus-visible{outline:3px solid #88c6ff;outline-offset:3px}main{max-width:1576px;margin:auto;padding:16px 20px 40px}figure{margin:0 0 24px}figcaption{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px;color:#d4dce6}img{display:block;width:100%;height:auto;background:#fff;border-radius:4px}a{color:#a8d2ff}footer{text-align:center;color:#b1becd}#status{min-width:65px}body.fit main{max-width:min(1576px,calc((100dvh - 190px)*.75 + 40px))}@media(max-width:650px){header{padding:10px 12px}nav{gap:6px}button,select{padding:8px}main{padding:12px}body.fit main{max-width:100%}}
+</style></head><body>
+<header><h1>Lantern · Layout comparison</h1><nav aria-label="Style carousel"><button id="prev" type="button">← Previous</button><label for="style">Style</label><select id="style"></select><button id="next" type="button">Next →</button><span id="status" role="status" aria-live="polite"></span><button id="fit" type="button" aria-pressed="false">Fit both on screen</button></nav></header>
+<main><figure><figcaption><strong id="top-label">Screen layout</strong><a id="top-link" target="_blank" rel="noopener">Open full size ↗</a></figcaption><img id="top" width="1536" height="1024" alt="Screen layout"></figure>
+<figure><figcaption><strong id="bottom-label">Support guide</strong><a id="bottom-link" target="_blank" rel="noopener">Open full size ↗</a></figcaption><img id="bottom" width="1536" height="1024" alt="Support guide"></figure><footer>Use Previous / Next or the ← → arrow keys. Both images change together.</footer></main>
+<script>
+const styles = [["01", "Precision workspace"], ["02", "Navy operations"], ["03", "Horizontal studio"], ["04", "Swiss grid"], ["05", "Night command"], ["06", "Blue clarity"], ["07", "Warm workbench"], ["08", "Modular board"], ["09", "Graphite navigator"], ["10", "Plum focus"]];
+const select=document.getElementById('style');
+styles.forEach(([id,name],i)=>select.add(new Option(id+' · '+name,i)));
+let selected=0;
+function render(index){
+ selected=(index+styles.length)%styles.length;
+ const [id,name]=styles[selected];select.value=selected;
+ for(const [position,suffix,label] of [['top','a','Screen layout'],['bottom','b','Support guide']]){
+  const path='images/'+id+suffix+'.png';
+  const img=document.getElementById(position);img.src=path;img.alt=id+suffix.toUpperCase()+' · '+name+' · '+label;
+  document.getElementById(position+'-link').href=path;
+  document.getElementById(position+'-label').textContent=id+suffix.toUpperCase()+' · '+label+' — '+name;
+ }
+ document.getElementById('status').textContent=(selected+1)+' / '+styles.length;
+ history.replaceState(null,'','#style-'+id);
+ const adjacent=styles[(selected+1)%styles.length][0];for(const suffix of ['a','b']){const image=new Image();image.src='images/'+adjacent+suffix+'.png';}
+}
+document.getElementById('prev').onclick=()=>render(selected-1);
+document.getElementById('next').onclick=()=>render(selected+1);
+select.onchange=()=>render(Number(select.value));
+document.addEventListener('keydown',event=>{if(new URLSearchParams(location.search).has('embedded'))return;if(['SELECT','INPUT','TEXTAREA'].includes(event.target.tagName))return;if(event.key==='ArrowRight'||event.key==='ArrowLeft'){event.preventDefault();render(selected+(event.key==='ArrowRight'?1:-1));}});
+document.getElementById('fit').onclick=function(){const fit=document.body.classList.toggle('fit');this.setAttribute('aria-pressed',String(fit));this.textContent=fit?'Show full-width images':'Fit both on screen';};
+if(new URLSearchParams(location.search).has('embedded')){for(const el of document.querySelectorAll('#prev,#next,#style,label[for=style],#status,footer'))el.style.display='none';}
+const initial=styles.findIndex(([id])=>location.hash==='#style-'+id);render(initial<0?0:initial);
+</script></body></html>
