@@ -1,0 +1,11 @@
+import { readFile } from 'node:fs/promises';
+import { promotionGate, verifyStageRun } from './gates.mjs';
+const { RELEASE_SHA: sha, STAGE_RUN_ID: runId, GITHUB_REPOSITORY: repository, GH_TOKEN: token } = process.env;
+if (!/^\d+$/.test(runId ?? '')) throw new Error('Invalid stage run ID.');
+const response = await fetch(`https://api.github.com/repos/${repository}/actions/runs/${runId}`, { headers:{Authorization:`Bearer ${token}`,Accept:'application/vnd.github+json'},signal:AbortSignal.timeout(10000) });
+if (!response.ok) throw new Error('Cannot verify stage run.');
+const run = await response.json();
+verifyStageRun(run, sha, repository);
+const evidence = JSON.parse(await readFile('stage-evidence/release-evidence.json','utf8'));
+promotionGate(sha, evidence);
+if (String(evidence.runId) !== runId) throw new Error('Evidence run mismatch.');

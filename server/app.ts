@@ -3,9 +3,10 @@ import type {Request,Response,NextFunction} from 'express';
 import { accessRoutes } from './access.js';
 import type { AccessConfig } from './access.js';
 import type { Pool } from 'pg';
+import { assertSchemaReady } from './schema.js';
 import type { HealthResponse } from '../shared/health.js';
 
-export function createApp(database: Pool, config: AccessConfig = { origin: 'http://127.0.0.1:4391' }) {
+export function createApp(database: Pool, config: AccessConfig = { origin: 'http://127.0.0.1:4391' }, runtime?: { revision?: string; deployment?: string }) {
   const app = express();
   app.disable('x-powered-by');
   app.disable('etag');
@@ -13,7 +14,11 @@ export function createApp(database: Pool, config: AccessConfig = { origin: 'http
   app.get('/health', async (_request, response) => {
     response.set('Cache-Control', 'no-store');
     try {
-      await database.query('SELECT 1');
+      if (runtime) await assertSchemaReady(database);
+      else await database.query('SELECT 1');
+      if (runtime?.revision) response.set('X-Lantern-Revision', runtime.revision);
+      if (runtime?.deployment) response.set('X-Lantern-Deployment', runtime.deployment);
+      if (runtime) response.set('X-Lantern-Schema', '1');
       response.status(200).json({ status: 'ok', database: 'ok' } satisfies HealthResponse);
     } catch {
       response.status(503).json({
