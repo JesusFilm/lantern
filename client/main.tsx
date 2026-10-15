@@ -46,8 +46,11 @@ function App() {
   useEffect(() => {
     void refresh();
     const run = () => void refresh();
-    const denied = () => {
-      setSession(undefined);
+    const denied = (event: Event) => {
+      // A forbidden target/action does not necessarily revoke the actor's session.
+      // Recheck authority, retaining form errors if the current identity is unchanged.
+      if ((event as CustomEvent<{ status: number }>).detail.status === 401)
+        setSession(undefined);
       void refresh();
     };
     const pop = () => setPage(currentPage());
@@ -160,7 +163,7 @@ function App() {
               ) : page === "department" &&
                 session.department.role === "career-lead" ? (
                 <Department
-                  key={accessRevision}
+                  accessRevision={accessRevision}
                   session={{ ...session, department: session.department }}
                 />
               ) : (

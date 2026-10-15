@@ -15,7 +15,9 @@ const explanation = (user: RegisteredUser) =>
 
 export function Department({
   session,
+  accessRevision,
 }: {
+  accessRevision: number;
   session: SessionView & { department: NonNullable<SessionView["department"]> };
 }) {
   const route = () => ({
@@ -47,6 +49,7 @@ export function Department({
     [search, setSearch] = useState(""),
     [selected, setSelected] = useState(""),
     [busy, setBusy] = useState(false),
+    [loadingMembers, setLoadingMembers] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
   async function refresh() {
@@ -67,18 +70,31 @@ export function Department({
     }
   }
   useEffect(() => {
-    if (!selection.member) {
-      setMembers([]);
-      void act(refresh);
-    }
-  }, [selection.member]);
+    if (selection.member) return;
+    let active = true;
+    setMembers([]);
+    setLoadingMembers(true);
+    void api<{ members: typeof members }>("/api/department")
+      .then((result) => {
+        if (active) setMembers(result.members);
+      })
+      .catch((error: Error) => {
+        if (active) setError(error.message);
+      })
+      .finally(() => {
+        if (active) setLoadingMembers(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [selection.member, accessRevision]);
   const visible = users.filter((u) =>
     `${u.name} ${u.email}`.toLowerCase().includes(search.toLowerCase()),
   );
   if (selection.member)
     return (
       <MemberFocuses
-        key={`${selection.member}:${selection.focus}`}
+        key={`${selection.member}:${selection.focus}:${accessRevision}`}
         memberId={selection.member}
         focusId={selection.focus}
         navigate={navigate}
@@ -91,7 +107,9 @@ export function Department({
           {error} <button onClick={() => void act(refresh)}>Try again</button>
         </p>
       )}
-      {busy && <p role="status">Loading department users…</p>}
+      {(busy || loadingMembers) && (
+        <p role="status">Loading department users…</p>
+      )}
       {notice && <p role="status">{notice}</p>}
       <p className="eyebrow">
         {session.department.name} ·{" "}

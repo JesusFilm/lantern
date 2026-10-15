@@ -470,6 +470,101 @@ test(
           }
         },
       );
+      await t.test(
+        "refocusing preserves the lead’s add-user search and selection",
+        async () => {
+          const candidate = randomUUID();
+          await db.query(
+            "INSERT INTO users VALUES($1::uuid,$1::text,'candidate@example.test','Candidate','example.test')",
+            [candidate],
+          );
+          await page.goto(`${origin}/?page=department`);
+          await page
+            .getByRole("button", { name: "Add user", exact: true })
+            .click();
+          await page
+            .getByLabel("Search by name or email address")
+            .fill("candidate");
+          await page
+            .getByLabel("Registered user", { exact: true })
+            .selectOption(candidate);
+          const response = page.waitForResponse("**/api/session");
+          const rosterRefresh = page.waitForResponse("**/api/department");
+          await page.evaluate("window.dispatchEvent(new Event('focus'))");
+          await (await response).finished();
+          await (await rosterRefresh).finished();
+          await expect(page.getByRole("status")).toHaveCount(0);
+          await expect(
+            page.getByLabel("Search by name or email address"),
+          ).toHaveValue("candidate");
+          await expect(
+            page.getByLabel("Registered user", { exact: true }),
+          ).toHaveValue(candidate);
+        },
+      );
+      await t.test(
+        "an unapproved candidate shows the rejection without discarding the lead’s form",
+        async () => {
+          await page.goto(`${origin}/?page=department`);
+          await page
+            .getByRole("button", { name: "Add user", exact: true })
+            .click();
+          await page
+            .getByLabel("Search by name or email address")
+            .fill("candidate");
+          await page
+            .getByLabel("Registered user", { exact: true })
+            .selectOption({ label: "Candidate — candidate@example.test" });
+          const response = page.waitForResponse("**/api/department/members");
+          const rosterRefresh = page.waitForResponse("**/api/department");
+          await page
+            .getByRole("button", { name: "Add selected user", exact: true })
+            .click();
+          assert.equal((await response).status(), 403);
+          await (await rosterRefresh).finished();
+          await expect(page.getByRole("status")).toHaveCount(0);
+          await expect(page.getByRole("alert")).toContainText(
+            "This account is not currently approved for access.",
+          );
+          await expect(
+            page.getByLabel("Search by name or email address"),
+          ).toHaveValue("candidate");
+          await expect(page.locator(".aside-foot")).toContainText("Lead");
+        },
+      );
+      await t.test(
+        "a forbidden read after lead-role removal still clears private content",
+        async () => {
+          await page.goto(
+            `${origin}/?page=department&member=${alice}&memberFocus=${focus.id}`,
+          );
+          await expect(
+            page.getByText("Publish a guide by June", { exact: true }),
+          ).toBeVisible();
+          await db.query(
+            "UPDATE memberships SET role='member' WHERE user_id=$1",
+            [lead],
+          );
+          await page
+            .getByRole("button", {
+              name: "← Alice’s position focuses",
+              exact: true,
+            })
+            .click();
+          await expect(
+            page.getByRole("heading", {
+              name: "Position focuses",
+              exact: true,
+            }),
+          ).toBeVisible();
+          await expect(
+            page.getByRole("button", { name: "Department users", exact: true }),
+          ).toHaveCount(0);
+          await expect(
+            page.getByText("Publish a guide by June", { exact: true }),
+          ).toHaveCount(0);
+        },
+      );
     } finally {
       await browser.close();
       await vite?.close();
