@@ -17,7 +17,7 @@ Use Node 22.12 or newer, PostgreSQL, and the normal `.env` setup in the README. 
    ```
 
    Supply additional domains as separate arguments. The command replaces the list atomically. Removing a domain ends its users' app access on the next request, including existing sessions. It refuses to exclude an active career lead's domain.
-4. Start the app with `npm run dev`, or `npm run build` followed by `npm start`. Have the intended career lead sign in once. They initially see the waiting screen, creating their ordinary account without approval.
+4. Start the app with `npm run dev`, or `npm run build` followed by `npm run start:local`. Have the intended career lead sign in once. They initially see the waiting screen, creating their ordinary account without approval.
 5. Create the department and assign that registered account:
 
    ```sh

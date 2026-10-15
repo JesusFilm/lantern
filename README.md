@@ -25,11 +25,11 @@ npm run dev:local
 
 ```sh
 npm run typecheck
-npm test
 npm run build
+npm test
 ```
 
-Tests create isolated real PostgreSQL schemas and preserve walkthrough data. They cover persistence, HTTP/browser authoring, ownership/membership access, Google validation, guides, failures and tracker regressions. To serve the compiled build locally, stop the dev server and run `npm start`. It currently expects `.env`; hosted runtime preparation is [M06/04](.scratch/team-trial/issues/04-hosted-runtime.md).
+Tests create isolated real PostgreSQL schemas and preserve walkthrough data. They cover persistence, HTTP/browser authoring, ownership/membership access, Google validation, guides, failures and tracker regressions. To serve the compiled build locally, stop the dev server and run `npm run start:local` (optional `.env`). `npm start` uses injected variables with no dotenv requirement. See the [hosted release runbook](docs/operations/hosted-release.md) for compiled migrations/operators, Railway configuration, CI checks, stage delivery and manual production promotion. Live infrastructure and Google setup remain M06/05 work.
 
 `GET /health` runs a fresh database query and returns 200 or a generic 503 without connection details. `.env`, runtime credentials and personnel records stay outside Git. PostgreSQL data remains in the existing Docker volume; do not reset it to test releases.
 

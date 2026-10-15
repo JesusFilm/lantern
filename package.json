@@ -9,9 +9,9 @@
   "scripts": {
     "dev": "tsx watch --env-file=.env server/index.ts",
     "build": "tsc -p tsconfig.server.json && vite build",
-    "start": "node --env-file=.env dist/server/index.js --production",
+    "start": "node dist/server/index.js --production",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.check.json",
-    "test": "node --env-file=.env --import tsx --test --test-concurrency=1 server/*.test.ts tools/ticket-board/tickets.test.ts",
+    "test": "node --env-file-if-exists=.env --import tsx --test --test-concurrency=1 server/*.test.ts tools/ticket-board/tickets.test.ts tools/release/*.test.mjs",
     "db:start": "docker compose up -d --wait database",
     "db:stop": "docker compose stop database",
     "tickets": "tsx watch tools/ticket-board/index.ts",
@@ -21,7 +21,11 @@
     "preview:build": "vite build --config tools/guide-preview/vite.config.ts",
     "preview:dev": "vite --config tools/guide-preview/vite.config.ts --host 127.0.0.1",
     "dev:local": "LOCAL_ACCESS=1 tsx watch --env-file=.env server/index.ts",
-    "predev:local": "npm run db:start"
+    "predev:local": "npm run db:start",
+    "start:local": "node --env-file-if-exists=.env dist/server/index.js --production",
+    "db:migrate": "node dist/server/migrate.js",
+    "access:ops:compiled": "node dist/server/operations.js",
+    "preaccess:ops": "tsx --env-file=.env server/migrate.ts"
   },
   "dependencies": {
     "express": "^5.3.0",
