@@ -4,6 +4,10 @@ Investigated 2026-10-16. Read-only Forge source review at commit
 `d350c1289b44144de17c705624ae43a200988173`. No Auth configuration, registrations,
 credentials, deployments, or user records were changed.
 
+## Current decision — 16 October 2026
+
+Authentication is deferred while [hosting-only staging](../../.scratch/team-trial/issues/09-hosting-only-staging.md) proceeds. Jesus Film One is a candidate for the [bounded provider/admission investigation](../../.scratch/team-trial/issues/10-authentication-provider-decision.md), not an approved replacement. The recommendations below are research proposals. Direct Google setup is paused and Lantern-owned passwords are not pursued. Production admission policy has not been replaced, and no shared workforce capability is authorized by this investigation.
+
 ## Jesus Film One (Forge)
 
 **Recommended direction, subject to an integration proof:** reuse the existing

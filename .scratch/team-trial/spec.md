@@ -6,6 +6,14 @@ Date: 15 October 2026
 
 This specifies the next milestone; it is not a claim that the behavior exists. [PRD](../../docs/PRD.md) is current product scope. Existing authoring and guides are retained.
 
+## Current delivery decision — 16 October 2026
+
+The immediate delivery is [hosting-only staging](issues/09-hosting-only-staging.md). Railway's existing environment is named `staging`; Lantern's application value remains `LANTERN_ENV=stage`. Deploy a known merged revision with login unavailable and protected access denied, verify hosting separately, and leave `STAGE_DELIVERY_ENABLED` unset/false. Hosting evidence does not complete authenticated smoke, ticket 05, or the team trial.
+
+Authentication is deferred to [the bounded provider decision](issues/10-authentication-provider-decision.md). Jesus Film One is a candidate for investigation, not an approved replacement. Direct Google setup is paused and Lantern-owned passwords are not pursued. The Google-specific requirements below describe the existing implementation and original acceptance baseline; any replacement requires a recorded policy decision and revised acceptance before implementation.
+
+Production remains inactive. Manual promotion needs a deliberate authorized operator action, not a second reviewer. [Promotion simplification](issues/11-simplify-manual-promotion.md) records the proposed latest-main selection and exact-revision evidence checks; it is not implemented by this planning update.
+
 ## Identity and approved participants
 
 Use verified Google identity and stable Google subject identity. Every environment requires an exact normalized email in its own database allowlist before issuing an application session. Production additionally requires an approved Google hosted domain and rejects personal accounts. Local development and stage also admit explicitly approved personal Google accounts without a hosted-domain claim; work accounts retain domain checks. This is normal Google authentication, not the local walkthrough bypass. Jaco explicitly chose direct production-database approval; supply a small documented parameterized operator procedure, no app administration/invitation UI. Stage has an independent QA allowlist.

@@ -5,7 +5,7 @@ Milestone: M06
 Type: task
 Status: ready-for-human
 Blocked by: 01, 04
-Implementation: Public repository and initial GitHub protections configured; live setup awaits private Google inputs and resource/live verification
+Implementation: Incomplete; hosting-only staging proceeds in 09; authenticated setup waits for provider decision 10
 Slice: Hosted team trial
 
 ---
@@ -13,9 +13,15 @@ Slice: Hosted team trial
 
 Stage is available for authenticated QA, and production is separately configured for later promotion. Agent preparation is possible; real account/credential choices and provider setup require the operator.
 
+## Current execution boundary — 16 October 2026
+
+Proceed with [09 hosting-only staging](09-hosting-only-staging.md) independently of login. Railway uses the environment name `staging`; application configuration uses `LANTERN_ENV=stage`. Original Google acceptance below remains pending, subject to the explicit provider/admission decision in [10](10-authentication-provider-decision.md). Neither successful hosting smoke nor intentionally unavailable login completes this ticket. Direct Google setup is paused. Production activation and participant enrollment remain deferred.
+
+Railway-generated domains are approved. Start with small resources and review actual cost; a numeric budget is not an outstanding prerequisite. US$30/month projected usage was suggested as a review threshold, not a cap or price guarantee. Preserve shared workspace spending controls.
+
 ## Inputs before execution
 
-Railway project access and an environment-scoped deployment token for the intended project (the CLI upload workflow does not require a Railway GitHub repository connection); intended plan/budget; stage/prod domains; separate local/stage/production Google OAuth clients and exact callbacks; approved work domains and real lead/QA identities, including Jaco's personal Google member account for stage; repository-rule and deployment integration access. Obtain/store these privately. This planning task does not authorize provisioning charges or invent credentials.
+Railway project access and an environment-scoped deployment token for the intended project (the CLI upload workflow does not require a Railway GitHub repository connection); stage/prod domains; separate local/stage/production Google OAuth clients and exact callbacks; approved work domains and real lead/QA identities, including Jaco's personal Google member account for stage; repository-rule and deployment integration access. Obtain/store these privately. This planning task does not authorize provisioning charges or invent credentials.
 
 ## Acceptance
 
@@ -30,7 +36,7 @@ Railway project access and an environment-scoped deployment token for the intend
 
 ## Evidence
 
-[Setup inventory and bootstrap preparation](../../../docs/operations/railway-google-setup-evidence.md) records the 15 October 2026 live read-only inspection at merged SHA `92a18ff2de72e9ba95cc6d30d803f859e6aacecf`. Existing Railway environments can be reused; no services are provisioned. Main quality checks passed, stage delivery remains unset/skipped, and repository protection APIs returned a plan-related 403. No live Google, deployment, restore or workflow acceptance is claimed; all acceptance boxes remain open.
+[Setup inventory and bootstrap preparation](../../../docs/operations/railway-google-setup-evidence.md) records the 15 October 2026 live read-only inspection at merged SHA `92a18ff2de72e9ba95cc6d30d803f859e6aacecf`. Existing Railway environments can be reused; no services are provisioned. Main quality checks passed, stage delivery remains unset/skipped, and repository protection APIs initially returned a plan-related 403. Subsequent setup made the repository public and configured initial required checks/protections; consult the evidence document for current verification rather than treating that initial failure as the current state. No live Google, deployment, restore or workflow acceptance is claimed; all acceptance boxes remain open.
 
 Record sanitized configuration checklist, stage URL, deployed SHA and backup/restore result in the release evidence. Actual credentials/emails remain private. Complete only when live setup succeeds; code tests do not substitute. [Research](../../../docs/research/railway-team-trial.md).
 
