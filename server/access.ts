@@ -95,7 +95,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
   router.get('/api/department', async (req, res) => {
     const user = await requireUser(req);
     const department = await membership(db, user.id);
-    if (!department) throw new AccessError(403, 'Active department membership is required.');
+    if (department?.role !== 'career-lead') throw new AccessError(403, 'Only the career lead can browse department users.');
     const members = await db.query(`SELECT u.id,u.name,u.email,m.role FROM memberships m JOIN users u ON u.id=m.user_id
       WHERE m.department_id=$1 AND m.deleted_at IS NULL ORDER BY lower(u.name),u.id`, [department.id]);
     res.json({ department, members: members.rows });

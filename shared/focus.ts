@@ -15,3 +15,17 @@ export interface PositionFocus extends FocusDraft {
   version: number;
   updatedAt: string;
 }
+
+export interface FocusMember {
+  id: string;
+  name: string;
+  email: string;
+}
+export interface MemberFocusList {
+  member: FocusMember;
+  focuses: PositionFocus[];
+}
+export interface MemberFocusDetail {
+  member: FocusMember;
+  focus: PositionFocus;
+}

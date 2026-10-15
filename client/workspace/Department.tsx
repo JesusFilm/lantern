@@ -1,3 +1,4 @@
+import { MemberFocuses } from "./MemberFocuses.js";
 import { useEffect, useState } from "react";
 import type { RegisteredUser, SessionView } from "../../shared/access.js";
 import { api as request } from "./api.js";
@@ -14,9 +15,32 @@ const explanation = (user: RegisteredUser) =>
 
 export function Department({
   session,
+  accessRevision,
 }: {
+  accessRevision: number;
   session: SessionView & { department: NonNullable<SessionView["department"]> };
 }) {
+  const route = () => ({
+    member: new URLSearchParams(location.search).get("member"),
+    focus: new URLSearchParams(location.search).get("memberFocus"),
+  });
+  const [selection, setSelection] = useState(route);
+  function navigate(member?: string, focus?: string) {
+    const url = new URL(location.href);
+    url.searchParams.set("page", "department");
+    url.searchParams.delete("focus");
+    if (member) url.searchParams.set("member", member);
+    else url.searchParams.delete("member");
+    if (focus) url.searchParams.set("memberFocus", focus);
+    else url.searchParams.delete("memberFocus");
+    history.pushState(null, "", url);
+    setSelection(route());
+  }
+  useEffect(() => {
+    const pop = () => setSelection(route());
+    window.addEventListener("popstate", pop);
+    return () => window.removeEventListener("popstate", pop);
+  }, []);
   const [members, setMembers] = useState<
       Array<{ id: string; name: string; email: string; role: string }>
     >([]),
@@ -25,6 +49,7 @@ export function Department({
     [search, setSearch] = useState(""),
     [selected, setSelected] = useState(""),
     [busy, setBusy] = useState(false),
+    [loadingMembers, setLoadingMembers] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
   async function refresh() {
@@ -45,14 +70,46 @@ export function Department({
     }
   }
   useEffect(() => {
-    void act(refresh);
-  }, []);
+    if (selection.member) return;
+    let active = true;
+    setMembers([]);
+    setLoadingMembers(true);
+    void api<{ members: typeof members }>("/api/department")
+      .then((result) => {
+        if (active) setMembers(result.members);
+      })
+      .catch((error: Error) => {
+        if (active) setError(error.message);
+      })
+      .finally(() => {
+        if (active) setLoadingMembers(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [selection.member, accessRevision]);
   const visible = users.filter((u) =>
     `${u.name} ${u.email}`.toLowerCase().includes(search.toLowerCase()),
   );
+  if (selection.member)
+    return (
+      <MemberFocuses
+        key={`${selection.member}:${selection.focus}:${accessRevision}`}
+        memberId={selection.member}
+        focusId={selection.focus}
+        navigate={navigate}
+      />
+    );
   return (
     <section>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert">
+          {error} <button onClick={() => void act(refresh)}>Try again</button>
+        </p>
+      )}
+      {(busy || loadingMembers) && (
+        <p role="status">Loading department users…</p>
+      )}
       {notice && <p role="status">{notice}</p>}
       <p className="eyebrow">
         {session.department.name} ·{" "}
@@ -63,7 +120,9 @@ export function Department({
       <ul className="members">
         {members.map((member) => (
           <li key={member.id}>
-            <strong>{member.name}</strong>
+            <button className="link" onClick={() => navigate(member.id)}>
+              {member.name}
+            </button>
             <span>{member.email}</span>
             <small>
               {member.role === "career-lead" ? "Career lead" : "Member"}

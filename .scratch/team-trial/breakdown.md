@@ -18,7 +18,7 @@ Production remains inactive. Manual promotion needs a deliberate authorized oper
 | First | [Hosted runtime, required CI and gated stage delivery](issues/04-hosted-runtime.md) | ready-for-agent; unblocked | None |
 | Next; independently buildable | [Database-approved Google access](issues/01-approved-access.md) | ready-for-agent; unblocked | None |
 | Then, as soon as foundations pass | [Railway environments, Google access and live release gates](issues/05-railway-environments.md) | ready-for-human; blocked | Approved access + hosted runtime |
-| Alongside environment setup | [Lead member list and focus reading](issues/02-lead-member-focuses.md) | ready-for-agent; blocked | Approved access |
+| Alongside environment setup | [Lead member list and focus reading](issues/02-lead-member-focuses.md) | implemented and locally verified on codex/lead-member-focuses; integration pending | Approved access merged in 92a18ff |
 | After lead reading | [Initial confirmation and immutable lock](issues/03-confirm-and-lock.md) | ready-for-agent; blocked | Lead member list and focus reading |
 | After setup and feature delivery | [Real-account stage QA and newcomer trial](issues/06-stage-verification.md) | ready-for-human; blocked | Lead reading + confirmation + environment setup |
 | Last | [Same-revision production promotion and smoke](issues/07-production-promotion.md) | ready-for-human; blocked | Stage verification |
