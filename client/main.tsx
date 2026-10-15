@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState } from "react";
+import { Fragment, StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { SessionView } from "../shared/access.js";
 import { api } from "./workspace/api.js";
@@ -11,12 +11,16 @@ function App() {
   const [session, setSession] = useState<SessionView>(),
     [error, setError] = useState(""),
     [page, setPage] = useState("focuses");
+  const refreshVersion = useRef(0);
   async function refresh() {
+    const version = ++refreshVersion.current;
     try {
-      setSession(await api("/api/session"));
+      const next = await api<SessionView>("/api/session");
+      if (version !== refreshVersion.current) return;
+      setSession(next);
       setError("");
     } catch (e) {
-      setError((e as Error).message);
+      if (version === refreshVersion.current) setError((e as Error).message);
     }
   }
   useEffect(() => {
@@ -74,7 +78,9 @@ function App() {
               )}
             </section>
           ) : (
-            <>
+            <Fragment
+              key={`${session.user.id}:${session.department?.id ?? ""}:${session.department?.role ?? ""}`}
+            >
               {!session.localAccess && (
                 <button
                   className="sign-out"
@@ -90,7 +96,13 @@ function App() {
               {page === "account" ? (
                 <Account
                   user={session.user}
-                  onChange={(user) => setSession({ ...session, user })}
+                  onChange={(user) =>
+                    setSession((current) =>
+                      current?.user?.id === user.id
+                        ? { ...current, user }
+                        : current,
+                    )
+                  }
                 />
               ) : !session.department ? (
                 <section>
@@ -110,7 +122,7 @@ function App() {
               ) : (
                 <LearningGuide onFocuses={() => setPage("focuses")} />
               )}
-            </>
+            </Fragment>
           )}
         </div>
       </main>
