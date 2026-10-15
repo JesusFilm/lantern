@@ -1,6 +1,6 @@
 # Railway and Google setup evidence
 
-Inspected 15 October 2026. **Incomplete: provider inputs, spending decision and GitHub plan capabilities block activation.** This record does not accept the team workflow or authorize production promotion.
+Inspected 15 October 2026. **Incomplete: provider inputs, spending decision and production reviewer selection block activation.** GitHub visibility/protections were subsequently configured as recorded below. This record does not accept the team workflow or authorize production promotion.
 
 ## Revision and preserved resources
 
@@ -36,8 +36,20 @@ The primary local `.env` was inspected for key names only: database and host/por
 
 ## Operator decisions and private inputs still required
 
-1. Confirm the existing Railway workspace/project, monthly ceiling for two app/database pairs, backup storage and temporary restore resources, and generated versus custom domains. No billable resource was provisioned pending this decision.
-2. Enable the GitHub capabilities required by the runbook. The API's generic “Pro” message is not sufficient guidance for this organization: [GitHub documents](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments) that required deployment reviewers are public-only on Free/Pro/Team. Verify private-repository production review, no self-review and bypass restrictions before placing a production deployment token in Actions. Do not silently replace enforced review with an operator convention.
+### Authorized follow-up: public repository and initial protections
+
+The operator authorized making the repository public and selected Railway-generated domains. GitHub now reports `visibility=public`, `private=false`. Before that change, Gitleaks 8.24.2 reported zero findings across all local Git refs/history and separately across the six existing Actions runs' retrieved logs and repository issues/comments/reviews. Tracked-file/reference-image inspection found no participant enrollment data. This is a bounded publication check, not a guarantee that automated scanning finds every sensitive value. No repository content/history was rewritten, pushed or merged.
+
+GitHub accepted and read-back verified main branch protection: all three exact required checks are pinned to GitHub Actions app ID 15368; branches must be up to date; one approving PR review is required; stale approvals are dismissed; conversations must resolve; administrators are subject to enforcement; force pushes and branch deletion are disabled.
+
+Created GitHub `stage` and `production` environments, each allowing only branch `main` via a custom branch policy. Production reports `can_admins_bypass=false`. **Production still has no required reviewer or token**: an operator-nominated reviewer distinct from the initiator is required next, including `prevent_self_review=true`. The stage repository switch remains unset and production environment secrets remain empty. Live failed-check and reviewer-denial drills remain unperformed; API configuration is not equivalent to those drills.
+
+The original plan-related 403 observations above are historical and no longer block public-repository setup. [Google operator instructions](google-operator-setup.md) now describe checking the work account's Cloud project permissions, the External QA audience, separate Web clients and private credential transfer.
+
+Set and read-back verified each GitHub environment's `RAILWAY_ENVIRONMENT` variable to the existing Railway environment ID in the inventory. Service IDs/origins/tokens remain absent pending provisioning; no deployment was triggered.
+
+1. Supply the monthly ceiling for two app/database pairs, backup storage and temporary restore resources in the existing Railway project. Generated domains are approved. No billable resource was provisioned pending the ceiling.
+2. Nominate the production reviewer and configure no self-review before placing a production deployment token in Actions. Public repository capabilities are now available; do not silently replace enforced review with an operator convention.
 3. Provide the Google Cloud project and separate local/stage/production Web OAuth clients privately. Local/stage must permit the intended personal accounts in the consent audience. Register each exact callback only after the origin is known. Production configuration retains work-domain admission and no trial participant enrollment.
 4. Privately supply the approved hosted domain, department name, Jaco's work lead identity, his personal ordinary-member identity and a distinct second ordinary QA identity. Google OAuth testing audience approval and Lantern database approval are separate controls.
 5. Select a production reviewer distinct from the eventual promotion initiator, recovery owner, RPO/RTO and actual backup policy.
