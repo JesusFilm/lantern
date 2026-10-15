@@ -4,7 +4,7 @@ Title: Deploy locked-down staging and verify hosting without login
 Milestone: M06
 Type: task
 Status: ready-for-agent
-Implementation: Hosting-only mode and separate smoke prepared/tested; merge, provisioning and live deployment remain pending
+Implementation: Hosting-only mode tested and staging services provisioned; operator review, merge and live app deployment remain pending
 Slice: Hosted team trial
 
 ---
@@ -14,7 +14,7 @@ A reachable Railway staging deployment proves hosting, migrations and database r
 
 ## Scope and acceptance
 
-- [ ] Reuse the existing Railway project/environment named `staging`. Provision a small application and separate PostgreSQL service after inspecting existing resources. Use a Railway-generated domain. Preserve local services/data and prototype hosting; leave production inactive.
+- [x] Reuse the existing Railway project/environment named `staging`. Provision a small application and separate PostgreSQL service after inspecting existing resources. Use a Railway-generated domain. Preserve local services/data and prototype hosting; leave production inactive.
 - [x] Add an explicit, fail-closed hosting-only configuration with public-behavior TDD. Use `NODE_ENV=production`, `LANTERN_ENV=stage`, and no `LOCAL_ACCESS`. Login is unavailable; every protected request remains denied, including previously issued sessions. Production cannot select the hosting-only exception. Missing credentials in ordinary authenticated mode still fail configuration validation.
 - [x] Document how to start hosting-only mode and later return to authenticated mode. Keep credentials and participant identities out of source, logs and evidence.
 - [ ] Deploy only a reviewed, known merged SHA with successful main CI. Record exact SHA, deployment ID/URL, migration and readiness results. Preparing branch changes is authorized; pushing, merging or production promotion is not authorized by this ticket.
@@ -28,3 +28,5 @@ Resume authenticated bootstrap and unattended delivery only after [10](10-authen
 ## Preparation evidence — 16 October 2026
 
 [Hosting-only runbook](../../../docs/operations/hosting-only-staging.md) documents `LANTERN_HOSTING_ONLY=1`, resource ownership, environment mapping, deployment and separate evidence. Configuration and compiled HTTP tests were observed failing before implementation, then passing. Real PostgreSQL/HTTP/browser/release suite: 66 passed; typecheck and build passed. Compiled tests prove old sessions are denied in hosting-only mode and work normally again afterward, preserving approval-revocation checks. The hosting-smoke fixture proves unavailable login, browser rendering, denied reads/writes and separation from authenticated promotion evidence. No Railway resources or live deployment were created by this preparation; unchecked acceptance items remain outstanding.
+
+Staging services were subsequently provisioned for operator inspection: [resource evidence](../../../docs/operations/staging-provisioning-evidence.md). Draft PR [#6](https://github.com/JesusFilm/lantern/pull/6) is published at the user's request; this supersedes the earlier no-push preparation boundary. Merge and application deployment still require the user's approval. The final combined application code passed 84 local tests and all required PR checks; no live app smoke is claimed.
