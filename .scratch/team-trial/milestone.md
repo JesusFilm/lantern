@@ -14,10 +14,11 @@ A small invited group can use Lantern outside the local walkthrough, with confid
 
 ## Done when
 
-- [ ] Database-approved Google work accounts sign in; unapproved people and removed memberships cannot access protected data.
+- [ ] Database-approved Google accounts sign in under environment policy: production requires approved work domains; local development/stage also accept approved personal accounts; unapproved people and removed memberships cannot access protected data.
 - [ ] Members manage only their own drafts; the career lead can browse the team and drill into member focuses.
 - [ ] Lead confirmation persists an immutable baseline with actor/time and handles stale or concurrent changes safely.
-- [ ] Railway stage and production use separate data/secrets and normal authentication; QA can access stage.
+- [ ] Railway stage and production use separate data/secrets and normal authentication; real Google setup is verified locally and in hosted environments. Jaco can use separate lead/personal-member sessions in stage and QA can join.
+- [ ] Required PR/main CI gates automatic same-revision stage deployment and post-deployment smoke/E2E checks. Production autodeploy is off and promotion is explicitly manual.
 - [ ] Stage practical verification is recorded, including two-member isolation and newcomer use.
 - [ ] The verified revision is promoted to production, backed by recovery evidence and a release record.
 

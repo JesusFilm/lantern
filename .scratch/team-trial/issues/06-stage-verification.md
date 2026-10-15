@@ -15,8 +15,8 @@ There is practical evidence that the staged revision supports a member's initial
 
 ## Acceptance
 
-- [ ] Record exact Git SHA/deployment and passing automated checks. Reconcile any change after these checks before sign-off.
-- [ ] With the real Google provider, separate lead and at least two member sessions, verify approved login, unapproved same-domain/outsider denial, expired/signed-out/revoked access and absence of a local bypass.
+- [ ] Record exact Git SHA/deployment and passing PR/main CI plus post-deployment stage smoke/E2E checks. Verify the release evidence refers to the same candidate revision; record human acceptance separately. Reconcile any change after these checks before sign-off.
+- [ ] With the real Google provider, separate lead and at least two member sessions, verify approved work and personal-member login (including Jaco's separate lead/member sessions), unapproved same-domain/personal/outsider denial, expired/signed-out/revoked access and absence of a local bypass.
 - [ ] A newcomer uses the current guides to draft and reopen a titled/dated focus with objectives/goals; optional types and normal default work. Record confusing steps or failures, not invented successful observations.
 - [ ] Lead browses members, drills into the intended focus, discusses and confirms it. Member/lead reads show the same immutable baseline after reload; stale edit fails without losing typed input.
 - [ ] Each member cannot list/read/change the other's records via UI or direct requests. Ordinary members cannot fetch roster/lead endpoints. Confirm removal revokes a disposable QA member while retaining their data.

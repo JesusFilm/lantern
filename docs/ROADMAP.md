@@ -13,7 +13,11 @@ Reconciled 15 October 2026 around a small hosted team trial. Dates and broader a
 
 ## Next implementation order
 
-[01 Approved access](../.scratch/team-trial/issues/01-approved-access.md) and [04 Hosted runtime](../.scratch/team-trial/issues/04-hosted-runtime.md) can begin independently. Then [02 Lead views](../.scratch/team-trial/issues/02-lead-member-focuses.md), [03 Confirm and lock](../.scratch/team-trial/issues/03-confirm-and-lock.md), [05 Railway setup](../.scratch/team-trial/issues/05-railway-environments.md), [06 Stage verification](../.scratch/team-trial/issues/06-stage-verification.md) and [07 Production promotion](../.scratch/team-trial/issues/07-production-promotion.md) follow their recorded dependencies.
+Start with [Hosted runtime, required CI and gated stage delivery](../.scratch/team-trial/issues/04-hosted-runtime.md). [Approved Google access](../.scratch/team-trial/issues/01-approved-access.md) is independently ready, with approved personal accounts allowed locally/in stage and work-domain restrictions retained in production.
+
+After both foundations, prioritise [Railway environments, Google setup and live release gates](../.scratch/team-trial/issues/05-railway-environments.md). [Lead browsing](../.scratch/team-trial/issues/02-lead-member-focuses.md) follows approved access and can proceed alongside setup; [Confirm and lock](../.scratch/team-trial/issues/03-confirm-and-lock.md) follows lead browsing. All converge on [Stage verification](../.scratch/team-trial/issues/06-stage-verification.md), then [Manual production promotion](../.scratch/team-trial/issues/07-production-promotion.md).
+
+Required PR/main checks precede automatic stage deployment; stage smoke/E2E and human acceptance precede manual promotion of the exact verified revision. Main merges never deploy production. See the [prioritised queue](../.scratch/team-trial/breakdown.md) for dependencies and verification. Other milestones have no implementation-ready tickets.
 
 Backend allowlist configuration replaces a need for administrator screens. QA uses real authenticated test accounts and isolated stage data. Review later phases only after people have tried the initial workflow. The [deferred register](../.scratch/position-focus-guide/deferred.md) retains ideas without committing to implement them.
 

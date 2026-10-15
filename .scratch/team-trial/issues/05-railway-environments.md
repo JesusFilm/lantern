@@ -1,6 +1,6 @@
 Kind: ticket
 ID: team-trial/05
-Title: Configure isolated Railway stage and production access
+Title: Configure Railway environments, Google access and live release gates
 Milestone: M06
 Type: task
 Status: ready-for-human
@@ -15,15 +15,16 @@ Stage is available for authenticated QA, and production is separately configured
 
 ## Inputs before execution
 
-Railway project access and permission for the GitHub App to read JesusFilm/lantern; intended plan/budget; stage/prod domains; separate Google OAuth projects/clients; approved work domains and real lead/QA identities. Obtain/store these privately. This planning task does not authorize provisioning charges or invent credentials.
+Railway project access and permission for the GitHub App to read JesusFilm/lantern; intended plan/budget; stage/prod domains; separate local/stage/production Google OAuth clients and exact callbacks; approved work domains and real lead/QA identities, including Jaco's personal Google member account for stage; repository-rule and deployment integration access. Obtain/store these privately. This planning task does not authorize provisioning charges or invent credentials.
 
 ## Acceptance
 
 - [ ] Stage/prod application and PostgreSQL resources are prepared with separate databases, credentials, OAuth callbacks and exact-email approval stores; only stage is activated for QA in this ticket. Test that stage cannot read/write production records. Use synthetic stage content.
 - [ ] Both apps use normal authentication, NODE_ENV=production and no local bypass. Set Railway port/interface, HTTPS APP_ORIGIN, healthcheck and migration entrypoint; secrets remain outside Git/client bundles.
-- [ ] Prepare real Google clients and exact callbacks for each environment. In stage, approve lead/QA emails directly in its database, bootstrap lead membership, and add approved QA members. Prepare production resources and private configuration only; do not activate an incomplete production app or enroll trial participants before 07.
-- [ ] Stage URL is accessible to approved QA users; unapproved same-domain and external accounts are refused. Verify cookies, cancellation/retry and sign-out with the real provider.
-- [ ] Disable production autodeploy. Record environment/service identifiers and commands without secrets so 07 can promote a specific tested commit.
+- [ ] Prepare real Google clients and exact callbacks for local development, stage and production. Verify local real-Google login with the walkthrough bypass disabled, using approved work and personal QA identities and isolated local test data. Preserve existing walkthrough data/services. In stage, approve Jaco's lead and personal member emails directly in its database, bootstrap lead membership, and add the personal account as an ordinary member. Repeat with QA participants and provide at least two member accounts for full isolation checks. Prepare production resources and private configuration only; do not activate an incomplete production app or enroll trial participants before 07.
+- [ ] Stage URL is accessible to approved work/personal QA users; unapproved same-domain and personal/external accounts are refused. Verify stage uses its explicit server-side admission policy and production configuration retains mandatory work-domain restrictions. Verify cookies, cancellation/retry and sign-out with the real provider.
+- [ ] Activate required PR checks/repository rules and main-revision CI. Verify a failed required check prevents merge, and a failed main check prevents stage deployment. Successful main CI automatically deploys that same SHA to stage, waits for migration/readiness and runs stage smoke/E2E checks. Remove or disable any direct merge deployment path that bypasses these checks. Record sanitized evidence of the gates.
+- [ ] Disable production autodeploy and verify a main merge/stage deployment cannot deploy production. Verify an explicit manual promotion path selects the exact stage-tested SHA and rejects missing/failed evidence. Record environment/service identifiers and commands without secrets for production promotion.
 - [ ] Configure backup retention and perform a restore into an isolated disposable database; show retained records are readable and record recovery time/result. Never restore over live data for rehearsal.
 
 ## Evidence
