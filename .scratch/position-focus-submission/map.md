@@ -2,28 +2,20 @@ Labels: wayfinder:map
 Milestone: M03
 
 ---
-# Plan engineers can complete a position focus
+# Superseded submission-workflow plan
 
-## Destination
+## Closure — 15 October 2026
 
-Agree the scope and decisions needed to specify [Engineers can complete a position focus](milestone.md) and break it into buildable tickets.
-
-## Notes
-
-- The milestone file defines the outcome; this map records its planning progress.
-- Use Wayfinder for decision discovery, to-spec for a settled specification and to-tickets for an approved implementation breakdown.
-- This is planning. Recording the milestone does not authorize product implementation.
-- Keep the existing five readiness labels. Individual decision tickets use the tracker’s Type and Status conventions.
+The original broad milestone is split into delivered [M01 authoring](../position-focus-guide/issues/10-persisted-refine-4-authoring.md) and the next [M06 hosted trial](../team-trial/spec.md). M03 is Complete because its planning effort is closed as superseded, not because every original feature was built.
 
 ## Decisions so far
 
-## Not yet specified
+- Members already create, save and reopen their own position focuses and view guides.
+- The career lead needs a member list and read access to members' focuses; members must not see one another's data.
+- Jaco confirmed that the career lead confirms and locks a focus. The initial implementation belongs to M06, after joint conversation, without an added submission pipeline.
+- Google accounts must be individually pre-approved in the production database. Stage has a separate QA allowlist; configuration and validation belong to M06.
+- Railway stage/prod and a QA-to-production promotion process are in M06.
 
-- Authentication and account provisioning options.
-- Position-focus fields and request, draft and submission transitions.
-- Visibility rules, hosting and database recovery.
+## Withdrawn assumptions
 
-## Out of scope
-
-- Unrelated milestones and later product expansion.
-- Automated messaging, transcription, AI analysis and broad HR functionality for the January cycle.
+An application-generated request, invitation, submission state or manual-message integration is not required. The November/early-December window and January deadline are no longer commitments. Later phase revision mechanics stay with [M04](../position-focus-review/milestone.md).

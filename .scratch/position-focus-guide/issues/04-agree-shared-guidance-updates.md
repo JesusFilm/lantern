@@ -9,6 +9,12 @@ Slice: Position focus guide
 Summary: Decide how shared default guidance is maintained and how later changes affect departmental adaptations.
 
 ---
+## Current scope — 15 October 2026
+
+This resolved decision is retained as planning history. The [current PRD](../../../docs/PRD.md), [accepted baseline](../spec.md) and [M06 team trial](../../team-trial/spec.md) supersede earlier scope where they differ. The original Answer and discussion below have not been rewritten.
+
+Fixed generic content remains the current delivery. Department customization, multiple departments and cross-department example browsing are parked candidates, not an implementation commitment. No shared-content synchronization/adoption workflow is required.
+
 ## Question
 
 Who maintains the shared default walkthrough text, and what should happen when it changes after a department has adapted its wording or examples?

@@ -1,62 +1,82 @@
-# Career lead
+# Lantern
 
-Language for the January position-focus cycle and its planning.
+Language for the member position-focus workflow. This glossary distinguishes the agreed product model from delivered capability; see the PRD and milestone specifications for delivery status.
 
-## Language
+## People and access
 
-**Milestone**:
-A meaningful outcome in the roadmap, with a completion criterion and a target window. Its progress is tracked through Planning, Specification, Delivery, optional Verify and Learn stages, and Complete. Completion closes the effort with its outcome recorded, including when work was rolled back.
+**Member**:
+An approved participant with active membership of the team who prepares and manages their own position focuses.
 
-**Planning map**:
-The record of decisions made and questions still to resolve on the way to a milestone’s agreed specification.
+**Career lead**:
+The person supporting members' development who can read their focuses and confirm an agreed baseline after discussion. The initial trial has one career lead, Jaco.
 
-**Implementation ticket**:
-A bounded, buildable part of an agreed specification with acceptance criteria and dependencies. Finishing a ticket may contribute to a milestone without completing it.
+**Approved account**:
+A verified Google work account whose exact email is approved for access. Approval permits sign-in; membership and career-lead authority are separate grants.
+
+**Department**:
+The team boundary within which membership and position focuses belong. The initial trial uses Engineering; multiple-department workflows are outside its scope.
+
+**Beneficiary**:
+A person or group whose needs a member's contribution serves, including colleagues within the team.
+_Avoid_: User when it could be confused with an application account.
+
+## Position focuses
 
 **Position focus**:
-An engineer’s stated understanding of their role’s purpose, responsibilities and contributions, mission objectives, intended users and outcomes, expectations, and uncertainties. Developed with the career lead, it is an ongoing reference for pursuing objectives and discussing growth and success, and can evolve over time.
+A titled, dated document describing a member's intended contributions through objectives and SMART goals, with optional personal-development and leadership objectives.
 
 **Draft position focus**:
-A position focus still being prepared or awaiting an agreed critical mission objective. It may also need discussion to clarify its direction or content.
+A focus still open to its member's edits and discussion with the career lead. It may be incomplete.
+
+**Confirmed position focus**:
+A focus the career lead has confirmed after discussion with the member, establishing an agreed baseline whose content is locked. Confirmation means agreement, not that the goals have been achieved.
+_Avoid_: Submitted, approved by management, or complete when those imply additional workflow stages.
 
 **Locked-in position focus**:
-A position focus agreed and locked in by the engineer and career lead as their baseline, complete for the cycle without further sign-off. They can revise it together; the career lead’s departmental guidance defines review timing and process, with no fixed interval or default schedule.
+The historical term for a confirmed position focus. Later review work preserves this baseline rather than silently rewriting it.
 
-**Critical mission objective**:
-An objective describing an engineer’s intended contribution in alignment with the greater mission. It can initially concern identifying whom they could serve and agreeing a useful contribution, with leadership responsible for putting a direction in place when none exists.
+**Review phase**:
+An occasion to discuss a focus: initial draft/confirmation, midyear adjustment/review, or year-end review/retrospective. Later phase mechanics and dates remain deferred.
 
-**Mission statement**:
-A statement of the organization’s shared purpose. Department contributions and individual objectives describe how people contribute to that mission.
+**Objective**:
+An intended contribution or outcome that gives direction to a member's work or development.
+
+**Normal objective**:
+An objective for the member's contribution in their position. Earlier planning called this a critical mission objective.
+
+**Personal-development objective**:
+An optional objective for a capability or behavior the member wants to grow, paired with goals for applying it.
+
+**Leadership objective**:
+An optional objective for developing leadership through a practical assignment, paired with goals for its outcomes.
+
+**SMART goal**:
+A specific, measurable, achievable, relevant and time-bound goal supporting an objective. These qualities do not require five separate written fields or universal numerical targets.
+
+**Contribution**:
+Work towards useful outcomes, including product work, shared capabilities and activities supporting team connection.
+
+## Guidance and context
+
+**Guide**:
+Optional instruction supporting objective and SMART-goal writing, separate from focus authoring.
+
+**Example position focus**:
+A concise generic illustration of one objective and two goals. Its targets do not impose requirements on a member's own focus.
 
 **Organizational mission**:
 “We partner with the Body of Christ through heart language media, so everyone, everywhere can encounter Jesus.”
 
 **Department contribution**:
-A department’s intended contribution to the organizational mission, providing context for individual objectives.
+The team's intended contribution to the organizational mission. It is context for conversations, not a required app field or customization feature.
 
-**Personal development plan**:
-An optional, encouraged plan for capabilities or behaviours an engineer wants to grow, with goals describing how they will apply them in practice.
+## Planning
 
-**Leadership development assignment**:
-A practical assignment given by a coach to develop someone’s leadership capacity, paired with specific goals and outcomes. It is an optional part of a position focus, separate from the personal development plan.
+**Milestone**:
+A meaningful roadmap outcome with explicit scope and closure criteria. Closing a superseded milestone records its disposition without claiming withdrawn requirements were delivered.
 
-**SMART goal**:
-A specific, measurable, achievable, relevant and time-bound goal used to check progress towards a critical mission objective, a personal-development objective or a leadership development assignment. All five qualities are considered without requiring five separate written sections; some may be clear from the objective or assignment, or established during review with the career lead.
+**Planning map**:
+A record of decisions and remaining questions for a milestone.
 
-**User**:
-A person or group whose needs an engineer’s contribution is intended to serve, including people within the engineering team.
-
-**Contribution**:
-An engineer’s work towards useful outcomes, including product work, shared technical capabilities, and activities supporting team connection and collaboration. It can include non-engineering work such as facilitating social events, demos or show-and-tells.
-
-**Position-focus supporting resources**:
-Optional guidance and illustrative material that help someone prepare a position focus, including explanations of critical mission objectives and SMART goals. Career leads can adapt these resources to their department’s context.
-
-**Generic guidance template**:
-The curated, fixed starting guidance available to all departments. A career lead may use it unchanged or adapt their department’s guidance from it.
-
-**Department guidance**:
-The support documentation a career lead provides for the people they coach in their department, using the generic guidance unchanged or customized for that department.
-
-**Example position focus**:
-An illustrative, mock position focus suited to a department, available to everyone as a learning reference independently of their own department’s guidance. Its example goals and targets do not establish requirements for the reader’s own focus.
+**Implementation ticket**:
+A bounded change with acceptance criteria and dependencies. Readiness means specified work, not completed work.

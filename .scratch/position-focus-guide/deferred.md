@@ -1,22 +1,30 @@
-# After dogfooding — preserved feature decisions
+# Deferred candidates after the initial team trial
 
-These features are deferred, not authorized implementation work. Review their value and remaining details after engineering beta. This register preserves agreed direction without requiring a speculative implementation now. The [beta specification](spec.md) takes precedence for initial delivery; complete discussion is retained in [history](history/spec-before-beta-consolidation-2026-10-14.md).
+Updated: 15 October 2026
 
-| Deferred area | Preserved direction and remaining limits |
+This is a prioritized revisit list, not a committed feature backlog. Jaco narrowed the immediate objective to a small, secure hosted trial. Older detailed expansion decisions are retained in [history](history/2026-10-15-pre-team-trial/deferred.md); they do not require future delivery.
+
+## Next priority: later review phases
+
+[M04](../position-focus-review/milestone.md) owns midyear adjustment/review and year-end review/retrospective after initial draft/confirmation works. The career lead may initiate these manually. Preserve the original confirmed focus unchanged. A linked copy into a new editable focus is a candidate; a richer revision mechanism should be chosen only if it is clearly simpler or necessary. Exact initiation, editing, linking, current-version and retrospective rules remain to be specified. No automatic schedule, clone or unlock workflow is approved by this register.
+
+## Revisit after trial evidence
+
+| Candidate | Trigger and current boundary |
 |---|---|
-| Career-lead requests | Sole self-service entry is account settings, accessible before membership. Show Pending/Approved/Denied; prevent duplicate pending requests; allow reapplication after denial. No registration role checkbox. |
-| Administrator approval UI | In-app request list with Approve/Deny; identity/team verification by direct contact outside the app. Approval establishes eligibility, not automatic department assignment. |
-| Administration setup | Jaco's Google account is the first administrator and can appoint others. Approved-domain management UI is deferred. Authority of additional administrators to appoint administrators is not settled. Beta needs backend setup only. |
-| Department creation | An approved career lead may create a department and become its lead without extra approval. Beta preconfigures engineering instead. |
-| Multiple career leads | Existing leads designate approved members in the department users panel. Disable designation until administrator approval. Removing the role retains ordinary membership; never remove the last lead. Promotion of ordinary members and adding an unassigned approved lead to another department are deferred. |
-| User revocation and succession | Administrator revocation blocks participation and data access for ordinary users as well as leads. If the sole lead is revoked, require a replacement in the same operation; confirmation also grants the replacement eligibility if necessary. Initial replacement eligibility was members or unassigned users, excluding users already elsewhere. No automated expiry follows from a temporary appointment. Revisit these restrictions when multi-membership is supported. |
-| Member removal UI | If a person is a lead, first remove that role, then remove membership. Preserve department data as soft deleted and deny the removed person's access. Beta performs necessary removal through the backend. |
-| Department lifecycle UI | Leads may rename departments. Soft deletion preserves existing user data; hard deletion is eligible only before user data has been captured. Precise definition of user data and deletion-access behavior remains unresolved. Rare cleanup is not a backup/recovery product. Beta uses data-preserving backend operations. |
-| Rejoining | Eventually offer restoration of historical data or a fresh start. Beta leaves former members visible but unavailable to re-add to the same department, explaining that rejoining is unsupported. |
-| Multiple memberships | Permit them when introduced, with user data scoped by department. Adding a membership does not silently move/copy historical data. A working-context switcher is separate from example browsing. Initial beta cannot add people already in another department. |
-| Guidance and example editing | Career leads edit heading/body text and examples for their own department, not layout/animation. Fixed generic defaults remain immutable system data; departments can retain them or customize. A custom full example is independent of guidance customization. |
-| Cross-department examples | All may browse department examples; the example selector changes the example only, never the reader's support guidance. Engineering is the only initial example. |
-| Deferred practical checks | Career-lead text editing without design skills, and the two-department generic/custom guidance plus independent example-browsing scenario. Run when those capabilities exist; neither is verified today. |
-| Export and restructuring | On-demand personal data extraction needs a later pathway. Department splitting/migration and possible regeneration of focuses are unplanned; do not infer automatic transfers or copy-forward behavior. |
+| First team-cycle coverage | Revisit once the participating team and completion expectations are known. No committed January deadline or reporting dashboard. See [M05](../first-team-cycle/milestone.md). |
+| Catch-up/conversation notes | Revisit if real use needs notes alongside focuses. The member list belongs to M06; a broader contact/notes system does not. See [M02](../engineer-context/milestone.md). |
+| Member removal/rejoining UI | Necessary removal remains an operator task preserving data. Build UI/restoration only when the trial demonstrates a need; do not silently grant rejoining access. |
+| Export | Revisit personal extraction needs; backup/recovery for hosting is operational work in M06, not an export product. |
+| Guide/example editing | Keep the accepted fixed concise resources. Revisit when concrete content maintenance needs appear. |
+| Request/submission workflow | Not required for members to draft and jointly confirm a focus. Add only if direct coordination proves insufficient. |
 
-No ongoing shared-default adoption, synchronization, versioning or notification workflow was agreed. Future release changes to defaults remain outside that decision. These are not implicitly added by the deferred editing work.
+## Parked expansion
+
+No current commitment to administrator roles or approval screens, self-service career-lead requests, additional career leads, lead succession UI, department creation/lifecycle UI, multiple departments/memberships, working-context switching, cross-department examples, department-specific guides, summaries for other leaders, feedback collection, notifications, transcription, AI analysis or broad HR workflows.
+
+Existing department scoping and server-authoritative access remain security boundaries. Parking multi-department product work is not permission to weaken these boundaries or expose other members' records.
+
+## Already assigned, not deferred
+
+Approved secure access and member isolation; career-lead member/focus reading; initial confirmation/locking; Railway stage/prod, QA access and promotion/recovery are [M06](../team-trial/spec.md). Historical live Google and newcomer checks transfer there and are not reported as passed.

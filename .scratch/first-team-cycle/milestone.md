@@ -1,31 +1,30 @@
 Kind: milestone
 ID: M05
-Title: Complete the first team cycle
+Title: Revisit the first team-cycle outcome
 Status: Planning
+Priority: Deferred
 Slice: First team cycle
 Sequence: 5
-Target: By 31 January 2027 (provisional)
-Effort: Small–medium
-Summary: Identify incomplete position focuses, follow up and make each completed focus easy to revisit.
+Target: To be agreed; no committed deadline
+Summary: Define team participation and completion after the hosted trial establishes a workable initial focus cycle.
 
 ---
-## Outcome
+## Current disposition — 15 October 2026
 
-The career lead can demonstrate coverage of the participating team by the January deadline, using the agreed definition of completion.
+Deferred outcome. Getting the important functionality in front of a few people through [M06](../team-trial/milestone.md) takes priority. The former 31 January 2027 target was provisional and is not a committed current deadline.
 
-## Intended scope
+## Candidate outcome
 
-- A clear view of participating engineers and their position-focus state.
-- Identify missing responses, outstanding reviews and unresolved completion steps.
-- Follow up manually and preserve the completed focus for later conversations.
+Participating members can complete an agreed initial position focus and revisit it. The career lead can identify any remaining work through a suitably small view or process. The trial's member/focus list may be sufficient; a coverage dashboard is not assumed.
 
-## Done when
+## Not yet specified
 
-- [ ] Each participating engineer meets the completion criterion agreed in the guide milestone.
-- [ ] The lead can distinguish completed focuses from remaining work, and engineers can revisit their focus.
+Participating roster, target date, team-level completion/exception rules and whether software support is needed beyond M06. Initial individual confirmation is recorded by the career lead after joint discussion; it does not mean objectives have been achieved or the whole team cycle is complete.
 
-## Planning
+## Revisit when
 
-This milestone is accepted as a starting roadmap outcome. Detailed scope, decisions and implementation tickets remain to be planned. It is not an implementation task ready for an agent to execute.
+Hosted trial feedback and the real participating team make the outcome and any remaining gap concrete. No automatic follow-up, reporting, notification, manager-summary or extra-approval work is authorized by this record.
 
-Use the adjacent planning map to work through open decisions. The target windows guide sequencing; they are not engineering estimates. The working deadline is the end of January 2027, with the exact date and definition of completion still to be confirmed.
+## Historical scope
+
+The starting roadmap proposed identifying missing responses/outstanding reviews and manual follow-up by January 2027. Preserve that as context, without carrying the deadline or proposed workflow states into the current plan. See [current PRD](../../docs/PRD.md) and [roadmap](../../docs/ROADMAP.md).

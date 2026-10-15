@@ -9,6 +9,12 @@ Claimed by: 01a13306-3159-7833-a2a7-018889a8653e
 Summary: Agree what an engineer should include and what makes the content useful enough for review.
 
 ---
+## Current scope — 15 October 2026
+
+This resolved decision is retained as planning history. The [current PRD](../../../docs/PRD.md), [accepted baseline](../spec.md) and [M06 team trial](../../team-trial/spec.md) supersede earlier scope where they differ. The original Answer and discussion below have not been rewritten.
+
+The accepted minimal app uses objectives and SMART goals, with optional personal-development and leadership types. Drafts may be incomplete. The old mandatory mission-context, gaps/next-step and one-month-review wording is historical; it does not add fields or restore removed teaching. Confirmation criteria are specified in M06.
+
 ## Question
 
 What must a position focus contain, what existing organizational format or requirements must it follow, and what makes each part useful enough for review?

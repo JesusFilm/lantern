@@ -1,37 +1,44 @@
 Kind: ticket
-Title: Read the fixed engineering example
+Title: Read the accepted concise position-focus example
 Milestone: M01
 Type: task
-Status: needs-info
+Status: resolved
 Blocked by: 06
-Implementation: Pending explicit user approval
-Slice: Engineering beta
+Implementation: Complete for accepted generic example; newcomer verification in M06/06
+Slice: Position focus baseline
 
 ---
+# 08: Read the accepted concise position-focus example
 
-# 08: Read the fixed engineering example
+## Current disposition — 15 October 2026
 
-## Execution hold
+The accepted Refine 4 example is implemented beside the guide side navigation: one generic objective and two SMART goals. The removed “One objective, two goals. Illustrative targets and dates.” subtitle stays removed.
 
-Scope and dependencies are approved for publication only. **Do not implement until Jaco explicitly authorizes it.** The needs-info status represents this authorization hold; completed dependencies do not lift it.
+## Scope reconciliation
 
-**What to build:** Members find and read the full engineering product-work example as a useful drafting reference.
+The original full engineering product-work example and its gaps, optional sections and review/timing coverage were intentionally replaced by this concise generic example. Their checked criteria remain in the [historical ticket](../history/2026-10-15-pre-team-trial/08-fixed-engineering-example.md), not as current delivery claims.
 
-## Acceptance criteria
+Jaco accepted the minimal local experience. Browser checks cover guide/example navigation and layout. Newcomer usefulness has not been human-verified; relevant current-app checks are [M06/06](../../team-trial/issues/06-stage-verification.md).
 
-- [ ] Inspect the supplied reference during production and develop that scenario with objective/SMART goals, users/needs/outcomes, gaps and next steps.
-- [ ] Mark scenario counts, targets and dates illustrative. Explain optional personal and leadership development distinctly.
-- [ ] Present clear readable content under application control. No example editor, department selector or mandatory organizational template.
-- [ ] Browser checks demonstrate discovery and reading; content review checks source fidelity and requirement coverage. Coordinate wording with 07 through the specification, without making unrelated implementation dependencies.
+## Sources
 
-**Traceability:** specification story 11; D01/D03 and engineering-only beta decision.
-
-## Sources and boundaries
-
-Follow the [specification](../spec.md), [approved breakdown](../breakdown.md) and [deferred features](../deferred.md). Publication does not authorize implementation, deployment or milestone closure.
+[Accepted baseline](../spec.md), [M01 closure](../milestone.md), [current PRD](../../../docs/PRD.md) and [M06](../../team-trial/milestone.md).
 
 ## Comments
+
+### 15 October 2026 — Reconciled for the team trial
+
+The current disposition above supersedes the original scope and execution holds. Historical comments below describe what was true at their recorded date; they are not fresh verification claims or current authorization requirements.
 
 ### 14 October 2026 — Publication approved
 
 Jaco approved the four slices and dependencies and requested individual tickets. Implementation remains pending explicit approval.
+
+
+## Answer
+
+Implemented on 14 October 2026 after Jaco authorized completing 07–08 and the automated/preparation portion of 09, with human verification deferred to final review. The real app serves curated content only to active members through `/api/guide`; a separate static preview shares the guide component and fixed content without Google, accounts or a database.
+
+Content was reviewed against consolidated D01–D05, the beta deferrals and the supplied working-example image. Typecheck, 25 automated checks, production build and preview build pass. Chromium covers independent walkthrough navigation, context retention/omission, example discovery, mobile/keyboard behavior and the integrated member journey. Private HTTPS HTML/assets and published browser interactions pass on the VM. Practical human evidence is still pending in ticket 09; M01 remains open.
+
+[Open preview](https://jacobuntu.tail5c6dbf.ts.net/lantern-guide/) · [Verification and content-review record](../../../docs/system/guide-verification.md).
