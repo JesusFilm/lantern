@@ -1,5 +1,7 @@
 # Railway staging provisioning evidence
 
+This records the initial staging setup. Production was subsequently provisioned separately: see [production evidence](production-provisioning-evidence.md). Both applications remain undeployed.
+
 Verified 16 October 2026 (Pacific/Auckland), using Railway CLI 5.68.0.
 
 - Existing project: lantern / 9a445065-bde0-4184-bdb8-4161b033cc8f (Jesus Film Project).
