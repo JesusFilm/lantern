@@ -1,6 +1,6 @@
 # Railway and Google setup evidence
 
-Inspected 15 October 2026. **Incomplete: provider inputs, spending decision and production reviewer selection block activation.** GitHub visibility/protections were subsequently configured as recorded below. This record does not accept the team workflow or authorize production promotion.
+Inspected 15 October 2026. **Incomplete: provider inputs and resource/live verification remain outstanding.** GitHub visibility/protections were subsequently configured as recorded below. This record does not accept the team workflow or authorize production promotion.
 
 ## Revision and preserved resources
 
@@ -42,17 +42,17 @@ The operator authorized making the repository public and selected Railway-genera
 
 GitHub accepted and read-back verified main branch protection: all three exact required checks are pinned to GitHub Actions app ID 15368; branches must be up to date; one approving PR review is required; stale approvals are dismissed; conversations must resolve; administrators are subject to enforcement; force pushes and branch deletion are disabled.
 
-Created GitHub `stage` and `production` environments, each allowing only branch `main` via a custom branch policy. Production reports `can_admins_bypass=false`. **Production still has no required reviewer or token**: an operator-nominated reviewer distinct from the initiator is required next, including `prevent_self_review=true`. The stage repository switch remains unset and production environment secrets remain empty. Live failed-check and reviewer-denial drills remain unperformed; API configuration is not equivalent to those drills.
+Created GitHub `stage` and `production` environments, each allowing only branch `main` via a custom branch policy. Production reports `can_admins_bypass=false`. **Production has no required reviewer or token**. The subsequent operator decision below removes the separate reviewer requirement. The stage repository switch remains unset and production environment secrets remain empty. Live failed-check and reviewer-denial drills remain unperformed; API configuration is not equivalent to those drills.
 
 The original plan-related 403 observations above are historical and no longer block public-repository setup. [Google operator instructions](google-operator-setup.md) now describe checking the work account's Cloud project permissions, the External QA audience, separate Web clients and private credential transfer.
 
 Set and read-back verified each GitHub environment's `RAILWAY_ENVIRONMENT` variable to the existing Railway environment ID in the inventory. Service IDs/origins/tokens remain absent pending provisioning; no deployment was triggered.
 
-1. Supply the monthly ceiling for two app/database pairs, backup storage and temporary restore resources in the existing Railway project. Generated domains are approved. No billable resource was provisioned pending the ceiling.
-2. Nominate the production reviewer and configure no self-review before placing a production deployment token in Actions. Public repository capabilities are now available; do not silently replace enforced review with an operator convention.
+1. Use the existing Railway project and generated domains with a modest single-replica configuration. The operator explained that the workspace payer reviews project costs and did not request a numeric cap. Do not change workspace-wide spending limits or upgrade the plan. Inspect actual usage after deployment and bring unexpected costs to the operator. No billable resources have yet been provisioned.
+2. Keep production manually triggered. The operator explicitly chose no separate approval reviewer: an authorized deployer deliberately starts promotion after inspecting stage evidence. Retain exact-SHA CI/stage checks and main-only dispatch; never substitute an unchecked moving latest commit.
 3. Provide the Google Cloud project and separate local/stage/production Web OAuth clients privately. Local/stage must permit the intended personal accounts in the consent audience. Register each exact callback only after the origin is known. Production configuration retains work-domain admission and no trial participant enrollment.
 4. Privately supply the approved hosted domain, department name, Jaco's work lead identity, his personal ordinary-member identity and a distinct second ordinary QA identity. Google OAuth testing audience approval and Lantern database approval are separate controls.
-5. Select a production reviewer distinct from the eventual promotion initiator, recovery owner, RPO/RTO and actual backup policy.
+5. Select the recovery owner, RPO/RTO and actual backup policy.
 
 A local, untracked private-input wizard is prepared at `/home/jacobuntu/Ops/private/lantern-railway-setup/collect-inputs.sh`. Run it in a private terminal, not a recorded agent command. Hidden values are written to a mode-0600 file in a mode-0700 directory outside the repository. It only captures inputs; it does not grant access or configure providers. Stop before a hosted client section if its domain is not allocated. Syntax validation passed; shellcheck was unavailable. Do not source the captured file as shell code or copy it into Git/chat/logs. Consume it through a dotenv parser or equivalent data-only reader.
 
@@ -60,7 +60,7 @@ A local, untracked private-input wizard is prepared at `/home/jacobuntu/Ops/priv
 
 This breaks the dependency between the first running app and the two real-login session secrets without introducing an authentication bypass:
 
-1. After spending approval, provision separate app/PostgreSQL services in the existing environments. Inspect each target's variables, volume, credentials and private database reference. Do not clone stage approval data into production. Disable GitHub/image automatic deployment paths on both apps; keep production unactivated.
+1. Within the modest configuration described above, provision separate app/PostgreSQL services in the existing environments. Inspect each target's variables, volume, credentials and private database reference. Do not clone stage approval data into production. Disable GitHub/image automatic deployment paths on both apps; keep production unactivated.
 2. Allocate stage/production domains and configure separate Google callbacks. Set `LANTERN_ENV=stage` or `production`, `NODE_ENV=production`, `LOCAL_ACCESS=0`, `HOST=0.0.0.0`, environment-specific `DATABASE_URL`, `APP_ORIGIN` and Google credentials. Verify `railway.json` pre-deploy migration and `/health` settings without dashboard overrides. Do not deploy production to obtain its configuration.
 3. Verify required PR checks and same-SHA main CI. Keep the repository switch unset/false. Use a clean **detached checkout of the selected merged SHA**, not this setup branch or a moving main checkout. Confirm its CI run has all three passing jobs. Stamp that SHA with `tools/release/stamp.mjs`.
 4. Privately inject stage's environment-scoped project token and exact service/environment IDs. With the pinned Railway CLI on PATH, run `tools/release/deploy.mjs` with `RELEASE_SHA` and a private temporary `GITHUB_ENV` output file. This is a one-time operator stage bootstrap using the existing receipt validator, not successful automated stage acceptance. Record the returned deployment ID. Never print raw deployment logs.
@@ -80,6 +80,14 @@ After authenticated synthetic stage data exists, follow the runbook's logical du
 
 ## Remaining live gates and acceptance boundary
 
-All platform failure-path drills in the [runbook](hosted-release.md#live-gate-verification-checklist) remain outstanding. Testing a failed required PR check needs a controlled remotely visible PR/check; this task does not authorize pushing this branch or merging main. Coordinate a separately authorized test before claiming that gate is proven. Production promotion remains disabled/unperformed; no production token is installed. Verify reviewer denial and missing/failed/mismatched evidence rejection before later activation, without promoting participants in this ticket.
+All platform failure-path drills in the [runbook](hosted-release.md#live-gate-verification-checklist) remain outstanding. Testing a failed required PR check needs a controlled remotely visible PR/check; this task does not authorize pushing this branch or merging main. Coordinate a separately authorized test before claiming that gate is proven. Production promotion remains disabled/unperformed; no production token is installed. Verify absence of automatic production triggers and missing/failed/mismatched evidence rejection before later activation, without promoting participants in this ticket.
 
 Lead browsing, confirmation, newcomer acceptance and final multi-account stage verification remain separate feature/acceptance work. This infrastructure preparation does not close ticket 05 or claim full workflow acceptance.
+
+## Operator clarification: cost and manual promotion
+
+The operator does not require a Railway budget entry or second-person production approval. The workspace payer already reviews per-project spending. Recommended cost posture: one replica per app/database, private database networking, modest resource limits reviewed against startup metrics, small initial volumes and a short-lived restore target. Consider stage app sleeping only after verifying its effect on readiness and smoke. Production remains unactivated in this task.
+
+Railway's documented hard usage limits apply at workspace level and can shut down workloads; do not set one for Lantern in this shared workspace. A suggested Lantern-only review threshold is US$30/month projected incremental usage, not a configured alert, guaranteed estimate or spending cap. Revisit using measured usage. Pricing reference: [Railway cost controls](https://docs.railway.com/pricing/cost-control) and [resource pricing/metrics](https://docs.railway.com/guides/right-size-cpu-memory).
+
+The existing manual GitHub workflow already supplies the deliberate button plus exact tested-SHA enforcement. Keep it as the prepared path without a separate reviewer. Railway's Deploy Latest Commit button follows the connected branch's latest commit and therefore does not alone preserve the tested revision. No production dispatch was performed.

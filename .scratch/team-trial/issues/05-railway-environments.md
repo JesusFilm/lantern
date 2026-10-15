@@ -5,7 +5,7 @@ Milestone: M06
 Type: task
 Status: ready-for-human
 Blocked by: 01, 04
-Implementation: Public repository and initial GitHub protections configured; live setup awaits operator inputs, spending ceiling and production reviewer
+Implementation: Public repository and initial GitHub protections configured; live setup awaits private Google inputs and resource/live verification
 Slice: Hosted team trial
 
 ---
