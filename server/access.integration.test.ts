@@ -102,9 +102,9 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
     await t.test('assignment persists across a new session, cannot duplicate, and does not confer lead powers', async () => {
       const results = await Promise.all([request('/api/department/members', lead.cookie, { userId: memberId }), request('/api/department/members', lead.cookie, { userId: memberId })]);
       assert.deepEqual(results.map((r) => r.status), [204, 204]);
-      assert.equal((await request('/api/department', member.cookie)).status, 200);
+      assert.equal((await request('/api/department', member.cookie)).status, 403);
       assert.equal((await request('/api/guide', member.cookie)).status, 200);
-      assert.equal((await request('/api/department', (await login('member')).cookie)).status, 200);
+      assert.equal((await request('/api/department', (await login('member')).cookie)).status, 403);
       assert.equal((await request('/api/department/members', member.cookie, { userId: memberId })).status, 403);
       const department = await (await request('/api/department', lead.cookie)).json() as { members: { id: string }[] };
       assert.equal(department.members.filter((u: { id: string }) => u.id === memberId).length, 1);
@@ -165,12 +165,10 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       await memberPage.getByRole('button', { name: 'Guide', exact: true }).click();
       await memberPage.getByRole('button', { name: 'Example', exact: true }).click();
       await expect(memberPage.getByRole('heading', { name: 'A simple position focus' })).toBeVisible();
-      await memberPage.getByRole('button', { name: 'Department users', exact: true }).click();
-      await expect(memberPage.getByRole('heading', { name: 'Department users' })).toBeVisible();
+      await expect(memberPage.getByRole('button', { name: 'Department users', exact: true })).toHaveCount(0);
       await expect(memberPage.getByRole('button', { name: 'Add user' })).toHaveCount(0);
       await memberPage.reload();
-      await memberPage.getByRole('button', { name: 'Department users', exact: true }).click();
-      await expect(memberPage.getByRole('heading', { name: 'Department users' })).toBeVisible();
+      await expect(memberPage.getByRole('button', { name: 'Department users', exact: true })).toHaveCount(0);
       await revokeEmail(db, 'browser-member@gmail.com');
       assert.equal((await memberContext.request.get(origin + '/api/department')).status(), 401);
       await memberPage.evaluate("window.dispatchEvent(new Event('focus'))");

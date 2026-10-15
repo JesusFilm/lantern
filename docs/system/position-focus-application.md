@@ -2,7 +2,7 @@
 
 The application implements the approved Refine 4 layout as React screens backed by Express and PostgreSQL. The prototype journey remains separate. This iteration adds document authoring to the earlier guide beta; it does not introduce joint agreement, review notifications, department customization or approval workflows.
 
-The [current PRD](../PRD.md) records the narrowed team-trial direction. M01 closes the accepted local baseline; career-lead reading, confirmation locks, exact-email admission and Railway hosting are the next [M06 tickets](../../.scratch/team-trial/breakdown.md), not implemented features. [Design decisions and prototype history](product-decisions.md).
+The [current PRD](../PRD.md) records the narrowed team-trial direction. M01 closes the accepted local baseline; Exact-email admission and hosted runtime are merged. Career-lead member browsing and read-only focus access are implemented on `codex/lead-member-focuses`; confirmation locks and live Railway/Google setup remain [M06 work](../../.scratch/team-trial/breakdown.md). [Design decisions and prototype history](product-decisions.md).
 
 ## User flows
 
@@ -10,6 +10,7 @@ The [current PRD](../PRD.md) records the narrowed team-trial direction. M01 clos
 - Add normal, personal-development or leadership objectives. Every new objective defaults to Normal. Add/edit/remove goals and objectives through focused dialogs; Cancel and Escape discard unsaved input.
 - Read the objective and SMART lessons, navigate their steps, and inspect the concise example beside the guide menu.
 - Edit the current account’s display name. Saved names survive later sign-in.
+- As career lead, open **Department users**, select a current member by name/email, then read a dated focus. Member detail is read-only, identifies the person, and supports reload and back navigation. Ordinary members have no roster navigation or roster API access.
 
 No sample documents, prototype state panels, style selectors or reset controls are included in the application.
 
@@ -17,7 +18,9 @@ No sample documents, prototype state panels, style selectors or reset controls a
 
 `shared/focus.ts` defines document contracts. `client/workspace` separates document presentation, lessons, account, department membership and reusable modal behavior. The fetch adapter reports HTTP failures without dropping dialog input. Fixed lesson content is separate from presentation.
 
-`server/access.ts` resolves configured local identity or authenticated sessions and enforces request origin. `server/focus-http.ts` resolves active membership for each request. `server/focus.ts` validates input and stores whole versioned documents atomically, using parameterized SQL. Owner and department IDs come only from the server. The table `position_focuses` links each document to its user and originating department. Active users can access only their own documents in their current active department; removed memberships and department changes do not delete historical documents or expose them to other members.
+`server/access.ts` resolves configured local identity or authenticated sessions and enforces request origin. `server/focus-http.ts` resolves active membership for each request. `server/focus.ts` validates input and stores whole versioned documents atomically, using parameterized SQL. Owner and department IDs come only from the server. The table `position_focuses` links each document to its user and originating department. Owner routes expose only the current user’s documents in their active department; removed memberships and department changes do not delete historical documents or expose them to other members.
+
+`server/member-focuses.ts` provides a separate read-only domain interface. A scoped SQL read checks current lead/target memberships and department alongside document retrieval; guessed or mismatched identifiers receive a generic unavailable response. HTTP resolves admitted identity through the existing session contract. React renders typed member/list/detail results. Refocus revalidates the selected member, and failed session checks or protected-request denial clear private views. See [lead-reading verification](lead-member-focuses-verification.md).
 
 An integer version prevents silent overwrites by stale browser tabs. A conflict keeps the unsaved dialog text and asks the user to close and reopen the document. Reopening fetches the latest server version. Limits: title 200 characters, objective/goal 10,000 characters, 100 objectives and 100 goals per objective, 1 MB request body. Date ranges are validated. Partial drafts may contain no objectives/goals; this is authoring, not a completion/approval gate.
 

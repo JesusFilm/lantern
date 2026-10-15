@@ -11,6 +11,8 @@ export async function api<T>(
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403)
+      window.dispatchEvent(new Event("lantern-access-changed"));
     const message = await response.json().catch(() => null);
     throw new Error(message?.error ?? "The request failed. Please try again.");
   }

@@ -1,3 +1,4 @@
+import { memberFocusReader } from "./member-focuses.js";
 import { Router } from "express";
 import type { Request } from "express";
 import type { Pool } from "pg";
@@ -45,5 +46,23 @@ export function focusRoutes(
       ),
     );
   });
+  const members = memberFocusReader(db);
+  router.get("/api/department/members/:memberId/focuses", async (req, res) => {
+    const user = await requireUser(req);
+    res.json(await members.list(user.id, String(req.params.memberId)));
+  });
+  router.get(
+    "/api/department/members/:memberId/focuses/:id",
+    async (req, res) => {
+      const user = await requireUser(req);
+      res.json(
+        await members.get(
+          user.id,
+          String(req.params.memberId),
+          String(req.params.id),
+        ),
+      );
+    },
+  );
   return router;
 }

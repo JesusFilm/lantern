@@ -1,6 +1,6 @@
 # Lantern
 
-Lantern helps members write position focuses containing objectives and SMART goals. The current application provides a persisted, read-first workspace, focused editing dialogs, concise guides and account-name editing. The next milestone is a small secure hosted team trial with career-lead reading, confirmation locks and Railway stage/production.
+Lantern helps members write position focuses containing objectives and SMART goals. The current application provides a persisted, read-first workspace, focused editing dialogs, concise guides and account-name editing. Career leads can browse current members and read their focuses. The hosted team trial still requires confirmation locks and live Railway stage/production verification.
 
 [Current product scope](docs/PRD.md) · [Roadmap](docs/ROADMAP.md) · [Next tickets](.scratch/team-trial/breakdown.md) · [Application details](docs/system/position-focus-application.md)
 

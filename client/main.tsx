@@ -10,24 +10,49 @@ import "./workspace/style.css";
 function App() {
   const [session, setSession] = useState<SessionView>(),
     [error, setError] = useState(""),
-    [page, setPage] = useState("focuses");
+    [page, setPage] = useState(() =>
+      new URLSearchParams(location.search).get("page") === "department"
+        ? "department"
+        : "focuses",
+    );
   const refreshVersion = useRef(0);
+  const [accessRevision, setAccessRevision] = useState(0);
   async function refresh() {
     const version = ++refreshVersion.current;
     try {
       const next = await api<SessionView>("/api/session");
       if (version !== refreshVersion.current) return;
       setSession(next);
+      setAccessRevision(version);
       setError("");
     } catch (e) {
-      if (version === refreshVersion.current) setError((e as Error).message);
+      if (version === refreshVersion.current) {
+        setSession(undefined);
+        setError((e as Error).message);
+      }
     }
   }
   useEffect(() => {
     void refresh();
     const run = () => void refresh();
+    const denied = () => {
+      setSession(undefined);
+      void refresh();
+    };
+    const pop = () =>
+      setPage(
+        new URLSearchParams(location.search).get("page") === "department"
+          ? "department"
+          : "focuses",
+      );
     window.addEventListener("focus", run);
-    return () => window.removeEventListener("focus", run);
+    window.addEventListener("lantern-access-changed", denied);
+    window.addEventListener("popstate", pop);
+    return () => {
+      window.removeEventListener("lantern-access-changed", denied);
+      window.removeEventListener("focus", run);
+      window.removeEventListener("popstate", pop);
+    };
   }, []);
   return (
     <>
@@ -38,7 +63,8 @@ function App() {
             ["focuses", "Position focuses"],
             ["guide", "Guide"],
             ["account", "Account"],
-            ...(!session?.localAccess
+            ...(session?.department?.role === "career-lead" &&
+            !session.localAccess
               ? [["department", "Department users"]]
               : []),
           ].map(([id, label]) => (
@@ -46,7 +72,16 @@ function App() {
               key={id}
               aria-current={page === id ? "page" : undefined}
               className={page === id ? "active" : ""}
-              onClick={() => setPage(id!)}
+              onClick={() => {
+                const url = new URL(location.href);
+                url.searchParams.delete("member");
+                url.searchParams.delete("memberFocus");
+                if (id === "department") url.searchParams.set("page", id);
+                else url.searchParams.delete("page");
+                history.pushState(null, "", url);
+                window.dispatchEvent(new PopStateEvent("popstate"));
+                setPage(id!);
+              }}
             >
               {label}
             </button>
@@ -71,8 +106,13 @@ function App() {
           ) : !session.user ? (
             <section>
               <h1>Welcome to Lantern</h1>
-              {new URLSearchParams(window.location.search).has("signInError") && (
-                <p role="alert">Sign-in could not be completed. Try again or contact your career lead.</p>
+              {new URLSearchParams(window.location.search).has(
+                "signInError",
+              ) && (
+                <p role="alert">
+                  Sign-in could not be completed. Try again or contact your
+                  career lead.
+                </p>
               )}
               {session.signInAvailable ? (
                 <a href="/auth/google">Sign in with Google</a>
@@ -116,10 +156,14 @@ function App() {
                   </p>
                   <button onClick={() => void refresh()}>Check access</button>
                 </section>
-              ) : page === "focuses" ? (
+              ) : page === "focuses" ||
+                (page === "department" &&
+                  session.department.role !== "career-lead") ? (
                 <FocusWorkspace />
-              ) : page === "department" ? (
+              ) : page === "department" &&
+                session.department.role === "career-lead" ? (
                 <Department
+                  key={accessRevision}
                   session={{ ...session, department: session.department }}
                 />
               ) : (
