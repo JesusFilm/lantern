@@ -49,3 +49,13 @@ There is no schema migration; schema readiness remains version 2. No Railway res
 Ticket 03 owns confirmation state, locking, lifecycle fields and actions. This read interface returns the existing `PositionFocus` contract without a draft-state filter. There are currently no confirmed records to verify. When 03 adds lifecycle metadata, extend the owner and member read projections/contracts together and test confirmed-document reads; this work does not claim that future acceptance evidence.
 
 After integration, environment setup and stage verification must rerun checks against the resulting stage revision, including real approved Google accounts and at least two members. Local test results do not validate live Google/Railway configuration and do not authorize promotion. Changed revisions require new stage evidence.
+
+## PR review and user acceptance — 16 October 2026
+
+Jaco tried the separate private walkthrough and accepted member/lead focus reading. Its account chooser, fixture seed, service and verification script remain ignored under `output/local-walkthrough/`; none is included in PR #5. Authentication-provider selection, login entry and role-default home screens remain separate work.
+
+Standards review found no blocking violations. A nonblocking duplication observation in owner/member document rendering is deferred until lifecycle work warrants sharing the presentation. Spec review found browser Back from Department users lost Guide/Account destinations. A new public browser test reproduced the failure, then passed after consistent page URL encoding/decoding was introduced. Follow-up review found no actionable issue.
+
+PR: https://github.com/JesusFilm/lantern/pull/5. The prior no-push statement describes initial implementation delivery; publication and merge were subsequently authorized. Integration still requires the repository's checks and review gate, and the merged stage revision requires new verification.
+
+After the review fix: **80 tests passed** (zero failures/skips/cancellations), typecheck and production build passed. The retained HTTPS walkthrough also passed its account-switching/read/edit/persistence smoke check against the updated client. Required GitHub checks must pass on the final PR head before merge.

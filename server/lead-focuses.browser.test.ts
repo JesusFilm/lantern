@@ -432,6 +432,44 @@ test(
           }
         },
       );
+      await t.test(
+        "browser history and reload preserve Guide and Account destinations",
+        async () => {
+          await context.addCookies([
+            { name: "lantern-session", value: lead, url: origin },
+          ]);
+          await page.goto(origin);
+          for (const destination of ["Guide", "Account"]) {
+            await page
+              .getByRole("button", { name: destination, exact: true })
+              .click();
+            await page
+              .getByRole("button", { name: "Department users", exact: true })
+              .click();
+            await expect(
+              page.getByRole("heading", {
+                name: "Department users",
+                exact: true,
+              }),
+            ).toBeVisible();
+            await page.goBack();
+            await expect(
+              page.getByRole("button", { name: destination, exact: true }),
+            ).toHaveAttribute("aria-current", "page");
+            await page.reload();
+            await expect(
+              page.getByRole("button", { name: destination, exact: true }),
+            ).toHaveAttribute("aria-current", "page");
+            await page.goForward();
+            await expect(
+              page.getByRole("heading", {
+                name: "Department users",
+                exact: true,
+              }),
+            ).toBeVisible();
+          }
+        },
+      );
     } finally {
       await browser.close();
       await vite?.close();

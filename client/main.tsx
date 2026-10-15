@@ -7,14 +7,25 @@ import { LearningGuide } from "./workspace/LearningGuide.js";
 import { Account } from "./workspace/Account.js";
 import { Department } from "./workspace/Department.js";
 import "./workspace/style.css";
+function currentPage() {
+  const page = new URLSearchParams(location.search).get("page");
+  return page === "department" || page === "guide" || page === "account"
+    ? page
+    : "focuses";
+}
+function navigatePage(page: string) {
+  const url = new URL(location.href);
+  url.searchParams.delete("member");
+  url.searchParams.delete("memberFocus");
+  if (page === "focuses") url.searchParams.delete("page");
+  else url.searchParams.set("page", page);
+  history.pushState(null, "", url);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
 function App() {
   const [session, setSession] = useState<SessionView>(),
     [error, setError] = useState(""),
-    [page, setPage] = useState(() =>
-      new URLSearchParams(location.search).get("page") === "department"
-        ? "department"
-        : "focuses",
-    );
+    [page, setPage] = useState(currentPage);
   const refreshVersion = useRef(0);
   const [accessRevision, setAccessRevision] = useState(0);
   async function refresh() {
@@ -39,12 +50,7 @@ function App() {
       setSession(undefined);
       void refresh();
     };
-    const pop = () =>
-      setPage(
-        new URLSearchParams(location.search).get("page") === "department"
-          ? "department"
-          : "focuses",
-      );
+    const pop = () => setPage(currentPage());
     window.addEventListener("focus", run);
     window.addEventListener("lantern-access-changed", denied);
     window.addEventListener("popstate", pop);
@@ -72,16 +78,7 @@ function App() {
               key={id}
               aria-current={page === id ? "page" : undefined}
               className={page === id ? "active" : ""}
-              onClick={() => {
-                const url = new URL(location.href);
-                url.searchParams.delete("member");
-                url.searchParams.delete("memberFocus");
-                if (id === "department") url.searchParams.set("page", id);
-                else url.searchParams.delete("page");
-                history.pushState(null, "", url);
-                window.dispatchEvent(new PopStateEvent("popstate"));
-                setPage(id!);
-              }}
+              onClick={() => navigatePage(id!)}
             >
               {label}
             </button>
@@ -167,7 +164,7 @@ function App() {
                   session={{ ...session, department: session.department }}
                 />
               ) : (
-                <LearningGuide onFocuses={() => setPage("focuses")} />
+                <LearningGuide onFocuses={() => navigatePage("focuses")} />
               )}
             </Fragment>
           )}
