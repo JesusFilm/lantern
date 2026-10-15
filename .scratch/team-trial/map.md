@@ -12,6 +12,14 @@ A prioritised, dependency-linked plan for taking the existing application to sta
 - Use wayfinder, grilling and domain-modeling for new decisions. [Tracker conventions](../../docs/agents/issue-tracker.md) define local claims and dependencies.
 - The [specification](spec.md) and ticket acceptance translate agreed policy into implementation requirements. Credentials and actual approved email lists remain private.
 
+## Current delivery decision — 16 October 2026
+
+The immediate delivery is [hosting-only staging](issues/09-hosting-only-staging.md). Railway's existing environment is named `staging`; Lantern's application value remains `LANTERN_ENV=stage`. Deploy a known merged revision with login unavailable and protected access denied, verify hosting separately, and leave `STAGE_DELIVERY_ENABLED` unset/false. Hosting evidence does not complete authenticated smoke, ticket 05, or the team trial.
+
+Authentication is deferred to [the bounded provider decision](issues/10-authentication-provider-decision.md). Jesus Film One is a candidate for investigation, not an approved replacement. Direct Google setup is paused and Lantern-owned passwords are not pursued. The Google-specific requirements below describe the existing implementation and original acceptance baseline; any replacement requires a recorded policy decision and revised acceptance before implementation.
+
+Production application activation remains deferred, while independent production app/database resource provisioning is explicitly authorized under [ticket 05](issues/05-railway-environments.md). Manual promotion needs a deliberate authorized operator action, not a second reviewer. [Promotion simplification](issues/11-simplify-manual-promotion.md) records the proposed latest-main selection and exact-revision evidence checks; it is not implemented by this planning update.
+
 ## Decisions so far
 
 - One Engineering team and one career lead; reuse existing ownership/department boundaries without expanding department management.
@@ -28,7 +36,7 @@ The spec fixes conservative defaults so tickets are buildable: current active me
 
 ## Not yet specified
 
-No remaining product decision blocks the current implementation queue. Platform configuration details are implementation/setup work: validate current provider capabilities and record the concrete commands, required check names, repository rules and revision-bound promotion mechanism in the release runbook. Surface a new decision only if implementation discovers a material trade-off that cannot satisfy the agreed policy.
+The deferred authentication provider and production admission decision blocks authenticated setup and acceptance, but not hosting-only staging. Platform configuration details remain implementation/setup work: validate current provider capabilities and record the concrete commands, required check names, repository rules and revision-bound promotion mechanism in the release runbook. Surface a new decision only if implementation discovers a material trade-off that cannot satisfy the agreed policy.
 
 ## Inputs for setup, not product ambiguities
 

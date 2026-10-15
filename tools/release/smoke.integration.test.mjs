@@ -12,6 +12,7 @@ import { createDatabase } from '../../dist/server/database.js';
 import { migrate } from '../../dist/server/schema.js';
 import { createApp } from '../../dist/server/app.js';
 import { smoke } from './smoke.mjs';
+import { hostingSmoke } from './hosting-smoke.mjs';
 
 test('stage smoke exercises real HTTPS/browser/PostgreSQL and refuses expired QA sessions', {timeout:60000}, async () => {
  const dir = await mkdtemp(join(tmpdir(),'lantern-smoke-'));
@@ -49,6 +50,17 @@ test('stage smoke exercises real HTTPS/browser/PostgreSQL and refuses expired QA
   assert.deepEqual(await smoke(env,transport),{sha,stage:'passed',target:'stage',deployment:'isolated-test-deployment',schemaVersion:2,runId:'123'});
   await db.query('DELETE FROM sessions');
   await assert.rejects(smoke(env,transport));
+  await assert.rejects(hostingSmoke({...env,RELEASE_TARGET:'stage'},transport), /Sign-in must be disabled/);
+  const locked = createApp(db,{origin,hostingOnly:true},{revision:sha,deployment:'isolated-test-deployment'});
+  locked.use(express.static('dist/client'));
+  server.removeAllListeners('request'); server.on('request',locked);
+  const hostingEvidence = await hostingSmoke({...env,QA_MEMBER_A_SESSION:undefined,QA_MEMBER_B_SESSION:undefined},transport);
+  assert.equal(hostingEvidence.hosting,'passed');
+  assert.equal(hostingEvidence.stage,undefined,'hosting checks must not create promotion evidence');
+  assert.equal(hostingEvidence.sha,sha);
+  assert.equal(hostingEvidence.deployment,'isolated-test-deployment');
+  assert.equal(hostingEvidence.authenticatedSmoke,'pending');
+  await assert.rejects(hostingSmoke({...env,RELEASE_TARGET:'production'},transport));
  } finally {
   if(server) await new Promise(r=>server.close(r));
   await db.end(); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.end(); await rm(dir,{recursive:true,force:true});

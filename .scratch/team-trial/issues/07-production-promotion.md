@@ -9,6 +9,10 @@ Implementation: Not started
 Slice: Hosted team trial
 
 ---
+## Deferred authentication boundary
+
+Hosting-only staging in [09](09-hosting-only-staging.md) does not satisfy this ticket. Resume authenticated acceptance after [10](10-authentication-provider-decision.md) records the selected provider and admission policy and its implementation is verified. Existing Google-specific checks below remain the baseline until explicitly revised. Production activation remains deferred; manual promotion requires an authorized operator action, with no separate second-reviewer requirement.
+
 ## Outcome
 
 Invited participants can use the stage-verified version in production, with a traceable release and recovery procedure.

@@ -18,6 +18,9 @@ export function resolveRuntime(env: NodeJS.ProcessEnv = process.env) {
   try { parsed = new URL(origin); } catch { throw new Error('Invalid APP_ORIGIN.'); }
   if (parsed.origin !== origin || (parsed.protocol !== 'https:' && (hosted || parsed.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(parsed.hostname)))) throw new Error('APP_ORIGIN must be HTTPS when hosted, or HTTP loopback locally.');
   const clientId = env.GOOGLE_CLIENT_ID, clientSecret = env.GOOGLE_CLIENT_SECRET;
-  if ((hosted && (!clientId || !clientSecret)) || !!clientId !== !!clientSecret) throw new Error('Set both Google client credentials.');
-  return { environment, hosted, connectionString, port, host, localAccess, origin, clientId, clientSecret };
+  if (env.LANTERN_HOSTING_ONLY && !['0', '1'].includes(env.LANTERN_HOSTING_ONLY)) throw new Error('Invalid LANTERN_HOSTING_ONLY.');
+  const hostingOnly = env.LANTERN_HOSTING_ONLY === '1';
+  if (hostingOnly && (environment !== 'stage' || clientId || clientSecret)) throw new Error('Hosting-only mode requires stage without identity provider credentials.');
+  if ((hosted && !hostingOnly && (!clientId || !clientSecret)) || !!clientId !== !!clientSecret) throw new Error('Set both Google client credentials.');
+  return { environment, hosted, connectionString, port, host, localAccess, origin, clientId, clientSecret, hostingOnly };
 }

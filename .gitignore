@@ -13,4 +13,5 @@ output/
 # Generated release metadata/evidence (CI artifacts only).
 release-evidence.json
 production-evidence.json
+hosting-evidence.json
 stage-evidence/

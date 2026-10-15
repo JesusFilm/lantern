@@ -5,7 +5,7 @@ Milestone: M06
 Type: task
 Status: ready-for-human
 Blocked by: 01, 04
-Implementation: Not started
+Implementation: Staging and production resources provisioned; authentication, app deployment, backups/restore and live gates remain incomplete
 Slice: Hosted team trial
 
 ---
@@ -13,9 +13,24 @@ Slice: Hosted team trial
 
 Stage is available for authenticated QA, and production is separately configured for later promotion. Agent preparation is possible; real account/credential choices and provider setup require the operator.
 
+## Current execution boundary — 16 October 2026
+
+Proceed with [09 hosting-only staging](09-hosting-only-staging.md) independently of login. Railway uses the environment name `staging`; application configuration uses `LANTERN_ENV=stage`. Original Google acceptance below remains pending, subject to the explicit provider/admission decision in [10](10-authentication-provider-decision.md). Neither successful hosting smoke nor intentionally unavailable login completes this ticket. Direct Google setup is paused. Production activation and participant enrollment remain deferred.
+
+Railway-generated domains are approved. Start with small resources and review actual cost; a numeric budget is not an outstanding prerequisite. US$30/month projected usage was suggested as a review threshold, not a cap or price guarantee. Preserve shared workspace spending controls.
+
 ## Inputs before execution
 
-Railway project access and an environment-scoped deployment token for the intended project (the CLI upload workflow does not require a Railway GitHub repository connection); intended plan/budget; stage/prod domains; separate local/stage/production Google OAuth clients and exact callbacks; approved work domains and real lead/QA identities, including Jaco's personal Google member account for stage; repository-rule and deployment integration access. Obtain/store these privately. This planning task does not authorize provisioning charges or invent credentials.
+Railway project access and an environment-scoped deployment token for the intended project (the CLI upload workflow does not require a Railway GitHub repository connection); stage/prod domains; separate local/stage/production Google OAuth clients and exact callbacks; approved work domains and real lead/QA identities, including Jaco's personal Google member account for stage; repository-rule and deployment integration access. Obtain/store these privately. The operator authorized modest staging and production resource provisioning on 16 October 2026. This does not authorize application deployment, production activation, plan upgrades or inventing identity-provider credentials.
+
+## Resource provisioning checklist — separate from application activation
+
+Production resource preparation is part of this ticket, not the later production-promotion ticket. The operator explicitly requested it alongside staging on 16 October 2026.
+
+- [x] Staging application shell, PostgreSQL instance/volume, generated domain and private database reference provisioned; application remains undeployed.
+- [x] Production application shell and PostgreSQL instance/volume provisioned with independent credentials/data and a generated domain; no staging data or credentials copied.
+- [x] Production configuration uses `NODE_ENV=production`, `LANTERN_ENV=production`, `LOCAL_ACCESS=0`, and hosting-only mode off; app has no automatic deployment source or deployed revision.
+- [x] Record both environments' resource identifiers and isolation checks for operator inspection. Authentication clients, migrations, backups/restore, live application readiness and promotion remain incomplete until separately verified.
 
 ## Acceptance
 
@@ -30,8 +45,14 @@ Railway project access and an environment-scoped deployment token for the intend
 
 ## Evidence
 
+[Setup inventory and bootstrap preparation](../../../docs/operations/railway-google-setup-evidence.md) records the 15 October 2026 live read-only inspection at merged SHA `92a18ff2de72e9ba95cc6d30d803f859e6aacecf`. This was an initial inventory, not the current resource state; later provisioning is recorded below and in linked evidence. Main quality checks passed, stage delivery remains unset/skipped, and repository protection APIs initially returned a plan-related 403. Subsequent setup made the repository public and configured initial required checks/protections; consult the evidence document for current verification rather than treating that initial failure as the current state. No live Google, deployment, restore or workflow acceptance is claimed; all acceptance boxes remain open.
+
 Record sanitized configuration checklist, stage URL, deployed SHA and backup/restore result in the release evidence. Actual credentials/emails remain private. Complete only when live setup succeeds; code tests do not substitute. [Research](../../../docs/research/railway-team-trial.md).
 
 ## Sources and verification
 
 Follow [current specification](../spec.md), [breakdown](../breakdown.md) and [AGENTS.md](../../../AGENTS.md). Application changes use failing public-behavior tests before implementation and isolated real PostgreSQL. Ticket readiness is not a claim of completed implementation or authorization to deploy.
+
+## Production resource evidence — 16 October 2026
+
+[Production resources](../../../docs/operations/production-provisioning-evidence.md) are now prepared alongside [staging resources](../../../docs/operations/staging-provisioning-evidence.md). The project-wide service definitions are reused, but environment instances, credentials and database volumes are distinct. Production database startup succeeded; the application has no source/deployment and is not activated. Authentication, schema migrations, backup/restore, application readiness and participant acceptance remain pending.

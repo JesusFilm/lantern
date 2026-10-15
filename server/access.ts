@@ -15,7 +15,7 @@ const random = () => randomBytes(32).toString('base64url');
 function cookie(request: Request, name: string) {
   return request.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1);
 }
-export interface AccessConfig { origin: string; provider?: IdentityProvider; localUserId?: string; admissionPolicy?: AdmissionPolicy }
+export interface AccessConfig { origin: string; provider?: IdentityProvider; localUserId?: string; admissionPolicy?: AdmissionPolicy; hostingOnly?: boolean }
 export function accessRoutes(db: Pool, config: AccessConfig) {
   const router = Router();
   const secure = config.origin.startsWith('https:');
@@ -28,6 +28,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     next();
   });
   async function currentUser(req: Request) {
+    if (config.hostingOnly) return undefined;
     if (config.localUserId) {
       const local = await db.query('SELECT id,name,email FROM users WHERE id=$1', [config.localUserId]);
       return local.rows[0] as { id: string; name: string; email: string } | undefined;
@@ -46,7 +47,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     return user;
   }
   router.get('/auth/google', async (_req, res) => {
-    if (!config.provider) throw new AccessError(503, 'Google sign-in is not configured.');
+    if (config.hostingOnly || !config.provider) throw new AccessError(503, 'Google sign-in is not configured.');
     const state = random(), nonce = random(), verifier = random();
     await db.query('DELETE FROM login_attempts WHERE expires_at<=now()');
     await db.query("INSERT INTO login_attempts VALUES($1,$2,$3,now()+interval '10 minutes')", [hash(state), nonce, verifier]);
@@ -56,7 +57,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
   router.get('/auth/google/callback', async (req, res) => {
     const state = req.query.state;
     res.clearCookie(loginCookie, options);
-    if (!config.provider || typeof state !== 'string' || cookie(req, loginCookie) !== state) return res.redirect('/?signInError=1');
+    if (config.hostingOnly || !config.provider || typeof state !== 'string' || cookie(req, loginCookie) !== state) return res.redirect('/?signInError=1');
     const attempt = await db.query('DELETE FROM login_attempts WHERE state_hash=$1 AND expires_at>now() RETURNING nonce,verifier', [hash(state)]);
     if (!attempt.rowCount || typeof req.query.code !== 'string') return res.redirect('/?signInError=1');
     let identity;
@@ -77,7 +78,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
   });
   router.get('/api/session', async (req, res) => {
     const user = await currentUser(req);
-    res.json({ user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !!config.provider, localAccess: !!config.localUserId });
+    res.json({ user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !config.hostingOnly && !!config.provider, localAccess: !!config.localUserId });
   });
   router.use(focusRoutes(db, requireUser));
   router.patch('/api/account', async (req, res) => {

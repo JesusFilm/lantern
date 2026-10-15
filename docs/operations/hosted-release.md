@@ -1,5 +1,7 @@
 # Hosted runtime and release runbook
 
+Current interim milestone (16 October 2026): [hosting-only Railway staging](hosting-only-staging.md). Authentication setup is deferred. Keep unattended delivery disabled and use separate hosting evidence until real member sessions are available; the authenticated release path below remains the later requirement.
+
 Prepared 15 October 2026 for team-trial/04. This is repository implementation, not evidence of live configuration. Ticket 05 owns provisioning, secrets, repository rules and real Google setup. Never deploy this baseline to participants before approved-access is integrated.
 
 ## Runtime contract
@@ -15,6 +17,7 @@ Use Node 24.21.0 (the Dockerfile and CI use this version). `npm ci && npm run bu
 | `APP_ORIGIN` | Explicit canonical HTTPS origin when hosted; HTTP loopback allowed locally. No path/trailing slash. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Both required when hosted. Configure separate local/stage/production OAuth clients and exact `/auth/google/callback` URLs during ticket 05. Local walkthrough may omit them. |
 | `LOCAL_ACCESS` | Separate opt-in `1`, default off; only loopback/non-production. Stage and production set `0`. |
+| `LANTERN_HOSTING_ONLY` | Temporary explicit `1` only with `LANTERN_ENV=stage`, no Google credentials and no local bypass. Disables login and recognition of existing sessions; production rejects it. Default off. |
 
 Omitting `LANTERN_ENV` retains local command compatibility but never opts into personal-account admission. It does not infer stage from NODE_ENV. Startup passes the resolved server-owned identity into the approved-access policy. Do not derive identity from a request or expose environment switching in the client.
 
@@ -42,7 +45,7 @@ Integration seam for subsequent migrations: add numbered migrations **after** ve
 
 Create separate Railway stage and production app/PostgreSQL services, volumes, variables, domains, OAuth clients and approval data. No production data copies. Configure the app from `railway.json` and Dockerfile; verify the dashboard has not overridden pre-deploy/readiness behavior. Disable GitHub autodeploy for **both** services and disable image automatic updates. Do not rely on Railway's independent “wait for CI” setting, or use “Deploy Latest Commit”. Only the workflows below have deployment tokens. Restrict manual Railway deployment permissions to release operators.
 
-Create GitHub `stage` and `production` environments, restricted to protected main. Production requires a reviewer, prevents self-review and disallows administrator bypass where supported. Verify plan/repository visibility support for these protection rules before collecting data. Keep production secrets unavailable to PR workflows. Protect workflow files through review/CODEOWNERS/repository rules appropriate to the organization.
+Create GitHub `stage` and `production` environments, restricted to protected main. Production uses an explicit operator-triggered promotion, with no separate reviewer or no-self-review requirement (operator decision, 15 October 2026). Keep administrator bypass disabled for the configured branch restriction. Keep production secrets unavailable to PR workflows. Protect workflow files through review/CODEOWNERS/repository rules appropriate to the organization.
 
 Each GitHub environment requires these variables: `APP_ORIGIN`, `RAILWAY_SERVICE` (service ID), `RAILWAY_ENVIRONMENT` (environment ID). Each requires `RAILWAY_TOKEN`, a **separate environment-scoped Railway project token**. Stage also requires `QA_MEMBER_A_SESSION` and `QA_MEMBER_B_SESSION`: cookie values from two distinct approved **ordinary members**, obtained by a human through real Google sign-in in stage. Keep them in environment secrets, never screenshots/artifacts/logs. Sessions expire/revoke normally; refresh by normal login and rerun CI when necessary. No session-minting command or login bypass is added. Provisioning and enrollment are later work.
 
@@ -55,6 +58,8 @@ Require these exact checks on PRs targeting main, select GitHub Actions as the e
 No path filters skip required checks. The same checks rerun on the actual merged main SHA. If enabling a merge queue later, add and verify `merge_group` checks first. `stage delivery and smoke` is a push-only downstream job, not a required PR check.
 
 ## Automatic stage delivery
+
+For the first deployment, follow the explicit [operator bootstrap and real-login session acquisition sequence](railway-google-setup-evidence.md#first-stage-bootstrap-before-enabling-unattended-delivery). A manual stage bootstrap is needed before members can obtain real Google sessions; it does not count as passing automated stage evidence and must leave the repository delivery switch off until prerequisites pass.
 
 Stage delivery is temporarily **off by default** pending ticket 05. The job runs only when the **repository-level** Actions variable `STAGE_DELIVERY_ENABLED` is exactly `true`; unset/false skips it before any setup or upload steps. PR/main quality checks continue normally and can finish green while stage is disabled. Do not put this switch in the `stage` environment: environment variables are unavailable when GitHub evaluates this job condition.
 
@@ -70,7 +75,7 @@ Automated smoke does not complete real Google login or replace newcomer/lead con
 
 ## Manual promotion
 
-Run `Promote verified revision` from protected main with a full SHA, successful main CI run ID and HTTPS acceptance-record URL. The production environment reviewer must inspect that record **before approving**. It must identify the exact SHA and stage deployment, successful CI/smoke, practical QA results, required migrations/schema version, previous production deployment, schema compatibility, backup ID/retention and successful isolated restore rehearsal. A bare URL is not human acceptance; reviewer enforcement is an external setup requirement.
+Run `Promote verified revision` from protected main with a full SHA, successful main CI run ID and HTTPS acceptance-record URL. The operator starting the workflow must inspect that record **before clicking Run workflow**. Any repository user already authorized to run this workflow may promote; public repository visibility does not grant deployment rights. It must identify the exact SHA and stage deployment, successful CI/smoke, practical QA results, required migrations/schema version, previous production deployment, schema compatibility, backup ID/retention and successful isolated restore rehearsal. A bare URL is not human acceptance; the initiating operator owns the practical QA decision. There is no second-person approval step.
 
 The workflow verifies the run through GitHub's API: repository, workflow path, push event, main branch, completed success and exact SHA. It downloads that run's named stage artifact and checks SHA, run ID and passing stage result. Missing/expired artifact, cancelled/failed run, or different SHA prevents deployment. It then checks out the candidate SHA in a separate directory and uploads that source to **production's** target using production's token. No merge event can trigger this workflow. Code changes require new CI/stage/QA evidence.
 
@@ -86,7 +91,7 @@ Application rollback selects a known image/deployment only after confirming curr
 
 ## Live gate verification checklist
 
-Ticket 05 records actual run/deployment IDs for: failed required PR check blocks merge; failed/cancelled main check creates no stage deployment; main advances during queued delivery without changing uploaded SHA; failed pre-deploy leaves previous revision serving; readiness failure cannot pass smoke; expired QA session/failed smoke produces no passing artifact; missing/failed/mismatched stage evidence blocks manual promotion; production cannot deploy on merge; production reviewer can reject promotion. Confirm secrets are target-scoped and public headers match the expected Railway deployment. These checks are still outstanding; local tests cannot prove live repository permissions or platform wiring.
+Ticket 05 records actual run/deployment IDs for: failed required PR check blocks merge; failed/cancelled main check creates no stage deployment; main advances during queued delivery without changing uploaded SHA; failed pre-deploy leaves previous revision serving; readiness failure cannot pass smoke; expired QA session/failed smoke produces no passing artifact; missing/failed/mismatched stage evidence blocks manual promotion; production cannot deploy on merge; no production deployment occurs without an explicit authorized operator dispatch. Confirm secrets are target-scoped and public headers match the expected Railway deployment. These checks are still outstanding; local tests cannot prove live repository permissions or platform wiring.
 
 ## Official platform references
 
