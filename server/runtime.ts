@@ -1,8 +1,8 @@
+import { admissionPolicy, type AdmissionPolicy } from './admission.js';
 /** Server-owned identity. Authentication must use this, never a request value. */
-export type LanternEnvironment = 'local' | 'stage' | 'production';
+export type LanternEnvironment = AdmissionPolicy;
 export function resolveRuntime(env: NodeJS.ProcessEnv = process.env) {
-  const environment = env.LANTERN_ENV ?? 'production';
-  if (!['local', 'stage', 'production'].includes(environment)) throw new Error('Invalid LANTERN_ENV.');
+  const environment = admissionPolicy(env.LANTERN_ENV);
   const hosted = env.LANTERN_ENV === 'stage' || env.LANTERN_ENV === 'production' || env.NODE_ENV === 'production';
   if (hosted && env.NODE_ENV !== 'production') throw new Error('Hosted environments require NODE_ENV=production.');
   const connectionString = env.DATABASE_URL;
@@ -19,5 +19,5 @@ export function resolveRuntime(env: NodeJS.ProcessEnv = process.env) {
   if (parsed.origin !== origin || (parsed.protocol !== 'https:' && (hosted || parsed.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(parsed.hostname)))) throw new Error('APP_ORIGIN must be HTTPS when hosted, or HTTP loopback locally.');
   const clientId = env.GOOGLE_CLIENT_ID, clientSecret = env.GOOGLE_CLIENT_SECRET;
   if ((hosted && (!clientId || !clientSecret)) || !!clientId !== !!clientSecret) throw new Error('Set both Google client credentials.');
-  return { environment: environment as LanternEnvironment, hosted, connectionString, port, host, localAccess, origin, clientId, clientSecret };
+  return { environment, hosted, connectionString, port, host, localAccess, origin, clientId, clientSecret };
 }

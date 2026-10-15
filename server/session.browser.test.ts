@@ -29,6 +29,7 @@ test("private browser state follows the current server session", { timeout: 6000
         "INSERT INTO users VALUES($1::uuid,$1::text,$2,$3,'example.test')",
         [id, `${id}@example.test`, name],
       );
+      await db.query("INSERT INTO approved_emails VALUES($1)", [`${id}@example.test`]);
       await db.query("INSERT INTO memberships VALUES($1,$2,'member',NULL)", [id, department]);
       await db.query("INSERT INTO sessions VALUES($1,$2,now()+interval '1 day')", [
         createHash("sha256").update(id!).digest("hex"), id,

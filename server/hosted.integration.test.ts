@@ -5,7 +5,7 @@ import { once } from 'node:events';
 import { mkdtemp, cp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { createServer } from 'node:net';
 import { createDatabase } from './database.js';
 test('production-only package migrates, starts without dotenv, serves assets and fails closed on missing schema', { timeout: 90000 }, async () => {
@@ -26,14 +26,32 @@ test('production-only package migrates, starts without dotenv, serves assets and
    await writeFile(join(dir,'release.json'), JSON.stringify({sha:'a'.repeat(40)}));
    assert.throws(() => execFileSync(process.execPath, ['dist/server/index.js'], { cwd: dir, env, stdio: 'pipe' }));
    for (const patch of [{LOCAL_ACCESS:'1'}, {GOOGLE_CLIENT_SECRET:''}, {LANTERN_ENV:'typo'}, {APP_ORIGIN:'http://localhost:4391'}]) assert.throws(() => execFileSync(process.execPath, ['dist/server/index.js'], {cwd:dir,env:{...env,...patch},stdio:'pipe'}));
+   const personalId = randomUUID(), personalToken = randomUUID();
    for (let n = 0; n < 2; n++) {
      execFileSync(process.execPath, ['dist/server/migrate.js'], { cwd: dir, env, stdio: 'pipe' });
      execFileSync(process.execPath, ['dist/server/operations.js', 'domains', 'example.test'], { cwd: dir, env, stdio: 'pipe' });
-     child = spawn(process.execPath, ['dist/server/index.js'], { cwd: dir, env, stdio: ['ignore','pipe','pipe'] });
+     execFileSync(process.execPath, ['dist/server/operations.js', 'approve-email', 'personal@gmail.com'], { cwd: dir, env, stdio: 'pipe' });
+     assert.match(execFileSync(process.execPath, ['dist/server/operations.js', 'list-approved-emails'], { cwd: dir, env, encoding: 'utf8' }), /personal@gmail.com/);
+     if (n === 0) {
+       const scoped = createDatabase(url.href);
+       try {
+         await scoped.query("INSERT INTO users VALUES($1,'personal-sub','personal@gmail.com','Personal',NULL)", [personalId]);
+         await scoped.query("INSERT INTO sessions VALUES($1,$2,now()+interval '1 hour')", [createHash('sha256').update(personalToken).digest('hex'), personalId]);
+       } finally { await scoped.end(); }
+     }
+     child = spawn(process.execPath, ['dist/server/index.js'], { cwd: dir, env: { ...env, LANTERN_ENV: n === 0 ? 'stage' : 'production' }, stdio: ['ignore','pipe','pipe'] });
      await new Promise<void>((resolve,reject) => { child!.once('exit', () => reject(new Error('Startup failed'))); child!.stdout!.on('data', b => { if (String(b).includes('Lantern:')) resolve(); }); });
      const origin: string = `http://127.0.0.1:${address.port}`;
      const health = await fetch(origin+'/health');
      assert.equal(health.status, 200);
+     assert.equal(health.headers.get('x-lantern-schema'), '2');
+     const session = await (await fetch(origin+'/api/session', { headers: { Cookie: `__Host-lantern-session=${personalToken}` } })).json() as { user: { id: string } | null };
+     assert.equal(session.user?.id ?? null, n === 0 ? personalId : null);
+     if (n === 0) {
+       execFileSync(process.execPath, ['dist/server/operations.js', 'remove-approved-email', 'personal@gmail.com'], { cwd: dir, env, stdio: 'pipe' });
+       const revoked = await (await fetch(origin+'/api/session', { headers: { Cookie: `__Host-lantern-session=${personalToken}` } })).json() as { user: unknown };
+       assert.equal(revoked.user, null);
+     }
      assert.equal(health.headers.get('x-lantern-revision'), 'a'.repeat(40));
      assert.match(await (await fetch(origin)).text(), /assets\//);
      assert.equal((await fetch(origin+'/api/focuses')).status, 401);

@@ -28,6 +28,7 @@ test('stage smoke exercises real HTTPS/browser/PostgreSQL and refuses expired QA
   const origin = `https://127.0.0.1:${server.address().port}`;
   await migrate(db);
   await db.query("INSERT INTO allowed_domains VALUES('example.test')");
+  await db.query("INSERT INTO approved_emails VALUES('qa@example.test')");
   const dept = randomUUID(); await db.query("INSERT INTO departments(id,name) VALUES($1,'Synthetic QA')",[dept]);
   const tokens = [randomUUID(),randomUUID()];
   for (const token of tokens) {
@@ -45,7 +46,7 @@ test('stage smoke exercises real HTTPS/browser/PostgreSQL and refuses expired QA
    chromium: {launch:async()=>{const b=await chromium.launch();return {newPage:()=>b.newPage({ignoreHTTPSErrors:true}),newContext:()=>b.newContext({ignoreHTTPSErrors:true}),close:()=>b.close()};}}
   };
   const env={EXPECTED_DEPLOYMENT_ID:'isolated-test-deployment',APP_ORIGIN:origin,RELEASE_SHA:sha,RELEASE_TARGET:'stage',GITHUB_RUN_ID:'123',QA_MEMBER_A_SESSION:tokens[0],QA_MEMBER_B_SESSION:tokens[1]};
-  assert.deepEqual(await smoke(env,transport),{sha,stage:'passed',target:'stage',deployment:'isolated-test-deployment',schemaVersion:1,runId:'123'});
+  assert.deepEqual(await smoke(env,transport),{sha,stage:'passed',target:'stage',deployment:'isolated-test-deployment',schemaVersion:2,runId:'123'});
   await db.query('DELETE FROM sessions');
   await assert.rejects(smoke(env,transport));
  } finally {

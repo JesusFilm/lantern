@@ -41,6 +41,16 @@ export async function migrate(database: Pool) {
       `);
       await client.query('INSERT INTO schema_migrations(version) VALUES (1)');
     }
+    const approvals = await client.query('SELECT version FROM schema_migrations WHERE version = 2');
+    if (!approvals.rowCount) {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS approved_emails (
+          email text PRIMARY KEY CHECK (email = lower(btrim(email)) AND email <> '')
+        );
+        ALTER TABLE users ALTER COLUMN hosted_domain DROP NOT NULL;
+      `);
+      await client.query('INSERT INTO schema_migrations(version) VALUES (2)');
+    }
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
@@ -49,8 +59,8 @@ export async function migrate(database: Pool) {
 }
 
 export async function assertSchemaReady(database: Pool) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version = 1');
-  if (!result.rowCount) throw new Error('Required migration is missing.');
-  await database.query(`SELECT u.id, d.id, m.user_id, f.id, s.token_hash, l.state_hash, a.domain
-    FROM users u, departments d, memberships m, position_focuses f, sessions s, login_attempts l, allowed_domains a LIMIT 0`);
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2)');
+  if (result.rowCount !== 2) throw new Error('Required migration is missing.');
+  await database.query(`SELECT u.id, d.id, m.user_id, f.id, s.token_hash, l.state_hash, a.domain, e.email
+    FROM users u, departments d, memberships m, position_focuses f, sessions s, login_attempts l, allowed_domains a, approved_emails e LIMIT 0`);
 }

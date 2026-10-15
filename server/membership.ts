@@ -1,3 +1,4 @@
+import { isAdmitted, type AdmissionPolicy } from './admission.js';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
@@ -27,12 +28,15 @@ export async function membership(db: Pool | PoolClient, userId: string) {
   return rows[0] as { id: string; name: string; role: 'member' | 'career-lead' } | undefined;
 }
 
-export async function addMember(db: Pool, actorId: string, userId: string) {
+export async function addMember(db: Pool, actorId: string, userId: string, policy: AdmissionPolicy = 'production') {
   return membershipWrite(db, async (client) => {
     const department = await membership(client, actorId);
     if (department?.role !== 'career-lead') throw new AccessError(403, 'Only the career lead can add users.');
-    const target = await client.query('SELECT id FROM users WHERE id::text = $1', [userId]);
+    const target = await client.query('SELECT id,email,hosted_domain FROM users WHERE id::text = $1', [userId]);
     if (!target.rowCount) throw new AccessError(400, 'Select a registered user.');
+    if (!await isAdmitted(client, { email: target.rows[0].email, hostedDomain: target.rows[0].hosted_domain }, policy)) {
+      throw new AccessError(403, 'This account is not currently approved for access.');
+    }
     const existing = await client.query('SELECT department_id, deleted_at FROM memberships WHERE user_id = $1', [userId]);
     if (existing.rowCount) {
       const row = existing.rows[0];
@@ -62,7 +66,8 @@ export async function setupDepartment(db: Pool, name: string, leadEmail: string)
   if (!name.trim() || !leadEmail.trim()) throw new Error('Department name and registered career-lead email are required.');
   await membershipWrite(db, async (client) => {
     const users = await client.query(`SELECT u.id FROM users u JOIN allowed_domains a ON a.domain=u.hosted_domain
-      WHERE lower(u.email)=lower($1)`, [leadEmail.trim()]);
+      JOIN approved_emails e ON e.email=lower(btrim(u.email))
+      WHERE lower(btrim(u.email))=lower($1)`, [leadEmail.trim()]);
     if (users.rowCount !== 1) throw new Error('Career lead must first register with an approved Google work account; email must identify one account.');
     const leadId = users.rows[0].id;
     const departments = await client.query('SELECT id, name, deleted_at FROM departments');
