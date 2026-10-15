@@ -1,49 +1,39 @@
-# Lantern — starting product requirements
+# Lantern — small team trial
 
-Status: discovery draft. The user authorized a local TypeScript/React/PostgreSQL foundation and database health check on 13 October 2026. Product workflows remain candidates for later prototypes and specification.
+Status: current product direction, reconciled 15 October 2026. This planning increment preserves and reviews the delivered application, merges it to origin/main, and prepares implementation tickets. It does not implement or deploy the next milestone.
 
-## Problem
+## Outcome and people
 
-Engineers are working, but their understanding of their role may be unclear: where work comes from, what they are working towards, who they serve, and how it connects to their development. Conversations uncover that understanding; a coherent record makes it possible to revisit and act on it.
+Get Lantern in front of a small invited group to learn whether members can prepare a useful position focus and the career lead can read and confirm it. One Engineering team, one career lead (Jaco), and members. No administrator role or multiple-department product workflow is required.
 
-## Users
+Members manage their own draft focuses and read the guides. The career lead sees the member list, opens each member's focuses, and confirms an agreed focus after discussion. Other members cannot see that person's focuses. The career lead's extra access is read plus confirmation; editing another person's draft is not included.
 
-- Engineers describe their role, clarify goals, contribute observations, and revisit their development record.
-- The career lead guides conversations, understands each person's position focus, and follows their development.
-- The engineering manager, delivery lead, and other specifically selected recipients receive read-only summaries of relevant insights.
+## Delivered baseline
 
-## Intended benefit
+The accepted Refine 4 application persists titled, dated focuses, objectives and SMART goals, including optional Personal Development and Leadership types. It opens documents in a compact read view and edits through spacious dialogs. Guides are separate: three objective steps, five SMART steps and a generic example with one objective and two goals. Account display names persist. Empty and partial drafts are valid.
 
-A shared, evolving understanding of each person's role and development gives engineers clearer direction and helps the career lead provide informed support and communicate progress. The software supports human conversations and judgement; it does not supply leadership experience or decide people's development for them.
+PostgreSQL persistence, server-resolved identity/membership, owner/department isolation and optimistic save conflicts exist. Google/session code exists but real Google access has not been verified. The private VM walkthrough uses a single shared local account; it is not hosted team access. Career-lead focus browsing and confirmation locks do not exist yet.
 
-## Starting workflow
+The user accepted this minimal application. The old full engineering example, mission/context banner, gaps/next-step fields and guide review-process content were intentionally removed from the active experience. Do not restore them from historical tickets.
 
-1. Small catch-ups capture what each engineer believes their job is, where work originates, intended outcomes, users, and uncertainties.
-2. The career lead requests a position focus. Clear instructions, examples, and supporting training material help engineers submit it and return to view it.
-3. Ongoing discussions revisit or edit the position focus throughout the year. Dated snapshots preserve its evolution. Conversation records may include manual observations, engineer contributions, transcripts, and recorded audio where available; the exact capture mechanism is undecided.
-4. The career lead collates insights about development, goals, and growth and selects read-only summaries to share with specific recipients through email or Slack. Whether these contain text, files, or access-controlled links is undecided.
+## Next: M06 — run a secure hosted team trial
 
-## Working scope
+- Google work-account sign-in requires an exact email pre-approved directly in the environment's database, as explicitly chosen by Jaco. Keep verified identity, approved hosted domains and active membership checks. No signup, invitation or approval administration UI. Use separate QA approvals in stage.
+- Members read/edit only their own drafts and read their confirmed focuses. The career lead reads all current members' focuses in the team. Membership removal ends member access and preserves records; no other-team access or role grants from client input.
+- The career lead confirms and locks after discussion with the member, as explicitly chosen by Jaco. Store who confirmed and when. Confirmed title, dates, objectives and goals become immutable on the server. There is no submission queue or additional approver.
+- Deploy isolated Railway stage and production environments, each with its own database, secrets and Google callback. Stage provides authenticated QA access. Production receives the exact revision verified in stage through a documented promotion process.
+- Verify real Google access, multiple accounts, persistence, lead visibility, privacy, locks, errors and recovery before a limited production trial. Record observed results separately from automated evidence.
 
-The user prefers a team-managed system with career-lead oversight. Personal private-note management is outside the current product direction. “Team-managed” does not yet settle whether engineers can view one another's records; exact permissions and visibility remain open.
+The [M06 specification](../.scratch/team-trial/spec.md) and [tickets](../.scratch/team-trial/breakdown.md) define acceptance and dependencies. New implementation remains a subsequent task; ticket readiness does not claim delivery.
 
-Multiple logins, central feedback requests and responses, dashboards, and future hosting are candidate capabilities. A decision supported by an insight must be identified before choosing reporting or AI features.
+## Deferred direction
 
-## Authorized foundation
+Anticipated phases are initial draft/confirm, midyear adjustment/review, and year-end review/retrospective. Only initial confirmation is next. Later work should preserve the confirmed baseline, likely by a lead-initiated linked draft copy; exact copying, version navigation, correction/unlock rules and retrospective content need a later decision. The existing save version is concurrency protection, not historical versioning.
 
-- Local Git repository; no GitHub repository or remote yet. An official organization upstream may follow later.
-- TypeScript, React, and a server connecting to PostgreSQL.
-- GET `/health` performs a fresh `SELECT 1` through the web server. Successful query: HTTP 200. Database failure: HTTP 503 with a generic response.
-- A plain React page shows the health result. No styling or product screens yet.
-- Local isolated PostgreSQL; no personnel records, private tracker migration, invitations, feedback collection, or deployment in this increment.
+Catch-up notes, requests/submission, notifications, schedules, dashboards and shared summaries, administrators, multiple departments/leads/memberships, guide editing and broad lifecycle management are parked candidates. They are not promised future requirements. January 2027 is a historical provisional target, not a current commitment. See the [roadmap](ROADMAP.md) and [deferred register](../.scratch/position-focus-guide/deferred.md).
 
-## Evidence of success to validate
+## Scope and completion
 
-- A catch-up can lead to a position focus and a concrete next step.
-- Engineers can revisit their submissions and understand who can see their information.
-- The career lead can use dated records to discuss change and prepare an appropriate summary.
-- The workflow's administrative burden is workable.
+This reconciliation is complete when the delivered code and applicable uncommitted project work have passed review and verification and are merged to origin/main, with M06 specified and its next implementation tickets ready. M06 itself is complete only after stage acceptance and a checked production promotion; these are separate outcomes.
 
-## Next discovery decisions
-
-Position-focus content and agreement lifecycle; exact access and summary-sharing rules; editing and snapshot rules; recording/transcript expectations; feedback attribution; retention, deletion and recovery; hosting and operations ownership; the first useful reporting decisions; and MVP boundaries with acceptance examples.
+Personnel records, approved real emails and credentials stay outside Git. Preserve current local data and the retained prototype worktree/viewer. Prototype controls and assets are not runtime dependencies of the application.

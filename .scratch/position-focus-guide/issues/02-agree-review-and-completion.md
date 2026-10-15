@@ -10,6 +10,12 @@ Slice: Position focus guide
 Summary: Agree who reviews a position focus and what must happen before it counts as complete.
 
 ---
+## Current scope — 15 October 2026
+
+This resolved decision is retained as planning history. The [current PRD](../../../docs/PRD.md), [accepted baseline](../spec.md) and [M06 team trial](../../team-trial/spec.md) supersede earlier scope where they differ. The original Answer and discussion below have not been rewritten.
+
+Joint discussion/agreement remains the basis of confirmation, with no additional approver. Jaco has now specified that the career lead confirms and locks the focus. The current application does not yet implement that action. M06 owns initial locking; M04 owns later phase revision planning. The historical timing and broad workflow assumptions do not authorize extra states or scheduling.
+
 ## Question
 
 Who must review or approve a position focus, and what event or agreement makes it complete for the first team cycle?

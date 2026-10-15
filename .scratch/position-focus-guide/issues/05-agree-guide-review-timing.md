@@ -9,6 +9,12 @@ Slice: Position focus guide
 Summary: Career leads define departmental review timing in guidance; no fixed interval or default schedule applies.
 
 ---
+## Current scope — 15 October 2026
+
+This resolved decision is retained as planning history. The [current PRD](../../../docs/PRD.md), [accepted baseline](../spec.md) and [M06 team trial](../../team-trial/spec.md) supersede earlier scope where they differ. The original Answer and discussion below have not been rewritten.
+
+For this team, Jaco now anticipates initial draft/confirmation, midyear adjustment/review and year-end review/retrospective. Initial confirmation is M06; later phase mechanics are deferred to M04. No dates, automated cadence, notification or departmental guide editor are required. The old practical timing protocol is superseded rather than passed.
+
 ## Question
 
 How should the guide explain the first review a month after writing a focus alongside the set annual review, adjustment and retrospective periods, including what readers are told when calendar details are not yet supplied?

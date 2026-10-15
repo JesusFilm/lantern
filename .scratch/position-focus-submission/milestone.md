@@ -1,33 +1,25 @@
 Kind: milestone
 ID: M03
-Title: Engineers can complete a position focus
-Status: Planning
+Title: Close the superseded submission-workflow plan
+Status: Complete
 Slice: Position focus submission
-Sequence: 3
-Target: November–early December 2026
-Effort: Largest
-Summary: Give engineers a reachable, authenticated workflow to receive a request, save a draft, submit it and reopen it.
+Sequence: 6
+Target: Closed 15 October 2026
+Summary: Split the old submission milestone into delivered authoring and the focused hosted-trial work without adding a request/submission pipeline.
 
 ---
-## Outcome
+## Closure outcome
 
-An engineer can respond to a position-focus request without relying on the career lead to enter their response.
+This planning milestone is closed as **superseded**, not as fully delivered. The user narrowed the next goal to getting the important functionality in front of a small group of people.
 
-## Intended scope
+- Persisted member authoring, reopening drafts and guides are delivered and credited to [M01/10](../position-focus-guide/issues/10-persisted-refine-4-authoring.md).
+- Approved login, secure member isolation, career-lead member/focus reading, initial confirmation/locking, hosted environments and recovery/promotion belong to [M06](../team-trial/spec.md).
+- An app-generated request, invitation, submission queue/state or email/Slack sending workflow is not required for the trial and has not been delivered or approved as new work.
 
-- Engineer sign-in, account provisioning and agreed access rules.
-- A request containing the guide, example and supporting resources.
-- Draft saving, submission and subsequent viewing with persistent records.
-- A shared reachable website and a workable database recovery process.
-- Initially send request links manually through email or Slack.
+## Historical scope
 
-## Done when
+The original November–early December plan combined requests, draft saving, submission, subsequent viewing, lead access, hosted delivery and recovery. The date and single combined workflow are superseded. No claim is made that users received a request or submitted a focus. Confirmation/locking is distinct from the authoring already delivered.
 
-- [ ] An invited engineer can open a request, save a draft, submit and reopen it.
-- [ ] The career lead can see the submission, and unrelated access follows the agreed rules.
+## Follow-through
 
-## Planning
-
-This milestone is accepted as a starting roadmap outcome. Detailed scope, decisions and implementation tickets remain to be planned. It is not an implementation task ready for an agent to execute.
-
-Use the adjacent planning map to work through open decisions. The target windows guide sequencing; they are not engineering estimates. The working deadline is the end of January 2027, with the exact date and definition of completion still to be confirmed.
+Use the [current PRD](../../docs/PRD.md), [roadmap](../../docs/ROADMAP.md) and [M06 tickets](../team-trial/milestone.md). There are no remaining implementation tickets under M03 and no blocker requiring a request mechanism before the trial.

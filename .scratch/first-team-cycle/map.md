@@ -1,29 +1,25 @@
 Labels: wayfinder:map
 Milestone: M05
+Priority: Deferred
 
 ---
-# Plan complete the first team cycle
+# Revisit team-cycle completion after trial use
 
 ## Destination
 
-Agree the scope and decisions needed to specify [Complete the first team cycle](milestone.md) and break it into buildable tickets.
-
-## Notes
-
-- The milestone file defines the outcome; this map records its planning progress.
-- Use Wayfinder for decision discovery, to-spec for a settled specification and to-tickets for an approved implementation breakdown.
-- This is planning. Recording the milestone does not authorize product implementation.
-- Keep the existing five readiness labels. Individual decision tickets use the tracker’s Type and Status conventions.
+Agree the participating team, completion outcome and timing after the [M06 hosted trial](../team-trial/milestone.md) establishes the initial workflow.
 
 ## Decisions so far
 
+- 15 October 2026: prioritize a small secure trial over a speculative full annual roadmap.
+- No committed January 2027 deadline. The former 31 January date remains historical/provisional.
+- Individual confirmation/locking belongs to M06; later review phases belong to M04. Neither proves whole-team completion.
+- The career-lead member/focus view may be enough to support manual follow-up. Do not assume a separate dashboard or request/submission pipeline.
+
 ## Not yet specified
 
-- Confirm the exact January deadline and participating roster.
-- The final completion criterion and any required approval.
-- Exceptions for absent engineers or unresolved focus questions.
+Participating roster, date, exceptions and team-level completion. Resolve only when this outcome is resumed; no ready implementation tickets exist here.
 
-## Out of scope
+## Out of scope now
 
-- Unrelated milestones and later product expansion.
-- Automated messaging, transcription, AI analysis and broad HR functionality for the January cycle.
+Automated messaging, reporting/summary distribution, feedback collection, transcription, AI and broad HR workflows.

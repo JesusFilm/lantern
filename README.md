@@ -1,73 +1,51 @@
 # Lantern
 
-Lantern helps ministry teams clarify their contribution, grow through coaching, and connect their work to the wider mission. This repository contains its local application foundation and Markdown planning/ticket system. The starting product direction is in [docs/PRD.md](docs/PRD.md). Current implementation is an unstyled React page plus a database-backed health route; product workflows are still being specified.
+Lantern helps members write position focuses containing objectives and SMART goals. The current application provides a persisted, read-first workspace, focused editing dialogs, concise guides and account-name editing. The next milestone is a small secure hosted team trial with career-lead reading, confirmation locks and Railway stage/production.
 
-## Planning
+[Current product scope](docs/PRD.md) · [Roadmap](docs/ROADMAP.md) · [Next tickets](.scratch/team-trial/breakdown.md) · [Application details](docs/system/position-focus-application.md)
 
-Start at [.scratch/roadmap/map.md](.scratch/roadmap/map.md). Milestones, planning maps, feature specs and individual Markdown tickets live under `.scratch/<feature>/`; [tracker conventions](docs/agents/issue-tracker.md) define the layout. The default triage labels describe readiness for the next decision or action.
+## Current private walkthrough
 
-## Local ticket board
+The [local walkthrough](https://jacobuntu.tail5c6dbf.ts.net:8444/) runs on the Jacobuntu VM behind Tailscale. Everyone using it shares one persistent local account. It is not the upcoming hosted multi-user trial. Google/session/membership code exists; real Google configuration and acceptance remain outstanding.
 
-On Jaco’s Mac, the ticket board starts automatically at login. Bookmark http://127.0.0.1:4393. To install or refresh the login service, run `python3 tools/ticket-board/macos/install.py`. For a manual development session on another machine, run `npm run tickets`. The selected C layout groups tickets by feature and shows rendered Markdown with a separate metadata panel. Search, item-type, readiness-label, and feature filters combine. Milestone cards are explicitly marked; detailed tickets remain separate.
-
-The board reads `.scratch/<feature>/milestone.md` and `.scratch/<feature>/issues/*.md` live: refresh the page after edits or let it update automatically every five seconds. No HTML rebuild is needed. The board runs on TypeScript/Node.js with the same npm dependencies as the main website. The macOS login service keeps the server running and restarts it after an exit. It is available while the Mac is awake and you are logged in. With no tracker records, it shows an empty board. Feature groups are derived only from existing tickets.
-
-The viewer lives in [tools/ticket-board/](tools/ticket-board/README.md). Run `npm run tickets:test` for tracker-format and live-reading checks.
+The [prototype journey](https://jacobuntu.tail5c6dbf.ts.net/lantern-prototypes/) preserves the original guide, image concepts, layouts and refinements separately. The former standalone guide viewer was consolidated there. `npm run preview:dev` and `npm run preview:build` retain the **historical** guide entrypoint for regression/reference; the current application uses `client/workspace/LearningGuide.tsx`.
 
 ## Run locally
 
-Requires Node.js 22.12+ and Docker with Compose. PostgreSQL retains the existing `career-lead` Compose project and persistent volume to preserve local data through the Lantern rename, bound to loopback port 55439. The app uses loopback port 4391.
+Requires Node.js 22.12+, Docker with Compose and Chromium for browser tests. PostgreSQL retains the existing `career-lead` Compose project/volume and loopback port 55439. The app defaults to loopback port 4391. Preserve an existing `.env` rather than replacing it.
 
 ```sh
 cp .env.example .env
 npm ci
-npm run dev
+npx playwright install chromium
+npm run dev:local
 ```
 
-The development command starts the local PostgreSQL service through its npm predev hook, waits for it to be healthy, then launches the website. The ticket board runs independently and requires no database. Use separate terminals to run both.
-
-The development command uses tsx watch; this avoids a repeated-restart issue observed with Node 24.3 native watch mode and the Vite integration.
-
-Open http://127.0.0.1:4391. The React page calls the same-origin `/health` route. The server runs a fresh PostgreSQL `SELECT 1` for every request, returning HTTP 200 with `{"status":"ok","database":"ok"}` or HTTP 503 with `{"status":"unavailable","database":"unavailable"}`. Health responses disable ETags and use `Cache-Control: no-store`; failure responses do not include connection details. Connection and query waits are bounded.
-
-```sh
-curl -i http://127.0.0.1:4391/health
-```
-
-The database URL stays server-side. `.env` is ignored; example credentials are for isolated local development only. When changing database credentials after initialization, remember that the existing database volume retains its original credentials.
-
-## Verify
-
-Start PostgreSQL first, then run:
+`dev:local` starts PostgreSQL and explicitly enables the local account. Use `npm run dev` for normal Google/session authentication and follow [access setup](docs/system/access-setup.md). Local access is off by default, requires loopback and is rejected with `NODE_ENV=production`.
 
 ```sh
 npm run typecheck
 npm test
 npm run build
-npm start
 ```
 
-Tests cover the ticket reader and real HTTP requests against PostgreSQL: health-check success and an unavailable database. The production build serves the compiled React page and the same health endpoint from one Node server. Stop the development server before `npm start`, since they use the same port.
+Tests create isolated real PostgreSQL schemas and preserve walkthrough data. They cover persistence, HTTP/browser authoring, ownership/membership access, Google validation, guides, failures and tracker regressions. To serve the compiled build locally, stop the dev server and run `npm start`. It currently expects `.env`; hosted runtime preparation is [M06/04](.scratch/team-trial/issues/04-hosted-runtime.md).
 
-To manually prove dependency failure and recovery while the app is running:
+`GET /health` runs a fresh database query and returns 200 or a generic 503 without connection details. `.env`, runtime credentials and personnel records stay outside Git. PostgreSQL data remains in the existing Docker volume; do not reset it to test releases.
 
-```sh
-npm run db:stop
-curl -i http://127.0.0.1:4391/health
-npm run db:start
-curl -i http://127.0.0.1:4391/health
-```
+## Planning and ticket board
 
-Expect 503 while PostgreSQL is stopped and 200 once it returns. `npm run db:stop` preserves database data. Stop the web server with Ctrl+C.
+Start with [the roadmap map](.scratch/roadmap/map.md). Local Markdown milestones, specs and tickets live in `.scratch/<feature>/` under [tracker conventions](docs/agents/issue-tracker.md). Ready tickets are separate from delivered behavior. M01 is the accepted baseline; M06 is next. Later phases and administration are [deferred candidates](.scratch/position-focus-guide/deferred.md).
 
-## Layout
+Run `npm run tickets` for the board on http://127.0.0.1:4393. The private VM [roadmap viewer](https://jacobuntu.tail5c6dbf.ts.net:8443/) reads the same files. The TypeScript board refreshes Markdown records without regenerating HTML. [Board tooling](tools/ticket-board/README.md) includes the optional macOS login-service installer; it is separate from application hosting.
 
-- `client/`: unstyled React entry point.
-- `server/`: Express application, PostgreSQL pool, and server entry point.
-- `shared/`: health response contract.
-- `docs/PRD.md`: product direction and open decisions.
-- `compose.yaml`: local PostgreSQL only.
+## Repository
 
-The private upstream is `JesusFilm/lantern` on GitHub. Product code and local Markdown planning/tickets are versioned here; personnel records and runtime secrets stay outside Git.
+- `client/workspace/`: focus authoring, current guides, account and membership UI.
+- `server/`: HTTP identity/validation, Google sessions, domain/storage, operations and schema.
+- `shared/`: typed contracts.
+- `docs/system/`: operating notes, verification and review evidence.
+- `docs/research/`: supporting research; historical comparisons are not current requirements.
+- `.scratch/`: current plans and preserved decision history.
 
-Implementation references: [Vite middleware integration](https://vite.dev/guide/ssr#setting-up-the-dev-server), [node-postgres pooling](https://node-postgres.com/apis/pool), and the [official PostgreSQL container](https://hub.docker.com/_/postgres).
+[AGENTS.md](AGENTS.md) requires TDD, server-authoritative identity/ownership and separated responsibilities. Product code and plans are tracked in the private `JesusFilm/lantern` upstream. The prototype worktree remains `/home/jacobuntu/Ops/worktrees/lantern-ui-prototypes` on `codex/lantern-ui-prototypes`; application code must not depend on it.

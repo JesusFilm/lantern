@@ -1,31 +1,36 @@
 Kind: milestone
 ID: M04
-Title: Review and clarify together
+Title: Preserve later position-focus review phases
 Status: Planning
-Slice: Position focus review
-Sequence: 4
-Target: December 2026–January 2027
-Effort: Medium
-Summary: Review submissions in conversations, record unresolved questions and preserve dated focus revisions.
+Priority: Deferred next
+Slice: Position focus phase revisions
+Sequence: 3
+Target: After the initial team trial
+Summary: Let the career lead initiate later review and adjustment while preserving each original confirmed focus.
 
 ---
-## Outcome
+## Candidate outcome
 
-The career lead and engineer can turn a submission into an understood position focus and revisit how it changes.
+The user anticipates initial draft/confirmation, midyear adjustment/review and year-end review/retrospective. [M06](../team-trial/spec.md) implements only the initial confirmation/lock. This milestone is the next deferred priority after that behavior works in the trial.
 
-## Intended scope
+## Direction and boundaries
 
-- Discuss a submitted focus and record the review and remaining uncertainties.
-- Revise the focus while preserving dated snapshots.
-- Track requested, drafting, submitted and reviewed states with clear meanings.
+The career lead may initiate a later phase manually and make a new editable focus available to its member. Preserve the original confirmed focus unchanged. A linked clone is the smallest candidate; compare it with an easy revision mechanism during planning rather than committing to a general versioning system now.
+
+No automatic schedule, broad requested/drafting/submitted/reviewed state model, review-note system, uncertainties tracker or additional approver is implied. Do not unlock the original confirmed record as a shortcut that loses its history.
+
+## Not yet specified
+
+- Whether later phases use linked clones or a dedicated revision model.
+- How the lead starts a phase and how members discover it.
+- How phase/date labels, lineage and the current focus are presented.
+- Which content can be adjusted and how confirmation works for the later phase.
+- What year-end review/retrospective records, if anything, beyond the focus itself.
 
 ## Done when
 
-- [ ] A review and revision can be recorded without losing the earlier focus.
-- [ ] Both participants can find the current focus, previous versions and unresolved questions.
+Completion criteria will be agreed when the milestone is resumed. At minimum the old confirmed focus must remain available unchanged while the later editable work is distinguishable. No implementation ticket is ready solely from this planning direction.
 
-## Planning
+## Historical scope
 
-This milestone is accepted as a starting roadmap outcome. Detailed scope, decisions and implementation tickets remain to be planned. It is not an implementation task ready for an agent to execute.
-
-Use the adjacent planning map to work through open decisions. The target windows guide sequencing; they are not engineering estimates. The working deadline is the end of January 2027, with the exact date and definition of completion still to be confirmed.
+The earlier December–January plan proposed submission reviews, uncertainties and dated snapshots with several workflow states. That broader scope and calendar commitment are superseded by this smaller, manually initiated phase direction. [Current PRD](../../docs/PRD.md) governs the immediate product.

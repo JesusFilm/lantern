@@ -1,31 +1,26 @@
 Kind: milestone
 ID: M02
-Title: Know each engineer’s current situation
+Title: Revisit conversation context after the team trial
 Status: Planning
+Priority: Deferred
 Slice: Engineer context
-Sequence: 2
-Target: October–November 2026
-Effort: Medium
-Summary: Maintain an engineer roster and capture dated catch-up notes about current work, expectations and uncertainties.
+Sequence: 4
+Target: Not scheduled
+Summary: Reconsider dated catch-up notes only when trial use demonstrates a need beyond members and position focuses.
 
 ---
-## Outcome
+## Current disposition — 15 October 2026
 
-The career lead can build and revisit an informed understanding of each engineer before requesting a position focus.
+Parked. The earlier roster-and-conversation-record milestone is not a prerequisite for testing Lantern with people. The career lead's member list and drill-in to a member's focuses are now [M06](../team-trial/milestone.md), using the existing membership baseline.
 
-## Intended scope
+## Candidate outcome
 
-- Career-lead sign-in and a persistent engineer roster with contact details.
-- Dated manual conversation records covering current work, its source, intended users, outcomes and uncertainties.
-- A readable history that supports preparation for the next conversation.
+If concrete use requires it, help the career lead revisit useful context from conversations. Fields, contributor/correction rules, retention and access remain unspecified. No implementation tickets are ready, and no personal contact database or note-taking workflow is authorized by this record.
 
-## Done when
+## Revisit when
 
-- [ ] The lead can add an engineer, save a catch-up record and revisit it later.
-- [ ] Records retain their date and author, and the agreed access rules are enforced.
+Trial feedback identifies information that cannot reasonably live in a position focus or the existing conversation process. Decide the smallest useful behavior and acceptance criteria then.
 
-## Planning
+## Historical scope
 
-This milestone is accepted as a starting roadmap outcome. Detailed scope, decisions and implementation tickets remain to be planned. It is not an implementation task ready for an agent to execute.
-
-Use the adjacent planning map to work through open decisions. The target windows guide sequencing; they are not engineering estimates. The working deadline is the end of January 2027, with the exact date and definition of completion still to be confirmed.
+The 13 October starting roadmap proposed a roster with contact details, dated manual conversation records and readable author/date history, targeting October–November 2026. Those were candidate planning outcomes, not delivered features. The dates and implication that notes must precede focus drafting are superseded. [Current PRD](../../docs/PRD.md) and [roadmap](../../docs/ROADMAP.md) govern priorities.

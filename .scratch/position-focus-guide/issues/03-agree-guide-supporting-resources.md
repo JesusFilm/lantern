@@ -9,6 +9,12 @@ Slice: Position focus guide
 Summary: Decide which instructions, example and supporting material engineers need to prepare a meaningful position focus.
 
 ---
+## Current scope — 15 October 2026
+
+This resolved decision is retained as planning history. The [current PRD](../../../docs/PRD.md), [accepted baseline](../spec.md) and [M06 team trial](../../team-trial/spec.md) supersede earlier scope where they differ. The original Answer and discussion below have not been rewritten.
+
+The accepted Refine 4 resources are fixed three-step Objectives and five-step SMART guides plus a concise generic example with one objective and two goals. Optional development uses the same objective/goal structure and visible Add Objective types. The broader mission banner, full engineering example, department editors/selectors and gap/review teaching were superseded or parked.
+
 ## Question
 
 What instructions, completed example and supporting resources must the guide provide so an engineer can prepare a meaningful position focus and understand how it will be reviewed?

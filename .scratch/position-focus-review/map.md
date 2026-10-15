@@ -1,29 +1,25 @@
 Labels: wayfinder:map
 Milestone: M04
+Priority: Deferred next
 
 ---
-# Plan review and clarify together
+# Plan later review phases after initial locking
 
 ## Destination
 
-Agree the scope and decisions needed to specify [Review and clarify together](milestone.md) and break it into buildable tickets.
-
-## Notes
-
-- The milestone file defines the outcome; this map records its planning progress.
-- Use Wayfinder for decision discovery, to-spec for a settled specification and to-tickets for an approved implementation breakdown.
-- This is planning. Recording the milestone does not authorize product implementation.
-- Keep the existing five readiness labels. Individual decision tickets use the tracker’s Type and Status conventions.
+Specify the smallest manual phase-change mechanism after [M06](../team-trial/milestone.md) makes initial draft/confirmation usable.
 
 ## Decisions so far
 
+- 15 October 2026: expected phases are initial draft/confirmation, midyear review/adjustment and year-end review/retrospective.
+- The career lead confirms and locks the initial focus in M06. Members cannot keep editing a confirmed original.
+- Later work must preserve that original unchanged. A linked copy into a new editable focus is a candidate, not yet a selected data model.
+- Later phase initiation/unlocking of new work is manual; no scheduler is required.
+
 ## Not yet specified
 
-- How submission, review, agreement and approval differ.
-- Who can revise a focus and how corrections are handled.
-- What event creates a snapshot and which version is current.
+Clone versus revision mechanics, lineage/current selection, phase naming/date rules, later confirmation and retrospective content. Use concrete trial feedback and keep the public behavior small before ticketing implementation.
 
-## Out of scope
+## Out of scope now
 
-- Unrelated milestones and later product expansion.
-- Automated messaging, transcription, AI analysis and broad HR functionality for the January cycle.
+Changing confirmed originals, generic workflow engines, automatic reminders/schedules, submissions, review-note or uncertainty mechanisms. Do not infer those from the historical milestone.

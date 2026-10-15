@@ -1,0 +1,32 @@
+Kind: ticket
+ID: team-trial/07
+Title: Promote the verified revision and open the limited trial
+Milestone: M06
+Type: task
+Status: ready-for-human
+Blocked by: 06
+Implementation: Not started
+Slice: Hosted team trial
+
+---
+## Outcome
+
+Invited participants can use the stage-verified version in production, with a traceable release and recovery procedure.
+
+## Acceptance
+
+- [ ] Confirm successful 06 evidence, target production project/service and private participant approvals. Record the exact reviewed SHA, stage deployment and checks; production autodeploy stays off.
+- [ ] Capture a pre-release backup where data exists. Verify restore evidence, migration compatibility and application rollback target. Do not treat code rollback as a database rollback.
+- [ ] Deploy that tested commit (or identical tested image digest) to production with production-specific secrets/database. If code changes or latest main is different, select the verified revision or return it to stage.
+- [ ] On the verified production release, approve the intended lead/member emails directly in its database, perform initial Google login and backend lead bootstrap, and assign approved participants. Record production deployment ID/URL, revision and schema/migration result. Confirm healthy startup and safe rollback/failure handling with the prepared runbook.
+- [ ] Perform authenticated production smoke checks with approved lead/member accounts: own draft save/reopen, lead read, confirmation and lock, denied outsider/member-cross-access. Keep test content disposable and isolated from real personnel records where possible.
+- [ ] Record the production URL/access instructions for the invited group and a way for Jaco to collect trial feedback; no automated invitation/message sending is required.
+- [ ] Close M06 only when actual stage and production evidence exists. Review observed friction before selecting M04 or other deferred work.
+
+## Execution boundary
+
+Requires operator-controlled production configuration and a concrete release decision. This ticket is prepared, not executed by the planning reconciliation. Preserve all current local data/services and prototype hosting.
+
+## Sources and verification
+
+Follow [current specification](../spec.md), [breakdown](../breakdown.md) and [AGENTS.md](../../../AGENTS.md). Application changes use failing public-behavior tests before implementation and isolated real PostgreSQL. Ticket readiness is not a claim of completed implementation or authorization to deploy.

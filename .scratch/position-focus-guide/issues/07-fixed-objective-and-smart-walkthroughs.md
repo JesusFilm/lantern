@@ -1,40 +1,44 @@
 Kind: ticket
-Title: Use fixed objective and SMART walkthroughs
+Title: Use the accepted concise objective and SMART guides
 Milestone: M01
 Type: task
-Status: needs-info
+Status: resolved
 Blocked by: 06
-Implementation: Pending explicit user approval
-Slice: Engineering beta
+Implementation: Complete for accepted Refine 4 scope; newcomer verification in M06/06
+Slice: Position focus baseline
 
 ---
+# 07: Use the accepted concise objective and SMART guides
 
-# 07: Use fixed objective and SMART walkthroughs
+## Current disposition — 15 October 2026
 
-## Execution hold
+The accepted Refine 4 guide is implemented: Objectives in three small steps, SMART goals in five, with separate side navigation, clearly distinguished weak/strong examples and prominent “Why it works” explanations. Guidance stays separate from authoring.
 
-Scope and dependencies are approved for publication only. **Do not implement until Jaco explicitly authorizes it.** The needs-info status represents this authorization hold; completed dependencies do not lift it.
+## Scope reconciliation
 
-**What to build:** Members open optional guidance and use independently selectable objective and SMART walkthroughs with mission context, gaps, development and review explanations.
+This remains resolved against the accepted concise guide. The earlier mission-context banner, gap/next-step teaching, review/lock-in/timing explanations and broad content checklist were intentionally superseded. Their old checked boxes are retained in the [historical ticket](../history/2026-10-15-pre-team-trial/07-fixed-objective-and-smart-walkthroughs.md), not carried forward as claims about today's app.
 
-## Acceptance criteria
+Jaco accepted the minimal local experience. Automated browser coverage is part of the last reported 39-test suite on 15 October 2026. Newcomer usefulness has not been human-verified; relevant current-app checks are [M06/06](../../team-trial/issues/06-stage-verification.md).
 
-- [ ] Fixed curated content is available from first run, with visible help, short steps, Next transitions and restrained application-controlled presentation.
-- [ ] Preserve exact mission wording and the reader-controlled collapsible context banner across steps; omit absent context.
-- [ ] Teach all agreed content areas without mandatory-field assumptions; include internal contributions and discovery, active clarification and leadership responsibility for absent direction.
-- [ ] Improve a vague goal through all SMART qualities without forcing numerical goals or five written sections.
-- [ ] Explain optional development, joint review/lock-in, revisable baseline and remaining gaps. No focus-editing or lock-in implementation is included.
-- [ ] Explain departmental timing, illustrative cycles and referral to the career lead when timing is missing; no default cadence or calendar feature.
-- [ ] Browser checks cover walkthrough entry/selection/navigation and context behavior. Review content against D01–D05 and later beta decisions. Do not create text editors.
+## Sources
 
-**Traceability:** specification stories 6–10, 12–13; D01–D03/D05.
-
-## Sources and boundaries
-
-Follow the [specification](../spec.md), [approved breakdown](../breakdown.md) and [deferred features](../deferred.md). Publication does not authorize implementation, deployment or milestone closure.
+[Accepted baseline](../spec.md), [M01 closure](../milestone.md), [current PRD](../../../docs/PRD.md) and [M06](../../team-trial/milestone.md).
 
 ## Comments
+
+### 15 October 2026 — Reconciled for the team trial
+
+The current disposition above supersedes the original scope and execution holds. Historical comments below describe what was true at their recorded date; they are not fresh verification claims or current authorization requirements.
 
 ### 14 October 2026 — Publication approved
 
 Jaco approved the four slices and dependencies and requested individual tickets. Implementation remains pending explicit approval.
+
+
+## Answer
+
+Implemented on 14 October 2026 after Jaco authorized completing 07–08 and the automated/preparation portion of 09, with human verification deferred to final review. The real app serves curated content only to active members through `/api/guide`; a separate static preview shares the guide component and fixed content without Google, accounts or a database.
+
+Content was reviewed against consolidated D01–D05, the beta deferrals and the supplied working-example image. Typecheck, 25 automated checks, production build and preview build pass. Chromium covers independent walkthrough navigation, context retention/omission, example discovery, mobile/keyboard behavior and the integrated member journey. Private HTTPS HTML/assets and published browser interactions pass on the VM. Practical human evidence is still pending in ticket 09; M01 remains open.
+
+[Open preview](https://jacobuntu.tail5c6dbf.ts.net/lantern-guide/) · [Verification and content-review record](../../../docs/system/guide-verification.md).
