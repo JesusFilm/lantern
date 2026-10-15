@@ -1,5 +1,7 @@
 # Hosted runtime and release runbook
 
+Current interim milestone (16 October 2026): [hosting-only Railway staging](hosting-only-staging.md). Authentication setup is deferred. Keep unattended delivery disabled and use separate hosting evidence until real member sessions are available; the authenticated release path below remains the later requirement.
+
 Prepared 15 October 2026 for team-trial/04. This is repository implementation, not evidence of live configuration. Ticket 05 owns provisioning, secrets, repository rules and real Google setup. Never deploy this baseline to participants before approved-access is integrated.
 
 ## Runtime contract
@@ -15,6 +17,7 @@ Use Node 24.21.0 (the Dockerfile and CI use this version). `npm ci && npm run bu
 | `APP_ORIGIN` | Explicit canonical HTTPS origin when hosted; HTTP loopback allowed locally. No path/trailing slash. |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Both required when hosted. Configure separate local/stage/production OAuth clients and exact `/auth/google/callback` URLs during ticket 05. Local walkthrough may omit them. |
 | `LOCAL_ACCESS` | Separate opt-in `1`, default off; only loopback/non-production. Stage and production set `0`. |
+| `LANTERN_HOSTING_ONLY` | Temporary explicit `1` only with `LANTERN_ENV=stage`, no Google credentials and no local bypass. Disables login and recognition of existing sessions; production rejects it. Default off. |
 
 Omitting `LANTERN_ENV` retains local command compatibility but never opts into personal-account admission. It does not infer stage from NODE_ENV. Startup passes the resolved server-owned identity into the approved-access policy. Do not derive identity from a request or expose environment switching in the client.
 

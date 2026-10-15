@@ -48,6 +48,22 @@ test('production-only package migrates, starts without dotenv, serves assets and
      const session = await (await fetch(origin+'/api/session', { headers: { Cookie: `__Host-lantern-session=${personalToken}` } })).json() as { user: { id: string } | null };
      assert.equal(session.user?.id ?? null, n === 0 ? personalId : null);
      if (n === 0) {
+       await stop();
+       child = spawn(process.execPath, ['dist/server/index.js'], { cwd: dir, env: { ...env, LANTERN_HOSTING_ONLY:'1', GOOGLE_CLIENT_ID:'', GOOGLE_CLIENT_SECRET:'' }, stdio: ['ignore','pipe','pipe'] });
+       await new Promise<void>((resolve,reject) => { child!.once('exit', () => reject(new Error('Hosting-only startup failed'))); child!.stdout!.on('data', b => { if (String(b).includes('Lantern:')) resolve(); }); });
+       const headers = { Cookie: `__Host-lantern-session=${personalToken}`, Origin: env.APP_ORIGIN };
+       const locked = await (await fetch(origin+'/api/session', {headers})).json() as {user:unknown;signInAvailable:boolean;localAccess:boolean};
+       assert.equal(locked.user, null, 'hosting-only must reject previously valid sessions');
+       assert.equal(locked.signInAvailable, false);
+       assert.equal(locked.localAccess, false);
+       for (const path of ['/api/focuses', '/api/department', '/api/guide']) assert.equal((await fetch(origin+path,{headers})).status,401);
+       assert.equal((await fetch(origin+'/api/focuses',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({title:'Forbidden',start:'2026-01-01',end:'2026-12-31',sections:[]})})).status,401);
+       assert.equal((await fetch(origin+'/auth/google',{redirect:'manual'})).status,503);
+       assert.equal((await fetch(origin+'/health')).status,200);
+       await stop();
+       child = spawn(process.execPath, ['dist/server/index.js'], { cwd:dir, env, stdio:['ignore','pipe','pipe'] });
+       await new Promise<void>((resolve,reject) => { child!.once('exit', () => reject(new Error('Startup failed'))); child!.stdout!.on('data', b => { if (String(b).includes('Lantern:')) resolve(); }); });
+       assert.equal(((await (await fetch(origin+'/api/session', {headers})).json()) as {user:{id:string}}).user.id, personalId);
        execFileSync(process.execPath, ['dist/server/operations.js', 'remove-approved-email', 'personal@gmail.com'], { cwd: dir, env, stdio: 'pipe' });
        const revoked = await (await fetch(origin+'/api/session', { headers: { Cookie: `__Host-lantern-session=${personalToken}` } })).json() as { user: unknown };
        assert.equal(revoked.user, null);
