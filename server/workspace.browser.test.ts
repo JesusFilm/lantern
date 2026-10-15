@@ -150,10 +150,20 @@ test(
             .locator(".read-goal")
             .getByRole("button", { name: "Edit", exact: true })
             .click();
+          // Exercise the save/reload boundary with a genuinely pending HTTP write.
+          await page.route("**/api/focuses/*", async (route) => {
+            if (route.request().method() === "PUT" &&
+                route.request().postData()?.includes("Run three practice sessions by July.")) {
+              await new Promise((resolve) => setTimeout(resolve, 300));
+            }
+            await route.continue().catch(() => {});
+          });
           await page
             .getByLabel("SMART goal", { exact: true })
             .fill("Run three practice sessions by July.");
           await page.getByRole("button", { name: "Save changes" }).click();
+          await expect(page.getByRole("dialog")).toBeHidden();
+          await page.unroute("**/api/focuses/*");
           await page.reload();
           await expect(page.locator(".read-goal")).toContainText(
             "three practice",
@@ -268,6 +278,7 @@ test(
             .getByLabel("Display name", { exact: true })
             .fill("Jordan Updated");
           await page.getByRole("button", { name: "Save changes" }).click();
+          await expect(page.getByRole("dialog")).toBeHidden();
           await page.reload();
           await page
             .getByRole("button", { name: "Account", exact: true })

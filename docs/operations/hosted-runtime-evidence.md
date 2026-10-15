@@ -30,3 +30,7 @@ The [release runbook](hosted-release.md) lists required variables/secrets, exact
 4. `server/operations.ts` now checks schema readiness instead of migrating implicitly. Extend its existing dispatch with approved-access operations after the explicit compiled migration step.
 5. The isolated smoke fixture currently seeds baseline users/domains/sessions. When approved-access changes its required storage, update that fixture with synthetic approvals under the real new policy; do not add a runtime bypass. Stage cookies still come from normal Google login.
 6. Integrate this branch before approved access. Re-run all tests and a new stage delivery after integration; evidence for this branch alone does not cover the combined release.
+
+## First PR execution
+
+PR #3 triggered GitHub Actions before merge, confirming that this private repository can run the checks. The first run passed typecheck/build but exposed an existing browser-test race: it reloaded immediately after clicking Save, before the HTTP write finished. A 300ms delay at the real HTTP boundary reproduced the same lost-edit assertion locally. Waiting for the save dialog to close (the application's confirmed-save signal) fixes the test while preserving its persistence assertions; the delayed scenario and typecheck pass locally. The profile-save/reload test now waits for the same signal. No application behavior or authorization was changed.
