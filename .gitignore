@@ -9,3 +9,8 @@ coverage/
 
 # Generated design exports; retained source/history lives in the prototype worktree.
 output/
+
+# Generated release metadata/evidence (CI artifacts only).
+release-evidence.json
+production-evidence.json
+stage-evidence/

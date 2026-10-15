@@ -1,13 +1,13 @@
 import { approveEmail, revokeEmail, approvedEmails, admissionPolicy } from './admission.js';
 import { createDatabase } from './database.js';
-import { migrate } from './schema.js';
+import { assertSchemaReady } from './schema.js';
 import { configureDomains, removeMember, setupDepartment } from './membership.js';
 
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required.');
 admissionPolicy(process.env.LANTERN_ENV);
 const db = createDatabase(process.env.DATABASE_URL);
 try {
-  await migrate(db);
+  await assertSchemaReady(db);
   const [operation, ...args] = process.argv.slice(2);
   if (operation === 'domains' && args.length) await configureDomains(db, args);
   else if (operation === 'setup' && args.length === 2) await setupDepartment(db, args[0]!, args[1]!);

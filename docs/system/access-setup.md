@@ -8,10 +8,10 @@ Real identities, Google clients and hosting configuration belong to [environment
 
 ## First setup
 
-Use Node 22.12 or newer, PostgreSQL, and the normal `.env` setup in the README. The server and operations command apply the additive schema on startup. The application's database role needs schema/table creation permission for this beta. Back up an existing database before applying releases.
+Use Node 22.12 or newer, PostgreSQL, and the normal `.env` setup in the README. Build first (`npm run build`) and run `npm run db:migrate` with `DATABASE_URL` injected. Hosted startup and compiled operators verify migration readiness without running DDL; local development still migrates automatically. Back up an existing database before applying releases.
 
 1. In Google Cloud, configure a Web application OAuth client and consent screen for the intended environment and account audience. Set its authorized redirect URI to the exact public origin followed by `/auth/google/callback`.
-2. Set `LANTERN_ENV`, `APP_ORIGIN`, `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in the server's private environment. `APP_ORIGIN` has no trailing slash or path. Hosted origins require HTTPS; local development allows HTTP on `127.0.0.1` or `localhost`. Keep proxy traffic on the same public origin and forward cookies. The app does not derive callback URLs or authorization from forwarded headers. Missing both credentials leaves a configuration message; partially supplied credentials stop startup.
+2. Set `LANTERN_ENV`, `APP_ORIGIN`, `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in the server's private environment. `APP_ORIGIN` has no trailing slash or path. Hosted origins require HTTPS; local development allows HTTP on `127.0.0.1` or `localhost`. Keep proxy traffic on the same public origin and forward cookies. The app does not derive callback URLs or authorization from forwarded headers. Hosted startup requires both credentials. Local development without either credential shows a configuration message; partially supplied credentials stop startup.
 3. Configure the complete approved **Google hosted-domain** allowlist (the verified `hd` claim, not merely the email suffix):
 
    ```sh
@@ -27,7 +27,7 @@ Use Node 22.12 or newer, PostgreSQL, and the normal `.env` setup in the README. 
    ```
 
    Approval trims surrounding whitespace and lowercases the address; it does not remove dots, plus tags or match domains/wildcards. Add is idempotent. Lists are sorted. All email values are SQL parameters. Each environment has its own independent approval data; an empty list denies all Google sign-ins.
-5. Start the app with `npm run dev`, or `npm run build` followed by `npm start`. Have the intended career lead sign in once. They initially see the waiting screen, creating an ordinary account without membership or lead authority.
+5. Start the app with `npm run dev`, or `npm run build` followed by `npm run start:local` for local `.env` configuration (hosted startup uses injected variables and `npm start`). Have the intended career lead sign in once. They initially see the waiting screen, creating an ordinary account without membership or lead authority.
 6. Create the department and assign that registered account:
 
    ```sh
@@ -47,7 +47,7 @@ npm run access:ops -- remove-approved-email "$PARTICIPANT_EMAIL"
 
 Removal is idempotent. Existing sessions recheck approval and environment/domain policy on every authenticated request. Revocation denies subsequent protected requests without deleting accounts, documents or membership history. Reapproval does not restore a former membership. Already displayed data clears when the browser refreshes or refocuses. Failed session persistence rolls back account changes, and provider/database failures fail closed with safe feedback.
 
-After `npm run build`, an operator with injected environment variables can run the same commands without a `.env` file:
+After `npm run build` and `npm run db:migrate`, an operator with injected environment variables can run the same commands without a `.env` file:
 
 ```sh
 node dist/server/operations.js approve-email "$PARTICIPANT_EMAIL"
@@ -75,8 +75,8 @@ The operation refuses career-lead removal. There is no successor selection, seco
 npx playwright install chromium
 npm run db:start
 npm run typecheck
-npm test
 npm run build
+npm test
 ```
 
 Tests exercise real PostgreSQL and HTTP, plus Chromium using synthetic identities at the external provider boundary. A separate adapter test validates locally signed tokens through the real Google verification library, including rejection of signature, issuer, audience, expiry, nonce and verified-email failures. Browser coverage includes registration/waiting, searchable assignment, unavailable states, session persistence, removal and sign-out. Synthetic other-department membership exists only in the isolated test schema, which is removed afterward. Screenshots in `captures/access-members*.png` contain only synthetic people. Run tests against a local/test database whose role can create temporary schemas.
@@ -90,12 +90,10 @@ Before accepting live Google integration, a human must:
 
 Jaco subsequently authorized tickets 07–08 and automated/preparation work for 09, deferring live Google and practical human verification to final review. The [current application verification record](guide-verification.md) replaces the old guide-only checklist. M01 is closed against the revised local baseline; live access checks remain unperformed in M06. The original standalone guide preview was consolidated into the retained prototype viewer.
 
-## Integration with hosted runtime (required before merge)
+## Integration with hosted runtime
 
-This branch starts at `ef74bcbb9172094b694132838bd1ab71dc9129bd`. Hosted runtime/CI integrates first. Merge those changes into this branch and rerun migration, compiled startup and authentication checks before merging approved access.
+Hosted runtime/CI (`c9db854`, PR #3) is integrated. `resolveRuntime().environment` supplies `AccessConfig.admissionPolicy`; runtime and operator validation use the same policy parser. Environment identity never comes from request input or NODE_ENV. The provider verifies Google identity; `registerSession` checks database approval/policy before transactional account/session storage. `isAdmitted` is shared by session resolution and member assignment.
 
-The small startup seam is `admissionPolicy(process.env.LANTERN_ENV)` in `server/index.ts`, injected as `AccessConfig.admissionPolicy`. Runtime configuration may resolve the same typed policy centrally. Do not derive it from `NODE_ENV` or request input. Operations validate the same environment value. The provider adapter verifies Google identity; `registerSession` checks database approval/policy before transactional account/session storage. `isAdmitted` is shared by session resolution and member assignment.
+Migration 2 creates an empty `approved_emails` table with a normalized unique key and makes `users.hosted_domain` nullable, using the runtime migration transaction, lock and ledger. Readiness requires both migrations and reports schema version 2. No approvals are backfilled from existing accounts. Apply schema before deploying this code; existing accounts lose access until explicitly approved. Compiled operators require migration readiness. Upgrade/repeat/concurrency tests preserve existing data.
 
-Schema additions currently live in the existing `migrate` function: create empty `approved_emails` with a normalized unique key, and drop `users.hosted_domain`'s NOT NULL constraint. They are repeatable and preserve existing rows. Carry these statements into the runtime owner's migration sequence; do not backfill approvals from existing accounts. Apply schema before deploying this code. Existing accounts lose access until explicitly approved. The migration runner and predeploy/startup split remain owned by the runtime ticket; this branch retains the existing runner behavior.
-
-A previous application version cannot safely serve personal-account rows under its unconditional hosted-domain policy. Coordinate code rollback with that limitation; do not delete personal accounts or history to restore the old constraint.
+Rolling application code back to the earlier version also restores its less restrictive domain-only sign-in rule and prevents personal-account access. Coordinate any rollback with those security changes; do not delete accounts or history to restore the old constraint.

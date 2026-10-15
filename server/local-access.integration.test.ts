@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:net";
 import pg from "pg";
@@ -77,6 +77,9 @@ test(
         200,
       );
       await stop();
+      for (let n = 0; n < 2; n++) execFileSync(process.execPath, ['dist/server/migrate.js'], {
+        env: { ...process.env, DATABASE_URL: url.toString() }, stdio: 'pipe',
+      });
       await start();
       const next = (await (
         await fetch(origin + "/api/session")
