@@ -1,0 +1,56 @@
+.guide { --ink: #243b34; --muted: #61736b; --accent: #a06a32; }
+.guide h1:focus { outline: none; }
+.guide .eyebrow { font-size: .75rem; letter-spacing: .09em; text-transform: uppercase; font-weight: 650; }
+.guide-intro { background: transparent; border: 0; padding: 42px 0 30px; }
+.guide-intro h1 { font-family: Georgia, serif; font-weight: 400; font-size: clamp(2.4rem, 5vw, 3.8rem); letter-spacing: -.035em; margin: 18px 0 24px; }
+.intro-copy { font-size: 1.1rem; max-width: 680px; color: #52675d; }
+.focus-path { display: flex; gap: 28px; flex-wrap: wrap; margin: 34px 0 0; color: #647267; font-size: .8rem; }
+.mission-context { border: 1px solid #d5dfd4; border-radius: 8px; background: #eef2e9; }
+.context-toggle { display: flex; justify-content: space-between; width: 100%; text-align: left; background: transparent; border: 0; padding: 16px 20px; }
+#mission-context { padding: 0 20px 12px; max-width: 760px; }
+#mission-context h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .07em; }
+.resource-heading { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.resource-heading h2 { margin-bottom: 0; }
+.help-mark { border: 1px solid #8a9e91; border-radius: 50%; height: 22px; width: 22px; text-align: center; font-size: .8rem; margin-top: 14px; }
+.resource-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 24px 0 32px; }
+.resource-card { text-align: left; padding: 26px; display: flex; flex-direction: column; gap: 16px; border: 1px solid #d6ded4; transition: border-color .15s, transform .15s; }
+.resource-card:hover { border-color: #59745b; transform: translateY(-2px); }
+.resource-card strong { font-family: Georgia, serif; font-size: 1.6rem; line-height: 1.2; font-weight: 400; }
+.resource-card > span:not(.eyebrow):not(.card-action) { color: #5d6d62; }
+.card-action { font-size: .9rem; font-weight: 600; margin-top: auto; }
+.example-card { grid-column: 1 / -1; background: #eaf0e6; }
+.guide-note { padding: 24px 28px; }
+.guide-note h2 { margin-top: 0; }
+.timing-note { margin: 28px 0; padding-left: 20px; border-left: 3px solid #b3966a; }
+.timing-note p { margin-bottom: 0; }
+.resource-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.resource-nav div { display: flex; flex-wrap: wrap; gap: 6px; }
+.resource-nav button { font-size: .85rem; padding: 7px 10px; border-color: transparent; background: transparent; }
+.resource-nav button[aria-current] { background: #e2ebdf; color: #244833; }
+.walkthrough, .full-example { margin-top: 24px; }
+.step-meta { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.step-meta [role=status] { font-size: .85rem; white-space: nowrap; color: #5e7263; }
+.step-progress { display: flex; gap: 6px; margin: 8px 0 32px; }
+.step-progress span { flex: 1; height: 3px; background: #e5e9e2; }
+.step-progress span.reached { background: #628167; }
+.step-content h1, .full-example h1 { font-family: Georgia, serif; font-weight: 400; font-size: clamp(1.9rem, 4vw, 2.6rem); }
+.step-content { animation: step-in .2s ease-out; }
+.worked-example { margin: 26px 0; padding: 18px 24px; background: #f1f4eb; border-left: 3px solid #7a9468; border-radius: 0 6px 6px 0; }
+.worked-example p:first-child { margin-top: 0; }
+.worked-example p:last-child { margin-bottom: 0; }
+.reflection { margin: 28px 0; padding: 20px 0 0; border-top: 1px solid #e2e7dd; color: #536955; }
+.reflection strong { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
+.reflection p { margin-bottom: 0; }
+.step-controls { display: flex; justify-content: space-between; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e7dd; }
+.full-example section { margin-top: 24px; scroll-margin-top: 20px; }
+.full-example > button { margin-top: 24px; }
+.example-contents { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 16px 0; }
+.example-contents a { color: #41654e; font-size: .9rem; text-underline-offset: 3px; }
+.guide-points { list-style: disc; padding-left: 24px; }
+.guide-points li { border: 0; padding: 6px 0; }
+.app-nav { display: flex; gap: 8px; margin-bottom: 28px; }
+.app-nav button[aria-current] { background: #245e4c; color: white; }
+.preview-banner { margin: 0 0 24px; background: #fff2d9; border: 1px solid #dfc994; padding: 12px 18px; border-radius: 8px; font-size: .85rem; }
+@keyframes step-in { from { opacity: .5; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 600px) { .resource-cards { grid-template-columns: 1fr; } .resource-card { padding: 22px; } .focus-path { gap: 14px; } .step-meta { align-items: start; } .step-meta .eyebrow { margin-top: 0; } .worked-example { padding: 16px; } }
+@media (prefers-reduced-motion: reduce) { .step-content { animation: none; } .resource-card { transition: none; } }

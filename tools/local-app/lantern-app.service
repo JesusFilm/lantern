@@ -1,0 +1,18 @@
+[Unit]
+Description=Lantern local application walkthrough
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/jacobuntu/Ops/projects/lantern
+Environment=HOST=127.0.0.1
+Environment=PORT=4391
+Environment=APP_ORIGIN=https://jacobuntu.tail5c6dbf.ts.net:8444
+Environment=LOCAL_ACCESS=1
+Environment=NODE_ENV=development
+ExecStart=/home/jacobuntu/.nvm/versions/node/v24.21.0/bin/node --env-file=.env dist/server/index.js --production
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
