@@ -2,11 +2,15 @@ import type { Pool } from 'pg';
 
 export async function migrate(database: Pool) {
   await database.query(`
+    CREATE TABLE IF NOT EXISTS approved_emails (
+      email text PRIMARY KEY CHECK (email = lower(btrim(email)) AND email <> '')
+    );
     CREATE TABLE IF NOT EXISTS allowed_domains (domain text PRIMARY KEY);
     CREATE TABLE IF NOT EXISTS users (
       id uuid PRIMARY KEY, google_sub text UNIQUE NOT NULL, email text NOT NULL,
       name text NOT NULL, hosted_domain text NOT NULL
     );
+    ALTER TABLE users ALTER COLUMN hosted_domain DROP NOT NULL;
     CREATE TABLE IF NOT EXISTS departments (
       id uuid PRIMARY KEY, name text NOT NULL, deleted_at timestamptz
     );

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import { OAuth2Client } from 'google-auth-library';
 import { googleProvider } from './google.js';
 
-test('Google adapter validates signed identities, audience, issuer, expiry, nonce and work-account claims', async (t) => {
+test('Google adapter validates signed identities, audience, issuer, expiry, nonce and verified email claims', async (t) => {
   const keys = generateKeyPairSync('rsa', { modulusLength: 2048 });
   const now = Math.floor(Date.now() / 1000);
   const base = { iss: 'https://accounts.google.com', aud: 'fixture-client', sub: 'fixture-sub',
@@ -28,10 +28,15 @@ test('Google adapter validates signed identities, audience, issuer, expiry, nonc
   assert.equal(authorization.searchParams.get('code_challenge_method'), 'S256');
   assert.equal((await provider.exchange('code', 'verifier', 'fixture-nonce')).sub, 'fixture-sub');
   for (const change of [{ aud: 'wrong-client' }, { iss: 'https://evil.test' }, { exp: now - 3600 },
-    { nonce: 'wrong' }, { email_verified: false }, { hd: undefined }, { sub: '' }]) {
+    { nonce: 'wrong' }, { email_verified: false }, { email_verified: 'true' }, { email: '' }, { hd: '' }, { hd: 42 }, { sub: '' }]) {
     payload = { ...base, ...change };
     await assert.rejects(provider.exchange('code', 'verifier', 'fixture-nonce'));
   }
+  payload = { ...base, email: ' Personal@Gmail.Com ', hd: undefined };
+  const personal = await provider.exchange('code', 'verifier', 'fixture-nonce');
+  assert.equal(personal.email, 'personal@gmail.com');
+  assert.equal(personal.hostedDomain, null);
+  assert.equal(authorization.searchParams.has('hd'), false);
   payload = base; tamper = true;
   await assert.rejects(provider.exchange('code', 'verifier', 'fixture-nonce'));
 });

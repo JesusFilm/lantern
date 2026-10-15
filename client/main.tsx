@@ -71,6 +71,9 @@ function App() {
           ) : !session.user ? (
             <section>
               <h1>Welcome to Lantern</h1>
+              {new URLSearchParams(window.location.search).has("signInError") && (
+                <p role="alert">Sign-in could not be completed. Try again or contact your career lead.</p>
+              )}
               {session.signInAvailable ? (
                 <a href="/auth/google">Sign in with Google</a>
               ) : (

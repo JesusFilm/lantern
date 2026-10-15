@@ -6,7 +6,7 @@ Lantern helps members write position focuses containing objectives and SMART goa
 
 ## Current private walkthrough
 
-The [local walkthrough](https://jacobuntu.tail5c6dbf.ts.net:8444/) runs on the Jacobuntu VM behind Tailscale. Everyone using it shares one persistent local account. It is not the upcoming hosted multi-user trial. Google/session/membership code exists; real Google configuration and acceptance remain outstanding.
+The [local walkthrough](https://jacobuntu.tail5c6dbf.ts.net:8444/) runs on the Jacobuntu VM behind Tailscale. Everyone using it shares one persistent local account. It is not the upcoming hosted multi-user trial. Database-approved Google access, sessions and membership are implemented; real Google configuration and acceptance remain outstanding.
 
 The [prototype journey](https://jacobuntu.tail5c6dbf.ts.net/lantern-prototypes/) preserves the original guide, image concepts, layouts and refinements separately. The former standalone guide viewer was consolidated there. `npm run preview:dev` and `npm run preview:build` retain the **historical** guide entrypoint for regression/reference; the current application uses `client/workspace/LearningGuide.tsx`.
 

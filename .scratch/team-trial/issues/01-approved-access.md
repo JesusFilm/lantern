@@ -5,7 +5,7 @@ Milestone: M06
 Type: task
 Status: ready-for-agent
 Blocked by: None
-Implementation: Not started
+Implementation: Implemented on codex/approved-google-access; pending hosted-runtime integration and revalidation
 Slice: Hosted team trial
 
 ---
@@ -29,3 +29,7 @@ Extend server identity/membership storage and the existing external provider con
 ## Sources and verification
 
 Follow [current specification](../spec.md), [breakdown](../breakdown.md) and [AGENTS.md](../../../AGENTS.md). Application changes use failing public-behavior tests before implementation and isolated real PostgreSQL. Ticket readiness is not a claim of completed implementation or authorization to deploy.
+
+## Branch verification
+
+Implementation and automated verification are recorded in [approved-access verification](../../../docs/system/approved-access-verification.md). Hosted runtime/CI must integrate first; rerun migration, compiled-startup and authentication checks on the integrated branch before merge. Real Google configuration and participant enrollment remain deferred.

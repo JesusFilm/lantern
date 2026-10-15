@@ -1,3 +1,4 @@
+import { approveEmail, revokeEmail } from './admission.js';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
@@ -25,6 +26,7 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
   try {
     await migrate(db);
     await configureDomains(db, ['example.test']);
+    for (const name of ['lead', 'member', 'other', 'outsider']) await approveEmail(db, `${name}@example.test`);
     let nextIdentity = 'lead';
     const provider: IdentityProvider = {
       authorizationUrl: (state, nonce, challenge) => {
@@ -34,13 +36,14 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       exchange: async (code, verifier, nonce) => {
         assert.ok(verifier); assert.ok(nonce);
         if (code === 'invalid') throw new Error('Invalid token');
+        if (code === 'browser-member') return { sub: code, name: 'Test browser-member', email: 'browser-member@gmail.com', hostedDomain: null };
         return { sub: code, name: `Test ${code}`, email: `${code}@example.test`, hostedDomain: code === 'outsider' ? 'other.test' : 'example.test' };
       },
     };
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address(); assert.ok(address && typeof address !== 'string');
     const origin = `http://127.0.0.1:${address.port}`;
-    const app = createApp(db, { origin, provider });
+    const app = createApp(db, { origin, provider, admissionPolicy: 'stage' });
     vite = await createViteServer({ server: { middlewareMode: {server}, hmr: {server} }, appType: 'spa' });
     app.use(vite.middlewares);
     server.on('request', app);
@@ -135,6 +138,11 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       nextIdentity = 'browser-member';
       await memberPage.goto(origin);
       await memberPage.getByRole('link', { name: 'Sign in with Google' }).click();
+      await expect(memberPage).toHaveURL(origin + '/?signInError=1');
+      await expect(memberPage.getByRole('alert')).toHaveText('Sign-in could not be completed. Try again or contact your career lead.');
+      await expect(memberPage.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
+      await approveEmail(db, 'browser-member@gmail.com');
+      await memberPage.getByRole('link', { name: 'Sign in with Google' }).click();
       await expect(memberPage.getByRole('heading', { name: 'Your account is ready' })).toBeVisible();
       await expect(memberPage.getByText('Contact your career lead directly', { exact: false })).toBeVisible();
       nextIdentity = 'lead';
@@ -163,6 +171,14 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       await memberPage.reload();
       await memberPage.getByRole('button', { name: 'Department users', exact: true }).click();
       await expect(memberPage.getByRole('heading', { name: 'Department users' })).toBeVisible();
+      await revokeEmail(db, 'browser-member@gmail.com');
+      assert.equal((await memberContext.request.get(origin + '/api/department')).status(), 401);
+      await memberPage.evaluate("window.dispatchEvent(new Event('focus'))");
+      await expect(memberPage.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
+      await approveEmail(db, 'browser-member@gmail.com');
+      nextIdentity = 'browser-member';
+      await memberPage.getByRole('link', { name: 'Sign in with Google' }).click();
+      await expect(memberPage.getByRole('heading', { name: 'Position focuses', exact: true })).toBeVisible();
       await removeMember(db, browserId);
       assert.equal((await memberContext.request.get(origin + '/api/department')).status(), 403);
       await memberPage.reload();

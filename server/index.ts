@@ -1,3 +1,4 @@
+import { admissionPolicy } from './admission.js';
 import { prepareLocalAccount } from './local-access.js';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
@@ -7,6 +8,7 @@ import { migrate } from './schema.js';
 import { googleProvider } from './google.js';
 import { createDatabase } from './database.js';
 
+const policy = admissionPolicy(process.env.LANTERN_ENV);
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
   throw new Error('DATABASE_URL is required. Copy .env.example to .env before starting.');
@@ -34,7 +36,7 @@ const clientId = process.env.GOOGLE_CLIENT_ID;
 const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 if (!!clientId !== !!clientSecret) throw new Error('Set both Google client credentials.');
 const localUserId = localAccess ? await prepareLocalAccount(database) : undefined;
-const app = createApp(database, { origin, localUserId, provider: clientId && clientSecret ? googleProvider(clientId, clientSecret, origin) : undefined });
+const app = createApp(database, { origin, admissionPolicy: policy, localUserId, provider: clientId && clientSecret ? googleProvider(clientId, clientSecret, origin) : undefined });
 const server = createServer(app);
 const production = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 let closeFrontend: (() => Promise<void>) | undefined;
