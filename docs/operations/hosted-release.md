@@ -56,6 +56,8 @@ No path filters skip required checks. The same checks rerun on the actual merged
 
 ## Automatic stage delivery
 
+For the first deployment, follow the explicit [operator bootstrap and real-login session acquisition sequence](railway-google-setup-evidence.md#first-stage-bootstrap-before-enabling-unattended-delivery). A manual stage bootstrap is needed before members can obtain real Google sessions; it does not count as passing automated stage evidence and must leave the repository delivery switch off until prerequisites pass.
+
 Stage delivery is temporarily **off by default** pending ticket 05. The job runs only when the **repository-level** Actions variable `STAGE_DELIVERY_ENABLED` is exactly `true`; unset/false skips it before any setup or upload steps. PR/main quality checks continue normally and can finish green while stage is disabled. Do not put this switch in the `stage` environment: environment variables are unavailable when GitHub evaluates this job condition.
 
 Ticket 05 must configure and verify the stage resources, target settings/token, Google authentication, two QA session secrets and CI protections before setting the switch to `true`. Then rerun a successful main push workflow for the intended SHA or use the next reviewed merge and verify deployment/readiness/smoke evidence. Set it back to `false` if activation fails. This switch does not enable production delivery.

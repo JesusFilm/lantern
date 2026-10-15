@@ -5,7 +5,7 @@ Milestone: M06
 Type: task
 Status: ready-for-human
 Blocked by: 01, 04
-Implementation: Not started
+Implementation: Preparation recorded; live setup blocked on operator inputs, spending approval and GitHub plan capabilities
 Slice: Hosted team trial
 
 ---
@@ -29,6 +29,8 @@ Railway project access and an environment-scoped deployment token for the intend
 - [ ] Configure backup retention and perform a restore into an isolated disposable database; show retained records are readable and record recovery time/result. Never restore over live data for rehearsal.
 
 ## Evidence
+
+[Setup inventory and bootstrap preparation](../../../docs/operations/railway-google-setup-evidence.md) records the 15 October 2026 live read-only inspection at merged SHA `92a18ff2de72e9ba95cc6d30d803f859e6aacecf`. Existing Railway environments can be reused; no services are provisioned. Main quality checks passed, stage delivery remains unset/skipped, and repository protection APIs returned a plan-related 403. No live Google, deployment, restore or workflow acceptance is claimed; all acceptance boxes remain open.
 
 Record sanitized configuration checklist, stage URL, deployed SHA and backup/restore result in the release evidence. Actual credentials/emails remain private. Complete only when live setup succeeds; code tests do not substitute. [Research](../../../docs/research/railway-team-trial.md).
 
