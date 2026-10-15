@@ -56,7 +56,9 @@ jobs:
   stage:
     name: stage delivery and smoke
     needs: [typecheck, tests, build]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Off until team-trial/05 provisions and verifies Railway stage delivery.
+    # This must be a repository variable: environment variables are unavailable here.
+    if: vars.STAGE_DELIVERY_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: stage

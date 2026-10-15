@@ -34,3 +34,7 @@ The [release runbook](hosted-release.md) lists required variables/secrets, exact
 ## First PR execution
 
 PR #3 triggered GitHub Actions before merge, confirming that this private repository can run the checks. The first run passed typecheck/build but exposed an existing browser-test race: it reloaded immediately after clicking Save, before the HTTP write finished. A 300ms delay at the real HTTP boundary reproduced the same lost-edit assertion locally. Waiting for the save dialog to close (the application's confirmed-save signal) fixes the test while preserving its persistence assertions; the delayed scenario and typecheck pass locally. The profile-save/reload test now waits for the same signal. No application behavior or authorization was changed.
+
+## Temporary stage activation gate
+
+Automatic stage delivery now defaults off until ticket 05 completes Railway setup. Only the repository-level Actions variable `STAGE_DELIVERY_ENABLED=true` enables the main-only stage job; missing/false leaves all three quality checks running and skips deployment. Ticket 05 explicitly owns configuring prerequisites, enabling the switch and recording a successful exact-revision stage run. No live variable or infrastructure setting was changed by this update.
