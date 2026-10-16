@@ -1,7 +1,7 @@
 Kind: milestone
 ID: M06
 Title: Run a secure hosted team trial
-Status: Specification
+Status: Delivery
 Slice: Hosted team trial
 Sequence: 2
 Target: Next; no committed date
@@ -10,17 +10,21 @@ Summary: Invited members draft private focuses, the career lead reads and confir
 ---
 ## Current delivery decision — 16 October 2026
 
-The immediate delivery is [hosting-only staging](issues/09-hosting-only-staging.md). Railway's existing environment is named `staging`; Lantern's application value remains `LANTERN_ENV=stage`. Deploy a known merged revision with login unavailable and protected access denied, verify hosting separately, and leave `STAGE_DELIVERY_ENABLED` unset/false. Hosting evidence does not complete authenticated smoke, ticket 05, or the team trial.
+Authenticated staging is live on checked main revision `8e4cd805e9e5c88dea534823859191627ee8402c`, with schema version 2. Real Google work/personal login, member draft save/reload and career-lead read-only access have been observed. [Activation and workflow evidence](../../docs/operations/staging-activation-evidence.md) records this bounded manual proof; it is not full stage acceptance or automated release evidence. Google setup resumed successfully; the earlier hosting-only/provider-pause route is historical.
 
-Authentication is deferred to [the bounded provider decision](issues/10-authentication-provider-decision.md). Jesus Film One is a candidate for investigation, not an approved replacement. Direct Google setup is paused and Lantern-owned passwords are not pursued. The Google-specific requirements below describe the existing implementation and original acceptance baseline; any replacement requires a recorded policy decision and revised acceptance before implementation.
+Production remains inactive and `STAGE_DELIVERY_ENABLED` remains unset/false. This reconciliation authorizes planning only: no code implementation, credentials, permissions, infrastructure, workflow runs or delivery activation. Future execution requires a separate instruction; ticket readiness alone does not grant it.
 
-Production remains inactive. Manual promotion needs a deliberate authorized operator action, not a second reviewer. [Promotion simplification](issues/11-simplify-manual-promotion.md) records the proposed latest-main selection and exact-revision evidence checks; it is not implemented by this planning update.
+The existing `ci.yml` stage job and `promote.yml` manual promotion workflow are merged. Stage automation lacks its token and two ordinary-member session secrets; no passing stage artifact exists. Ticket 11 is optional promotion-UI simplification, not a prerequisite for the existing explicit SHA/run workflow. Confirm-and-lock (03), full acceptance, recovery and production access governance remain required. A narrower draft-only production pilot would require an explicit scope change.
+
+Manual release promotion still requires one authorized operator, not a separate reviewer. Production **data-change** approval and emergency-access policy are unresolved in ticket 12; do not infer them from that release-promotion decision.
 
 ## Outcome
 
 A small invited group can use Lantern outside the local walkthrough, with confidence about who can see or change each focus. Learn from the initial draft/confirm cycle before building later review phases.
 
 ## Done when
+
+- [ ] Production operator/database access policy is approved and enforced, with scoped privileges, restricted interactive access and protected audit evidence (12/13); effective deployment configuration is reproducible (14).
 
 - [ ] Database-approved Google accounts sign in under environment policy: production requires approved work domains; local development/stage also accept approved personal accounts; unapproved people and removed memberships cannot access protected data.
 - [ ] Members manage only their own drafts; the career lead can browse the team and drill into member focuses.
@@ -32,4 +36,4 @@ A small invited group can use Lantern outside the local walkthrough, with confid
 
 ## Boundaries
 
-Planning and ticket preparation are complete; none of these new behaviors is claimed delivered. Backend setup is sufficient. Admin screens, multiple departments, submission queues and subsequent phase revisions are excluded. [Specification](spec.md) · [Breakdown](breakdown.md) · [Planning map](map.md).
+Runtime, approved access and lead reading are merged, with bounded authenticated stage proof. Confirmation, governance, automation/recovery verification and production acceptance are incomplete. The current changes are planning only. Backend setup is sufficient. Admin screens, multiple departments, submission queues and subsequent phase revisions are excluded. [Specification](spec.md) · [Breakdown](breakdown.md) · [Planning map](map.md).

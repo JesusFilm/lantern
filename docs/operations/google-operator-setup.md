@@ -2,6 +2,12 @@
 
 Prepared 15 October 2026. This is an operator guide, not evidence that Google login is configured. Your work Google account can manage this setup only if its organization/project permissions allow it. No Google password, MFA code, client secret or participant email belongs in Git or chat.
 
+## Completed Mac setup — 16 October 2026
+
+Dedicated `Lantern local`, `Lantern stage` and `Lantern production` clients now exist in the approved existing `jesus-film-development-bedd3` project. Do not create duplicates or reuse Forge's client. [Mac evidence](google-mac-setup-evidence.md) records exact callbacks, real local work/personal logins and outstanding hosted acceptance. Existing generic project branding and External/In production audience were retained; the new-client walkthrough below is historical preparation guidance, not a claim that this shared project is in Testing.
+
+The Mac proof runs directly at `http://127.0.0.1:4491` with a separate PostgreSQL schema and `LOCAL_ACCESS=0`; no SSH tunnel is needed. Credentials and environment bundles are retained privately outside Git on that Mac. Do not use the VM input collector path for this Mac setup. Hosted callbacks are now the allocated Railway origins recorded in the evidence; no hosted app was deployed by this authentication task.
+
 ## 1. Check project access
 
 Open [Google Cloud Console](https://console.cloud.google.com/) in a browser profile signed into your work account. Use the project picker at the top to inspect existing projects. Reuse a suitable Lantern project if one exists; do not modify an unrelated application's consent settings.
