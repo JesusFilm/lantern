@@ -4,20 +4,22 @@ Title: Verify the initial workflow with real stage participants
 Milestone: M06
 Type: task
 Status: ready-for-human
-Blocked by: 02, 03, 05
-Implementation: Not started
+Blocked by: 02, 03, 05, 13, 15, 16
+Implementation: Partial manual staging save/read proof; full candidate acceptance outstanding
 Slice: Hosted team trial
 
 ---
-## Deferred authentication boundary
+## Current execution boundary — 16 October 2026
 
-Hosting-only staging in [09](09-hosting-only-staging.md) does not satisfy this ticket. Resume authenticated acceptance after [10](10-authentication-provider-decision.md) records the selected provider and admission policy and its implementation is verified. Existing Google-specific checks below remain the baseline until explicitly revised. Production activation remains deferred; manual promotion requires an authorized operator action, with no separate second-reviewer requirement.
+Real Google staging and bounded member-save/lead-read proof are recorded in [activation evidence](../../../docs/operations/staging-activation-evidence.md). Full acceptance is incomplete. Production remains inactive and automatic stage delivery remains disabled. This planning update does not authorize either activation. The dependency-ordered production prerequisites are in the [breakdown](../breakdown.md).
 
 ## Outcome
 
 There is practical evidence that the staged revision supports a member's initial focus and the career lead's review/confirmation without exposing other members' data.
 
 ## Acceptance
+
+- [ ] Verify reviewed access-governance controls (13), successful automated stage artifact and failure-gate evidence (15), and recovery evidence (16) for the applicable final candidate/configuration. Revalidate changed code/schema; do not reuse manual bootstrap as automated release proof.
 
 - [ ] Record exact Git SHA/deployment and passing PR/main CI plus post-deployment stage smoke/E2E checks. Verify the release evidence refers to the same candidate revision; record human acceptance separately. Reconcile any change after these checks before sign-off.
 - [ ] With the real Google provider, separate lead and at least two member sessions, verify approved work and personal-member login (including Jaco's separate lead/member sessions), unapproved same-domain/personal/outsider denial, expired/signed-out/revoked access and absence of a local bypass.

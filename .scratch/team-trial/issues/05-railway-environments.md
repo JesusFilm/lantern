@@ -5,7 +5,7 @@ Milestone: M06
 Type: task
 Status: ready-for-human
 Blocked by: 01, 04
-Implementation: Staging and production resources provisioned; authentication, app deployment, backups/restore and live gates remain incomplete
+Implementation: Stage authenticated on checked main; production resources inactive; setup acceptance incomplete; automation/recovery tracked in 15/16
 Slice: Hosted team trial
 
 ---
@@ -15,7 +15,11 @@ Stage is available for authenticated QA, and production is separately configured
 
 ## Current execution boundary — 16 October 2026
 
-Proceed with [09 hosting-only staging](09-hosting-only-staging.md) independently of login. Railway uses the environment name `staging`; application configuration uses `LANTERN_ENV=stage`. Original Google acceptance below remains pending, subject to the explicit provider/admission decision in [10](10-authentication-provider-decision.md). Neither successful hosting smoke nor intentionally unavailable login completes this ticket. Direct Google setup is paused. Production activation and participant enrollment remain deferred.
+Google staging is active with schema version 2, one Engineering lead and one ordinary member. Production resources and a separate OAuth client exist, but production is inactive. [Current evidence](../../../docs/operations/staging-activation-evidence.md) supersedes the earlier hosting-only plan. Complete remaining environment isolation/authentication setup without treating provisioning as production acceptance. Planning only: do not activate delivery or install production credentials in this session.
+
+## Ownership of remaining release work
+
+The automation/backup requirements below are explicitly handed off. Their execution and completion evidence are owned by tickets [15](15-verify-automated-release-gates.md) and [16](16-backup-restore-readiness.md); they are not prerequisites for resolving this environment-setup ticket. Ticket 14 owns reproducible deployment settings, 12/13 production privileged-access policy/enforcement, and 07 production activation. Resolve 05 only after remaining environment setup checks have evidence, explicitly linking these open handoffs rather than checking them as passed. No production privileged operation may bypass 13.
 
 Railway-generated domains are approved. Start with small resources and review actual cost; a numeric budget is not an outstanding prerequisite. US$30/month projected usage was suggested as a review threshold, not a cap or price guarantee. Preserve shared workspace spending controls.
 
@@ -27,25 +31,32 @@ Railway project access and an environment-scoped deployment token for the intend
 
 Production resource preparation is part of this ticket, not the later production-promotion ticket. The operator explicitly requested it alongside staging on 16 October 2026.
 
-- [x] Staging application shell, PostgreSQL instance/volume, generated domain and private database reference provisioned; application remains undeployed.
+- [x] Staging application shell, PostgreSQL instance/volume, generated domain and private database reference provisioned; subsequently activated with real Google authentication; see staging evidence below.
 - [x] Production application shell and PostgreSQL instance/volume provisioned with independent credentials/data and a generated domain; no staging data or credentials copied.
 - [x] Production configuration uses `NODE_ENV=production`, `LANTERN_ENV=production`, `LOCAL_ACCESS=0`, and hosting-only mode off; app has no automatic deployment source or deployed revision.
-- [x] Record both environments' resource identifiers and isolation checks for operator inspection. Authentication clients, migrations, backups/restore, live application readiness and promotion remain incomplete until separately verified.
+- [x] Record both environments' resource identifiers and isolation checks for operator inspection. Local/stage Google clients and stage migrations/readiness have since been verified; production activation, recovery and full release acceptance remain outstanding.
 
 ## Acceptance
 
 - [ ] Stage/prod application and PostgreSQL resources are prepared with separate databases, credentials, OAuth callbacks and exact-email approval stores; only stage is activated for QA in this ticket. Test that stage cannot read/write production records. Use synthetic stage content.
-- [ ] Both apps use normal authentication, NODE_ENV=production and no local bypass. Set Railway port/interface, HTTPS APP_ORIGIN, healthcheck and migration entrypoint; secrets remain outside Git/client bundles.
-- [ ] Prepare real Google clients and exact callbacks for local development, stage and production. Verify local real-Google login with the walkthrough bypass disabled, using approved work and personal QA identities and isolated local test data. Preserve existing walkthrough data/services. In stage, approve Jaco's lead and personal member emails directly in its database, bootstrap lead membership, and add the personal account as an ordinary member. Repeat with QA participants and provide at least two member accounts for full isolation checks. Prepare production resources and private configuration only; do not activate an incomplete production app or enroll trial participants before 07.
-- [ ] Stage URL is accessible to approved work/personal QA users; unapproved same-domain and personal/external accounts are refused. Verify stage uses its explicit server-side admission policy and production configuration retains mandatory work-domain restrictions. Verify cookies, cancellation/retry and sign-out with the real provider.
-- [ ] Re-enable automatic stage delivery after setup: it is intentionally disabled by default in `.github/workflows/ci.yml`. Leave the **repository-level** Actions variable `STAGE_DELIVERY_ENABLED` unset or `false` until the stage app/database, target-specific `RAILWAY_TOKEN`, `RAILWAY_SERVICE` and `RAILWAY_ENVIRONMENT`, `APP_ORIGIN`, Google configuration, two approved QA member session secrets, migration/readiness settings and required CI gates are ready. Then set the repository variable to the exact string `true`; an environment-level variable cannot enable this job. Re-run a successful main push workflow for the intended SHA (or use the next reviewed main merge) and record its deployment/readiness/smoke evidence. Verify unset/false skips stage while all three CI checks still run; enabled delivery must still reject failed checks. If setup verification fails, set the switch back to `false` until corrected. Production remains manual and is not enabled by this switch.
-- [ ] Activate required PR checks/repository rules and main-revision CI. Verify a failed required check prevents merge, and a failed main check prevents stage deployment. Successful main CI automatically deploys that same SHA to stage, waits for migration/readiness and runs stage smoke/E2E checks. Remove or disable any direct merge deployment path that bypasses these checks. Record sanitized evidence of the gates.
-- [ ] Disable production autodeploy and verify a main merge/stage deployment cannot deploy production. Verify an explicit manual promotion path selects the exact stage-tested SHA and rejects missing/failed evidence. Record environment/service identifiers and commands without secrets for production promotion.
-- [ ] Configure backup retention and perform a restore into an isolated disposable database; show retained records are readable and record recovery time/result. Never restore over live data for rehearsal.
+- [ ] Verify staging normal authentication, NODE_ENV=production, no local bypass, port/interface and HTTPS origin. Prepare the corresponding production configuration without activation; effective deployment configuration is verified under 14 before release.
+- [x] Create separate local/stage/production Google clients with exact callbacks; verify real local and staging work/personal login without the local bypass. Preserve local data/services. Production credentials remain private and uninstalled.
+- [x] Approve the intended staging lead/member using compiled operations, bootstrap Engineering and add the ordinary member through the lead interface. Additional QA enrollment and the second member session are owned by 15.
+- [ ] Verify stage denial of unapproved same-domain/personal/external accounts, cookies, cancellation/retry and sign-out with the real provider; retain production work-domain policy. Full multi-account/revocation acceptance remains 06.
+- [ ] Verify absence of independent production/stage autodeploy sources and record target identifiers/configuration. Production remains inactive; credential installation and privileged enrollment cannot precede governance verification under 13.
+
+## Release requirements handed off (not completed here)
+
+- **14:** reproducible migration/start/health settings and drift detection; reconcile local evidence through review.
+- **15:** required-check and failed-check live proof, environment-scoped token, two ordinary-member sessions, separately authorized stage delivery enablement, exact-revision smoke artifact and promotion rejection drills. Keep `STAGE_DELIVERY_ENABLED` unset/false until that separately authorized work passes its prerequisites; return it to false on activation failure.
+- **16:** approved backup retention, recovery ownership and isolated restore/rollback rehearsal.
+- **06/07:** final candidate acceptance and explicit production promotion with controlled enrollment and authenticated smoke.
+
+These are downstream handoffs, not reciprocal blockers on 05. Resolving environment setup must leave their acceptance open and link their evidence when later completed.
 
 ## Evidence
 
-[Setup inventory and bootstrap preparation](../../../docs/operations/railway-google-setup-evidence.md) records the 15 October 2026 live read-only inspection at merged SHA `92a18ff2de72e9ba95cc6d30d803f859e6aacecf`. This was an initial inventory, not the current resource state; later provisioning is recorded below and in linked evidence. Main quality checks passed, stage delivery remains unset/skipped, and repository protection APIs initially returned a plan-related 403. Subsequent setup made the repository public and configured initial required checks/protections; consult the evidence document for current verification rather than treating that initial failure as the current state. No live Google, deployment, restore or workflow acceptance is claimed; all acceptance boxes remain open.
+[Setup inventory and bootstrap preparation](../../../docs/operations/railway-google-setup-evidence.md) records the 15 October 2026 live read-only inspection at merged SHA `92a18ff2de72e9ba95cc6d30d803f859e6aacecf`. This was an initial inventory, not the current resource state; later provisioning is recorded below and in linked evidence. Main quality checks passed, stage delivery remains unset/skipped, and repository protection APIs initially returned a plan-related 403. Subsequent setup made the repository public and configured initial required checks/protections; consult the evidence document for current verification rather than treating that initial failure as the current state. This historical inventory alone claims no live acceptance. Later evidence proves bounded stage Google login, deployment and save/read behavior; recovery and full release acceptance remain open.
 
 Record sanitized configuration checklist, stage URL, deployed SHA and backup/restore result in the release evidence. Actual credentials/emails remain private. Complete only when live setup succeeds; code tests do not substitute. [Research](../../../docs/research/railway-team-trial.md).
 
@@ -56,3 +67,7 @@ Follow [current specification](../spec.md), [breakdown](../breakdown.md) and [AG
 ## Production resource evidence — 16 October 2026
 
 [Production resources](../../../docs/operations/production-provisioning-evidence.md) are now prepared alongside [staging resources](../../../docs/operations/staging-provisioning-evidence.md). The project-wide service definitions are reused, but environment instances, credentials and database volumes are distinct. Production database startup succeeded; the application has no source/deployment and is not activated. Authentication, schema migrations, backup/restore, application readiness and participant acceptance remain pending.
+
+## Staging activation — 16 October 2026
+
+[Manual activation evidence](../../../docs/operations/staging-activation-evidence.md) records checked revision `8e4cd805e9e5c88dea534823859191627ee8402c`, successful schema migrations and live staging authentication. The operator explicitly requires automatic stage delivery to remain disabled and production inactive. Full two-member smoke, failure drills, backup/restore and production acceptance remain outstanding; the broad acceptance boxes above remain open.

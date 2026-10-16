@@ -14,17 +14,19 @@ A prioritised, dependency-linked plan for taking the existing application to sta
 
 ## Current delivery decision — 16 October 2026
 
-The immediate delivery is [hosting-only staging](issues/09-hosting-only-staging.md). Railway's existing environment is named `staging`; Lantern's application value remains `LANTERN_ENV=stage`. Deploy a known merged revision with login unavailable and protected access denied, verify hosting separately, and leave `STAGE_DELIVERY_ENABLED` unset/false. Hosting evidence does not complete authenticated smoke, ticket 05, or the team trial.
+Authenticated staging is live on checked main revision `8e4cd805e9e5c88dea534823859191627ee8402c`, with schema version 2. Real Google work/personal login, member draft save/reload and career-lead read-only access have been observed. [Activation and workflow evidence](../../docs/operations/staging-activation-evidence.md) records this bounded manual proof; it is not full stage acceptance or automated release evidence. Google setup resumed successfully; the earlier hosting-only/provider-pause route is historical.
 
-Authentication is deferred to [the bounded provider decision](issues/10-authentication-provider-decision.md). Jesus Film One is a candidate for investigation, not an approved replacement. Direct Google setup is paused and Lantern-owned passwords are not pursued. The Google-specific requirements below describe the existing implementation and original acceptance baseline; any replacement requires a recorded policy decision and revised acceptance before implementation.
+Production remains inactive and `STAGE_DELIVERY_ENABLED` remains unset/false. This reconciliation authorizes planning only: no code implementation, credentials, permissions, infrastructure, workflow runs or delivery activation. Future execution requires a separate instruction; ticket readiness alone does not grant it.
 
-Production application activation remains deferred, while independent production app/database resource provisioning is explicitly authorized under [ticket 05](issues/05-railway-environments.md). Manual promotion needs a deliberate authorized operator action, not a second reviewer. [Promotion simplification](issues/11-simplify-manual-promotion.md) records the proposed latest-main selection and exact-revision evidence checks; it is not implemented by this planning update.
+The existing `ci.yml` stage job and `promote.yml` manual promotion workflow are merged. Stage automation lacks its token and two ordinary-member session secrets; no passing stage artifact exists. Ticket 11 is optional promotion-UI simplification, not a prerequisite for the existing explicit SHA/run workflow. Confirm-and-lock (03), full acceptance, recovery and production access governance remain required. A narrower draft-only production pilot would require an explicit scope change.
+
+Manual release promotion still requires one authorized operator, not a separate reviewer. Production **data-change** approval and emergency-access policy are unresolved in ticket 12; do not infer them from that release-promotion decision.
 
 ## Decisions so far
 
 - One Engineering team and one career lead; reuse existing ownership/department boundaries without expanding department management.
 - Career lead reads current members' focuses, including drafts, and confirms after discussion; members alone author their drafts.
-- Jaco confirmed exact Google emails are pre-approved directly in the production database. QA approvals live separately in stage. No email lists in source control, role selectors, invitations or approval UI.
+- Exact Google emails require environment-local approval; production execution now requires the policy and controls in 12/13. QA approvals live separately in stage. No email lists in source control, role selectors, invitations or approval UI.
 - Jaco confirmed the career lead performs confirmation/locking. No member-submission state or unlock in this milestone.
 - Use confirmed focuses as immutable baselines. Later phase copies/versioning belong to M04.
 - Railway stage/prod are independent runtime/data environments. Promote the exact tested revision, with production autodeploy disabled.
@@ -36,7 +38,7 @@ The spec fixes conservative defaults so tickets are buildable: current active me
 
 ## Not yet specified
 
-The deferred authentication provider and production admission decision blocks authenticated setup and acceptance, but not hosting-only staging. Platform configuration details remain implementation/setup work: validate current provider capabilities and record the concrete commands, required check names, repository rules and revision-bound promotion mechanism in the release runbook. Surface a new decision only if implementation discovers a material trade-off that cannot satisfy the agreed policy.
+Google authentication works on stage. Production data-change approval, privileged access ownership, audit retention and emergency-access policy remain decisions under 12. Platform configuration details remain implementation/setup work: validate current provider capabilities and record the concrete commands, required check names, repository rules and revision-bound promotion mechanism in the release runbook. Surface a new decision only if implementation discovers a material trade-off that cannot satisfy the agreed policy.
 
 ## Inputs for setup, not product ambiguities
 
@@ -45,3 +47,7 @@ Railway project/service access, repository-rule access and GitHub deployment int
 ## Out of scope
 
 Later review cycles, engineer catch-up context and the first full team-cycle outcome remain deferred until trial feedback. Administration screens, multiple teams and notifications are not part of this delivery plan. Existing walkthrough data/services and prototype hosting are preserved.
+
+## Production prerequisites — 16 October 2026
+
+The operator requested planning only for the production gaps. Follow the [dependency order](breakdown.md): policy 12 → enforcement 13; configuration 14, setup 05 and confirm/lock 03 can progress independently where dependencies allow; automated gates 15 and recovery 16 converge on stage acceptance 06, then production 07. No new permission or delivery setting is granted by this plan.

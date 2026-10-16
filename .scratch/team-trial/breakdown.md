@@ -1,39 +1,42 @@
 # Hosted team trial implementation breakdown
 
-Original breakdown updated 15 October 2026 after Jaco confirmed trial priority, local/stage personal-account admission and checked automatic stage delivery followed by manual production promotion. [Decision record](issues/08-agree-delivery-priority.md). No new feature, CI or environment is implemented by this planning update.
+Reconciled 16 October 2026 after authenticated staging proof and the production-readiness review. This is a planning update, not authorization to execute the queue.
 
 ## Current delivery decision — 16 October 2026
 
-The immediate delivery is [hosting-only staging](issues/09-hosting-only-staging.md). Railway's existing environment is named `staging`; Lantern's application value remains `LANTERN_ENV=stage`. Deploy a known merged revision with login unavailable and protected access denied, verify hosting separately, and leave `STAGE_DELIVERY_ENABLED` unset/false. Hosting evidence does not complete authenticated smoke, ticket 05, or the team trial.
+Authenticated staging is live on checked main revision `8e4cd805e9e5c88dea534823859191627ee8402c`, with schema version 2. Real Google work/personal login, member draft save/reload and career-lead read-only access have been observed. [Activation and workflow evidence](../../docs/operations/staging-activation-evidence.md) records this bounded manual proof; it is not full stage acceptance or automated release evidence. Google setup resumed successfully; the earlier hosting-only/provider-pause route is historical.
 
-Authentication is deferred to [the bounded provider decision](issues/10-authentication-provider-decision.md). Jesus Film One is a candidate for investigation, not an approved replacement. Direct Google setup is paused and Lantern-owned passwords are not pursued. The Google-specific requirements below describe the existing implementation and original acceptance baseline; any replacement requires a recorded policy decision and revised acceptance before implementation.
+Production remains inactive and `STAGE_DELIVERY_ENABLED` remains unset/false. This reconciliation authorizes planning only: no code implementation, credentials, permissions, infrastructure, workflow runs or delivery activation. Future execution requires a separate instruction; ticket readiness alone does not grant it.
 
-Production application activation remains deferred, while independent production app/database resource provisioning is explicitly authorized under [ticket 05](issues/05-railway-environments.md). Manual promotion needs a deliberate authorized operator action, not a second reviewer. [Promotion simplification](issues/11-simplify-manual-promotion.md) records the proposed latest-main selection and exact-revision evidence checks; it is not implemented by this planning update.
+The existing `ci.yml` stage job and `promote.yml` manual promotion workflow are merged. Stage automation lacks its token and two ordinary-member session secrets; no passing stage artifact exists. Ticket 11 is optional promotion-UI simplification, not a prerequisite for the existing explicit SHA/run workflow. Confirm-and-lock (03), full acceptance, recovery and production access governance remain required. A narrower draft-only production pilot would require an explicit scope change.
 
-| Priority | Ticket | Readiness | Depends on |
+Manual release promotion still requires one authorized operator, not a separate reviewer. Production **data-change** approval and emergency-access policy are unresolved in ticket 12; do not infer them from that release-promotion decision.
+
+## Dependency order
+
+| Order | Ticket | Current state | Blocked by |
 | --- | --- | --- | --- |
-| Now | [Hosting-only staging](issues/09-hosting-only-staging.md) | ready-for-agent | Hosted runtime; reviewed merged deployment revision |
-| Deferred investigation | [Authentication provider decision](issues/10-authentication-provider-decision.md) | needs-info | Operator/provider interaction for live proof |
-| Deferred improvement | [Simplify manual promotion](issues/11-simplify-manual-promotion.md) | needs-triage | Approved workflow change |
-| First | [Hosted runtime, required CI and gated stage delivery](issues/04-hosted-runtime.md) | ready-for-agent; unblocked | None |
-| Next; independently buildable | [Database-approved Google access](issues/01-approved-access.md) | ready-for-agent; unblocked | None |
-| Then, as soon as foundations pass | [Railway environments, Google access and live release gates](issues/05-railway-environments.md) | ready-for-human; blocked | Approved access + hosted runtime |
-| Alongside environment setup | [Lead member list and focus reading](issues/02-lead-member-focuses.md) | implemented and locally verified on codex/lead-member-focuses; integration pending | Approved access merged in 92a18ff |
-| After lead reading | [Initial confirmation and immutable lock](issues/03-confirm-and-lock.md) | ready-for-agent; blocked | Lead member list and focus reading |
-| After setup and feature delivery | [Real-account stage QA and newcomer trial](issues/06-stage-verification.md) | ready-for-human; blocked | Lead reading + confirmation + environment setup |
-| Last | [Same-revision production promotion and smoke](issues/07-production-promotion.md) | ready-for-human; blocked | Stage verification |
+| Delivered foundations | [01 approved access](issues/01-approved-access.md), [02 lead reads](issues/02-lead-member-focuses.md), [04 runtime/CI](issues/04-hosted-runtime.md) | Merged; bounded manual staging proof recorded | None |
+| First: policy decision | [12 production access policy](issues/12-production-access-policy.md) | Requires operator decisions; no controls claimed | None |
+| Parallel feature work | [03 confirm and lock](issues/03-confirm-and-lock.md) | Not implemented | 02 |
+| Parallel configuration work | [14 reproducible Railway configuration](issues/14-reproducible-railway-configuration.md) | Not implemented; reconcile local evidence and dashboard drift | 04 |
+| Parallel setup completion | [05 environments and Google setup](issues/05-railway-environments.md) | Stage active; production prepared/inactive; incomplete setup acceptance | 01, 04 |
+| After policy | [13 enforce access governance](issues/13-enforce-production-access-governance.md) | Blocked on policy; implementation choices unresolved | 12 |
+| After setup, controls and configuration | [15 automated release verification](issues/15-verify-automated-release-gates.md) | Existing workflows need credentials, two member sessions and live gate proof | 05, 13, 14 |
+| In parallel with release verification | [16 recovery readiness](issues/16-backup-restore-readiness.md) | Backup policy and isolated rehearsal outstanding | 05, 13, 14 |
+| Convergence on final candidate | [06 real-account stage acceptance](issues/06-stage-verification.md) | Partial save/read proof only; all prerequisites required | 02, 03, 05, 13, 15, 16 |
+| Last, separately authorized | [07 production promotion](issues/07-production-promotion.md) | Existing workflow; actual activation not performed | 06 |
+| Optional/deferred | [11 promotion input simplification](issues/11-simplify-manual-promotion.md) | Proposed convenience only | No prerequisite for 07 |
 
-Hosting-only staging now takes priority. The original authenticated delivery sequence below resumes after ticket 10 establishes the provider and admission policy. Hosted runtime and approved-access foundations have merged; table readiness is the original specification state, not current live acceptance. Approved access can proceed independently without credentials; its policy now explicitly supports approved personal Google accounts locally/in stage while keeping production work-domain restrictions. Ready labels describe specification completeness; dependencies still block execution. No later product milestone has ready implementation tickets.
+Ticket 10 retains provider setup findings; remaining environment-specific verification is owned by 05 and production login acceptance by 07. Ticket 09 records the superseded hosting-only route. Do not reopen the provider decision or deploy hosting-only mode merely because historical records mention them.
 
-Local Google configuration, Jaco's stage lead/personal-member setup, QA enrollment, repository rules and live deployment gates belong to environment setup. Credentials, domains and emails are obtained privately when setup starts. Initial stage deployment need not wait for lead browsing/locking; full stage acceptance must include those features and their migrations in the verified revision. At least two member accounts are required for isolation evidence.
+Ticket 05 owns environment readiness, not final release approval. Ticket 15 owns automation and failure-gate verification; 16 owns recovery. Their links from 05 are handoffs, not reverse dependencies. This prevents a bootstrap cycle: staging already exists, real sessions are acquired there, then automated delivery can be verified after separate authorization. Production credentials/privileged operations remain gated by 13 even if earlier resource preparation is complete.
 
-## Release path and verification
+## Release path and evidence
 
-1. PR: required typecheck, browser/HTTP tests against isolated real PostgreSQL, and production build before merge.
-2. Merged main revision: rerun checks; automatically deploy that exact SHA to stage only after success. Verify migrations/readiness, then automated stage smoke/E2E checks.
-3. Stage acceptance: real Google lead/member sessions, newcomer workflow, privacy, persistence and immutable confirmation; bind automated and human evidence to the candidate SHA.
-4. Production: explicit manual promotion of that exact verified revision, with backups/migration compatibility and production smoke evidence. Main merges never deploy production. Changed code returns through stage verification.
+1. Complete reviewed feature/control/configuration changes with required PR tests; merge the currently local setup evidence and runbook reconciliation through review. Existing workflows are already merged; Renovate is unrelated.
+2. On the final merged candidate, obtain successful same-SHA CI and automated staging receipt/readiness/smoke artifact under 15. Earlier manual proof or a previous revision's artifact cannot substitute.
+3. Complete 06 using a real lead and at least two ordinary members: authoring, read access, confirmation/lock, isolation, denial/revocation, persistence and newcomer usability. Bind recovery and governance verification to the applicable configuration/schema; rerun affected checks after changes.
+4. An authorized operator inspects the protected acceptance record and explicitly dispatches the existing SHA/run promotion workflow only after 07's preflight. The URL input alone is not proof its contents passed. Production credentials and migration settings must be verified before dispatch; authenticated production acceptance happens after controlled activation and before inviting the trial group.
 
-All application slices follow public-behavior TDD and preserve current data. Failed or absent checks prevent downstream deployment/promotion. A passing local suite is not proof that live repository/deployment gates or Google configuration work.
-
-New review phases, unlock/copy/versioning, catch-up notes, administrators, multiple departments and notifications remain deferred. [Milestone](milestone.md) · [Specification](spec.md).
+No production deployment, ordinary data repair or privilege grant is authorized by this document. Release promotion's one-operator decision is separate from ticket 12's unresolved data-change approval policy. No silent reduction to a draft-only trial; that requires a new scope decision. Later product milestones and admin UI remain deferred.

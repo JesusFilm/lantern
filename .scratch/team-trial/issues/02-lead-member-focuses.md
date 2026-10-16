@@ -5,7 +5,7 @@ Milestone: M06
 Type: task
 Status: resolved
 Blocked by: None
-Implementation: Implemented and locally verified on codex/lead-member-focuses; awaiting integration and same-revision stage verification.
+Implementation: Merged on main; member save/reload and lead read-only browsing verified manually on staging at 8e4cd80; full acceptance remains 06.
 Slice: Hosted team trial
 
 ---

@@ -5,7 +5,7 @@ Reconciled 15 October 2026 around a small hosted team trial. Dates and broader a
 | Priority | Milestone | Current disposition |
 | --- | --- | --- |
 | Delivered | [M01 — accepted local authoring and guide baseline](../.scratch/position-focus-guide/milestone.md) | Complete against revised scope; live Google/newcomer checks transferred, not passed. |
-| Next | [M06 — run a secure hosted team trial](../.scratch/team-trial/milestone.md) | Specification complete; implementation tickets prepared. Approved emails, member privacy, lead browsing, confirmation locks, Railway stage/prod, QA and promotion. |
+| Next | [M06 — run a secure hosted team trial](../.scratch/team-trial/milestone.md) | Authenticated staging and lead reading verified in part; confirmation, production access governance, release/recovery evidence and production acceptance remain. |
 | Deferred next | [M04 — later review cycles](../.scratch/position-focus-review/milestone.md) | Plan after initial trial: lead-initiated midyear/year-end drafts, preserving confirmed history. |
 | Parked | [M02 — engineer context](../.scratch/engineer-context/milestone.md) | Catch-up records await a demonstrated need; member list is included in M06. |
 | Superseded | [M03 — original completion workflow](../.scratch/position-focus-submission/milestone.md) | Closed as split: authoring delivered in M01; confirmation and trial in M06; request/submission machinery not approved. |
@@ -13,12 +13,13 @@ Reconciled 15 October 2026 around a small hosted team trial. Dates and broader a
 
 ## Next implementation order
 
-Start with [Hosted runtime, required CI and gated stage delivery](../.scratch/team-trial/issues/04-hosted-runtime.md). [Approved Google access](../.scratch/team-trial/issues/01-approved-access.md) is independently ready, with approved personal accounts allowed locally/in stage and work-domain restrictions retained in production.
+The runtime, approved Google access and lead-reading foundations are merged. Staging has real member-save/lead-read proof; production is inactive and automatic staging delivery is disabled.
 
-After both foundations, prioritise [Railway environments, Google setup and live release gates](../.scratch/team-trial/issues/05-railway-environments.md). [Lead browsing](../.scratch/team-trial/issues/02-lead-member-focuses.md) follows approved access and can proceed alongside setup; [Confirm and lock](../.scratch/team-trial/issues/03-confirm-and-lock.md) follows lead browsing. All converge on [Stage verification](../.scratch/team-trial/issues/06-stage-verification.md), then [Manual production promotion](../.scratch/team-trial/issues/07-production-promotion.md).
+1. Decide [production access policy](../.scratch/team-trial/issues/12-production-access-policy.md), then [enforce privileged access and auditing](../.scratch/team-trial/issues/13-enforce-production-access-governance.md).
+2. In parallel where dependencies permit, implement [confirm and lock](../.scratch/team-trial/issues/03-confirm-and-lock.md), complete environment setup (05), and make [Railway configuration reproducible](../.scratch/team-trial/issues/14-reproducible-railway-configuration.md).
+3. After setup/controls/configuration, prove [automated release gates](../.scratch/team-trial/issues/15-verify-automated-release-gates.md) and [backup/recovery readiness](../.scratch/team-trial/issues/16-backup-restore-readiness.md).
+4. Converge on full final-revision stage acceptance (06), then separately authorized production promotion (07). The explicit SHA/run promotion workflow already exists; its proposed input simplification (11) is optional.
 
-Required PR/main checks precede automatic stage deployment; stage smoke/E2E and human acceptance precede manual promotion of the exact verified revision. Main merges never deploy production. See the [prioritised queue](../.scratch/team-trial/breakdown.md) for dependencies and verification. Other milestones have no implementation-ready tickets.
-
-Backend allowlist configuration replaces a need for administrator screens. QA uses real authenticated test accounts and isolated stage data. Review later phases only after people have tried the initial workflow. The [deferred register](../.scratch/position-focus-guide/deferred.md) retains ideas without committing to implement them.
+See the [dependency-ordered queue](../.scratch/team-trial/breakdown.md). Planning only: no ticket status authorizes implementation, credential installation or enabling delivery. Production data-change approval policy is separate from the existing one-operator release-promotion decision. Backend operations still avoid an admin UI, but now require production governance rather than unrestricted database access. Later product milestones remain deferred.
 
 Historical ticket answers and pre-reconciliation records remain available under `.scratch/position-focus-guide/history/`. Current requirements take precedence. [Planning map](../.scratch/roadmap/map.md) · [Tracker conventions](agents/issue-tracker.md).

@@ -6,11 +6,13 @@ credentials, deployments, or user records were changed.
 
 ## Current decision — 16 October 2026
 
-Authentication is deferred while [hosting-only staging](../../.scratch/team-trial/issues/09-hosting-only-staging.md) proceeds. Jesus Film One is a candidate for the [bounded provider/admission investigation](../../.scratch/team-trial/issues/10-authentication-provider-decision.md), not an approved replacement. The recommendations below are research proposals. Direct Google setup is paused and Lantern-owned passwords are not pursued. Production admission policy has not been replaced, and no shared workforce capability is authorized by this investigation.
+The operator superseded the earlier pause: use the existing Google implementation first, and investigate Jesus Film One only if Google is genuinely blocked. Local and stage dedicated clients have now been created through the signed-in work account in an existing compatible External project. Production client preparation was also requested. See [live Mac setup evidence](../operations/google-mac-setup-evidence.md) for outcomes and limitations. Real work and personal Lantern logins succeeded locally in separate browser profiles after explicit local-only approvals. Subsequent [staging evidence](../operations/staging-activation-evidence.md) verifies hosted work/personal login and bounded member-save/lead-read behavior; production remains inactive and its admission policy is unchanged. Lantern-owned passwords remain excluded.
+
+The Forge findings below are retained as fallback research. Earlier preferences for replacing direct Google are historical and no longer govern execution.
 
 ## Jesus Film One (Forge)
 
-**Recommended direction, subject to an integration proof:** reuse the existing
+**Fallback only if Google is blocked, subject to an integration proof:** reuse the existing
 Jesus Film identity provider. This avoids a separate Google Cloud setup for
 Lantern while retaining Google sign-in through the shared provider, if that
 provider's live Google configuration admits the intended participants.
@@ -90,7 +92,7 @@ Technically possible, but the least attractive option while a shared provider ex
 
 Jesus Film One already has password authentication in its source, so it may also satisfy an email/password fallback without Lantern operating another credential store. Live availability and recovery behavior still need verification.
 
-## Recommendation and change boundary
+## Earlier recommendation and change boundary — superseded
 
 1. First choice: prove Jesus Film One onboarding and the required identity/eligibility claims. Keep its login methods centralized and Lantern's exact-email approvals, active department membership and career-lead permissions local.
 2. Lowest code-change fallback: use dedicated clients within an approved existing Google project, provided its owner grants access and the audience supports QA.
@@ -100,7 +102,7 @@ This is research, not authorization to replace authentication. Lantern's current
 
 The practical next checkpoint is one registered local Lantern client and real sign-in through Jesus Film One, verifying work and personal-QA outcomes and the issued claims without logging tokens. No production enrollment or deployment is needed for this proof. Google setup can remain on hold while that is resolved.
 
-## Follow-up decision: shared identity, Lantern-owned permissions
+## Earlier follow-up decision — superseded: shared identity, Lantern-owned permissions
 
 The operator selected Jesus Film One for further investigation and ruled out direct Google setup and Lantern-owned passwords. They have Forge repository and Railway administration access. This enables a reviewed onboarding/configuration change; it does not require a broad change to all consumers of the shared identity provider.
 
