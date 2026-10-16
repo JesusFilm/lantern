@@ -3,7 +3,7 @@ ID: team-trial/10
 Title: Complete Google setup and verify real-account access
 Milestone: M06
 Type: research
-Status: needs-info
+Status: resolved
 Implementation: Dedicated local/stage/production Google clients created; local and staging work/personal real login verified; production login deferred to 07
 Slice: Hosted team trial
 
@@ -29,9 +29,9 @@ See [Mac Google setup evidence](../../../docs/operations/google-mac-setup-eviden
 - [x] Complete the separately requested production client preparation; credentials saved privately, no production activation.
 - [x] Verify a successful approved work-account Lantern session locally, with zero memberships/roles, after explicit local-only enrollment authorization.
 - [x] Verify the selected personal-account flow on the normal runtime after explicit local-only approval; separate work/personal sessions, zero departments and memberships.
-- [ ] Complete environment-specific Railway credential handoff and separately authorized staging deployment/enrollment. Do not enable STAGE_DELIVERY_ENABLED in this setup task.
+- [x] Complete staging credential handoff and separately authorized deployment/enrollment; real work/personal Google sessions verified. Production credentials remain uninstalled and STAGE_DELIVERY_ENABLED remains unset. See [activation evidence](../../../docs/operations/staging-activation-evidence.md).
 
-## Fallback investigation only if Google is blocked
+## Conditional fallback (not triggered; not outstanding acceptance)
 
 - [ ] Confirm live issuer/discovery, supported client onboarding, exact callbacks, environment separation and available login methods. Source capability alone is insufficient; explain prior discovery 403 rather than assuming an outage.
 - [ ] Prepare one local client proof with authorization code/PKCE, server-side validation and a real work account plus personal QA account. Obtain identities and secrets privately. If registration or operator interaction is needed, identify the narrow change and obtain the necessary input before proceeding.
@@ -39,9 +39,9 @@ See [Mac Google setup evidence](../../../docs/operations/google-mac-setup-eviden
 - [ ] Decide explicitly whether production admission retains an authoritative workforce signal or adopts an operator-maintained approved-employee policy. Lantern remains authoritative for approval, active department membership, career-lead permissions and document ownership on every protected request. Neither a shared login nor an approval grants a lead role.
 - [ ] Record recommendation, evidence limitations, shared-service changes/risks and operator decision. If accepted, create a separately scoped implementation ticket addressing issuer/subject storage, deliberate identity migration, configuration and callback changes, revocation and environment-policy tests; revise 05/06/07 and spec consistently before implementation.
 
-## Completion
+## Answer
 
-A recorded provider/admission decision and implementation scope, or a documented blocker and next decision. This ticket does not replace Lantern authentication, enable unattended delivery, provision production participants or complete the team trial.
+Google setup succeeded without a provider replacement. Dedicated clients and real local/staging work/personal sessions establish the bounded result requested here. Conditional fallback investigation was unnecessary and is not claimed completed. Remaining environment denial/revocation checks are owned by 05/06, automated release verification by 15 and production login/enrollment by 07. This ticket does not replace Lantern authentication, enable unattended delivery, provision production participants or complete the team trial.
 
 ## Sources
 
