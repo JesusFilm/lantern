@@ -8,5 +8,5 @@ try {
   await assertDatabaseTarget(database, { database: config.expectedDatabase, schema: config.schema, role: config.migration });
   await migrate(database, {runtime:config.runtime,migration:config.migration,admin:config.admin});
   console.log('Migrations and privilege grants complete.');
-} catch { console.error('Migration failed; transaction rolled back.'); process.exitCode = 1; }
+} catch { console.error('No migration success recorded. Keep the application inactive; verify the ledger before retry or recovery.'); process.exitCode = 1; }
 finally { await database.end(); }

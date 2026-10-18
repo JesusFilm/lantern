@@ -5,7 +5,7 @@ import { bootstrapDatabaseRoles } from './database-privileges.js';
 
 // Privilege tests need a disposable DATABASE, since PUBLIC database grants cannot
 // safely be changed inside a schema shared with other test runs.
-export async function privilegeFixture() {
+export async function privilegeFixture(options: { deferBootstrap?: boolean; requireEmpty?: boolean; beforeBootstrap?: (db: ReturnType<typeof createDatabase>) => Promise<void> } = {}) {
   const url = new URL(process.env.DATABASE_URL!);
   assert.ok(['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname), 'Privilege tests require local synthetic PostgreSQL');
   const owner = createDatabase(url.href);
@@ -25,8 +25,9 @@ export async function privilegeFixture() {
     await owner.end();
   }
   try {
-    await bootstrapDatabaseRoles(bootstrap, { expectedDatabase: databaseName, schema: 'lantern', ...roles });
-    for (const role of Object.values(roles)) await bootstrap.query(`ALTER ROLE ${role} LOGIN PASSWORD '${password}'`);
+    await options.beforeBootstrap?.(bootstrap);
+    if (!options.deferBootstrap) await bootstrapDatabaseRoles(bootstrap, { requireEmpty: options.requireEmpty, expectedDatabase: databaseName, schema: 'lantern', ...roles });
+    if (!options.deferBootstrap) for (const role of Object.values(roles)) await bootstrap.query(`ALTER ROLE ${role} LOGIN PASSWORD '${password}'`);
     function connection(role: string) {
       const connection = new URL(url); connection.username = role; connection.password = password;
       connection.searchParams.set('options', '-c search_path=lantern');

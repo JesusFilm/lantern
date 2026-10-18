@@ -5,13 +5,23 @@ Milestone: M06
 Type: task
 Status: needs-info
 Blocked by: Hosted authorization and remaining provider/production verification
-Implementation: Local database-role slice implemented and tested; hosted rollout and remaining controls outstanding
+Implementation: Local role split merged in PR #9; transfer/fresh setup and recovery prepared locally; hosted enforcement outstanding
 Slice: Hosted team trial
 
 ---
 ## Outcome
 
 Implement and verify the policy agreed in ticket 12 and repository-root AGENTS.md before production activation. Policy decisions and Jaco’s manual superuser findings are recorded; the complete provider inventory and hosted enforcement remain outstanding. Local code and isolated synthetic-data execution were explicitly authorized on 2026-10-19. Hosted changes and production execution remain outside that authorization. No new admin UI, second approver or bespoke tamper-proof audit service is required for the initial trial.
+
+## Database transition preparation — 19 October 2026
+
+The approved local slice now covers the existing schema-2 staging transfer, explicit
+empty-database bootstrap, read-only scope verification, and recovery rehearsal.
+[Procedure and evidence](../../../docs/operations/database-transition.md) distinguish
+prepared scripts from hosted execution. Ticket 17 is the human production database-only
+checkpoint after staging transition proof; its reported findings feed this ticket.
+Do not require full closure of 13 before 17 can establish those database controls.
+The broader application/provider privacy boundary and operational controls remain open.
 
 ## Remaining implementation checks
 

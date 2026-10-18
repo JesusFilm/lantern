@@ -1,4 +1,4 @@
-import type { Pool } from 'pg';
+import type { Pool, PoolClient } from 'pg';
 import { grantApplicationPrivileges, type DatabaseRoles } from './database-privileges.js';
 import { migrateEnrollment } from './enrollment-migration.js';
 
@@ -66,7 +66,7 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
   } finally { client.release(); }
 }
 
-export async function assertSchemaReady(database: Pool) {
+export async function assertSchemaReady(database: Pool | PoolClient) {
   const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3)');
   if (result.rowCount !== 3) throw new Error('Required migration is missing.');
   await database.query(`SELECT u.id, d.id, m.user_id, f.id, s.token_hash, l.state_hash, a.domain, e.email

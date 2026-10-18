@@ -17,3 +17,9 @@ test('environment identity defaults restrictively and validates hosted configura
   }
   assert.equal(resolveRuntime({ DATABASE_URL: 'postgresql://unused', LANTERN_ENV: 'local', LOCAL_ACCESS: '1' }).localAccess, true);
 });
+
+test('application deployment never runs the privileged migration command', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const config = JSON.parse(await readFile('railway.json','utf8'));
+  assert.equal(config.deploy.preDeployCommand, undefined);
+});
