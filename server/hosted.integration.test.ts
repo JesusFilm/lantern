@@ -18,7 +18,7 @@ test('production-only package migrates, starts without dotenv, serves assets and
  await new Promise<void>(r => socket.close(() => r()));
  const env = { ...process.env, DATABASE_URL: url.href, NODE_ENV: 'production', LANTERN_ENV: 'stage', LOCAL_ACCESS: '0', HOST: '127.0.0.1', PORT: String(address.port), APP_ORIGIN: 'https://stage.example.test', GOOGLE_CLIENT_ID: 'synthetic', GOOGLE_CLIENT_SECRET: 'synthetic' };
  const commandEnv = { ...env, MIGRATION_DATABASE_URL:migration.options.connectionString!, ADMIN_DATABASE_URL:admin.options.connectionString!,
-   LANTERN_DB_NAME:fixture.databaseName, LANTERN_DB_SCHEMA:'lantern', LANTERN_DB_RUNTIME_ROLE:roles.runtime, LANTERN_DB_MIGRATION_ROLE:roles.migration, LANTERN_DB_ADMIN_ROLE:roles.admin };
+   LANTERN_DB_EXPECTED_ENDPOINT:url.host, LANTERN_DB_NAME:fixture.databaseName, LANTERN_DB_SCHEMA:'lantern', LANTERN_DB_RUNTIME_ROLE:roles.runtime, LANTERN_DB_MIGRATION_ROLE:roles.migration, LANTERN_DB_ADMIN_ROLE:roles.admin };
  let child: ReturnType<typeof spawn> | undefined;
  async function stop() { if (child && child.exitCode === null) { const exited = once(child, 'exit'); child.kill(); await exited; } child = undefined; }
  try {

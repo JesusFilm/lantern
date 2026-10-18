@@ -12,15 +12,26 @@ function validateRoles(roles: DatabaseRoles) {
 }
 
 /** Human bootstrap only. Fresh dedicated database/schema; never adopts existing objects or roles. */
-export async function bootstrapDatabaseRoles(db: Pool, config: DatabaseRoles & { expectedDatabase: string; schema: string }) {
+export async function bootstrapDatabaseRoles(db: Pool, config: DatabaseRoles & { expectedDatabase: string; schema: string; requireEmpty?: boolean; expectedOwner?: string }) {
   validateRoles({ runtime: config.runtime, migration: config.migration, admin: config.admin });
   const schema = identifier(config.schema), database = identifier(config.expectedDatabase);
   if (['public', 'information_schema'].includes(config.schema) || config.schema.startsWith('pg_')) throw new Error('Use a dedicated application schema.');
   const client = await db.connect();
   try {
     await client.query('BEGIN');
-    const target = await client.query('SELECT current_database() AS name');
+    const target = await client.query('SELECT current_database() AS name, current_user AS role, session_user AS login');
     if (target.rows[0].name !== config.expectedDatabase) throw new Error('Database target mismatch.');
+    if (config.expectedOwner && (target.rows[0].role !== config.expectedOwner || target.rows[0].login !== config.expectedOwner)) throw new Error('Bootstrap owner mismatch.');
+    if (config.requireEmpty) {
+      const existing = await client.query(`SELECT EXISTS(
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+      ) OR EXISTS(
+        SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+        WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+      ) AS occupied`);
+      if (existing.rows[0].occupied) throw new Error('Fresh setup requires an empty database.');
+    }
     for (const role of [config.migration, config.runtime, config.admin]) {
       await client.query(`CREATE ROLE ${identifier(role)} NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`);
     }

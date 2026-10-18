@@ -52,6 +52,10 @@ PUBLIC CREATE/TEMP on that database and CREATE on its public schema.
 Bootstrap, migration and admin processes require these explicit target settings:
 
 ```dotenv
+LANTERN_ENV=local
+LANTERN_DB_SETUP_MODE=empty
+LANTERN_DB_EXPECTED_ENDPOINT=127.0.0.1:55439
+LANTERN_DB_SOURCE_OWNER=career_lead
 LANTERN_DB_NAME=lantern_local
 LANTERN_DB_SCHEMA=lantern
 LANTERN_DB_RUNTIME_ROLE=lantern_local_runtime
@@ -61,7 +65,8 @@ LANTERN_DB_ADMIN_ROLE=lantern_local_admin
 
 Use environment-specific role names. The migration/admin commands check actual
 database, schema, current/session role, elevated attributes and role membership
-before work. A matching name is not provider/project attestation: independently
+before work. Bootstrap, migration and verification also require the URL host/port
+to match `LANTERN_DB_EXPECTED_ENDPOINT`. A matching name is not provider/project attestation: independently
 verify the connection endpoint and environment before supplying a credential.
 
 1. Create the dedicated database using the local owner, then supply
@@ -104,6 +109,10 @@ For any eventual production work, follow the required [operator assistance proce
 
 ## Eventual staging handoff — unexecuted
 
+The executable [database transition procedure](database-transition.md) now covers
+the locally rehearsed populated-stage transfer and empty-production setup. Follow
+its ordered checkpoints; hosted execution remains separately authorized.
+
 Jaco reported on 2026-10-19 that staging runtime uses the Postgres service URL with
 username `postgres`, and that staging/production inspected connections have all
 four reported elevated attributes. He reported no production application tables.
@@ -120,12 +129,12 @@ For a separately authorized staging switch:
    is the simplest alternative.
 2. Create the separate roles/schema with the bootstrap process only after reviewing
    its database-wide PUBLIC changes. Existing public-schema tables are **not**
-   adopted by bootstrap. Prepare and rehearse a separate ownership/schema transfer
+   adopted by bootstrap. Use the prepared and locally rehearsed ownership/schema transfer
    of the complete existing baseline (including ledger, indexes and constraints),
    or restore it into a fresh dedicated database owned by the migration role.
    Verify source/destination row counts and ownership before changing runtime.
-   This transfer is a remaining hosted-rollout step, not something this local
-   bootstrap silently attempts. Do not lose existing membership/history or rerun
+   This transfer is an explicit separate command and an unexecuted hosted-rollout
+   step; bootstrap never silently attempts it. Do not lose existing membership/history or rerun
    baseline creation into an empty schema and call it a data migration.
 3. Run the versioned migrator with its separate credential, absent from the runtime
    service. Verify three ledger versions, object owners, explicit grants and denied
@@ -169,6 +178,10 @@ is scheduled by this document. Prepare a sanitized `planned` record in
 production execution; update it only from Jaco's sanitized report afterward.
 
 ## Local verification evidence
+
+The transition preparation adds CLI checks, transactional transfer/reversal and
+real local dump/restore rehearsal; see [the transition procedure](database-transition.md).
+The evidence below records the earlier merged privilege slice.
 
 On 2026-10-19, Node 24.21.0 / PostgreSQL 17 synthetic local verification passed:
 92 tests, zero failures/skips; client and server TypeScript checks; production

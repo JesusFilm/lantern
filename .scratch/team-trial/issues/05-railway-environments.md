@@ -19,7 +19,7 @@ Google staging is active with schema version 2, one Engineering lead and one ord
 
 ## Ownership of remaining release work
 
-The automation/backup requirements below are explicitly handed off. Their execution and completion evidence are owned by tickets [15](15-verify-automated-release-gates.md) and [16](16-backup-restore-readiness.md); they are not prerequisites for resolving this environment-setup ticket. Ticket 14 owns reproducible deployment settings, 12/13 production privileged-access policy/enforcement, and 07 production activation. Resolve 05 only after remaining environment setup checks have evidence, explicitly linking these open handoffs rather than checking them as passed. No production privileged operation may bypass 13.
+The automation/backup requirements below are explicitly handed off. Their execution and completion evidence are owned by tickets [15](15-verify-automated-release-gates.md) and [16](16-backup-restore-readiness.md); they are not prerequisites for resolving this environment-setup ticket. Ticket 14 owns reproducible deployment settings, 12/13 production privileged-access policy/enforcement, 17 production database readiness while inactive, and 07 later production activation. Resolve 05 only after remaining environment setup checks have evidence, explicitly linking these open handoffs rather than checking them as passed. No production privileged operation may bypass 13.
 
 Railway-generated domains are approved. Start with small resources and review actual cost; a numeric budget is not an outstanding prerequisite. US$30/month projected usage was suggested as a review threshold, not a cap or price guarantee. Preserve shared workspace spending controls.
 
@@ -50,6 +50,7 @@ Production resource preparation is part of this ticket, not the later production
 - **14:** reproducible migration/start/health settings and drift detection; reconcile local evidence through review.
 - **15:** required-check and failed-check live proof, environment-scoped token, two ordinary-member sessions, separately authorized stage delivery enablement, exact-revision smoke artifact and promotion rejection drills. Keep `STAGE_DELIVERY_ENABLED` unset/false until that separately authorized work passes its prerequisites; return it to false on activation failure.
 - **16:** approved backup retention, recovery ownership and isolated restore/rollback rehearsal.
+- **17:** human-run production role/schema setup after staging transition proof; no application activation.
 - **06/07:** final candidate acceptance and explicit production promotion with controlled enrollment and authenticated smoke.
 
 These are downstream handoffs, not reciprocal blockers on 05. Resolving environment setup must leave their acceptance open and link their evidence when later completed.

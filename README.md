@@ -52,3 +52,5 @@ Run `npm run tickets` for the board on http://127.0.0.1:4393. The private VM [ro
 - `.scratch/`: current plans and preserved decision history.
 
 [AGENTS.md](AGENTS.md) requires TDD, server-authoritative identity/ownership and separated responsibilities. Product code and plans are tracked in the private `JesusFilm/lantern` upstream. The prototype worktree remains `/home/jacobuntu/Ops/worktrees/lantern-ui-prototypes` on `codex/lantern-ui-prototypes`; application code must not depend on it.
+
+Database rollout preparation: follow the [staging transfer and empty-production procedure](docs/operations/database-transition.md). Production database readiness (ticket 17) precedes application launch (ticket 07); hosted execution is separately authorized.

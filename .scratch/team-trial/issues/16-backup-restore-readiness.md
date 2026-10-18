@@ -5,7 +5,7 @@ Milestone: M06
 Type: task
 Status: ready-for-human
 Blocked by: 05, 13, 14
-Implementation: Not started; planning only
+Implementation: Local synthetic transaction reversal and pg_dump/pg_restore rehearsal completed; hosted backups and full recovery acceptance outstanding
 Slice: Hosted team trial
 
 ---
@@ -22,6 +22,17 @@ Demonstrate recovery before production personnel data is collected, with privile
 - [ ] Rehearse schema-compatible application rollback and document migration recovery separately. Test logical restore versus provider volume/PITR claims separately; neither substitutes for the other.
 - [ ] Specify first-release handling when production is empty and pre-release backups for later releases where data exists. Carry the resulting evidence into 06/07; changed migration/recovery assumptions require revalidation.
 
+## Local rehearsal — 19 October 2026
+
+The [transition procedure](../../../docs/operations/database-transition.md) includes
+transaction rollback, reversal before migration, and an actual synthetic PostgreSQL
+17 dump/restore into a new isolated database followed by role transfer, migration and
+restricted-runtime HTTP read. This proves the local logical path only. It does not
+configure backup retention, prove provider snapshots/PITR, meet an RPO/RTO, or replace
+the authenticated stage/hosted rehearsal. Ticket 17 must consume applicable recovery
+proof before human production database preparation; ticket 07 still requires full
+release recovery acceptance before collecting personnel data.
+
 ## Boundary
 
-Future authorized recovery work only. No backup purchase, permission change, database restore, destructive cleanup or production activation occurs in this planning session.
+Local synthetic recovery preparation was authorized on 19 October. Hosted recovery remains separately authorized work. No hosted backup purchase, permission change, database restore, destructive cleanup or production activation occurs in this preparation session. Local disposable synthetic dump/restore is the rehearsal described above.

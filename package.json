@@ -27,7 +27,10 @@
     "access:ops:compiled": "node dist/server/operations.js",
     "db:bootstrap": "node dist/server/bootstrap-database.js",
     "db:migrate:local": "node --env-file=.env.migration dist/server/migrate.js",
-    "test:local": "node --env-file=.env.example --import tsx --test --test-concurrency=1 server/*.test.ts tools/ticket-board/tickets.test.ts tools/release/*.test.mjs"
+    "test:local": "node --env-file=.env.example --import tsx --test --test-concurrency=1 server/*.test.ts tools/ticket-board/tickets.test.ts tools/release/*.test.mjs",
+    "db:transition": "node dist/server/transition-database.js",
+    "db:verify": "node dist/server/verify-database.js",
+    "db:rehearse:local": "node --env-file=.env.example --import tsx tools/database/rehearse-recovery.ts"
   },
   "dependencies": {
     "express": "^5.3.0",
