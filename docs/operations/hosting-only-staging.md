@@ -1,12 +1,12 @@
 # Hosting-only staging
 
-This is the temporary ticket 09 milestone, not authenticated stage acceptance or a production candidate. Authentication selection is deferred to ticket 10. No hosted authentication bypass is permitted.
+This records the temporary ticket 09 hosting-only procedure; subsequent [staging activation evidence](staging-activation-evidence.md) records authentication activation. Before using this procedure with the current code, complete the separately authorized [database privilege rollout](database-privileges.md). The original app-service pre-deploy hook and provider-owner database reference are superseded: migration credentials must stay in a separate runner, and the application needs a restricted runtime URL. No hosted authentication bypass is permitted.
 
 ## Railway resources versus application configuration
 
 Reuse Railway project `9a445065-bde0-4184-bdb8-4161b033cc8f`, environment **staging** `8e19675b-08a2-4bfb-9762-fd6d8561fcfd`. The application policy name remains **stage**. These names serve different systems and need not match.
 
-Provision one PostgreSQL service with its own volume and one application service within that environment. Reinspect the project first to avoid duplicates. Railway CLI/API or dashboard creates these resources, allocates the generated HTTPS domain and stores secret variables. `railway.json` does not create a database or service: it configures the application build, pre-deploy migration, start command and readiness check. Keep it as the source of truth without conflicting dashboard overrides.
+Provision one PostgreSQL service with its own volume and one application service within that environment. Reinspect the project first to avoid duplicates. Railway CLI/API or dashboard creates these resources, allocates the generated HTTPS domain and stores secret variables. `railway.json` does not create a database or service: it still contains the original application pre-deploy migrator. That hook must be replaced as part of the separately authorized runner transition before deployment; do not install the migration credential in the app service. Verify effective hosted settings as described in the [release runbook](hosted-release.md).
 
 Use private networking for the application's environment-specific database reference. Never point it at existing local data or a production database. Keep app GitHub autodeploy and image autoupdates disabled. Production provisioning/activation is not needed for this milestone. Use one replica and review resource consumption after startup; do not change the shared workspace budget or unrelated services.
 
@@ -20,7 +20,7 @@ Use private networking for the application's environment-specific database refer
 | `LOCAL_ACCESS` | `0` |
 | `HOST` | `0.0.0.0` |
 | `PORT` | Railway-provided |
-| `DATABASE_URL` | Private reference to staging's PostgreSQL connection string |
+| `DATABASE_URL` | Staging's restricted runtime connection; never the provider-owner connection |
 | `APP_ORIGIN` | Allocated Railway HTTPS origin, no trailing slash |
 | Google client ID/secret | Absent; this mode rejects configured credentials |
 
@@ -49,4 +49,4 @@ Record the hosted URL, full deployed SHA, Railway deployment ID, schema version,
 
 ## Exit from temporary mode
 
-After the provider decision and implementation, configure the reviewed authentication, remove `LANTERN_HOSTING_ONLY=1`, and complete real login and participant enrollment. Acquire two ordinary-member sessions privately. Only then enable unattended stage delivery and obtain new authenticated stage evidence for the chosen merged SHA. Production promotion and practical lead/confirmation acceptance remain separate gates.
+After the provider decision and implementation, configure the reviewed authentication, remove `LANTERN_HOSTING_ONLY=1`, and complete real login and participant enrollment. Acquire two ordinary-member sessions privately. Keep unattended delivery disabled until the database-role/runner transition and all remaining gates pass and Jaco separately authorizes activation; then obtain new authenticated stage evidence for the chosen merged SHA. Production promotion and practical lead/confirmation acceptance remain separate gates.
