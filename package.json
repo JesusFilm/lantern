@@ -17,7 +17,7 @@
     "tickets": "tsx watch tools/ticket-board/index.ts",
     "tickets:test": "node --import tsx --test tools/ticket-board/tickets.test.ts",
     "predev": "npm run db:start",
-    "access:ops": "tsx --env-file=.env server/operations.ts",
+    "access:ops": "tsx --env-file=.env.admin server/operations.ts",
     "preview:build": "vite build --config tools/guide-preview/vite.config.ts",
     "preview:dev": "vite --config tools/guide-preview/vite.config.ts --host 127.0.0.1",
     "dev:local": "LOCAL_ACCESS=1 tsx watch --env-file=.env server/index.ts",
@@ -25,7 +25,9 @@
     "start:local": "node --env-file-if-exists=.env dist/server/index.js --production",
     "db:migrate": "node dist/server/migrate.js",
     "access:ops:compiled": "node dist/server/operations.js",
-    "preaccess:ops": "tsx --env-file=.env server/migrate.ts"
+    "db:bootstrap": "node dist/server/bootstrap-database.js",
+    "db:migrate:local": "node --env-file=.env.migration dist/server/migrate.js",
+    "test:local": "node --env-file=.env.example --import tsx --test --test-concurrency=1 server/*.test.ts tools/ticket-board/tickets.test.ts tools/release/*.test.mjs"
   },
   "dependencies": {
     "express": "^5.3.0",

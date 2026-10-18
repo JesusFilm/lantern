@@ -1,4 +1,4 @@
-import { isAdmitted, type AdmissionPolicy } from './admission.js';
+import { type AdmissionPolicy } from './admission.js';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
@@ -29,23 +29,14 @@ export async function membership(db: Pool | PoolClient, userId: string) {
 }
 
 export async function addMember(db: Pool, actorId: string, userId: string, policy: AdmissionPolicy = 'production') {
-  return membershipWrite(db, async (client) => {
-    const department = await membership(client, actorId);
-    if (department?.role !== 'career-lead') throw new AccessError(403, 'Only the career lead can add users.');
-    const target = await client.query('SELECT id,email,hosted_domain FROM users WHERE id::text = $1', [userId]);
-    if (!target.rowCount) throw new AccessError(400, 'Select a registered user.');
-    if (!await isAdmitted(client, { email: target.rows[0].email, hostedDomain: target.rows[0].hosted_domain }, policy)) {
-      throw new AccessError(403, 'This account is not currently approved for access.');
+  try {
+    await db.query('SELECT enroll_member($1::uuid,$2::text,$3::boolean)', [actorId, userId, policy !== 'production']);
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && ['P0400','P0403','P0409'].includes(String(error.code))) {
+      throw new AccessError(Number(String(error.code).slice(2)), error instanceof Error ? error.message : 'Enrollment rejected.');
     }
-    const existing = await client.query('SELECT department_id, deleted_at FROM memberships WHERE user_id = $1', [userId]);
-    if (existing.rowCount) {
-      const row = existing.rows[0];
-      if (row.department_id === department.id && !row.deleted_at) return;
-      throw new AccessError(409, row.department_id === department.id
-        ? 'Rejoining is not yet supported.' : 'This user belongs to another department.');
-    }
-    await client.query("INSERT INTO memberships(user_id, department_id, role) VALUES ($1, $2, 'member')", [userId, department.id]);
-  });
+    throw error;
+  }
 }
 
 export async function configureDomains(db: Pool, domains: string[]) {

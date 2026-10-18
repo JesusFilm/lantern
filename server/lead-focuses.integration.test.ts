@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { test } from "node:test";
-import pg from "pg";
+import { privilegeFixture } from './privilege-test-support.js';
 import { createApp } from "./app.js";
 import { hash } from "./access.js";
 import { migrate } from "./schema.js";
@@ -13,25 +13,20 @@ import type {
 } from "../shared/focus.js";
 
 test("career lead reads current members through scoped HTTP routes", async (t) => {
-  const admin = new pg.Pool({ connectionString: process.env.DATABASE_URL });
-  const schema = `lead_${randomUUID().replaceAll("-", "")}`;
-  await admin.query(`CREATE SCHEMA ${schema}`);
-  const db = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    options: `-c search_path=${schema}`,
-  });
+  const fixture = await privilegeFixture();
+  const {runtime:db,admin,migration,roles} = fixture;
   const server = createServer();
   try {
-    await migrate(db);
+    await migrate(migration, roles);
     const lead = randomUUID(),
       alice = randomUUID(),
       bob = randomUUID(),
       outsider = randomUUID();
     const department = randomUUID(),
       otherDepartment = randomUUID();
-    await db.query("INSERT INTO allowed_domains VALUES('example.test')");
+    await admin.query("INSERT INTO allowed_domains VALUES('example.test')");
     for (const id of [department, otherDepartment])
-      await db.query("INSERT INTO departments(id,name) VALUES($1,'Team')", [
+      await admin.query("INSERT INTO departments(id,name) VALUES($1,'Team')", [
         id,
       ]);
     for (const [id, name, role, team] of [
@@ -40,19 +35,19 @@ test("career lead reads current members through scoped HTTP routes", async (t) =
       [bob, "Bob", "member", department],
       [outsider, "Outsider", "career-lead", otherDepartment],
     ]) {
-      await db.query(
+      await admin.query(
         "INSERT INTO users VALUES($1::uuid,$1::text,$2,$3,'example.test')",
         [id, `${name}@example.test`, name],
       );
-      await db.query("INSERT INTO approved_emails VALUES(lower($1))", [
+      await admin.query("INSERT INTO approved_emails VALUES(lower($1))", [
         `${name}@example.test`,
       ]);
-      await db.query("INSERT INTO memberships VALUES($1,$2,$3,NULL)", [
+      await admin.query("INSERT INTO memberships VALUES($1,$2,$3,NULL)", [
         id,
         team,
         role,
       ]);
-      await db.query(
+      await admin.query(
         "INSERT INTO sessions VALUES($1,$2,now()+interval '1 day')",
         [hash(id!), id],
       );
@@ -208,7 +203,7 @@ test("career lead reads current members through scoped HTTP routes", async (t) =
         assert.equal(mismatch.status, 404);
         assert.deepEqual(await absent.json(), await mismatch.json());
         assert.equal((await request(lead, `${path}/unknown`)).status, 404);
-        await db.query(
+        await admin.query(
           "UPDATE memberships SET department_id=$1 WHERE user_id=$2",
           [otherDepartment, alice],
         );
@@ -218,7 +213,7 @@ test("career lead reads current members through scoped HTTP routes", async (t) =
             .focuses,
           [],
         );
-        await db.query(
+        await admin.query(
           "UPDATE memberships SET department_id=$1 WHERE user_id=$2",
           [department, alice],
         );
@@ -227,7 +222,7 @@ test("career lead reads current members through scoped HTTP routes", async (t) =
     await t.test(
       "storage failures return safe errors and recover without changing the document",
       async () => {
-        await db.query(
+        await migration.query(
           "ALTER TABLE position_focuses RENAME TO unavailable_focuses",
         );
         try {
@@ -240,7 +235,7 @@ test("career lead reads current members through scoped HTTP routes", async (t) =
             });
           }
         } finally {
-          await db.query(
+          await migration.query(
             "ALTER TABLE unavailable_focuses RENAME TO position_focuses",
           );
         }
@@ -288,7 +283,7 @@ test("career lead reads current members through scoped HTTP routes", async (t) =
     await t.test(
       "revocation denies existing sessions and target removal hides retained focuses",
       async () => {
-        await db.query(
+        await admin.query(
           "UPDATE memberships SET deleted_at=now() WHERE user_id=$1",
           [alice],
         );
@@ -300,7 +295,7 @@ test("career lead reads current members through scoped HTTP routes", async (t) =
         ).json()) as { members: { id: string }[] };
         assert.ok(!roster.members.some((m: { id: string }) => m.id === alice));
         // Restore only this synthetic fixture to verify retained history via HTTP.
-        await db.query(
+        await admin.query(
           "UPDATE memberships SET deleted_at=NULL WHERE user_id=$1",
           [alice],
         );
@@ -312,21 +307,21 @@ test("career lead reads current members through scoped HTTP routes", async (t) =
           ).focus,
           focus,
         );
-        await db.query(
+        await admin.query(
           "UPDATE memberships SET deleted_at=now() WHERE user_id=$1",
           [lead],
         );
         assert.equal((await request(lead, path)).status, 403);
-        await db.query(
+        await admin.query(
           "UPDATE memberships SET deleted_at=NULL,role='member' WHERE user_id=$1",
           [lead],
         );
         assert.equal((await request(lead, path)).status, 403);
-        await db.query(
+        await admin.query(
           "UPDATE memberships SET role='career-lead' WHERE user_id=$1",
           [lead],
         );
-        await db.query(
+        await admin.query(
           "DELETE FROM approved_emails WHERE email='lead@example.test'",
         );
         for (const endpoint of ["/api/department", path, `${path}/${focus.id}`])
@@ -336,8 +331,6 @@ test("career lead reads current members through scoped HTTP routes", async (t) =
   } finally {
     server.closeAllConnections();
     await new Promise<void>((r) => server.close(() => r()));
-    await db.end();
-    await admin.query(`DROP SCHEMA ${schema} CASCADE`);
-    await admin.end();
+    await fixture.close();
   }
 });

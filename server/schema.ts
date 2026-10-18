@@ -1,6 +1,8 @@
 import type { Pool } from 'pg';
+import { grantApplicationPrivileges, type DatabaseRoles } from './database-privileges.js';
+import { migrateEnrollment } from './enrollment-migration.js';
 
-export async function migrate(database: Pool) {
+export async function migrate(database: Pool, roles?: DatabaseRoles) {
   const client = await database.connect();
   try {
     await client.query('BEGIN');
@@ -51,6 +53,12 @@ export async function migrate(database: Pool) {
       `);
       await client.query('INSERT INTO schema_migrations(version) VALUES (2)');
     }
+    const enrollment = await client.query('SELECT version FROM schema_migrations WHERE version = 3');
+    if (!enrollment.rowCount) {
+      await migrateEnrollment(client);
+      await client.query('INSERT INTO schema_migrations(version) VALUES (3)');
+    }
+    if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');
@@ -59,8 +67,8 @@ export async function migrate(database: Pool) {
 }
 
 export async function assertSchemaReady(database: Pool) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2)');
-  if (result.rowCount !== 2) throw new Error('Required migration is missing.');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3)');
+  if (result.rowCount !== 3) throw new Error('Required migration is missing.');
   await database.query(`SELECT u.id, d.id, m.user_id, f.id, s.token_hash, l.state_hash, a.domain, e.email
     FROM users u, departments d, memberships m, position_focuses f, sessions s, login_attempts l, allowed_domains a, approved_emails e LIMIT 0`);
 }

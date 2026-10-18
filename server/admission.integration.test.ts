@@ -1,3 +1,4 @@
+import { privilegeFixture } from './privilege-test-support.js';
 import type { SessionView } from '../shared/access.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -155,17 +156,20 @@ test('stage lead assigns approved personal members; revoked eligibility and forg
 });
 
 test('operator command adds, lists and removes approvals without interpolating email SQL', async () => {
-  await fixture(async db => {
-    const schema = (await db.query('SELECT current_schema() AS name')).rows[0].name;
+  const fixture = await privilegeFixture();
+  try {
+    await migrate(fixture.migration, fixture.roles);
     const run = (...args: string[]) => promisify(execFile)(process.execPath, ['--import', 'tsx', 'server/operations.ts', ...args], {
-      env: { ...process.env, PGOPTIONS: `-c search_path=${schema}` },
+      env: { ...process.env, ADMIN_DATABASE_URL:fixture.admin.options.connectionString!,
+        LANTERN_DB_NAME:fixture.databaseName, LANTERN_DB_SCHEMA:'lantern',
+        LANTERN_DB_RUNTIME_ROLE:fixture.roles.runtime, LANTERN_DB_MIGRATION_ROLE:fixture.roles.migration, LANTERN_DB_ADMIN_ROLE:fixture.roles.admin },
     });
     await run('approve-email', "o'connor@example.test");
     assert.match((await run('list-approved-emails')).stdout, /o'connor@example.test/);
     await run('remove-approved-email', "o'connor@example.test");
     assert.doesNotMatch((await run('list-approved-emails')).stdout, /o'connor/);
     await assert.rejects(run('approve-email', '*@example.test'));
-  });
+  } finally { await fixture.close(); }
 });
 
 test('provider and database failures fail closed with safe feedback; failed session creation is atomic', async () => {

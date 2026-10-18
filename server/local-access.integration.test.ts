@@ -1,19 +1,18 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { spawn, execFileSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import pg from "pg";
+import { privilegeFixture } from './privilege-test-support.js';
+import { migrate } from './schema.js';
+import { prepareLocalAccount } from './local-access.js';
 
 test(
-  "explicit local startup provisions once and retains the account across process restart",
+  "prepared local account works with runtime privileges and survives process restart",
   { timeout: 30000 },
   async () => {
-    const admin = new pg.Pool({ connectionString: process.env.DATABASE_URL }),
-      schema = `local_${randomUUID().replaceAll("-", "")}`;
-    await admin.query(`CREATE SCHEMA ${schema}`);
-    const url = new URL(process.env.DATABASE_URL!);
-    url.searchParams.set("options", `-c search_path=${schema}`);
+    const fixture = await privilegeFixture();
+    const { runtime, migration, admin, roles } = fixture;
+    const url = new URL(runtime.options.connectionString!);
     const socket = createServer();
     await new Promise<void>((r) => socket.listen(0, "127.0.0.1", r));
     const addr = socket.address();
@@ -47,7 +46,7 @@ test(
       });
     }
     async function stop() {
-      if (child) {
+      if (child && child.exitCode === null) {
         const c = child;
         child = undefined;
         await new Promise<void>((r) => {
@@ -57,6 +56,8 @@ test(
       }
     }
     try {
+      await migrate(migration, roles);
+      await prepareLocalAccount(admin);
       await start();
       const first = (await (await fetch(origin + "/api/session")).json()) as {
         user: { id: string; name: string };
@@ -77,9 +78,7 @@ test(
         200,
       );
       await stop();
-      for (let n = 0; n < 2; n++) execFileSync(process.execPath, ['dist/server/migrate.js'], {
-        env: { ...process.env, DATABASE_URL: url.toString() }, stdio: 'pipe',
-      });
+      await migrate(migration, roles);
       await start();
       const next = (await (
         await fetch(origin + "/api/session")
@@ -90,8 +89,7 @@ test(
       assert.deepEqual(await (await fetch(origin + "/api/focuses")).json(), []);
     } finally {
       await stop();
-      await admin.query(`DROP SCHEMA ${schema} CASCADE`);
-      await admin.end();
+      await fixture.close();
     }
   },
 );
