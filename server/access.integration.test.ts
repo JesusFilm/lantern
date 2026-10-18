@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { test } from 'node:test';
-import pg from 'pg';
+import { privilegeFixture } from './privilege-test-support.js';
+import { grantApplicationPrivileges } from './database-privileges.js';
 import { chromium } from '@playwright/test';
 import { createServer as createViteServer } from 'vite';
 import { createApp } from './app.js';
@@ -16,17 +17,16 @@ const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required.');
 
 test('Google boundary, persistent access, assignment restrictions and browser journey', { timeout: 90000 }, async (t) => {
-  const schema = `access_test_${randomUUID().replaceAll('-', '')}`;
-  const admin = new pg.Pool({ connectionString });
-  await admin.query(`CREATE SCHEMA ${schema}`);
-  const db = new pg.Pool({ connectionString, options: `-c search_path=${schema}` });
+  const fixture = await privilegeFixture();
+  const { runtime: db, admin, migration, roles } = fixture;
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   let vite: Awaited<ReturnType<typeof createViteServer>> | undefined;
   const server = createServer();
   try {
-    await migrate(db);
-    await configureDomains(db, ['example.test']);
-    for (const name of ['lead', 'member', 'other', 'outsider']) await approveEmail(db, `${name}@example.test`);
+    await migrate(migration);
+    await grantApplicationPrivileges(migration, roles);
+    await configureDomains(admin, ['example.test']);
+    for (const name of ['lead', 'member', 'other', 'outsider']) await approveEmail(admin, `${name}@example.test`);
     let nextIdentity = 'lead';
     const provider: IdentityProvider = {
       authorizationUrl: (state, nonce, challenge) => {
@@ -72,7 +72,7 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       for (const who of ['invalid', 'outsider']) {
         assert.equal((await login(who)).response.headers.get('location'), '/?signInError=1');
       }
-      const rows = await db.query('SELECT google_sub FROM users');
+      const rows = await admin.query('SELECT google_sub FROM users');
       assert.deepEqual(rows.rows.map((row) => row.google_sub), ['lead']);
     });
     const lead = await login('lead');
@@ -87,13 +87,13 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       assert.equal((await request('/api/department/members', '', { userId: memberId })).status, 401);
       assert.equal((await request('/api/department/members', member.cookie, { userId: memberId })).status, 403);
     });
-    await setupDepartment(db, 'Engineering test', 'lead@example.test');
-    await setupDepartment(db, 'Engineering test', 'lead@example.test');
+    await setupDepartment(admin, 'Engineering test', 'lead@example.test');
+    await setupDepartment(admin, 'Engineering test', 'lead@example.test');
     await t.test('backend safeguards and server authority reject privilege changes and forged writes', async () => {
-      await assert.rejects(setupDepartment(db, 'Engineering test', 'member@example.test'));
-      await assert.rejects(configureDomains(db, ['other.test']));
+      await assert.rejects(setupDepartment(admin, 'Engineering test', 'member@example.test'));
+      await assert.rejects(configureDomains(admin, ['other.test']));
       const leadId = (await (await request('/api/session', lead.cookie)).json() as SessionView).user!.id;
-      await assert.rejects(removeMember(db, leadId));
+      await assert.rejects(removeMember(admin, leadId));
       assert.equal((await request('/api/department/members', lead.cookie, { userId: memberId, role: 'career-lead' })).status, 400);
       assert.equal((await request('/api/department/members', lead.cookie, { userId: memberId, departmentId: randomUUID() })).status, 400);
       assert.equal((await request('/api/department/members', lead.cookie, { userId: 'unknown' })).status, 400);
@@ -110,8 +110,8 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       assert.equal(department.members.filter((u: { id: string }) => u.id === memberId).length, 1);
     });
     await t.test('backend removal retains membership history and immediately blocks existing sessions and rejoining', async () => {
-      await removeMember(db, memberId);
-      await removeMember(db, memberId);
+      await removeMember(admin, memberId);
+      await removeMember(admin, memberId);
       assert.equal((await request('/api/department', member.cookie)).status, 403);
       assert.equal((await request('/api/guide', member.cookie)).status, 403);
       const session = await (await request('/api/session', member.cookie)).json() as SessionView;
@@ -124,8 +124,8 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
     const other = await login('other');
     const otherId = (await (await request('/api/session', other.cookie)).json() as SessionView).user!.id;
     const otherDept = randomUUID();
-    await db.query('INSERT INTO departments(id,name) VALUES($1,$2)', [otherDept, 'Other test department']);
-    await db.query("INSERT INTO memberships VALUES($1,$2,'member',NULL)", [otherId, otherDept]);
+    await admin.query('INSERT INTO departments(id,name) VALUES($1,$2)', [otherDept, 'Other test department']);
+    await admin.query("INSERT INTO memberships VALUES($1,$2,'member',NULL)", [otherId, otherDept]);
     assert.equal((await request('/api/department/members', lead.cookie, { userId: otherId })).status, 409);
 
     await t.test('browser registration, waiting, selection, membership indicators, access, removal and sign-out', async () => {
@@ -141,7 +141,7 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       await expect(memberPage).toHaveURL(origin + '/?signInError=1');
       await expect(memberPage.getByRole('alert')).toHaveText('Sign-in could not be completed. Try again or contact your career lead.');
       await expect(memberPage.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
-      await approveEmail(db, 'browser-member@gmail.com');
+      await approveEmail(admin, 'browser-member@gmail.com');
       await memberPage.getByRole('link', { name: 'Sign in with Google' }).click();
       await expect(memberPage.getByRole('heading', { name: 'Your account is ready' })).toBeVisible();
       await expect(memberPage.getByText('Contact your career lead directly', { exact: false })).toBeVisible();
@@ -156,7 +156,7 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       await expect(leadPage.locator('option', { hasText: 'member@example.test · Former member' })).toBeDisabled();
       await expect(leadPage.locator('option', { hasText: 'lead@example.test' })).toBeDisabled();
       await leadPage.getByLabel('Search by name or email address').fill('browser-member');
-      const browserId = (await db.query("SELECT id FROM users WHERE google_sub='browser-member'")).rows[0].id;
+      const browserId = (await admin.query("SELECT id FROM users WHERE google_sub='browser-member'")).rows[0].id;
       await leadPage.getByLabel('Registered user', { exact: true }).selectOption(browserId);
       await leadPage.getByRole('button', { name: 'Add selected user' }).click();
       await expect(leadPage.getByRole('status')).toHaveText('User added to the department.');
@@ -169,15 +169,15 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       await expect(memberPage.getByRole('button', { name: 'Add user' })).toHaveCount(0);
       await memberPage.reload();
       await expect(memberPage.getByRole('button', { name: 'Department users', exact: true })).toHaveCount(0);
-      await revokeEmail(db, 'browser-member@gmail.com');
+      await revokeEmail(admin, 'browser-member@gmail.com');
       assert.equal((await memberContext.request.get(origin + '/api/department')).status(), 401);
       await memberPage.evaluate("window.dispatchEvent(new Event('focus'))");
       await expect(memberPage.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
-      await approveEmail(db, 'browser-member@gmail.com');
+      await approveEmail(admin, 'browser-member@gmail.com');
       nextIdentity = 'browser-member';
       await memberPage.getByRole('link', { name: 'Sign in with Google' }).click();
       await expect(memberPage.getByRole('heading', { name: 'Position focuses', exact: true })).toBeVisible();
-      await removeMember(db, browserId);
+      await removeMember(admin, browserId);
       assert.equal((await memberContext.request.get(origin + '/api/department')).status(), 403);
       await memberPage.reload();
       await expect(memberPage.getByRole('heading', { name: 'Your account is ready' })).toBeVisible();
@@ -201,7 +201,7 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
     await t.test('sign-out and session expiry invalidate server access', async () => {
       assert.equal((await request('/api/sign-out', lead.cookie, {})).status, 204);
       assert.equal((await request('/api/department', lead.cookie)).status, 401);
-      await db.query("UPDATE sessions SET expires_at=now()-interval '1 second'");
+      await admin.query("UPDATE sessions SET expires_at=now()-interval '1 second'");
       assert.equal((await request('/api/department', other.cookie)).status, 401);
     });
   } finally {
@@ -209,8 +209,6 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
     await vite?.close();
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
-    await db.end();
-    await admin.query(`DROP SCHEMA ${schema} CASCADE`);
-    await admin.end();
+    await fixture.close();
   }
 });

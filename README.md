@@ -18,18 +18,21 @@ Requires Node.js 22.12+, Docker with Compose and Chromium for browser tests. Pos
 cp .env.example .env
 npm ci
 npx playwright install chromium
-npm run dev:local
+npm run db:start
+npm run build
 ```
 
-`dev:local` starts PostgreSQL and explicitly enables the local account. Use `npm run dev` for normal Google/session authentication and follow [access setup](docs/system/access-setup.md). Local access is off by default, requires loopback and is rejected with `NODE_ENV=production`.
+Prepare a dedicated local database and the three roles using [database privilege setup](docs/operations/database-privileges.md), then put the runtime URL in your private `.env` and run `npm run dev:local`.
+
+`dev:local` starts PostgreSQL and enables access to the pre-prepared local account. Startup no longer migrates or seeds accounts. Use `npm run dev` for normal Google/session authentication and follow [access setup](docs/system/access-setup.md). Local access is off by default, requires loopback and is rejected with `NODE_ENV=production`.
 
 ```sh
 npm run typecheck
 npm run build
-npm test
+npm run test:local
 ```
 
-Tests create isolated real PostgreSQL schemas and preserve walkthrough data. They cover persistence, HTTP/browser authoring, ownership/membership access, Google validation, guides, failures and tracker regressions. To serve the compiled build locally, stop the dev server and run `npm run start:local` (optional `.env`). `npm start` uses injected variables with no dotenv requirement. See the [hosted release runbook](docs/operations/hosted-release.md) for compiled migrations/operators, Railway configuration, CI checks, stage delivery and manual production promotion. Live infrastructure and Google setup remain M06/05 work.
+Tests create isolated real PostgreSQL schemas and disposable databases/roles, preserving walkthrough data. The test connection needs local owner privileges; do not use the runtime URL. They cover persistence, HTTP/browser authoring, ownership/membership access, Google validation, guides, failures and tracker regressions. To serve the compiled build locally, stop the dev server and run `npm run start:local` (optional `.env`). `npm start` uses injected variables with no dotenv requirement. See the [hosted release runbook](docs/operations/hosted-release.md) for compiled migrations/operators, Railway configuration, CI checks, stage delivery and manual production promotion. Live infrastructure and Google setup remain M06/05 work.
 
 `GET /health` runs a fresh database query and returns 200 or a generic 503 without connection details. `.env`, runtime credentials and personnel records stay outside Git. PostgreSQL data remains in the existing Docker volume; do not reset it to test releases.
 

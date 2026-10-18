@@ -4,14 +4,14 @@ Title: Enforce and audit production administrative access
 Milestone: M06
 Type: task
 Status: needs-info
-Blocked by: 12 effective-access inventory and explicit implementation authorization
-Implementation: Not started; planning only
+Blocked by: Hosted authorization and remaining provider/production verification
+Implementation: Local database-role slice implemented and tested; hosted rollout and remaining controls outstanding
 Slice: Hosted team trial
 
 ---
 ## Outcome
 
-Implement and verify the policy agreed in ticket 12 and repository-root AGENTS.md before production activation. Policy decisions are recorded; effective provider capabilities and grants remain unverified. This is a future, explicitly authorized implementation ticket, not an AFK production-execution task. No new admin UI, second approver or bespoke tamper-proof audit service is required for the initial trial.
+Implement and verify the policy agreed in ticket 12 and repository-root AGENTS.md before production activation. Policy decisions and Jaco’s manual superuser findings are recorded; the complete provider inventory and hosted enforcement remain outstanding. Local code and isolated synthetic-data execution were explicitly authorized on 2026-10-19. Hosted changes and production execution remain outside that authorization. No new admin UI, second approver or bespoke tamper-proof audit service is required for the initial trial.
 
 ## Remaining implementation checks
 
@@ -28,4 +28,4 @@ Implement and verify the policy agreed in ticket 12 and repository-root AGENTS.m
 
 ## Boundary
 
-Planning only in the current chat; implementation has not started. Keep production inactive and automatic staging delivery disabled. Do not change infrastructure, permissions, credentials, databases, application code or delivery switches, or run deployment workflows. Later implementation requires explicit scope and TDD for application changes; agents remain prohibited from production access even then. Member-requested removal is policy, not authorization to delete data now. These checks do not replace the separate release, recovery and acceptance prerequisites. Backup owner remains an open question.
+The local database-role slice was authorized on 2026-10-19; see [implementation and unexecuted handoff](../../../docs/operations/database-privileges.md). No hosted rollout has occurred. Keep production inactive and automatic staging delivery disabled. Do not change hosted infrastructure, permissions, credentials, databases or delivery switches, or run deployment workflows. Work outside the authorized local slice requires explicit scope and TDD for application changes; agents remain prohibited from production access even then. Member-requested removal is policy, not authorization to delete data now. These checks do not replace the separate release, recovery and acceptance prerequisites. Backup owner remains an open question.

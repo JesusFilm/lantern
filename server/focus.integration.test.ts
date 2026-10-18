@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { test } from "node:test";
-import pg from "pg";
+import { privilegeFixture } from './privilege-test-support.js';
 import { createApp } from "./app.js";
 import { migrate } from "./schema.js";
 import type { PositionFocus } from "../shared/focus.js";
@@ -10,31 +10,26 @@ import type { SessionView } from "../shared/access.js";
 import type { AccessConfig } from "./access.js";
 
 test("local account and persisted position focuses", async (t) => {
-  const admin = new pg.Pool({ connectionString: process.env.DATABASE_URL });
-  const schema = `focus_${randomUUID().replaceAll("-", "")}`;
-  await admin.query(`CREATE SCHEMA ${schema}`);
-  const db = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    options: `-c search_path=${schema}`,
-  });
+  const fixture = await privilegeFixture();
+  const {runtime:db,admin,migration,roles} = fixture;
   const server = createServer();
   try {
-    await migrate(db);
+    await migrate(migration, roles);
     const user = randomUUID(),
       other = randomUUID(),
       dept = randomUUID();
-    await db.query("INSERT INTO allowed_domains VALUES('example.test')");
+    await admin.query("INSERT INTO allowed_domains VALUES('example.test')");
     for (const id of [user, other])
-      await db.query(
+      await admin.query(
         "INSERT INTO users VALUES($1::uuid,$1::text,'person@example.test','Original name','example.test')",
         [id],
       );
-    await db.query(
+    await admin.query(
       "INSERT INTO departments(id,name) VALUES($1,'Engineering')",
       [dept],
     );
     for (const id of [user, other])
-      await db.query("INSERT INTO memberships VALUES($1,$2,'member',NULL)", [
+      await admin.query("INSERT INTO memberships VALUES($1,$2,'member',NULL)", [
         id,
         dept,
       ]);
@@ -271,21 +266,21 @@ test("local account and persisted position focuses", async (t) => {
           404,
         );
         const different = randomUUID();
-        await db.query("INSERT INTO departments(id,name) VALUES($1,'Other')", [
+        await admin.query("INSERT INTO departments(id,name) VALUES($1,'Other')", [
           different,
         ]);
-        await db.query(
+        await admin.query(
           "UPDATE memberships SET department_id=$1 WHERE user_id=$2",
           [different, user],
         );
         assert.deepEqual(await (await request("/api/focuses")).json(), []);
         assert.equal((await request("/api/focuses/" + focus.id)).status, 404);
-        await db.query(
+        await admin.query(
           "UPDATE memberships SET department_id=$1,deleted_at=now() WHERE user_id=$2",
           [dept, user],
         );
         assert.equal((await request("/api/focuses")).status, 403);
-        await db.query(
+        await admin.query(
           "UPDATE memberships SET deleted_at=NULL WHERE user_id=$1",
           [user],
         );
@@ -308,8 +303,6 @@ test("local account and persisted position focuses", async (t) => {
   } finally {
     server.closeAllConnections();
     await new Promise<void>((r) => server.close(() => r()));
-    await db.end();
-    await admin.query(`DROP SCHEMA ${schema} CASCADE`);
-    await admin.end();
+    await fixture.close();
   }
 });

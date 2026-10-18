@@ -1,25 +1,27 @@
-import { prepareLocalAccount } from './local-access.js';
+import { localAccount } from './local-access.js';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import express from 'express';
 import { createApp } from './app.js';
-import { migrate } from './schema.js';
 import { googleProvider } from './google.js';
 import { createDatabase } from './database.js';
+import { assertRuntimePrivileges } from './database-privileges.js';
 
 import { resolveRuntime } from './runtime.js';
 import { assertSchemaReady } from './schema.js';
 const { environment, connectionString, port, host, localAccess, origin, clientId, clientSecret, hosted, hostingOnly } = resolveRuntime();
 const database = createDatabase(connectionString);
 try {
-  if (hosted) await assertSchemaReady(database);
-  else await migrate(database);
+  await assertSchemaReady(database);
+  await assertRuntimePrivileges(database);
 } catch {
   await database.end();
-  throw new Error('Database schema is not ready. Run the migration command before startup.');
+  throw new Error('Database schema or runtime privileges are not ready. Check the scoped database setup before startup.');
 }
-const localUserId = localAccess ? await prepareLocalAccount(database) : undefined;
+let localUserId: string | undefined;
+try { localUserId = localAccess ? await localAccount(database) : undefined; }
+catch (error) { await database.end(); throw error; }
 let revision: string | undefined;
 try { revision = JSON.parse(readFileSync('release.json', 'utf8')).sha; } catch { /* Local builds need no release stamp. */ }
 const app = createApp(database, { origin, hostingOnly, admissionPolicy: environment, localUserId, provider: clientId && clientSecret ? googleProvider(clientId, clientSecret, origin) : undefined }, hosted ? { revision, deployment: process.env.RAILWAY_DEPLOYMENT_ID } : undefined);

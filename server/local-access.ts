@@ -27,3 +27,9 @@ export async function prepareLocalAccount(db: Pool) {
     return id;
   });
 }
+
+export async function localAccount(db: Pool) {
+  const result = await db.query("SELECT id FROM users WHERE google_sub='local:lantern-workspace'");
+  if (result.rowCount !== 1) throw new Error('Prepare the synthetic local account with the local-account admin command before startup.');
+  return result.rows[0].id as string;
+}
