@@ -25,10 +25,10 @@ export async function bootstrapDatabaseRoles(db: Pool, config: DatabaseRoles & {
     if (config.requireEmpty) {
       const existing = await client.query(`SELECT EXISTS(
         SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
-        WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema'
+        WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
       ) OR EXISTS(
         SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-        WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema'
+        WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
       ) AS occupied`);
       if (existing.rows[0].occupied) throw new Error('Fresh setup requires an empty database.');
     }

@@ -1,7 +1,9 @@
+import { assertOperatorEndpoint } from './operator-target.js';
 import { createDatabase } from './database.js';
 import { migrate } from './schema.js';
 import { assertDatabaseTarget, databaseRoleConfig } from './database-privileges.js';
 if (!process.env.MIGRATION_DATABASE_URL) throw new Error('MIGRATION_DATABASE_URL is required.');
+assertOperatorEndpoint(process.env.MIGRATION_DATABASE_URL, process.env.LANTERN_DB_EXPECTED_ENDPOINT);
 const config = databaseRoleConfig();
 const database = createDatabase(process.env.MIGRATION_DATABASE_URL);
 try {

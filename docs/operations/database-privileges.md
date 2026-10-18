@@ -65,7 +65,8 @@ LANTERN_DB_ADMIN_ROLE=lantern_local_admin
 
 Use environment-specific role names. The migration/admin commands check actual
 database, schema, current/session role, elevated attributes and role membership
-before work. A matching name is not provider/project attestation: independently
+before work. Bootstrap, migration and verification also require the URL host/port
+to match `LANTERN_DB_EXPECTED_ENDPOINT`. A matching name is not provider/project attestation: independently
 verify the connection endpoint and environment before supplying a credential.
 
 1. Create the dedicated database using the local owner, then supply

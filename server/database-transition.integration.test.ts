@@ -102,6 +102,16 @@ test('empty-database bootstrap refuses existing application data before creating
   }, /empty database/);
 });
 
+test('empty-database bootstrap includes non-system schemas beginning with pg', async () => {
+  await assert.rejects(async () => {
+    const f = await privilegeFixture({requireEmpty:true, beforeBootstrap: async db => {
+      await db.query('CREATE SCHEMA pgarchive; CREATE TABLE pgarchive.existing_history(id integer)');
+      await db.query('INSERT INTO pgarchive.existing_history VALUES (1)');
+    }});
+    await f.close();
+  }, /empty database/);
+});
+
 test('fresh setup creates the complete empty database under separate roles without copying stage records', async () => {
   const stage = await legacyFixture();
   const fresh = await privilegeFixture({requireEmpty:true});
@@ -174,6 +184,11 @@ test('fresh operator commands create NOLOGIN roles, then migrate and verify sepa
       assert.match(password,/^[a-z0-9-]+$/);
       await f.bootstrap.query(`ALTER ROLE "${f.roles[scope]}" LOGIN PASSWORD '${password}'`);
     }
+    await assert.rejects(run('migrate',[],{
+      MIGRATION_DATABASE_URL:f.migration.options.connectionString!,
+      LANTERN_DB_EXPECTED_ENDPOINT:'wrong:5432',
+    }));
+    assert.equal((await f.bootstrap.query("SELECT to_regclass('lantern.schema_migrations') AS ledger")).rows[0].ledger,null);
     await run('migrate',[],{MIGRATION_DATABASE_URL:f.migration.options.connectionString!});
     for (const [scope,variable] of [['runtime','DATABASE_URL'],['migration','MIGRATION_DATABASE_URL'],['admin','ADMIN_DATABASE_URL']] as const) {
       await run('verify-database',[scope,'--expect-empty'],{[variable]:f[scope].options.connectionString!});
