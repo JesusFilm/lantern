@@ -43,3 +43,28 @@ No staging backups; production backups deferred until dogfooding is complete and
 Jaco has determined application value. [Ticket 16](16-backup-restore-readiness.md)
 is deferred and does not block this ticket. Transaction checks and data-preserving
 failure handling remain required; no reset or deletion is authorized by this decision.
+
+## Acceptance continuation — 19 October 2026
+
+On revision `3349636a031d86b90c534e71e4a02d416a8f7df7`, the existing ordinary
+member created a clearly synthetic focus, Normal objective and SMART goal; all
+values persisted after browser reload. Temporarily revoking that member's email
+approval denied a direct document request from the existing session. Approval was
+restored, the same session regained access, and document counts were unchanged.
+The career lead's department route displayed the same content as read-only with
+no editing controls. Anonymous list/detail/roster checks returned 401.
+
+Jaco nominated a second Google account, now approved on staging only. Its real
+Google sign-in and subsequent lead enrollment are pending. No identities or
+sessions were fabricated; full two-member isolation/smoke is not yet passed.
+The existing memberships remain intact and the synthetic document is retained.
+See [sanitized partial evidence](../../../docs/operations/member-acceptance-2026-10-19.json).
+
+### Two-member case deferred — 19 October 2026
+
+Jaco explicitly parked this case. A second distinct Google member session is not
+available. Preserve completed single-member, revocation/restoration and lead
+read-only results; do not mark two-member isolation or full release acceptance
+as passed. Unused nominee email approvals were removed; existing lead/member
+accounts and retained synthetic test documents are unchanged. Resume when Jaco
+requests it and a second distinct Google account is available.

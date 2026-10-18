@@ -39,3 +39,30 @@ The broader application/provider privacy boundary and operational controls remai
 ## Boundary
 
 The local database-role slice was authorized on 2026-10-19; see [implementation and unexecuted handoff](../../../docs/operations/database-privileges.md). No hosted rollout has occurred. Keep production inactive and automatic staging delivery disabled. Do not change hosted infrastructure, permissions, credentials, databases or delivery switches, or run deployment workflows. Work outside the authorized local slice requires explicit scope and TDD for application changes; agents remain prohibited from production access even then. Member-requested removal is policy, not authorization to delete data now. These checks do not replace the separate release, recovery and acceptance prerequisites. Backup owner remains an open question.
+
+## Hosted staging execution — 19 October 2026
+
+Jaco authorized the staging continuation and delegated the Mac-side execution to
+chat 01a1512a-7e60-7483-98e8-b7c719d95485. Revision
+`3349636a031d86b90c534e71e4a02d416a8f7df7` passed CI run `39172627684` and was
+built on the Mac. The staging app was stopped, three separate stage roles were
+created, and the nine existing tables were transferred with unchanged row counts.
+An intentionally incorrect inventory was rejected and rollback/source integrity
+verified before the successful transfer. The separate migration login applied
+version 3; migration, admin and runtime scope verification all passed. Runtime
+DDL, ledger updates and approval deletion were denied with PostgreSQL 42501.
+
+The staging-only environment patch removed the hosted pre-deploy migration hook.
+The app now has only its runtime database URL, with no bootstrap/migration/admin
+URL variables. Manual deployment `fc083756-f5e7-4936-8d1c-29e9bff5641d` succeeded;
+public health returned 200 with the exact revision, deployment and schema 3.
+Unauthenticated focus access returned 401, Google sign-in redirected to Google,
+and the existing authenticated browser session survived reload. No backups were
+created, no production execution occurred, and automatic staging delivery remains
+disabled (the enabling repository variable is absent).
+
+Evidence: [sanitized execution record](../../../docs/operations/staging-transition-2026-10-19.json).
+Full authenticated release acceptance remains open: two ordinary-member Google
+sessions, cross-member denial, enrollment, revocation and save/reload checks.
+Production setup still requires separate human authorization/execution. These
+results do not close the complete provider-isolation or application-launch gate.
