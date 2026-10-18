@@ -49,7 +49,7 @@ Production resource preparation is part of this ticket, not the later production
 
 - **14:** reproducible migration/start/health settings and drift detection; reconcile local evidence through review.
 - **15:** required-check and failed-check live proof, environment-scoped token, two ordinary-member sessions, separately authorized stage delivery enablement, exact-revision smoke artifact and promotion rejection drills. Keep `STAGE_DELIVERY_ENABLED` unset/false until that separately authorized work passes its prerequisites; return it to false on activation failure.
-- **16:** approved backup retention, recovery ownership and isolated restore/rollback rehearsal.
+- **16 (deferred):** reconsider production backups only after dogfooding completes and value is determined. No staging backups; no backup/restore prerequisite for initial setup or dogfooding.
 - **17:** human-run production role/schema setup after staging transition proof; no application activation.
 - **06/07:** final candidate acceptance and explicit production promotion with controlled enrollment and authenticated smoke.
 
@@ -59,7 +59,7 @@ These are downstream handoffs, not reciprocal blockers on 05. Resolving environm
 
 [Setup inventory and bootstrap preparation](../../../docs/operations/railway-google-setup-evidence.md) records the 15 October 2026 live read-only inspection at merged SHA `92a18ff2de72e9ba95cc6d30d803f859e6aacecf`. This was an initial inventory, not the current resource state; later provisioning is recorded below and in linked evidence. Main quality checks passed, stage delivery remains unset/skipped, and repository protection APIs initially returned a plan-related 403. Subsequent setup made the repository public and configured initial required checks/protections; consult the evidence document for current verification rather than treating that initial failure as the current state. This historical inventory alone claims no live acceptance. Later evidence proves bounded stage Google login, deployment and save/read behavior; recovery and full release acceptance remain open.
 
-Record sanitized configuration checklist, stage URL, deployed SHA and backup/restore result in the release evidence. Actual credentials/emails remain private. Complete only when live setup succeeds; code tests do not substitute. [Research](../../../docs/research/railway-team-trial.md).
+Record sanitized configuration checklist, stage URL, deployed SHA and backup status (deferred by decision) in the release evidence. Actual credentials/emails remain private. Complete only when live setup succeeds; code tests do not substitute. [Research](../../../docs/research/railway-team-trial.md).
 
 ## Sources and verification
 
@@ -72,3 +72,9 @@ Follow [current specification](../spec.md), [breakdown](../breakdown.md) and [AG
 ## Staging activation — 16 October 2026
 
 [Manual activation evidence](../../../docs/operations/staging-activation-evidence.md) records checked revision `8e4cd805e9e5c88dea534823859191627ee8402c`, successful schema migrations and live staging authentication. The operator explicitly requires automatic stage delivery to remain disabled and production inactive. Full two-member smoke, failure drills, backup/restore and production acceptance remain outstanding; the broad acceptance boxes above remain open.
+
+## Backup decision — 19 October 2026
+
+The historical backup/restore work listed above is deferred under ticket 16 and
+does not block setup or initial dogfooding. No staging backups; production backups
+are reconsidered only after dogfooding is complete and application value determined.

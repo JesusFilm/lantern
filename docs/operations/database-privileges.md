@@ -122,7 +122,8 @@ Railway token scope, production isolation, or hosted role enforcement.
 For a separately authorized staging switch:
 
 1. Keep delivery disabled. Confirm synthetic-only data, identify the exact service,
-   database and schema, and retain a restorable backup plus the old release. Review
+   database and schema, and retain the old release. No staging backup is authorized
+   under the 19 October decision; follow the transition runbook’s failure plan. Review
    existing ownership, PUBLIC ACLs, role memberships/default grants, extensions,
    security-definer functions and other schemas. Stop if unknown grants or objects
    make the database an unsuitable isolation boundary; a fresh dedicated database
@@ -131,7 +132,7 @@ For a separately authorized staging switch:
    its database-wide PUBLIC changes. Existing public-schema tables are **not**
    adopted by bootstrap. Use the prepared and locally rehearsed ownership/schema transfer
    of the complete existing baseline (including ledger, indexes and constraints),
-   or restore it into a fresh dedicated database owned by the migration role.
+   rather than copying it into a fresh database.
    Verify source/destination row counts and ownership before changing runtime.
    This transfer is an explicit separate command and an unexecuted hosted-rollout
    step; bootstrap never silently attempts it. Do not lose existing membership/history or rerun
@@ -141,8 +142,8 @@ For a separately authorized staging switch:
    operations using the staging roles. Install only the runtime URL in the app.
    Execute normal login, lead enrollment, focus save/reload, cross-member denial,
    revocation and restart checks with synthetic accounts.
-4. On any failed check, stop the application and keep delivery off. Restore from the
-   verified backup into the intended ownership layout if data recovery is needed.
+4. On any failed check, stop the application and keep delivery off. Inspect the committed state and prepare a rehearsed forward correction; there
+   is no backup-based recovery path during the current deferral.
    Returning runtime to superuser access is a security regression, not a successful
    recovery. A rollback to pre-v3 code still needs constrained enrollment support;
    do not restore broad membership writes just to make old code start.
@@ -171,7 +172,7 @@ by a trusted owner. Hosted evidence and credential placement must still be revie
 
 Existing operator commands now use the admin scope and target checks, but are not
 a complete production correction/removal framework. Per-operation expected row
-counts, verified recovery/backup handling, and the complete ticket-13 human
+counts, verified failure handling under the current backup deferral, and the complete ticket-13 human
 handoff remain prerequisites for routine production use. No production operation
 is scheduled by this document. Prepare a sanitized `planned` record in
 [production-changes.md](production-changes.md) **before** preparing a specific

@@ -19,8 +19,11 @@ Before asking Jaco to execute anything, the agent must:
    Instructions must identify where Jaco enters them privately and which output stays
    private. Do not rely on him to translate a conceptual plan into SQL.
 3. Rehearse the operation, failure paths and recovery with synthetic local data, or
-   staging when separately authorized. Preserve relevant test evidence. Verify backup
-   or restore prerequisites rather than merely advising “take a backup.” State which
+   staging when separately authorized. Preserve relevant test evidence. Follow the current backup decision: no staging backups; production backups deferred
+   until dogfooding is complete and value determined. Do not add a backup gate during
+   this period. Rehearse transactional failure/forward-correction paths and state
+   the limits of data recovery without backups. If backups are later authorized,
+   verify their actual prerequisites rather than merely advising “take a backup.” State which
    production prerequisites still require Jaco's private inspection.
 4. Prepare the sanitized planned change record required by AGENTS.md, with the script
    version/digest, intended effect, executor and recovery plan. For a release/migration,

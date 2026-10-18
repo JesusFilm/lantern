@@ -32,7 +32,7 @@ do not assume an earlier database checkpoint covers a new schema.
 - [ ] Use the already implemented `.github/workflows/promote.yml`; ticket 11 is optional. Inspect and record operator sign-off on the protected acceptance checklist. The workflow checks an HTTPS URL, not the truth of its contents; apply ticket 15's agreed enforcement decision.
 
 - [ ] Require an explicit operator promotion action after successful stage verification, including same-revision CI and stage smoke/E2E evidence. Confirm successful stage acceptance evidence, target production project/service and private participant approvals. Record the exact reviewed SHA, stage deployment and checks; production autodeploy stays off.
-- [ ] Capture a pre-release backup where data exists. Verify restore evidence, migration compatibility and application rollback target. Do not treat code rollback as a database rollback.
+- [ ] Verify migration compatibility, transaction failure handling and application rollback target. No staging or production backups are required or authorized during initial dogfooding; ticket 16 is deferred until dogfooding is complete and value determined. Do not treat code rollback as a database rollback or assume data can be recovered from a backup.
 - [ ] Deploy that tested commit (or identical tested image digest) to production with production-specific secrets/database. If code changes or latest main is different, select the verified revision or return it to stage.
 - [ ] On the verified production release, approve the intended work-account lead/member emails through the controlled, audited production operations verified in 13, perform initial Google login and backend lead bootstrap, and assign approved participants. Record production deployment ID/URL, revision and schema/migration result. Confirm healthy startup and safe rollback/failure handling with the prepared runbook.
 - [ ] Perform authenticated production smoke checks with approved lead/member accounts: own draft save/reopen, lead read, confirmation and lock, denied outsider/member-cross-access and rejection of personal Google accounts under production policy (also covered with an email-approved personal identity in isolated production-policy tests). Keep test content disposable and isolated from real personnel records where possible.
@@ -46,3 +46,10 @@ Requires operator-controlled production configuration and a concrete release dec
 ## Sources and verification
 
 Follow [current specification](../spec.md), [breakdown](../breakdown.md) and [AGENTS.md](../../../AGENTS.md). Application changes use failing public-behavior tests before implementation and isolated real PostgreSQL. Ticket readiness is not a claim of completed implementation or authorization to deploy.
+
+## Backup decision — 19 October 2026
+
+No staging backups; production backups deferred until dogfooding is complete and
+Jaco has determined application value. [Ticket 16](16-backup-restore-readiness.md)
+is deferred and does not block this ticket. Transaction checks and data-preserving
+failure handling remain required; no reset or deletion is authorized by this decision.

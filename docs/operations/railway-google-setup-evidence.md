@@ -52,7 +52,7 @@ Set and read-back verified each GitHub environment's `RAILWAY_ENVIRONMENT` varia
 2. Keep production manually triggered. The operator explicitly chose no separate approval reviewer: an authorized deployer deliberately starts promotion after inspecting stage evidence. Retain exact-SHA CI/stage checks and main-only dispatch; never substitute an unchecked moving latest commit.
 3. Provide the Google Cloud project and separate local/stage/production Web OAuth clients privately. Local/stage must permit the intended personal accounts in the consent audience. Register each exact callback only after the origin is known. Production configuration retains work-domain admission and no trial participant enrollment.
 4. Privately supply the approved hosted domain, department name, Jaco's work lead identity, his personal ordinary-member identity and a distinct second ordinary QA identity. Google OAuth testing audience approval and Lantern database approval are separate controls.
-5. Select the recovery owner, RPO/RTO and actual backup policy.
+5. Record the 19 October backup deferral: no staging backups; production backups reconsidered only after dogfooding and the value decision (ticket 16).
 
 A local, untracked private-input wizard is prepared at `/home/jacobuntu/Ops/private/lantern-railway-setup/collect-inputs.sh`. Run it in a private terminal, not a recorded agent command. Hidden values are written to a mode-0600 file in a mode-0700 directory outside the repository. It only captures inputs; it does not grant access or configure providers. Stop before a hosted client section if its domain is not allocated. Syntax validation passed; shellcheck was unavailable. Do not source the captured file as shell code or copy it into Git/chat/logs. Consume it through a dotenv parser or equivalent data-only reader.
 
@@ -74,9 +74,13 @@ For local Google verification, use a separate disposable database/schema and unu
 
 ## Backup and restore status
 
-**No backup policy has been enabled; no restore rehearsal has run.** Railway's [volume backup documentation](https://docs.railway.com/volumes/backups) currently lists daily retention of 6 days, weekly 27 days and monthly 89 days. Daily alone does not satisfy the runbook's suggested minimum 7-day retention. Select and approve the actual combination and any encrypted logical-dump retention, plus its storage cost. Do not label a proposed policy as configured.
-
-After authenticated synthetic stage data exists, follow the runbook's logical dump/restore into a new empty isolated target. Record backup identifier, source revision/schema, start/end time, duration, observed recovery gap, restored membership/name/draft read through normal Google login and public APIs, and safe target disposal/retention. Use the restored app's own appropriate callback configuration; do not expose stage sessions or dump contents. Do not restore over stage, production or existing local data. Verify Railway's separate volume/PITR procedure against the selected plan rather than treating a logical restore as proof of those features.
+The earlier backup setup/rehearsal requirement is superseded by Jaco's 19 October
+decision: no staging backups, and production backups deferred until dogfooding is
+complete and the application's value is determined. No snapshot was created during
+the transition preflight. Ticket 16 is deferred; it does not block setup or initial
+dogfooding. Historical local synthetic restore evidence remains valid but does not
+authorize hosted dumps, snapshots or schedules. Follow the current [transition
+procedure](database-transition.md) for transaction failure/reversal limits.
 
 ## Remaining live gates and acceptance boundary
 
@@ -86,7 +90,7 @@ Lead browsing, confirmation, newcomer acceptance and final multi-account stage v
 
 ## Operator clarification: cost and manual promotion
 
-The operator does not require a Railway budget entry or second-person production approval. The workspace payer already reviews per-project spending. Recommended cost posture: one replica per app/database, private database networking, modest resource limits reviewed against startup metrics, small initial volumes and a short-lived restore target. Consider stage app sleeping only after verifying its effect on readiness and smoke. Production remains unactivated in this task.
+The operator does not require a Railway budget entry or second-person production approval. The workspace payer already reviews per-project spending. Recommended cost posture: one replica per app/database, private database networking, modest resource limits reviewed against startup metrics, small initial volumes and no backup/restore resources during the current deferral. Consider stage app sleeping only after verifying its effect on readiness and smoke. Production remains unactivated in this task.
 
 Railway's documented hard usage limits apply at workspace level and can shut down workloads; do not set one for Lantern in this shared workspace. A suggested Lantern-only review threshold is US$30/month projected incremental usage, not a configured alert, guaranteed estimate or spending cap. Revisit using measured usage. Pricing reference: [Railway cost controls](https://docs.railway.com/pricing/cost-control) and [resource pricing/metrics](https://docs.railway.com/guides/right-size-cpu-memory).
 
