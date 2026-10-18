@@ -6,10 +6,27 @@ staging delivery stays disabled; production application stays inactive. Ticket 1
 tracks database readiness separately from ticket 07's later application launch.
 
 The order is: review/merge this preparation, authorize and prove the staging
-transition and recovery, then separately authorize Jaco's empty production setup.
+transition and transactional failure checks, then separately authorize Jaco's empty production setup.
 Production findings feed ticket 13; closing the whole access gate is not a circular
 prerequisite for collecting those findings. Application activation still requires
 all gates in tickets 06/07. Never copy staging records into production.
+
+## Backup decision — 19 October 2026
+
+Jaco explicitly declined backups for staging and production at this point. Do not
+create staging snapshots, logical dumps or backup schedules as part of this rollout.
+Production backups are deferred until dogfooding is complete and Jaco has determined
+the application's value; that milestone triggers reconsideration, not automatic
+backup activation. Ticket 16 is deferred and does not block initial database setup,
+acceptance or dogfooding. A later production backup proposal needs explicit approval.
+
+Continue target/permission checks, transactional migrations, failure diagnosis and
+schema-compatible application rollback. Before migration 3, the rehearsed table
+transfer reversal remains available under its documented conditions. There is no
+backup-based data recovery promise during this period. A destructive reset, data
+removal or rebuild still requires a separate explicit decision; declining backups
+does not authorize discarding existing records. Earlier local synthetic dump/restore
+results remain historical evidence, not authorization for hosted backups.
 
 ## Assistance and private inputs
 
@@ -44,7 +61,8 @@ mistakes; they do not attest provider identity or prove agent token isolation.
 ## 1. Populated staging: pause, transfer, migrate, verify
 
 Separately authorize hosted work. Privately confirm data classification, the exact
-source baseline (public schema, migration ledger 1 and 2), and a restorable backup.
+source baseline (public schema, migration ledger 1 and 2). No backup is required or
+authorized under the 19 October decision.
 Stop the application and all writers/migration jobs. Keep the old release and
 credential configuration available privately for investigation, not automatic
 reversion to owner-powered runtime. Review other schemas, extensions, grants and
@@ -93,12 +111,13 @@ omits that hook, but hosted configuration may override the repository. Prove the
 separate human-invoked runner and its failure behavior before deploying the reviewed
 application with only the runtime credential. Verify Google login, ordinary lead
 enrollment, focus save/reload, cross-member denial, revocation and restart using
-approved synthetic test accounts. Record sanitized evidence in tickets 13/14/16.
+approved synthetic test accounts. Record sanitized evidence in tickets 13/14/17.
 This does not authorize enabling automatic staging delivery.
 
 ### Recovery checkpoints
 
-- Before bootstrap/transfer, have a verified backup and a restore target. Bootstrap
+- Before bootstrap/transfer, verify the target and transaction/reversal conditions. No
+  staging backup is taken under the current decision. Bootstrap
   and transfer are separate transactions; a later failure does not undo bootstrap.
 - A confirmed transfer failure rolls back its table changes. A lost connection can
   leave commit outcome uncertain: inspect state privately before retrying.
@@ -107,12 +126,13 @@ This does not authorize enabling automatic staging delivery.
   writers remain stopped. It requires unchanged counts and ledger 1/2, restores
   table location/ownership, and leaves role/schema scaffolding and PUBLIC privilege
   restrictions in place. It is not a full privilege or release rollback.
-- After migration 3, reversal refuses to run. Stop and restore the verified backup
-  into a separate isolated target, rehearse the corrected transfer/migration there,
-  verify data and permissions, then separately authorize any routing change. Do not
-  drop the source or restore broad runtime grants to make an old app work.
+- After migration 3, reversal refuses to run. Stop, inspect the known state and prepare
+  a locally rehearsed forward correction. No backup restore is available under the
+  current policy. Any destructive rebuild or loss of existing records requires a
+  separate explicit decision. Do not drop the source or restore broad runtime grants
+  to make an old app work.
 
-The local recovery rehearsal actually dumps and restores a populated synthetic
+The earlier local-only recovery rehearsal actually dumps and restores a populated synthetic
 baseline into a fresh disposable database, transfers it, migrates it and reads the
 restored focus over HTTP using the restricted runtime. It proves this logical path,
 not hosted backup configuration, recovery time, retention or point-in-time recovery.
@@ -186,8 +206,9 @@ permission checks. Verification is read-only and prints no records. The migratio
 transaction creates the complete application schema and explicit grants. If it
 fails, leave the app inactive; inspect the ledger privately, diagnose against a
 local fixture, then review the corrected runner before retrying. Do not blindly
-remove roles/schema or delete newly discovered data. Backup/restore and deletion
-handling must be agreed for any later operation after real data exists.
+remove roles/schema or delete newly discovered data. Deletion handling and operation-specific failure plans remain required. Production
+backups stay deferred until dogfooding is complete and value determined; do not
+introduce a backup prerequisite merely because dogfooding data now exists.
 
 Jaco reports only sanitized pass/fail results, counts and cleanup outcome. Update
 the planned record to applied/failed based on his report, attribute it to him, and

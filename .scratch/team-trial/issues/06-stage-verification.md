@@ -4,7 +4,7 @@ Title: Verify the initial workflow with real stage participants
 Milestone: M06
 Type: task
 Status: ready-for-human
-Blocked by: 02, 03, 05, 13, 15, 16
+Blocked by: 02, 03, 05, 13, 15
 Implementation: Partial manual staging save/read proof; full candidate acceptance outstanding
 Slice: Hosted team trial
 
@@ -19,7 +19,7 @@ There is practical evidence that the staged revision supports a member's initial
 
 ## Acceptance
 
-- [ ] Verify reviewed access-governance controls (13), successful automated stage artifact and failure-gate evidence (15), and recovery evidence (16) for the applicable final candidate/configuration. Revalidate changed code/schema; do not reuse manual bootstrap as automated release proof.
+- [ ] Verify reviewed access-governance controls (13), successful automated stage artifact and failure-gate evidence (15), and transactional failure/schema-compatible rollback checks for the applicable final candidate/configuration. Backup ticket 16 is deferred until after dogfooding/value assessment. Revalidate changed code/schema; do not reuse manual bootstrap as automated release proof.
 
 - [ ] Record exact Git SHA/deployment and passing PR/main CI plus post-deployment stage smoke/E2E checks. Verify the release evidence refers to the same candidate revision; record human acceptance separately. Reconcile any change after these checks before sign-off.
 - [ ] With the real Google provider, separate lead and at least two member sessions, verify approved work and personal-member login (including Jaco's separate lead/member sessions), unapproved same-domain/personal/outsider denial, expired/signed-out/revoked access and absence of a local bypass.
@@ -36,3 +36,10 @@ Carries remaining relevant practical/live checks from guide tickets 06 and 09. R
 ## Sources and verification
 
 Follow [current specification](../spec.md), [breakdown](../breakdown.md) and [AGENTS.md](../../../AGENTS.md). Application changes use failing public-behavior tests before implementation and isolated real PostgreSQL. Ticket readiness is not a claim of completed implementation or authorization to deploy.
+
+## Backup decision — 19 October 2026
+
+No staging backups; production backups deferred until dogfooding is complete and
+Jaco has determined application value. [Ticket 16](16-backup-restore-readiness.md)
+is deferred and does not block this ticket. Transaction checks and data-preserving
+failure handling remain required; no reset or deletion is authorized by this decision.
