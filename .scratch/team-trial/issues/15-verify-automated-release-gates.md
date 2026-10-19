@@ -4,7 +4,7 @@ Title: Configure and prove automated staging and promotion gates
 Milestone: M06
 Type: task
 Status: in-progress
-Blocked by: Staging-only migration runner provisioning and private connectivity
+Blocked by: First automatic main delivery and separate two-account acceptance
 Implementation: Simplified staging delivery preparation resumed; production promotion remains deferred
 Slice: Hosted team trial
 
@@ -17,7 +17,8 @@ See [automatic staging](../../../docs/operations/automatic-staging.md). Separate
 readiness checks from authenticated acceptance; no Google-session secrets in CI are
 required. Production promotion automation and broad gate drills remain deferred.
 The future checklist below is historical scope, not a prerequisite for this narrower
-staging delivery. No hosted execution is claimed yet.
+staging delivery. Private migration connectivity and execution have now passed;
+see the deployment/revision evidence in automatic-staging.md.
 
 ## Future outcome
 

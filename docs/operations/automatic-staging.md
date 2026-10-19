@@ -51,7 +51,13 @@ Migration-only credentials were privately installed in the service, using
 Application credentials were not changed. Host-specific private file locations
 are recorded in the VM operational runbook. No public endpoint was created.
 
-Hosted migration verification and delivery activation are still pending.
+Hosted migration completed and its exact-revision marker was verified on
+19 October: revision `c37a776`, deployment `f0b34b34-5a70-4ee5-b52a-9ad82ced8244`.
+This verifies private connectivity and dedicated migration credentials. Earlier
+rehearsals also completed but exposed a CLI receipt-shape mismatch, now fixed by
+validating detached deployment IDs against provider service/environment metadata.
+CI pins the rehearsed Railway CLI version 5.70.0. Delivery activation follows green
+PR checks and merge; authenticated two-account acceptance remains pending.
 
 ## Two-member isolation using the existing lead
 
