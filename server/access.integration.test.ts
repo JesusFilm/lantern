@@ -137,6 +137,18 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       const { expect } = await import('@playwright/test');
       nextIdentity = 'browser-member';
       await memberPage.goto(origin);
+      const signIn = memberPage.getByRole('link', { name: 'Sign in with Google' });
+      await expect(signIn).toHaveCSS('text-decoration-line', 'none');
+      await expect(signIn).toHaveCSS('height', '40px');
+      const navigation = memberPage.getByRole('navigation', { name: 'Main navigation' });
+      await expect(navigation.getByRole('button')).toHaveText(['Account']);
+      await expect(navigation.getByRole('button', { name: 'Account', exact: true })).toHaveAttribute('aria-current', 'page');
+      await memberPage.goto(origin + '/?page=guide');
+      await expect(signIn).toBeVisible();
+      await expect(navigation.getByRole('button')).toHaveText(['Account']);
+      await memberPage.goto(origin);
+      await signIn.focus();
+      await expect(signIn).toBeFocused();
       await memberPage.getByRole('link', { name: 'Sign in with Google' }).click();
       await expect(memberPage).toHaveURL(origin + '/?signInError=1');
       await expect(memberPage.getByRole('alert')).toHaveText('Sign-in could not be completed. Try again or contact your career lead.');
@@ -162,6 +174,7 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       await expect(leadPage.getByRole('status')).toHaveText('User added to the department.');
       await memberPage.getByRole('button', { name: 'Check access' }).click();
       await expect(memberPage.getByRole('heading', { name: 'Position focuses', exact: true })).toBeVisible();
+      await expect(navigation.getByRole('button')).toHaveText(['Position focuses', 'Guide', 'Account']);
       await memberPage.getByRole('button', { name: 'Guide', exact: true }).click();
       await memberPage.getByRole('button', { name: 'Example', exact: true }).click();
       await expect(memberPage.getByRole('heading', { name: 'A simple position focus' })).toBeVisible();
@@ -184,6 +197,8 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       await memberPage.getByRole('button', { name: 'Account', exact: true }).click();
       await memberPage.getByRole('button', { name: 'Sign out' }).click();
       await expect(memberPage.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
+      await expect(navigation.getByRole('button')).toHaveText(['Account']);
+      await expect(navigation.getByRole('button', { name: 'Account', exact: true })).toHaveAttribute('aria-current', 'page');
       await leadPage.setViewportSize({ width: 390, height: 844 });
       await leadPage.getByRole('button', { name: 'Add user', exact: true }).click();
       await expect(leadPage.getByRole('button', { name: 'Add selected user' })).toBeVisible();

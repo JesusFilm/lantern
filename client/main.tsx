@@ -63,14 +63,16 @@ function App() {
       window.removeEventListener("popstate", pop);
     };
   }, []);
+  const activePage = session?.user ? page : "account";
   return (
     <>
       <aside>
         <div className="brand">Lantern</div>
         <nav aria-label="Main navigation">
           {[
-            ["focuses", "Position focuses"],
-            ["guide", "Guide"],
+            ...(session?.user
+              ? [["focuses", "Position focuses"], ["guide", "Guide"]]
+              : []),
             ["account", "Account"],
             ...(session?.department?.role === "career-lead" &&
             !session.localAccess
@@ -79,8 +81,8 @@ function App() {
           ].map(([id, label]) => (
             <button
               key={id}
-              aria-current={page === id ? "page" : undefined}
-              className={page === id ? "active" : ""}
+              aria-current={activePage === id ? "page" : undefined}
+              className={activePage === id ? "active" : ""}
               onClick={() => navigatePage(id!)}
             >
               {label}
@@ -115,7 +117,9 @@ function App() {
                 </p>
               )}
               {session.signInAvailable ? (
-                <a href="/auth/google">Sign in with Google</a>
+                <a className="google-sign-in" href="/auth/google">
+                  <img src="/google-sign-in.png" alt="Sign in with Google" width="180" height="40" />
+                </a>
               ) : (
                 <p>Sign-in is awaiting configuration.</p>
               )}
