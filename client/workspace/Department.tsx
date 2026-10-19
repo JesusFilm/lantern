@@ -115,24 +115,14 @@ export function Department({
         {session.department.name} ·{" "}
         {session.department.role === "career-lead" ? "Career lead" : "Member"}
       </p>
-      <h1>Department users</h1>
-      <p>Signed in as {session.user?.email}</p>
-      <ul className="members">
-        {members.map((member) => (
-          <li key={member.id}>
-            <button className="link" onClick={() => navigate(member.id)}>
-              {member.name}
-            </button>
-            <span>{member.email}</span>
-            <small>
-              {member.role === "career-lead" ? "Career lead" : "Member"}
-            </small>
-          </li>
-        ))}
-      </ul>
-      {session.department.role === "career-lead" && (
-        <>
+      <header>
+        <div>
+          <h1>Department users</h1>
+          <p>Signed in as {session.user?.email}</p>
+        </div>
+        {session.department.role === "career-lead" && (
           <button
+            className="primary"
             disabled={busy}
             aria-expanded={adding}
             onClick={() =>
@@ -155,6 +145,24 @@ export function Department({
           >
             Add user
           </button>
+        )}
+      </header>
+      <ul className="members">
+        {members.map((member) => (
+          <li key={member.id}>
+            <button className="link" onClick={() => navigate(member.id)}>
+              {member.name}
+            </button>
+            <span>{member.email}</span>
+            <small>
+              {member.role === "career-lead" ? "Career lead" : "Member"}
+            </small>
+          </li>
+        ))}
+      </ul>
+      {session.department.role === "career-lead" && (
+        <>
+
           {adding && (
             <form
               onSubmit={(event) => {

@@ -6,8 +6,8 @@ import type {
 } from "../shared/focus.js";
 import { AccessError, membership } from "./membership.js";
 
-// Read authorization and document scope share one query snapshot. There is no
-// cross-member write surface; owner mutations continue through the owner store.
+// Read authorization and document scope share one query snapshot. Content edits remain owner-only; the separate confirmation operation locks
+// the agreed baseline without editing its content.
 export function memberFocusReader(db: Pool) {
   async function read(
     actorId: string,
@@ -24,7 +24,9 @@ export function memberFocusReader(db: Pool) {
       `SELECT u.id,u.name,u.email,
       COALESCE((SELECT jsonb_agg(document) FROM (
         SELECT f.id,f.title,to_char(f.period_start,'YYYY-MM-DD') AS start,
-          to_char(f.period_end,'YYYY-MM-DD') AS end,f.sections,f.version,f.updated_at AS "updatedAt"
+          to_char(f.period_end,'YYYY-MM-DD') AS end,f.sections,f.version,f.updated_at AS "updatedAt",
+          f.status,f.confirmed_at AS "confirmedAt",
+          (SELECT jsonb_build_object('id',lead.id,'name',lead.name) FROM users lead WHERE lead.id=f.confirmed_by) AS "confirmedBy"
         FROM position_focuses f WHERE f.user_id=u.id AND f.department_id=d.id
           AND ($3::text IS NULL OR f.id::text=$3)
         ORDER BY f.period_start DESC,f.updated_at DESC,f.id
@@ -43,6 +45,7 @@ export function memberFocusReader(db: Pool) {
       focuses: focuses.map((focus: PositionFocus) => ({
         ...focus,
         updatedAt: new Date(focus.updatedAt).toISOString(),
+        confirmedAt: focus.confirmedAt ? new Date(focus.confirmedAt).toISOString() : null,
       })),
     };
   }

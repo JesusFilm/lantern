@@ -46,6 +46,15 @@ export function focusRoutes(
       ),
     );
   });
+  router.post("/api/department/members/:memberId/focuses/:id/confirm", async (req, res) => {
+    const user = await requireUser(req);
+    const body = req.body;
+    if (!body || typeof body !== "object" || Array.isArray(body) ||
+        Object.keys(body).some(key => key !== "version") ||
+        !Number.isSafeInteger(body.version) || body.version < 1)
+      throw new AccessError(400, "Supply the current focus version to confirm it.");
+    res.json(await focuses.confirm(user.id, String(req.params.memberId), String(req.params.id), body.version));
+  });
   const members = memberFocusReader(db);
   router.get("/api/department/members/:memberId/focuses", async (req, res) => {
     const user = await requireUser(req);

@@ -4,6 +4,7 @@ import type {
   PositionFocus,
   ObjectiveKind,
 } from "../../shared/focus.js";
+import { FocusConfirmation } from "./FocusConfirmation.js";
 import { api } from "./api.js";
 import { Dialog } from "./Dialog.js";
 const date = (value: string) =>
@@ -23,7 +24,10 @@ const kindLabels: Record<ObjectiveKind, string> = {
   "personal-development": "Personal Development Objectives",
   leadership: "Leadership Objectives",
 };
-export function FocusWorkspace() {
+export function FocusWorkspace({ member, canConfirm }: {
+  member: { id: string; name: string };
+  canConfirm: boolean;
+}) {
   const [edit, setEdit] = useState<Edit>();
 
   const [items, setItems] = useState<PositionFocus[]>([]),
@@ -82,6 +86,7 @@ export function FocusWorkspace() {
     setMetadata(false);
     setEdit(undefined);
   }
+  const editable = focus?.status === "draft";
   if (loading) return <p role="status">Loading position focuses…</p>;
   return (
     <>
@@ -102,15 +107,20 @@ export function FocusWorkspace() {
                 {date(focus.start)} – {date(focus.end)}
               </p>
             </div>
-            <button
+            {editable && <button
               onClick={() => {
                 setCreating(false);
                 setMetadata(true);
               }}
             >
               Edit title & dates
-            </button>
+            </button>}
           </header>
+          <FocusConfirmation key={focus.id} focus={focus} member={member}
+            onConfirmed={canConfirm ? (saved) => {
+              setFocus(saved);
+              setItems(old => old.map(item => item.id === saved.id ? saved : item));
+            } : undefined} />
           {focus.sections.length ? (
             focus.sections.map((section, i) => (
               <section className="read-section" key={i}>
@@ -124,7 +134,7 @@ export function FocusWorkspace() {
                         </span>
                       )}
                     </div>
-                    <div className="section-tools">
+                    {editable && <div className="section-tools">
                       <button
                         className="link edit-action"
                         onClick={() =>
@@ -141,7 +151,7 @@ export function FocusWorkspace() {
                       >
                         Remove
                       </button>
-                    </div>
+                    </div>}
                   </div>
                   <p className="read-text">{section.objective}</p>
                 </div>
@@ -151,7 +161,7 @@ export function FocusWorkspace() {
                     <div className="read-goal" key={j}>
                       <span className="goal-number">{j + 1}</span>
                       <p className="read-text">{goal}</p>
-                      <div>
+                      {editable && <div>
                         <button
                           className="link"
                           onClick={() =>
@@ -172,20 +182,20 @@ export function FocusWorkspace() {
                         >
                           Remove
                         </button>
-                      </div>
+                      </div>}
                     </div>
                   ))}
                   {!section.goals.length && (
                     <p className="muted">No goals yet.</p>
                   )}
-                  <button
+                  {editable && <button
                     className="link"
                     onClick={() =>
                       setEdit({ type: "goal", section: i, adding: true })
                     }
                   >
                     + Add SMART goal
-                  </button>
+                  </button>}
                 </div>
               </section>
             ))
@@ -203,7 +213,7 @@ export function FocusWorkspace() {
               </button>
             </div>
           )}
-          <div className="editor-actions">
+          {editable && <div className="editor-actions">
             <button
               onClick={() =>
                 setEdit({
@@ -215,7 +225,7 @@ export function FocusWorkspace() {
             >
               + Add objective
             </button>
-          </div>
+          </div>}
         </>
       ) : (
         <>

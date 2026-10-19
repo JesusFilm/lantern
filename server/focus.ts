@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import { AccessError } from "./membership.js";
+import { AccessError, membership, membershipWrite } from "./membership.js";
 import type { FocusDraft, PositionFocus } from "../shared/focus.js";
 
-const columns = `id,title,to_char(period_start,'YYYY-MM-DD') AS start,to_char(period_end,'YYYY-MM-DD') AS end,sections,version,updated_at AS "updatedAt"`;
+const columns = `id,title,to_char(period_start,'YYYY-MM-DD') AS start,to_char(period_end,'YYYY-MM-DD') AS end,sections,version,updated_at AS "updatedAt",status,confirmed_at AS "confirmedAt",
+  (SELECT jsonb_build_object('id',u.id,'name',u.name) FROM users u WHERE u.id=confirmed_by) AS "confirmedBy"`;
 // A focus is saved atomically as one versioned document. Ownership never comes from its payload.
 export function focusStore(db: Pool) {
   return {
@@ -48,6 +49,51 @@ export function focusStore(db: Pool) {
         )
       ).rows[0];
     },
+    async confirm(
+      actorId: string,
+      memberId: string,
+      id: string,
+      version: number,
+    ): Promise<PositionFocus> {
+      return membershipWrite(db, async (client) => {
+        const department = await membership(client, actorId);
+        if (department?.role !== "career-lead")
+          throw new AccessError(403, "Only the career lead can confirm a focus.");
+        const target = await client.query(
+          `SELECT ${columns} FROM position_focuses
+           WHERE id::text=$1 AND user_id::text=$2 AND department_id=$3
+             AND EXISTS(SELECT 1 FROM memberships m WHERE m.user_id=position_focuses.user_id
+               AND m.department_id=$3 AND m.deleted_at IS NULL)
+           FOR UPDATE`,
+          [id, memberId, department.id],
+        );
+        if (!target.rowCount)
+          throw new AccessError(404, "Member or position focus unavailable.");
+        const focus = target.rows[0] as PositionFocus;
+        if (focus.version !== version)
+          throw new AccessError(
+            409,
+            "This focus changed. Close this dialog and reopen the focus before confirming.",
+          );
+        if (focus.status === "confirmed") return focus;
+        validateFocus({
+          title: focus.title,
+          start: focus.start,
+          end: focus.end,
+          sections: focus.sections,
+        });
+        if (!focus.sections.some(
+          section => section.kind === "normal" && section.goals.length > 0,
+        ))
+          throw new AccessError(400, "Add a Normal objective with at least one SMART goal before confirming.");
+        const result = await client.query(
+          `UPDATE position_focuses SET status='confirmed',confirmed_at=now(),confirmed_by=$2,
+           version=version+1,updated_at=now() WHERE id::text=$1 RETURNING ${columns}`,
+          [id, actorId],
+        );
+        return result.rows[0];
+      });
+    },
     async update(
       userId: string,
       departmentId: string,
@@ -56,7 +102,7 @@ export function focusStore(db: Pool) {
       version: number,
     ): Promise<PositionFocus> {
       const result = await db.query(
-        `UPDATE position_focuses SET title=$4,period_start=$5,period_end=$6,sections=$7,version=version+1,updated_at=now() WHERE user_id=$1 AND department_id=$2 AND id::text=$3 AND version=$8 RETURNING ${columns}`,
+        `UPDATE position_focuses SET title=$4,period_start=$5,period_end=$6,sections=$7,version=version+1,updated_at=now() WHERE user_id=$1 AND department_id=$2 AND id::text=$3 AND version=$8 AND status='draft' RETURNING ${columns}`,
         [
           userId,
           departmentId,
@@ -69,7 +115,9 @@ export function focusStore(db: Pool) {
         ],
       );
       if (!result.rowCount) {
-        await this.get(userId, departmentId, id);
+        const current = await this.get(userId, departmentId, id);
+        if (current.status === "confirmed")
+          throw new AccessError(409, "This focus is confirmed and read-only. Your unsaved text is still here; copy it before closing this dialog.");
         throw new AccessError(
           409,
           "This focus changed in another window. Close this dialog and reopen the focus before editing.",

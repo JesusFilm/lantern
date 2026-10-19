@@ -25,7 +25,8 @@ export async function verifyDatabase(db: Pool, config: DatabaseRoles & {expected
             ('users','name'), ('users','email'), ('users','hosted_domain'),
             ('position_focuses','title'), ('position_focuses','period_start'),
             ('position_focuses','period_end'), ('position_focuses','sections'),
-            ('position_focuses','version'), ('position_focuses','updated_at')
+            ('position_focuses','version'), ('position_focuses','updated_at'),
+            ('position_focuses','status'), ('position_focuses','confirmed_at'), ('position_focuses','confirmed_by')
           ) AS required(table_name,column_name)
           WHERE NOT has_column_privilege(table_name,column_name,'UPDATE')
         ) AS allowed`);

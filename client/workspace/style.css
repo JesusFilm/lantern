@@ -1406,3 +1406,43 @@ h2[tabindex="-1"]:focus {
     width: 100%;
   }
 }
+
+/* Member focus review: person context first, then document status and action. */
+.member-context {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 24px; padding: 20px 24px; margin: 12px 0 32px;
+  border: 1px solid #dce5ed; border-radius: 10px; background: white;
+}
+.member-identity { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.member-identity strong { display: block; overflow-wrap: anywhere; }
+.member-identity .muted { display: block; }
+.member-initials {
+  display: grid; place-items: center; flex-shrink: 0; width: 52px; height: 52px;
+  border-radius: 50%; background: #d9f0f3; color: #173651; font-weight: 700;
+}
+.member-context > button { font-weight: 600; }
+.focus-confirmation-row { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; margin: 24px 0 32px; }
+.focus-draft { background: #e8eef3; border-radius: 6px; padding: 8px 14px; font-weight: 600; color: #415c74; }
+.member-focus-detail .focus-confirmation-row > button { margin-left: auto; }
+@media (max-width: 600px) {
+  .member-context { align-items: flex-start; flex-direction: column; padding: 18px; gap: 16px; }
+  .focus-confirmation-row { gap: 16px; }
+}
+
+.button-with-icon { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.lock-icon { width: 22px; height: 22px; flex-shrink: 0; }
+dialog:has(.confirmation-summary) { max-width: 760px; }
+.confirmation-summary { padding: 20px 24px; background: #f1f5f9; border-radius: 8px; margin: 24px 0; }
+.confirmation-summary h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #61768e; margin: 0 0 12px; }
+.confirmation-summary dl { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px 20px; margin: 0; }
+.confirmation-summary dt { color: #61768e; }
+.confirmation-summary dd { margin: 0; overflow-wrap: anywhere; }
+.confirmation-warning { display: flex; gap: 18px; padding: 20px 24px; border: 1px solid #d99921; border-radius: 8px; background: #fff7e6; color: #693c0b; margin-bottom: 24px; }
+.confirmation-warning > .lock-icon { color: #a86c08; width: 26px; height: 26px; margin-top: 2px; }
+.confirmation-warning h3 { font-size: 17px; margin: 0 0 10px; }
+.confirmation-warning p { margin: 0; }
+@media (max-width: 600px) {
+  .confirmation-summary, .confirmation-warning { padding: 16px; }
+  .confirmation-summary dl { grid-template-columns: 52px minmax(0, 1fr); gap: 8px 12px; }
+  .confirmation-warning { gap: 12px; }
+}

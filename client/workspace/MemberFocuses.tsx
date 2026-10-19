@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { MemberFocusList, MemberFocusDetail } from "../../shared/focus.js";
+import { FocusConfirmation } from "./FocusConfirmation.js";
 import { api } from "./api.js";
 
 const date = (value: string) =>
@@ -45,10 +46,10 @@ export function MemberFocuses({
     };
   }, [memberId, focusId, attempt]);
   return (
-    <section>
-      <button className="link back" onClick={() => navigate()}>
+    <section className={focusId ? "member-focus-detail" : undefined}>
+      {!focusId && <button className="link back" onClick={() => navigate()}>
         ← Department users
-      </button>
+      </button>}
       {error ? (
         <p role="alert">
           {error}{" "}
@@ -58,14 +59,19 @@ export function MemberFocuses({
         <p role="status">Loading member focuses…</p>
       ) : (
         <>
-          <p className="eyebrow">
-            {data.member.name} · {data.member.email}
-          </p>
           {"focus" in data ? (
             <>
-              <button className="link back" onClick={() => navigate(memberId)}>
-                ← {data.member.name}’s position focuses
-              </button>
+              <div className="member-context">
+                <div className="member-identity">
+                  <span className="member-initials" aria-hidden="true">
+                    {data.member.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}
+                  </span>
+                  <div><strong>{data.member.name}</strong><span className="muted">Member</span></div>
+                </div>
+                <button className="link" onClick={() => navigate(memberId)}>
+                  View all position focuses <span aria-hidden="true">→</span>
+                </button>
+              </div>
               <header>
                 <div>
                   <h1>{data.focus.title}</h1>
@@ -74,7 +80,8 @@ export function MemberFocuses({
                   </p>
                 </div>
               </header>
-              <p className="muted">Read-only member focus</p>
+              <FocusConfirmation key={data.focus.id} focus={data.focus} member={data.member}
+                onConfirmed={(focus) => setData({member: data.member, focus})} />
               {data.focus.sections.map((section, i) => (
                 <section className="read-section" key={i}>
                   <div className="read-objective">

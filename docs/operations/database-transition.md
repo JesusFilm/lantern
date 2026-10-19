@@ -1,5 +1,10 @@
 # Database transition and production preparation
 
+For a candidate containing ticket 03, migration/readiness advances to schema 4.
+See [confirmation rollout limits](../system/focus-confirmation.md). Schema-3 counts
+and execution results below describe the earlier rehearsal/rollout; refresh affected
+candidate checks before execution and do not roll back confirmed data to older code.
+
 Status, 19 October 2026: prepared and rehearsed on disposable local PostgreSQL 17
 with synthetic data. No hosted change or production access has occurred. Automatic
 staging delivery stays disabled; production application stays inactive. Ticket 17

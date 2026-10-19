@@ -14,6 +14,9 @@ export interface PositionFocus extends FocusDraft {
   id: string;
   version: number;
   updatedAt: string;
+  status: "draft" | "confirmed";
+  confirmedAt: string | null;
+  confirmedBy: { id: string; name: string } | null;
 }
 
 export interface FocusMember {

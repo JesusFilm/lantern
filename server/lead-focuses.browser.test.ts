@@ -156,12 +156,12 @@ test(
       ).toBeVisible();
       await page
         .getByRole("button", {
-          name: "← Alice’s position focuses",
+          name: "View all position focuses",
           exact: true,
         })
         .click();
       await page
-        .getByRole("button", { name: "← Department users", exact: true })
+        .getByRole("button", { name: "Department users", exact: true })
         .click();
       await page.getByRole("button", { name: "Bob", exact: true }).click();
       await expect(
@@ -217,7 +217,7 @@ test(
             page.getByText("Publish a guide by June", { exact: true }),
           ).toHaveCount(0);
           await page
-            .getByRole("button", { name: "← Department users", exact: true })
+            .getByRole("button", { name: "Department users", exact: true })
             .click();
           await expect(
             page.getByRole("button", { name: "Alice", exact: true }),
@@ -288,7 +288,7 @@ test(
           );
           await page
             .getByRole("button", {
-              name: "← Alice’s position focuses",
+              name: "View all position focuses",
               exact: true,
             })
             .click();
@@ -547,7 +547,7 @@ test(
           );
           await page
             .getByRole("button", {
-              name: "← Alice’s position focuses",
+              name: "View all position focuses",
               exact: true,
             })
             .click();

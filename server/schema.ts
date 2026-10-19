@@ -58,6 +58,18 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
       await migrateEnrollment(client);
       await client.query('INSERT INTO schema_migrations(version) VALUES (3)');
     }
+    const confirmation = await client.query('SELECT version FROM schema_migrations WHERE version = 4');
+    if (!confirmation.rowCount) {
+      await client.query(`ALTER TABLE position_focuses
+        ADD COLUMN status text NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','confirmed')),
+        ADD COLUMN confirmed_at timestamptz,
+        ADD COLUMN confirmed_by uuid REFERENCES users(id),
+        ADD CONSTRAINT focus_confirmation_metadata CHECK (
+          (status='draft' AND confirmed_at IS NULL AND confirmed_by IS NULL) OR
+          (status='confirmed' AND confirmed_at IS NOT NULL AND confirmed_by IS NOT NULL)
+        )`);
+      await client.query('INSERT INTO schema_migrations(version) VALUES (4)');
+    }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
@@ -67,8 +79,8 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3)');
-  if (result.rowCount !== 3) throw new Error('Required migration is missing.');
-  await database.query(`SELECT u.id, d.id, m.user_id, f.id, s.token_hash, l.state_hash, a.domain, e.email
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4)');
+  if (result.rowCount !== 4) throw new Error('Required migration is missing.');
+  await database.query(`SELECT u.id, d.id, m.user_id, f.id, f.status, f.confirmed_at, f.confirmed_by, s.token_hash, l.state_hash, a.domain, e.email
     FROM users u, departments d, memberships m, position_focuses f, sessions s, login_attempts l, allowed_domains a, approved_emails e LIMIT 0`);
 }
