@@ -3,17 +3,21 @@ ID: team-trial/15
 Title: Configure and prove automated staging and promotion gates
 Milestone: M06
 Type: task
-Status: ready-for-human
-Blocked by: 05, 13, 14
-Implementation: Not started; planning only
+Status: deferred
+Blocked by: Future explicit decision to resume automation
+Implementation: Existing workflow retained; further setup and gate proof deferred
 Slice: Hosted team trial
 
 ---
-## Outcome
+## Current decision — 19 October 2026
+
+Deferred by Jaco. This ticket does not block 06, 07 or the trial. Keep automatic delivery off; no QA session-secret acquisition, renewal work or live failure drills. Use the manual release runbook.
+
+## Future outcome
 
 Produce trustworthy exact-revision staging evidence using the existing workflows, and demonstrate that missing/failed evidence prevents production promotion. Do not create a duplicate promotion workflow.
 
-## Acceptance
+## Future acceptance — only after explicit resumption
 
 - [ ] Inspect merged ci.yml/promote.yml and target variables; provide an environment-scoped stage deployment token only after access/configuration prerequisites pass. Verify branch restrictions, required checks and disabled Railway independent autodeploy paths.
 - [ ] Enroll a second distinct ordinary QA member through the approved process. Obtain two real Google member sessions and privately install QA_MEMBER_A_SESSION and QA_MEMBER_B_SESSION. A lead session is not a substitute. Define secure session renewal, expiry handling and synthetic-record retention; never mint sessions or add an auth bypass.
@@ -27,3 +31,7 @@ Produce trustworthy exact-revision staging evidence using the existing workflows
 ## Boundary
 
 Ticket 11's latest-main input simplification remains optional. This planning update does not authorize enabling staging delivery, creating secrets, running drills or dispatching production.
+
+## Adopted simplification — 19 October 2026
+
+Jaco approved the simplification described in the [current breakdown](../breakdown.md). Use the revised acceptance above and the [manual release procedure](../../../docs/operations/hosted-release.md). Historical execution notes remain evidence, not instructions to repeat completed work. Production execution remains separately authorized; two-member acceptance stays parked.

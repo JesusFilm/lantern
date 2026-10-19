@@ -46,3 +46,11 @@ The authoritative agent directive is the repository-root `AGENTS.md`, section "P
 ## Boundary
 
 Planning only. Keep production inactive and automatic staging delivery disabled. No permissions, credentials, infrastructure, databases, application code or delivery switches change under this ticket update; no deployment workflows run. Do not install production credentials to discover whether controls work. Backup ownership and additional career leads remain named open questions. Separate release, recovery and acceptance prerequisites remain outstanding.
+
+## Trial simplification — 19 October 2026
+
+Jaco adopted manual trial releases and deferred IaC/release automation. Existing
+access, operational record and human-only production policies remain in force.
+Ticket 13 retains concrete access verification and usable operations; a general
+administrative framework and separate emergency-policy ceremony rehearsal are not
+trial requirements. See the [current breakdown](../breakdown.md).

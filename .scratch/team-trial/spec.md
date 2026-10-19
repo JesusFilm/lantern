@@ -2,19 +2,19 @@
 
 Milestone: M06
 Status: ready-for-agent
-Date: 15 October 2026
+Date: 19 October 2026
 
 This specifies the next milestone; it is not a claim that the behavior exists. [PRD](../../docs/PRD.md) is current product scope. Existing authoring and guides are retained.
 
-## Current delivery decision — updated 19 October 2026
+## Current delivery decision — 19 October 2026
 
-Authenticated staging is live on checked main revision `8e4cd805e9e5c88dea534823859191627ee8402c`, with schema version 2. Real Google work/personal login, member draft save/reload and career-lead read-only access have been observed. [Activation and workflow evidence](../../docs/operations/staging-activation-evidence.md) records this bounded manual proof; it is not full stage acceptance or automated release evidence. Google setup resumed successfully; the earlier hosting-only/provider-pause route is historical.
-
-Production remains inactive and `STAGE_DELIVERY_ENABLED` remains unset/false. Local role separation is merged and preparation/rehearsal of staging transfer and empty-production setup is authorized. Hosted execution, credentials, permissions, workflow runs and delivery activation remain separately authorized; ticket readiness alone does not grant them.
-
-The existing `ci.yml` stage job and `promote.yml` manual promotion workflow are merged. Stage automation lacks its token and two ordinary-member session secrets; no passing stage artifact exists. Ticket 11 is optional promotion-UI simplification, not a prerequisite for the existing explicit SHA/run workflow. Confirm-and-lock (03), full acceptance, recovery and production access governance remain required. A narrower draft-only production pilot would require an explicit scope change.
-
-Manual release promotion still requires one authorized operator, not a separate reviewer. Ticket 12 assigns production approval/execution to Jaco; agents must prepare, rehearse and guide the work through verification and recovery, without production access.
+Jaco adopted the [simplified delivery plan](breakdown.md): CI plus manual staging
+acceptance and a human-run release of the exact revision. IaC and release automation
+are deferred; production remains inactive and automatic stage delivery off.
+Staging schema 3 and role separation are recorded complete. PR #12 is open with
+passing CI. Two-member live acceptance is parked and unpassed. Confirmation/locking
+and existing privacy/access policy remain required. Agents support Jaco's production
+execution without accessing production or its credentials.
 
 ## Identity and approved participants
 
@@ -55,7 +55,16 @@ Railway stage and production each have an application and PostgreSQL service, in
 
 Repository scripts must run with injected environment variables and no .env file, while preserving current local commands. Provide compiled operator and migration entrypoints. Migrations must preserve existing records, work on an empty database and be safe to rerun/serialize; introducing lock/allowlist data must not reset existing documents or memberships. Run privileged migrations in a separate human-invoked process, absent from the application service, with a documented compatible rollout order. Readiness probes use /health; startup/migration failure must not route traffic to a broken revision.
 
-Implement GitHub Actions checks on pull requests targeting main and on the actual merged main revision: typecheck, real PostgreSQL HTTP/browser regressions and production build. Require those PR checks before merge through repository rules, and gate automatic Railway stage deployment on successful checks for the same main SHA. Failed, cancelled or missing checks must prevent deployment; do not rely on an independent merge-triggered Railway deployment racing CI. Stage deployment waits for migrations and readiness, then runs automated stage smoke/E2E checks with isolated synthetic QA records. Record which checks are automatic and which real-provider/newcomer checks require human evidence. Production automatic deployment is disabled; an operator explicitly promotes only a revision with passing CI and stage evidence. The workflow provider is an implementation choice for this GitHub repository; platform configuration and repository rules are verified during environment setup. Release records bind Git SHA (and image digest if used), stage deployment, checks, practical QA result, schema version/migrations, backup status (explicitly deferred during dogfooding) and operator promotion to a particular production deployment. If main moves, select the tested commit; never promote latest blindly. Changed code requires new verification.
+Require typecheck, real PostgreSQL HTTP/browser regressions and production build on
+PRs and the selected merged main revision. Manually deploy only a revision whose CI
+passes, then record manual stage acceptance against that SHA/deployment/schema.
+Jaco explicitly releases the accepted revision using the [human-run procedure](../../docs/operations/hosted-release.md).
+A changed revision needs CI and affected acceptance checks. Keep independent and
+workflow-driven automatic deployment off. Automated stage artifacts, persistent
+Google QA session secrets, promotion-gate drills and IaC adoption are deferred.
+Record revision, stage result, migrations, production deployment, operator and
+verification in one release record. Database readiness is a checkpoint in that
+procedure; existing rehearsed scripts and separate credentials remain in use.
 
 No staging backups and no production backups at this point, by Jaco’s 19 October decision. Production backups are reconsidered only after dogfooding is complete and the application’s value is determined, under ticket 16 and later explicit authorization. Backup/restore evidence is not an initial data-collection or dogfooding gate. Application rollback and database recovery are different: rollback code only when schema-compatible; destructive migration recovery requires a separately planned procedure. Do not reset local or production data during testing.
 
@@ -65,7 +74,12 @@ Production access governance is a release prerequisite, not a deferred administr
 
 Keep procedures, migrations, sanitized configuration and release references under review in Git. Keep credentials, actual allowlists, personnel data and sensitive audit details in protected storage. Test forbidden operations under restricted identities as well as successful operations. No production privileged enrollment is allowed merely because the same command worked on stage.
 
-Ticket 14 owns reproducible effective Railway settings; checked-in railway.json alone failed to configure this new service. Ticket 15 proves automated release gates and documents that the existing acceptance URL is an operator sign-off boundary, not a machine-validated QA document. Ticket 16 is deferred production backup planning after dogfooding/value assessment; it is not an initial launch gate. Ticket 17 creates and verifies production roles/tables after staging transition and transactional failure checks, with the application inactive; its findings feed ticket 13. These converge with confirmation/locking on ticket 06, then separately authorized application promotion under 07. The existing production smoke covers public readiness, not authenticated workflow acceptance.
+Ticket 14 owns bounded configuration/preflight review; ticket 15 is deferred and
+not a launch dependency. Ticket 16 remains deferred. Ticket 17 supplies the database
+checkpoint and access findings for 13 within the same human-run release procedure.
+Ticket 06 owns functional/privacy acceptance, followed by authorized activation
+under 07. The parked two-member case remains unpassed and must be resolved before
+claiming full launch acceptance; do not solicit accounts while it is parked.
 
 ## Acceptance and exclusions
 

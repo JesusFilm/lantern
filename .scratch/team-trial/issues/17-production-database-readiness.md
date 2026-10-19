@@ -9,6 +9,10 @@ Implementation: Empty-database path and guided procedure prepared and locally re
 Slice: Hosted team trial
 
 ---
+## Role in the release procedure
+
+This is the database checkpoint of ticket 07’s single guided release procedure. Reuse applicable local/staging rehearsal evidence; repeat only affected checks after changes or failures. Preserve the separate sanitized execution result. No new production execution is authorized by the simplification.
+
 ## Outcome
 
 Production has its own runtime, migration and administrative roles and the complete
@@ -80,3 +84,7 @@ Full authenticated release acceptance remains open: two ordinary-member Google
 sessions, cross-member denial, enrollment, revocation and save/reload checks.
 Production setup still requires separate human authorization/execution. These
 results do not close the complete provider-isolation or application-launch gate.
+
+## Adopted simplification — 19 October 2026
+
+Jaco approved the simplification described in the [current breakdown](../breakdown.md). Use the revised acceptance above and the [manual release procedure](../../../docs/operations/hosted-release.md). Historical execution notes remain evidence, not instructions to repeat completed work. Production execution remains separately authorized; two-member acceptance stays parked.

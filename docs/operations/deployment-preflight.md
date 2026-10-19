@@ -48,27 +48,17 @@ separate database scope checks and exact-revision/deployment health smoke. The
 checker cannot establish that a correctly named role actually has safe grants.
 The deployed image/build receipt remains authoritative for which build ran.
 
-## Configuration ownership and IaC adoption
+## Configuration ownership
 
-Railway's [Config as Code documentation](https://docs.railway.com/config-as-code)
-now deprecates `railway.json`/`railway.toml`: new services cannot opt in, and existing
-users have a 1 December 2026 cutoff. The checked-in file is therefore not proof
-that hosted settings match. This service currently uses hosted settings; the
-preflight contract is the repository's reviewed release requirement.
+The hosted settings and this bounded preflight contract are the trial's reviewed
+configuration approach. IaC evaluation, import, ownership adoption and automated
+apply/drift repair are deferred by Jaco's 19 October simplification decision.
+They are not ticket-14 completion criteria or trial launch requirements.
 
-[Railway IaC](https://docs.railway.com/infrastructure-as-code) is the intended
-configuration-management path. Use its import with variable preservation, then
-`railway config plan --detailed-exit-code` to review drift. Do not use
-`--include-variables` or `--show-values`: those expose non-sealed secrets. Prefer a
-named app-service partial; a whole-project apply can delete omitted resources.
-Even an unchanged first partial apply claims ownership, so this PR does not
-silently adopt infrastructure or add an automatic apply workflow.
-
-Ticket 14 remains open for a reviewed IaC import/plan, ownership adoption and
-production preparation. Until that work is reviewed, an operator repairs hosted
-drift through the targeted environment and reruns this gate; the app's separate
-migration runner and scoped credentials remain required. Never restore the old
-owner-powered runtime or pre-deploy migration hook to satisfy a failed check.
+An authorized operator repairs a concrete configuration mismatch in the selected
+environment and reruns the preflight. Keep the separate migration runner and
+restricted runtime. The checker is in open PR #12; passing CI is not a merge or
+production verification claim. Production-specific preparation belongs to 17/07.
 
 ## Verification — 19 October 2026
 

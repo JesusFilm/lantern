@@ -1,8 +1,66 @@
 # Hosted runtime and release runbook
 
-Current rollout gate (19 October 2026): [database privilege separation](database-privileges.md) is implemented locally only. The checked-in `railway.json` no longer has an application pre-deploy migration hook; hosted services and effective overrides have not been converted or verified. Do not deploy this revision with that hook or add migration/admin credentials to the application service to make it work. A separately authorized, rehearsed hosted transition must transfer existing schema ownership, run migrations in a separate process, and replace the old hook before rollout. Keep production inactive and automatic staging delivery disabled. The delivery procedures below describe the eventual path, not current authorization. Agents must follow [production operator assistance](production-operator-assistance.md); Jaco alone executes production work.
+Current decision, 19 October 2026: Jaco approved manual trial releases. Staging
+schema 3 and separate database roles are recorded complete; PR #12's bounded
+preflight is open with passing CI. Production is inactive and automatic staging
+delivery off. IaC and automated release-gate setup are deferred. Agents prepare and
+rehearse; Jaco executes production under [operator assistance](production-operator-assistance.md).
+This runbook is not execution authorization.
 
-Prepared 15 October 2026 for team-trial/04. This is repository implementation, not evidence of live configuration. Ticket 05 owns provisioning, secrets, repository rules and real Google setup. Never deploy this baseline to participants before approved-access is integrated.
+## Human-run trial release
+
+Use one sanitized release record and this ordered checklist for tickets 06/17/07.
+Keep sensitive inputs private and use the existing production-change record for
+privileged operations; link it instead of duplicating the same execution evidence.
+
+1. **Select:** identify a reviewed exact commit with passing merged-main typecheck,
+   PostgreSQL HTTP/browser tests and production build. Record SHA and CI run.
+   PR #12 must be reviewed/merged before relying on its new preflight. A green CI
+   result does not authorize merge or deployment. Keep confirmation/locking and
+   privacy requirements; two-member live acceptance is currently parked/unpassed.
+2. **Prepare stage:** with separate task authorization, prepare an isolated checkout
+   of that SHA and the existing build/stamp commands (`npm ci`, `npm run build`,
+   `node tools/release/stamp.mjs` with `RELEASE_SHA`). Confirm the upload excludes
+   private files. Verify target, effective settings and restricted runtime through
+   the bounded [configuration preflight](deployment-preflight.md) once available
+   in the reviewed release tooling. Keep the runtime separate from privileged runners.
+3. **Verify stage:** use the reviewed manual CLI upload path to the explicit target,
+   preserve its successful deployment receipt, and verify `/health` reports that
+   revision, deployment and expected schema. Record manual ticket-06 checks on
+   that deployment. No automated stage artifact or persistent CI Google sessions
+   are required. A failing or unavailable required check stays unresolved.
+4. **Prepare production checkpoint:** after applicable stage proof, prepare the
+   exact versioned commands and target metadata using [database transition](database-transition.md).
+   Reuse relevant rehearsal evidence. Explain expected results, stop conditions,
+   schema-compatible rollback/forward correction and the absence of backup recovery.
+   Jaco verifies the private target and executes the separately authorized database
+   checkpoint with migration/admin credentials outside the application. Record
+   his sanitized results under 17/13. The application remains inactive.
+5. **Authorize and release:** once required acceptance is complete, Jaco explicitly
+   authorizes activation of that same revision. Prepare and rehearse the exact
+   source-upload command and receipt checks for that release using the existing
+   release tools; do not hand him an untested generic command or ask him to invent
+   SQL. Use only runtime credentials in the app. Jaco performs the upload privately.
+   Verify the receipt, public revision/deployment/schema, then human authenticated
+   smoke, intended membership, save/read and confirmation behavior. A changed SHA
+   returns to CI and affected stage acceptance; never select moving main implicitly.
+6. **Record and close:** record revision, CI/stage evidence, schema/migration result,
+   deployment, operator, verification and any recovery. Attribute production findings
+   to Jaco. Record access review and closure/removal of temporary sessions/grants.
+   Do not claim completion from script preparation or a deployment receipt alone.
+
+Stop on wrong target, failed CI, unexpected database state/counts, uncertain commit,
+failed configuration/readiness or required acceptance failure. Diagnose with synthetic
+data and sanitized reports; preserve records and use the reviewed recovery path.
+No reset, owner-powered runtime fallback or production access by an agent is allowed.
+Production preparation may be authorized before final feature acceptance, but
+activation waits for it. Do not solicit accounts for the parked two-member case.
+
+The existing `promote.yml` requires an automated stage artifact. It is retained
+unchanged for deferred automation and is **not the manual trial release path**.
+Do not dispatch it with fabricated evidence or remove its checks. The CLI tooling
+is reused through the release-specific rehearsed human procedure above; it has
+not yet been executed against production. Automatic stage delivery stays off.
 
 ## Runtime contract
 
@@ -46,11 +104,11 @@ Integration seam for subsequent migrations: add numbered migrations **after** ve
 
 ## GitHub and Railway setup (ticket 05; not performed here)
 
-Create separate Railway stage and production app/PostgreSQL services, volumes, variables, domains, OAuth clients and approval data. No production data copies. Build with the Dockerfile. For newly provisioned services, configure and read back the effective Railway service settings explicitly: a separately scoped migration runner (design and verification outstanding), start `node dist/server/index.js`, healthcheck `/health`, timeout 120 seconds and restart policy ON_FAILURE with 3 retries. The dashboard observed on 16 October 2026 says services that never used Config as Code cannot opt in after 28 August 2026; uploading `railway.json` alone did not apply these settings. Verify deployment metadata and migration logs, not just the checked-in file. Plan a separately reviewed migration to Railway Infrastructure as Code before enabling unattended delivery. Disable GitHub autodeploy for **both** services and disable image automatic updates. Do not rely on Railway's independent “wait for CI” setting, or use “Deploy Latest Commit”. Only the workflows below have deployment tokens. Restrict manual Railway deployment permissions to release operators.
+Create separate Railway stage and production app/PostgreSQL services, volumes, variables, domains, OAuth clients and approval data. No production data copies. Build with the Dockerfile. For newly provisioned services, configure and read back the effective Railway service settings explicitly: a separately scoped migration runner (design and verification outstanding), start `node dist/server/index.js`, healthcheck `/health`, timeout 120 seconds and restart policy ON_FAILURE with 3 retries. The dashboard observed on 16 October 2026 says services that never used Config as Code cannot opt in after 28 August 2026; uploading `railway.json` alone did not apply these settings. Verify deployment metadata and migration logs, not just the checked-in file. IaC adoption is deferred; hosted settings plus the bounded preflight are sufficient for the trial. Disable GitHub autodeploy for **both** services and disable image automatic updates. Do not rely on Railway's independent “wait for CI” setting, or use “Deploy Latest Commit”. The human release operator uses the target-scoped credential privately; agents retain staging-only access. Restrict manual Railway deployment permissions to release operators.
 
 Create GitHub `stage` and `production` environments, restricted to protected main. Production uses an explicit operator-triggered promotion, with no separate reviewer or no-self-review requirement (operator decision, 15 October 2026). Keep administrator bypass disabled for the configured branch restriction. Keep production secrets unavailable to PR workflows. Protect workflow files through review/CODEOWNERS/repository rules appropriate to the organization.
 
-Each GitHub environment requires these variables: `APP_ORIGIN`, `RAILWAY_SERVICE` (service ID), `RAILWAY_ENVIRONMENT` (environment ID). Each requires `RAILWAY_TOKEN`, a **separate environment-scoped Railway project token**. Stage also requires `QA_MEMBER_A_SESSION` and `QA_MEMBER_B_SESSION`: cookie values from two distinct approved **ordinary members**, obtained by a human through real Google sign-in in stage. Keep them in environment secrets, never screenshots/artifacts/logs. Sessions expire/revoke normally; refresh by normal login and rerun CI when necessary. No session-minting command or login bypass is added. Provisioning and enrollment are later work.
+Each GitHub environment requires these variables: `APP_ORIGIN`, `RAILWAY_SERVICE` (service ID), `RAILWAY_ENVIRONMENT` (environment ID). Each requires `RAILWAY_TOKEN`, a **separate environment-scoped Railway project token**. Only deferred automation would require `QA_MEMBER_A_SESSION` and `QA_MEMBER_B_SESSION`: cookie values from two distinct approved **ordinary members**, obtained by a human through real Google sign-in in stage. Keep them in environment secrets, never screenshots/artifacts/logs. Sessions expire/revoke normally; refresh by normal login and rerun CI when necessary. No session-minting command or login bypass is added. Provisioning and enrollment are later work.
 
 Require these exact checks on PRs targeting main, select GitHub Actions as the expected source, require up-to-date branches, prevent direct pushes and unauthorized bypass:
 
@@ -60,11 +118,11 @@ Require these exact checks on PRs targeting main, select GitHub Actions as the e
 
 No path filters skip required checks. The same checks rerun on the actual merged main SHA. If enabling a merge queue later, add and verify `merge_group` checks first. `stage delivery and smoke` is a push-only downstream job, not a required PR check.
 
-## Automatic stage delivery
+## Deferred reference: automatic stage delivery
 
 For the first deployment, follow the explicit [operator bootstrap and real-login session acquisition sequence](railway-google-setup-evidence.md#first-stage-bootstrap-before-enabling-unattended-delivery). A manual stage bootstrap is needed before members can obtain real Google sessions; it does not count as passing automated stage evidence and must leave the repository delivery switch off until prerequisites pass.
 
-Stage delivery is temporarily **off by default** pending ticket 05. The job runs only when the **repository-level** Actions variable `STAGE_DELIVERY_ENABLED` is exactly `true`; unset/false skips it before any setup or upload steps. PR/main quality checks continue normally and can finish green while stage is disabled. Do not put this switch in the `stage` environment: environment variables are unavailable when GitHub evaluates this job condition.
+Stage delivery remains **off** under the manual trial decision. The following describes the retained, deferred implementation, not work to activate now. The job runs only when the **repository-level** Actions variable `STAGE_DELIVERY_ENABLED` is exactly `true`; unset/false skips it before any setup or upload steps. PR/main quality checks continue normally and can finish green while stage is disabled. Do not put this switch in the `stage` environment: environment variables are unavailable when GitHub evaluates this job condition.
 
 Before any separately authorized switch activation, tickets 05/13 must configure and verify stage resources, target settings/token, Google authentication, two QA session secrets, CI protections and the separate migration runner/credential boundary. Any effective app-service pre-deploy migration override must first be removed and the separate runner rehearsed. Then rerun a successful main push workflow for the intended SHA or use the next reviewed merge and verify deployment/readiness/smoke evidence. Set it back to `false` if activation fails. This switch does not enable production delivery.
 
@@ -76,7 +134,7 @@ Only successful smoke writes `stage-evidence-SHA`, with SHA, deployment ID, sche
 
 Automated smoke does not complete real Google login or replace newcomer/lead confirmation acceptance. Ticket 06 records real login/cancel/retry, approval revocation, guide-assisted newcomer authoring, lead browsing/confirmation, two-member isolation, lock persistence and production readiness against the exact SHA. Feature-specific acceptance awaits the relevant tickets.
 
-## Manual promotion
+## Deferred reference: artifact-gated promotion
 
 Run `Promote verified revision` from protected main with a full SHA, successful main CI run ID and HTTPS acceptance-record URL. The operator starting the workflow must inspect that record **before clicking Run workflow**. Repository permissions must restrict release execution to Jaco under the current production-access policy; workflow availability alone is not release authorization. It must identify the exact SHA and stage deployment, successful CI/smoke, practical QA results, required migrations/schema version, previous production deployment, schema compatibility, the current backup decision (deferred during dogfooding) and applicable transaction/rollback checks. A bare URL is not human acceptance; the initiating operator owns the practical QA decision. There is no second-person approval step.
 
@@ -92,9 +150,9 @@ Future procedure, only after backup work is explicitly authorized: rehearse with
 
 Application rollback selects a known image/deployment only after confirming current schema compatibility. It does not undo database changes. Destructive migration recovery needs its own rehearsed restore/forward-fix plan and downtime/data-loss decision; never run a database reset as rollback.
 
-## Live gate verification checklist
+## Deferred reference: automated gate verification
 
-Ticket 05 records actual run/deployment IDs for: failed required PR check blocks merge; failed/cancelled main check creates no stage deployment; main advances during queued delivery without changing uploaded SHA; failed pre-deploy leaves previous revision serving; readiness failure cannot pass smoke; expired QA session/failed smoke produces no passing artifact; missing/failed/mismatched stage evidence blocks manual promotion; production cannot deploy on merge; no production deployment occurs without an explicit authorized operator dispatch. Confirm secrets are target-scoped and public headers match the expected Railway deployment. These checks are still outstanding; local tests cannot prove live repository permissions or platform wiring.
+If ticket 15 is explicitly resumed, it records actual run/deployment IDs for: failed required PR check blocks merge; failed/cancelled main check creates no stage deployment; main advances during queued delivery without changing uploaded SHA; failed pre-deploy leaves previous revision serving; readiness failure cannot pass smoke; expired QA session/failed smoke produces no passing artifact; missing/failed/mismatched stage evidence blocks manual promotion; production cannot deploy on merge; no production deployment occurs without an explicit authorized operator dispatch. Confirm secrets are target-scoped and public headers match the expected Railway deployment. These checks are still outstanding; local tests cannot prove live repository permissions or platform wiring.
 
 ## Official platform references
 

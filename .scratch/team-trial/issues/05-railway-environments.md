@@ -1,6 +1,6 @@
 Kind: ticket
 ID: team-trial/05
-Title: Configure Railway environments, Google access and live release gates
+Title: Complete environment and Google access readiness
 Milestone: M06
 Type: task
 Status: ready-for-human
@@ -15,7 +15,7 @@ Stage is available for authenticated QA, and production is separately configured
 
 ## Current execution boundary — 16 October 2026
 
-Google staging is active with schema version 2, one Engineering lead and one ordinary member. Production resources and a separate OAuth client exist, but production is inactive. [Current evidence](../../../docs/operations/staging-activation-evidence.md) supersedes the earlier hosting-only plan. Complete remaining environment isolation/authentication setup without treating provisioning as production acceptance. Planning only: do not activate delivery or install production credentials in this session.
+Google staging is now recorded on schema version 3, one Engineering lead and one ordinary member. Production resources and a separate OAuth client exist, but production is inactive. [Current evidence](../../../docs/operations/staging-activation-evidence.md) supersedes the earlier hosting-only plan. Complete remaining environment isolation/authentication setup without treating provisioning as production acceptance. Planning only: do not activate delivery or install production credentials in this session.
 
 ## Ownership of remaining release work
 
@@ -38,17 +38,17 @@ Production resource preparation is part of this ticket, not the later production
 
 ## Acceptance
 
-- [ ] Stage/prod application and PostgreSQL resources are prepared with separate databases, credentials, OAuth callbacks and exact-email approval stores; only stage is activated for QA in this ticket. Test that stage cannot read/write production records. Use synthetic stage content.
+- [ ] Stage/prod application and PostgreSQL resources are prepared with separate databases, credentials, OAuth callbacks and exact-email approval stores; only stage is activated for QA in this ticket. Verify credential/environment isolation without agent production probes; Jaco reports production-side findings privately and in sanitized form. Use synthetic stage content.
 - [ ] Verify staging normal authentication, NODE_ENV=production, no local bypass, port/interface and HTTPS origin. Prepare the corresponding production configuration without activation; effective deployment configuration is verified under 14 before release.
 - [x] Create separate local/stage/production Google clients with exact callbacks; verify real local and staging work/personal login without the local bypass. Preserve local data/services. Production credentials remain private and uninstalled.
-- [x] Approve the intended staging lead/member using compiled operations, bootstrap Engineering and add the ordinary member through the lead interface. Additional QA enrollment and the second member session are owned by 15.
+- [x] Approve the intended staging lead/member using compiled operations, bootstrap Engineering and add the ordinary member through the lead interface. The second-member case is parked under 06; request no additional accounts.
 - [ ] Verify stage denial of unapproved same-domain/personal/external accounts, cookies, cancellation/retry and sign-out with the real provider; retain production work-domain policy. Full multi-account/revocation acceptance remains 06.
 - [ ] Verify absence of independent production/stage autodeploy sources and record target identifiers/configuration. Production remains inactive; credential installation and privileged enrollment cannot precede governance verification under 13.
 
 ## Release requirements handed off (not completed here)
 
 - **14:** reproducible migration/start/health settings and drift detection; reconcile local evidence through review.
-- **15:** required-check and failed-check live proof, environment-scoped token, two ordinary-member sessions, separately authorized stage delivery enablement, exact-revision smoke artifact and promotion rejection drills. Keep `STAGE_DELIVERY_ENABLED` unset/false until that separately authorized work passes its prerequisites; return it to false on activation failure.
+- **15 (deferred):** automated delivery, session secrets and gate drills are not trial prerequisites. Keep automatic delivery off and use the human-run release procedure.
 - **16 (deferred):** reconsider production backups only after dogfooding completes and value is determined. No staging backups; no backup/restore prerequisite for initial setup or dogfooding.
 - **17:** human-run production role/schema setup after staging transition proof; no application activation.
 - **06/07:** final candidate acceptance and explicit production promotion with controlled enrollment and authenticated smoke.

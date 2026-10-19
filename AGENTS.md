@@ -8,6 +8,10 @@ Server-resolved identity and active department membership are authoritative. Nev
 
 For prototype additions or refinements, read `prototype/AGENTS.md` in the retained prototype worktree `/home/jacobuntu/Ops/worktrees/lantern-ui-prototypes`. Application code must not depend on prototype files or expose prototype controls.
 
+## Trial delivery scope
+
+For release preparation and ticket selection, follow the [current trial breakdown](.scratch/team-trial/breakdown.md) and [human-run release procedure](docs/operations/hosted-release.md). Jaco approved manual trial releases on 19 October 2026: IaC adoption and automated release-gate work are deferred. Preserve existing database roles and CI; two-member live acceptance is parked and unpassed. This scope decision does not authorize deployment or production access.
+
 ## Production access and change records
 
 Agreed policy (2026-10-16, team-trial ticket 12); technical enforcement remains outstanding under ticket 13. Until Jaco explicitly authorizes implementation, work is planning only. Keep production inactive and automatic staging delivery disabled until their activation is separately authorized after the required gates pass. This policy does not itself authorize execution or infrastructure changes; agents remain prohibited from production access even during authorized implementation.

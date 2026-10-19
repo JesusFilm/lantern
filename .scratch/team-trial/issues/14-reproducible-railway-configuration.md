@@ -5,7 +5,7 @@ Milestone: M06
 Type: task
 Status: ready-for-agent
 Blocked by: 04
-Implementation: Repository app pre-deploy migration removed; scoped runner commands and transition prepared; effective hosted setup outstanding
+Implementation: Staging transition and pre-deploy hook removal reported complete; bounded preflight in open PR #12; production preparation outstanding
 Slice: Hosted team trial
 
 ---
@@ -15,12 +15,13 @@ Replace the assumption that uploading railway.json configures a new service with
 
 ## Acceptance
 
-- [ ] Reconcile and merge sanitized setup evidence/runbook changes currently local to the setup worktree. Capture actual stage settings and intended production settings without secrets. Do not treat local documentation as merged evidence.
-- [ ] Verify current Railway-supported configuration mechanisms and choose an authoritative repository-managed approach (evaluate Infrastructure as Code). Document any unavoidable dashboard steps and how drift is detected.
-- [ ] Cover Dockerfile/build, start command, separate human-invoked migration runner, healthcheck/timeout/restart policy, explicit environment identity and disabled independent autodeploy. Keep secrets and resource references environment-specific; do not embed credentials.
-- [ ] Verify configuration on staging, including successful compiled migration and exact-revision/deployment health headers. Fail or block delivery when required effective settings are missing; merely finding railway.json is insufficient.
-- [ ] Prepare and review production configuration without deploying or migrating production. Account for ticket 13's separate migration/runtime/admin privileges; final configuration must conform before release verification.
-- [ ] Document and test migration from current dashboard settings without resetting services/data or enabling automatic delivery. Record the checked revision and effective settings.
+- [ ] Review and merge PR #12's bounded preflight and sanitized setup evidence through normal review; passing CI is recorded, merge is not yet authorized/performed.
+- [ ] Keep the effective build/start/health, environment identity, separate migration runner, restricted runtime and disabled source-trigger checks documented and verified on staging.
+- [ ] Record the preflight's limits: configuration checks do not establish SQL grants or token isolation. Fix concrete failures without broadening this into a configuration-management project.
+- [ ] Hand production-specific settings verification to 17/07 in the single release procedure.
+
+IaC evaluation/import/adoption, automatic drift repair and additional deployment
+frameworks are deferred and are not completion criteria for this ticket.
 
 ## Local preparation — 19 October 2026
 
@@ -62,13 +63,15 @@ sessions, cross-member denial, enrollment, revocation and save/reload checks.
 Production setup still requires separate human authorization/execution. These
 results do not close the complete provider-isolation or application-launch gate.
 
-## Deployment preflight implementation — 19 October 2026
+## Deployment preflight review — 19 October 2026
 
-The release command now checks hosted target/configuration and private runtime
-variable placement before upload. The standalone read-only check passed against
-current staging. CLI-boundary regression tests reject drift without uploading or
-printing secrets. See [preflight operation and IaC evaluation](../../../docs/operations/deployment-preflight.md).
+[Draft PR #12](https://github.com/JesusFilm/lantern/pull/12) adds a read-only hosted
+configuration preflight before upload, CLI-boundary regression tests, and
+protected-main promotion checks. Live read-only staging checks passed with the
+workflow-pinned CLI. New non-secret stage project/runtime-role variables are set;
+automatic delivery remains disabled. Typecheck, build, 10 release tests and 8
+ticket tests passed locally. At that checkpoint, merge review, IaC and production preparation were listed as outstanding. The subsequently approved simplification defers IaC and assigns production preparation to 17/07; PR review remains open. No deployment occurred in this slice.
 
-This completes the bounded drift-detection slice; the ticket remains open for
-reviewed IaC adoption and production preparation. No automatic delivery switch,
-provider ownership, production configuration or hosted settings changed here.
+## Adopted simplification — 19 October 2026
+
+Jaco approved the simplification described in the [current breakdown](../breakdown.md). Use the revised acceptance above and the [manual release procedure](../../../docs/operations/hosted-release.md). Historical execution notes remain evidence, not instructions to repeat completed work. Production execution remains separately authorized; two-member acceptance stays parked.

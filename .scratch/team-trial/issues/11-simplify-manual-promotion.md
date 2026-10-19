@@ -3,7 +3,7 @@ ID: team-trial/11
 Title: Simplify manual promotion while preserving revision-bound evidence
 Milestone: M06
 Type: task
-Status: needs-triage
+Status: deferred
 Implementation: Proposed; not implemented or required for hosting-only staging
 Slice: Hosted team trial
 
