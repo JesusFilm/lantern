@@ -36,7 +36,8 @@ here feed the access verification in 13. Dependencies are the rehearsed slices o
 - [x] Rehearse separate roles, complete schema creation and zero participant/content records locally with synthetic fixtures; no stage copying.
 - [x] Provide read-only checks for the three credential scopes and an optional empty-data checkpoint.
 - [x] Prepare the [guided procedure](../../../docs/operations/database-transition.md) and a sanitized planned entry in [production changes](../../../docs/operations/production-changes.md).
-- [ ] Obtain passing staging transition/configuration and transactional failure evidence for the intended scripts/schema. Record the checked revision and resolve any remaining provider-specific runner/access prerequisites.
+- [x] Staging transition/configuration and transactional failure evidence is recorded for revision `3349636a031d86b90c534e71e4a02d416a8f7df7`; see the hosted execution entry below.
+- [ ] Before production execution, verify that this evidence still covers the intended scripts/schema and resolve production-specific runner/access prerequisites. Repeat affected checks only if the candidate or configuration changed.
 - [ ] Jaco explicitly authorizes database-only execution, privately confirms the production endpoint and empty state, reviews the version/digest and planned record, and performs the prepared role/password steps.
 - [ ] Jaco runs the reviewed migration sequence with its separate credential. Runtime service receives neither migration/admin credentials nor provider-owner credentials. No application deployment occurs here.
 - [ ] Jaco reports the expected table/ledger/ownership/role checks and empty-data verification. Record actual results and any recovery as applied/failed, attributed to him.
