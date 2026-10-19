@@ -4,7 +4,7 @@ import {mkdtempSync,rmSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {deploymentReceipt} from './gates.mjs';
+import {queueDeployment} from './upload.mjs';
 
 const stage='8e19675b-08a2-4bfb-9762-fd6d8561fcfd';
 const project='9a445065-bde0-4184-bdb8-4161b033cc8f';
@@ -63,7 +63,7 @@ export function prepareUpload(sha, cwd=process.cwd()) {
   return {path,cleanup};
  } catch(error) {cleanup();throw error;}
 }
-export async function run(env, {call = args=>execFileSync('railway',args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:12*60*1000,maxBuffer:50*1024*1024}), wait = ()=>new Promise(resolve=>setTimeout(resolve,2000)), attempts=60, prepare=prepareUpload} = {}) {
+export async function run(env, {call = args=>execFileSync('railway',args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:12*60*1000,maxBuffer:50*1024*1024}), wait = ()=>new Promise(resolve=>setTimeout(resolve,2000)), attempts=360, prepare=prepareUpload} = {}) {
  validateTarget(env);
  const {RAILWAY_ENVIRONMENT:environment,RAILWAY_MIGRATION_SERVICE:service}=env;
  const config=JSON.parse(call(['api','--compact','--variables',JSON.stringify({environment,service}),query]));
@@ -71,7 +71,7 @@ export async function run(env, {call = args=>execFileSync('railway',args,{encodi
  validateRunner(config,vars,env);
  const upload=prepare(env.RELEASE_SHA);
  try {
- const deployment=deploymentReceipt(call(['up',upload.path,'--path-as-root','--json','--project',project,'--environment',environment,'--service',service,'--message',env.RELEASE_SHA]),service,environment);
+ const deployment=queueDeployment(call,[upload.path,'--path-as-root','--project',project,'--environment',environment,'--service',service,'--message',env.RELEASE_SHA],service,environment);
  // Deploy readiness alone does not prove the one-shot migration committed.
  for(let i=0;i<attempts;i++) {
   const logs=call(['logs',deployment,'--json','--lines','100','--project',project,'--environment',environment,'--service',service]);

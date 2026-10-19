@@ -22,7 +22,7 @@ test('migration upload and completion checks stay pinned to the runner and recei
  const calls=[];
  const call=args=>{
   calls.push(args);
-  if(args[0]==='api') return JSON.stringify(config);
+  if(args[0]==='api') return args.at(-1).includes('deployment(id:') ? JSON.stringify({data:{deployment:{id,serviceId:env.RAILWAY_MIGRATION_SERVICE,environmentId:env.RAILWAY_ENVIRONMENT}}}) : JSON.stringify(config);
   if(args[0]==='variables') return JSON.stringify(vars);
   if(args[0]==='up') return JSON.stringify({status:'success',serviceId:env.RAILWAY_MIGRATION_SERVICE,environmentId:env.RAILWAY_ENVIRONMENT,deploymentId:id});
   assert.equal(args[0],'logs');assert.equal(args[1],id);
