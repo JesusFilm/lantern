@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { MemberFocusList, MemberFocusDetail } from "../../shared/focus.js";
+import { FocusConfirmation } from "./FocusConfirmation.js";
 import { api } from "./api.js";
 
 const date = (value: string) =>
@@ -75,6 +76,8 @@ export function MemberFocuses({
                 </div>
               </header>
               <p className="muted">Read-only member focus</p>
+              <FocusConfirmation key={data.focus.id} focus={data.focus} member={data.member}
+                onConfirmed={(focus) => setData({member: data.member, focus})} />
               {data.focus.sections.map((section, i) => (
                 <section className="read-section" key={i}>
                   <div className="read-objective">

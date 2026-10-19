@@ -159,7 +159,7 @@ function App() {
               ) : page === "focuses" ||
                 (page === "department" &&
                   session.department.role !== "career-lead") ? (
-                <FocusWorkspace />
+                <FocusWorkspace member={session.user} canConfirm={session.department.role === "career-lead"} />
               ) : page === "department" &&
                 session.department.role === "career-lead" ? (
                 <Department

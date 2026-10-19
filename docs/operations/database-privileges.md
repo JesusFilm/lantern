@@ -1,5 +1,10 @@
 # Database privilege separation
 
+For a candidate containing ticket 03, migration/readiness advances to schema 4.
+See [confirmation rollout limits](../system/focus-confirmation.md). Schema-3 counts
+and execution results below describe the earlier rehearsal/rollout; refresh affected
+candidate checks before execution and do not roll back confirmed data to older code.
+
 Status: implemented and tested locally with synthetic data, 2026-10-19. No hosted
 switch has been executed. Production remains inactive; automatic staging delivery
 remains disabled. This covers the database-role slice of team-trial/13, not the

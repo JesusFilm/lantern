@@ -54,7 +54,7 @@ test('production-only package migrates, starts without dotenv, serves assets and
      const origin: string = `http://127.0.0.1:${address.port}`;
      const health = await fetch(origin+'/health');
      assert.equal(health.status, 200);
-     assert.equal(health.headers.get('x-lantern-schema'), '3');
+     assert.equal(health.headers.get('x-lantern-schema'), '4');
      const session = await (await fetch(origin+'/api/session', { headers: { Cookie: `__Host-lantern-session=${personalToken}` } })).json() as { user: { id: string } | null };
      assert.equal(session.user?.id ?? null, n === 0 ? personalId : null);
      if (n === 0) {

@@ -5,7 +5,7 @@ Milestone: M06
 Type: task
 Status: ready-for-agent
 Blocked by: 02
-Implementation: Not started
+Implementation: Implemented locally with migration 4; 117 tests passed; review pending; no hosted deployment
 Slice: Hosted team trial
 
 ---
@@ -29,3 +29,11 @@ No submit/request queue, unlock, copying, history browser, notification or sched
 ## Sources and verification
 
 Follow [current specification](../spec.md), [breakdown](../breakdown.md) and [AGENTS.md](../../../AGENTS.md). Application changes use failing public-behavior tests before implementation and isolated real PostgreSQL. Ticket readiness is not a claim of completed implementation or authorization to deploy.
+
+## Implementation — 19 October 2026
+
+The local implementation adds the explicit confirmation dialog, server-authorized
+versioned confirmation, immutable owner/lead reads and schema-4 migration. See
+[lifecycle and rollout limits](../../../docs/system/focus-confirmation.md).
+Local typecheck/build and all 117 tests passed. Review is pending; live staging/production acceptance remains
+separate. The parked two-member case is not resumed by local synthetic tests.

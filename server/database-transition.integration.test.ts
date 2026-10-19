@@ -16,7 +16,8 @@ async function legacyFixture() {
   try {
     await migrate(fixture.bootstrap);
     await fixture.bootstrap.query('DROP FUNCTION public.enroll_member(uuid,text,boolean)');
-    await fixture.bootstrap.query('DELETE FROM public.schema_migrations WHERE version=3');
+    await fixture.bootstrap.query('DELETE FROM public.schema_migrations WHERE version IN (3,4)');
+    await fixture.bootstrap.query('ALTER TABLE public.position_focuses DROP COLUMN status, DROP COLUMN confirmed_at, DROP COLUMN confirmed_by');
     const user = randomUUID(), department = randomUUID(), focus = randomUUID();
     await fixture.bootstrap.query("INSERT INTO public.users VALUES($1,'synthetic-sub','person@example.test','Synthetic person','example.test')", [user]);
     await fixture.bootstrap.query("INSERT INTO public.departments VALUES($1,'Synthetic team',NULL)", [department]);
@@ -121,7 +122,7 @@ test('fresh setup creates the complete empty database under separate roles witho
     for (const table of ['users','departments','memberships','position_focuses','sessions','login_attempts','approved_emails','allowed_domains']) {
       assert.equal((await fresh.runtime.query(`SELECT count(*) AS count FROM ${table}`)).rows[0].count,'0');
     }
-    assert.deepEqual((await fresh.runtime.query('SELECT version FROM schema_migrations ORDER BY version')).rows,[{version:1},{version:2},{version:3}]);
+    assert.deepEqual((await fresh.runtime.query('SELECT version FROM schema_migrations ORDER BY version')).rows,[{version:1},{version:2},{version:3},{version:4}]);
     assert.equal((await stage.bootstrap.query('SELECT count(*) AS count FROM public.position_focuses')).rows[0].count,'1');
   } finally { await fresh.close(); await stage.close(); }
 });
