@@ -17,11 +17,9 @@ export function FocusConfirmation({
   focus,
   member,
   onConfirmed,
-  readOnlyMember = false,
 }: {
   focus: PositionFocus;
   member: { id: string; name: string };
-  readOnlyMember?: boolean;
   onConfirmed?: (focus: PositionFocus) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -37,7 +35,6 @@ export function FocusConfirmation({
     <>
       <div className="focus-confirmation-row">
       <span className="focus-draft">Draft</span>
-      {readOnlyMember && <span className="focus-read-only muted">Read-only member focus</span>}
       {onConfirmed && (
         <button className="primary button-with-icon" onClick={() => setConfirming(true)}>
           <LockIcon />Confirm and lock

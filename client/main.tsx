@@ -124,7 +124,7 @@ function App() {
             <Fragment
               key={`${session.user.id}:${session.department?.id ?? ""}:${session.department?.role ?? ""}`}
             >
-              {!session.localAccess && (
+              {!session.localAccess && page === "account" && (
                 <button
                   className="sign-out"
                   onClick={() =>

@@ -80,7 +80,7 @@ export function MemberFocuses({
                   </p>
                 </div>
               </header>
-              <FocusConfirmation key={data.focus.id} focus={data.focus} member={data.member} readOnlyMember
+              <FocusConfirmation key={data.focus.id} focus={data.focus} member={data.member}
                 onConfirmed={(focus) => setData({member: data.member, focus})} />
               {data.focus.sections.map((section, i) => (
                 <section className="read-section" key={i}>

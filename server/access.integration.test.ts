@@ -181,6 +181,7 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       assert.equal((await memberContext.request.get(origin + '/api/department')).status(), 403);
       await memberPage.reload();
       await expect(memberPage.getByRole('heading', { name: 'Your account is ready' })).toBeVisible();
+      await memberPage.getByRole('button', { name: 'Account', exact: true }).click();
       await memberPage.getByRole('button', { name: 'Sign out' }).click();
       await expect(memberPage.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
       await leadPage.setViewportSize({ width: 390, height: 844 });

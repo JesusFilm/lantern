@@ -42,10 +42,15 @@ test('lead confirms in the browser; stale member edits retain input and the save
     assert.equal(response.status(),201);const focus=await response.json() as PositionFocus;
     await memberPage.goto(origin+'/?page=focuses&focus='+focus.id);
     await expect(memberPage.getByRole('button',{name:'Confirm and lock',exact:true})).toHaveCount(0);
+    await expect(memberPage.getByRole('button',{name:'Sign out',exact:true})).toHaveCount(0);
+    await memberPage.getByRole('button',{name:'Account',exact:true}).click();
+    await expect(memberPage.getByRole('button',{name:'Sign out',exact:true})).toBeVisible();
+    await memberPage.goto(origin+'/?page=focuses&focus='+focus.id);
     await memberPage.getByRole('button',{name:'Edit objective',exact:true}).click();
     await memberPage.getByLabel('Objective',{exact:true}).fill('Unsaved thought to keep');
     await leadPage.goto(origin+'/?page=department&member='+member+'&memberFocus='+focus.id);
     await expect(leadPage.getByRole('heading',{name:'Annual agreement',exact:true})).toBeVisible();
+    await expect(leadPage.getByText('Read-only member focus',{exact:true})).toHaveCount(0);
     await expect(leadPage.getByRole('button',{name:'Sign out',exact:true})).toHaveCount(0);
     await leadPage.getByRole('button',{name:'View all position focuses',exact:true}).click();
     await expect(leadPage.getByRole('heading',{name:'Member’s position focuses'})).toBeVisible();

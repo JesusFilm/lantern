@@ -1408,7 +1408,6 @@ h2[tabindex="-1"]:focus {
 }
 
 /* Member focus review: person context first, then document status and action. */
-.workspace:has(.member-focus-detail) > .sign-out { display: none; }
 .member-context {
   display: flex; align-items: center; justify-content: space-between;
   gap: 24px; padding: 20px 24px; margin: 12px 0 32px;
@@ -1424,11 +1423,10 @@ h2[tabindex="-1"]:focus {
 .member-context > button { font-weight: 600; }
 .focus-confirmation-row { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; margin: 24px 0 32px; }
 .focus-draft { background: #e8eef3; border-radius: 6px; padding: 8px 14px; font-weight: 600; color: #415c74; }
-.focus-read-only { border-left: 1px solid #dce5ed; padding-left: 24px; }
+.member-focus-detail .focus-confirmation-row > button { margin-left: auto; }
 @media (max-width: 600px) {
   .member-context { align-items: flex-start; flex-direction: column; padding: 18px; gap: 16px; }
   .focus-confirmation-row { gap: 16px; }
-  .focus-read-only { padding-left: 16px; }
 }
 
 .button-with-icon { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
