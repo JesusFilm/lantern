@@ -11,7 +11,7 @@ function run(config=settings,vars=variables,extraEnv={},script='deploy.mjs'){
  const dir=mkdtempSync(join(tmpdir(),'lantern-deploy-test-'));
  try{
  writeFileSync(join(dir,'fixture.json'),JSON.stringify({config,vars}));writeFileSync(join(dir,'calls.jsonl'),'');
- writeFileSync(join(dir,'railway'),`#!/usr/bin/env node\nconst fs=require('node:fs');const path=require('node:path');const dir=__dirname;const args=process.argv.slice(2);fs.appendFileSync(path.join(dir,'calls.jsonl'),JSON.stringify(args)+'\\n');const f=JSON.parse(fs.readFileSync(path.join(dir,'fixture.json')));if(args[0]==='api')console.log(JSON.stringify(f.config));else if(args[0]==='variables')console.log(JSON.stringify(f.vars));else if(args[0]==='up')console.log(JSON.stringify({status:'success',serviceId:'${service}',environmentId:'${environment}',deploymentId:'44444444-4444-4444-8444-444444444444'}));else process.exit(2);`,{mode:0o755});
+ writeFileSync(join(dir,'railway'),`#!/usr/bin/env node\nconst fs=require('node:fs');const path=require('node:path');const dir=__dirname;const args=process.argv.slice(2);fs.appendFileSync(path.join(dir,'calls.jsonl'),JSON.stringify(args)+'\\n');const f=JSON.parse(fs.readFileSync(path.join(dir,'fixture.json')));if(args[0]==='api')console.log(JSON.stringify(args.at(-1).includes('deployment(id:')?{data:{deployment:{id:'44444444-4444-4444-8444-444444444444',serviceId:'${service}',environmentId:'${environment}'}}}:f.config));else if(args[0]==='variables')console.log(JSON.stringify(f.vars));else if(args[0]==='up')console.log(JSON.stringify({deploymentId:'44444444-4444-4444-8444-444444444444'}));else process.exit(2);`,{mode:0o755});
  const result=spawnSync(process.execPath,[resolve('tools/release/'+script)],{encoding:'utf8',env:{PATH:dir+':'+process.env.PATH,RAILWAY_TOKEN:'fixture-token',RAILWAY_PROJECT:project,RAILWAY_ENVIRONMENT:environment,RAILWAY_SERVICE:service,RELEASE_TARGET:'stage',LANTERN_DB_RUNTIME_ROLE:'lantern_stage_runtime',APP_ORIGIN:'https://stage.example.com',RELEASE_SHA:'a'.repeat(40),GITHUB_ENV:join(dir,'github-env'),...extraEnv}});
  const calls=readFileSync(join(dir,'calls.jsonl'),'utf8').trim().split('\n').filter(Boolean).map(JSON.parse);
  return {...result,calls};
@@ -51,7 +51,7 @@ test('deployment rejects drift, ambiguous targets and privileged runtime configu
  for(const patch of [{RAILWAY_PROJECT:''},{RELEASE_TARGET:'unknown'},{RAILWAY_API_TOKEN:'do-not-print-secret'}]){const result=run(settings,variables,patch);assert.equal(result.status,1);assert.ok(!result.calls.some(c=>c[0]==='up'));}
 });
 test('verified settings permit an explicitly targeted upload and keep the read-only check non-deploying',()=>{
- const result=run();assert.equal(result.status,0,result.stderr);const up=result.calls.find(c=>c[0]==='up');assert.ok(up.includes('--project'));assert.ok(up.includes(project));assert.doesNotMatch(result.stdout+result.stderr,/do-not-print/);
+ const result=run();assert.equal(result.status,0,result.stderr);const up=result.calls.find(c=>c[0]==='up');assert.ok(up.includes('--detach'));assert.ok(up.includes('--project'));assert.ok(up.includes(project));assert.doesNotMatch(result.stdout+result.stderr,/do-not-print/);
 });
 
 test('standalone configuration check never uploads and fails closed on provider errors',()=>{
