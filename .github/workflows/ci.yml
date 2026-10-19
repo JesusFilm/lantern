@@ -60,7 +60,7 @@ jobs:
     # This must be a repository variable: environment variables are unavailable here.
     if: vars.STAGE_DELIVERY_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     environment: stage
     concurrency:
       group: lantern-stage

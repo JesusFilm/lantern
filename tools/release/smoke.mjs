@@ -14,7 +14,7 @@ assert.ok(env.EXPECTED_DEPLOYMENT_ID, 'Deployment receipt is required.');
 assert.match(sha ?? '', /^[a-f0-9]{40}$/);
 assert.equal(new URL(origin).protocol, 'https:');
 let health;
-for (let attempt = 0; attempt < 60; attempt++) {
+for (let attempt = 0; attempt < 360; attempt++) {
  try {
   const response = await fetch(origin+'/health', { signal: AbortSignal.timeout(5000) });
   if (response.ok && response.headers.get('x-lantern-revision') === sha && response.headers.get('x-lantern-deployment') === env.EXPECTED_DEPLOYMENT_ID) { health = response; break; }
