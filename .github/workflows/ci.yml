@@ -56,11 +56,11 @@ jobs:
   stage:
     name: stage delivery and smoke
     needs: [typecheck, tests, build]
-    # Off until team-trial/05 provisions and verifies Railway stage delivery.
+    # Enabled only after staging credentials and migration connectivity are verified.
     # This must be a repository variable: environment variables are unavailable here.
     if: vars.STAGE_DELIVERY_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     environment: stage
     concurrency:
       group: lantern-stage
@@ -69,6 +69,10 @@ jobs:
       RELEASE_SHA: ${{ github.sha }}
       APP_ORIGIN: ${{ vars.APP_ORIGIN }}
       RELEASE_TARGET: stage
+      RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT }}
+      RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
+      RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
+      LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -86,8 +90,18 @@ jobs:
           JS
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm install --global @railway/cli@5.68.0
+      - run: npm install --global @railway/cli@5.70.0
+      - run: npm run build
       - run: node tools/release/stamp.mjs
+      - name: Verify staging configuration before migrations
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: node tools/release/configuration.mjs
+      - name: Apply migrations in the private staging network
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_MIGRATION_SERVICE: ${{ vars.RAILWAY_MIGRATION_SERVICE }}
+        run: node tools/release/migrate-stage.mjs
       - name: Upload the checked source revision
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -96,14 +110,14 @@ jobs:
           RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
           RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
         run: node tools/release/deploy.mjs
-      - name: Exact-revision readiness and stage E2E
+      - name: Verify deployed revision, schema, login and anonymous denial
         env:
-          QA_MEMBER_A_SESSION: ${{ secrets.QA_MEMBER_A_SESSION }}
-          QA_MEMBER_B_SESSION: ${{ secrets.QA_MEMBER_B_SESSION }}
+          RELEASE_SMOKE_MODE: readiness
+          EXPECTED_SCHEMA_VERSION: '4'
         run: node tools/release/smoke.mjs
       - uses: actions/upload-artifact@v4
         with:
-          name: stage-evidence-${{ github.sha }}
+          name: stage-readiness-${{ github.sha }}
           path: release-evidence.json
           if-no-files-found: error
           retention-days: 90

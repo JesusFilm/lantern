@@ -6,3 +6,6 @@ dist
 captures
 .scratch
 
+
+output
+stage-isolation-evidence.json
