@@ -31,11 +31,23 @@ For Google sign-in, configure a Web OAuth client with the callback `APP_ORIGIN/a
 
 ## Delivery
 
-GitHub Actions checks types, runs PostgreSQL/browser tests, and builds the application. [Staging delivery](.github/workflows/ci.yml) runs for successful main commits when repository variable `STAGE_DELIVERY_ENABLED=true`, using the GitHub `stage` environment. It currently migrates through the private Railway migration service before uploading the webapp.
+GitHub Actions checks types, runs PostgreSQL/browser tests, and builds the application. [Staging delivery](.github/workflows/ci.yml) runs for successful main commits when repository variable `STAGE_DELIVERY_ENABLED=true`, using the GitHub `stage` environment. It applies migrations directly from the runner, then uploads the matching webapp revision.
 
-[Production deployment](.github/workflows/promote.yml) accepts one full main commit SHA and verifies its successful staging readiness artifact. Once production configuration and schema migration are ready, invoke it with `gh workflow run promote.yml --ref main -f sha=<full-main-sha>`. The GitHub `production` environment requires `RAILWAY_TOKEN` as a secret and `RAILWAY_PROJECT`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`, `LANTERN_DB_RUNTIME_ROLE`, and `APP_ORIGIN` variables.
+[Production deployment](.github/workflows/promote.yml) accepts one full main commit SHA and verifies its successful staging readiness artifact. Run `gh workflow run promote.yml --ref main -f sha=<full-main-sha>` after configuring production. The selected revision must include the GitHub migration runner's TLS-compatible operator validation. Production receives schema changes only; staging records are never copied.
 
-Production is not ready for execution: its migration path and credentials still require configuration. Replacing the staging migration service also requires selecting and configuring its replacement before deletion. Database migrations and webapp source must use the same revision; deployment does not copy staging records.
+Configure each GitHub environment (`stage` and `production`):
+
+| Setting | Value |
+| --- | --- |
+| Secrets | `RAILWAY_TOKEN` scoped to that environment; `MIGRATION_DATABASE_URL` using its migration role; `MIGRATION_DATABASE_CA` containing its public root CA PEM |
+| Railway variables | `RAILWAY_PROJECT`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`, HTTPS `APP_ORIGIN` |
+| Database variables | `LANTERN_DB_EXPECTED_ENDPOINT` as public proxy host:port; `LANTERN_DB_NAME`; distinct `LANTERN_DB_RUNTIME_ROLE`, `LANTERN_DB_MIGRATION_ROLE`, `LANTERN_DB_ADMIN_ROLE` |
+
+The workflows use schema `lantern`. Create the database TCP proxy to port 5432. Supply the migration URL without TLS query parameters; the runner adds TLS verification against the supplied private CA and removes its temporary certificate file afterward. Export only the public `/var/lib/postgresql/data/certs/root.crt` through trusted Railway access; never export private keys. Add the two migration secrets privately using the GitHub environment settings or `gh secret set NAME --env ENVIRONMENT` (interactive hidden input). The public proxy hostname does not match Railway's database certificate, so the client verifies the database-specific CA. See [the release decision](docs/adrs/0001-release-migrations.md).
+
+For the staging cutover, configure the migration secrets and variables before merging. Verify the merged-main migration, upload and readiness job succeeds, then delete the old staging migration service and remove GitHub's `RAILWAY_MIGRATION_SERVICE` variable. Do not delete the working service before verification.
+
+For first production setup, the owner uses a dedicated empty database and builds the chosen revision locally. With private owner credentials, run `npm run db:bootstrap` using `LANTERN_ENV=production`, `LANTERN_DB_SETUP_MODE=empty`, the database variables above, `LANTERN_DB_SCHEMA=lantern`, `LANTERN_DB_SOURCE_OWNER` and `BOOTSTRAP_DATABASE_URL`. This creates three NOLOGIN roles and the application schema; it aborts if the database is occupied or the roles/schema exist. In the owner's private PostgreSQL session, use `\password <role>` and `ALTER ROLE <role> LOGIN;` for each role. Configure the runtime URL only on the webapp and the migration URL only in GitHub. Configure Google's production callback and approval/domain settings separately through the existing administrative commands. Keep bootstrap/admin credentials out of GitHub and application settings. After setup, dispatch the production workflow and verify the SHA, schema and readiness result. Stop on target mismatch, bootstrap/migration failure or failed readiness; inspect the failure before retrying. Close owner sessions and remove any temporary credentials/grants after setup.
 
 The Railway application uses the root Dockerfile, `node dist/server/index.js`, `/health`, a 120-second health timeout, and an on-failure restart policy with three retries. Hosted settings include `NODE_ENV=production`, `LOCAL_ACCESS=0`, `LANTERN_HOSTING_ONLY=0`, `HOST=0.0.0.0`, the environment-specific `LANTERN_ENV`, HTTPS `APP_ORIGIN`, Google credentials and the restricted runtime `DATABASE_URL`. Keep credentials outside Git.
 

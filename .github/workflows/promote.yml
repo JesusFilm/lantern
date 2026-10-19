@@ -55,6 +55,18 @@ jobs:
           RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
           LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
         run: node tools/release/configuration.mjs
+      - name: Apply exact-revision schema migrations
+        working-directory: candidate
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          MIGRATION_DATABASE_CA: ${{ secrets.MIGRATION_DATABASE_CA }}
+          LANTERN_DB_EXPECTED_ENDPOINT: ${{ vars.LANTERN_DB_EXPECTED_ENDPOINT }}
+          LANTERN_DB_NAME: ${{ vars.LANTERN_DB_NAME }}
+          LANTERN_DB_SCHEMA: lantern
+          LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
+          LANTERN_DB_MIGRATION_ROLE: ${{ vars.LANTERN_DB_MIGRATION_ROLE }}
+          LANTERN_DB_ADMIN_ROLE: ${{ vars.LANTERN_DB_ADMIN_ROLE }}
+        run: node ../tools/release/migrate.mjs
       - name: Promote exact candidate
         working-directory: candidate
         env:
