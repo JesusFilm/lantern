@@ -3,13 +3,25 @@ import type { PositionFocus } from "../../shared/focus.js";
 import { Dialog } from "./Dialog.js";
 import { api } from "./api.js";
 
+function LockIcon() {
+  return <svg className="lock-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="5" y="10" width="14" height="11" rx="2" />
+    <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+  </svg>;
+}
+const date = (value: string) => new Date(value + "T12:00:00").toLocaleDateString("en-NZ", {
+  day: "numeric", month: "short", year: "numeric",
+});
+
 export function FocusConfirmation({
   focus,
   member,
   onConfirmed,
+  readOnlyMember = false,
 }: {
   focus: PositionFocus;
   member: { id: string; name: string };
+  readOnlyMember?: boolean;
   onConfirmed?: (focus: PositionFocus) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -23,16 +35,20 @@ export function FocusConfirmation({
     );
   return (
     <>
-      <p className="muted">Draft</p>
+      <div className="focus-confirmation-row">
+      <span className="focus-draft">Draft</span>
+      {readOnlyMember && <span className="focus-read-only muted">Read-only member focus</span>}
       {onConfirmed && (
-        <button className="primary" onClick={() => setConfirming(true)}>
-          Confirm and lock
+        <button className="primary button-with-icon" onClick={() => setConfirming(true)}>
+          <LockIcon />Confirm and lock
         </button>
       )}
+      </div>
       {confirming && (
         <Dialog
-          title="Confirm this agreed focus?"
+          title="Confirm and lock this focus?"
           saveLabel="Confirm and lock"
+          saveIcon={<LockIcon />}
           onClose={() => setConfirming(false)}
           onSave={async () => {
             const saved = await api<PositionFocus>(
@@ -44,11 +60,23 @@ export function FocusConfirmation({
             setConfirming(false);
           }}
         >
-          <p>Confirm “{focus.title}” for {member.name} after your discussion.</p>
-          <p>
-            This locks the title, dates, objectives and goals for both of you.
-            The agreed focus cannot be edited or unlocked here.
-          </p>
+          <p>Confirm after your discussion with {member.name}.</p>
+          <div className="confirmation-summary">
+            <h3>Focus summary</h3>
+            <dl>
+              <dt>Person</dt><dd><strong>{member.name}</strong></dd>
+              <dt>Focus</dt><dd>{focus.title}</dd>
+              <dt>Dates</dt><dd>{date(focus.start)} – {date(focus.end)}</dd>
+            </dl>
+          </div>
+          <section className="confirmation-warning" aria-labelledby="lock-warning-title">
+            <LockIcon />
+            <div>
+              <h3 id="lock-warning-title">This focus will become read-only.</h3>
+              <p>Locks the title, dates, objectives and goals for both of you.</p>
+              <p>It cannot be edited or unlocked here.</p>
+            </div>
+          </section>
         </Dialog>
       )}
     </>

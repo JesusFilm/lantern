@@ -6,12 +6,14 @@ export function Dialog({
   onSave,
   onClose,
   saveLabel = "Save changes",
+  saveIcon,
 }: {
   title: string;
   children: ReactNode;
   onSave: (data: FormData) => Promise<void>;
   onClose: () => void;
   saveLabel?: string;
+  saveIcon?: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [busy, setBusy] = useState(false),
@@ -51,7 +53,8 @@ export function Dialog({
           <button type="button" disabled={busy} onClick={onClose}>
             Cancel
           </button>
-          <button className="primary" disabled={busy}>
+          <button className={saveIcon ? "primary button-with-icon" : "primary"} disabled={busy}>
+            {!busy && saveIcon}
             {busy ? "Saving…" : saveLabel}
           </button>
         </div>
