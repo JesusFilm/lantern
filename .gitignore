@@ -15,3 +15,5 @@ release-evidence.json
 production-evidence.json
 hosting-evidence.json
 stage-evidence/
+
+stage-isolation-evidence.json

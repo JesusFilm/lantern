@@ -3,15 +3,21 @@ ID: team-trial/15
 Title: Configure and prove automated staging and promotion gates
 Milestone: M06
 Type: task
-Status: deferred
-Blocked by: Future explicit decision to resume automation
-Implementation: Existing workflow retained; further setup and gate proof deferred
+Status: in-progress
+Blocked by: Staging-only migration runner provisioning and private connectivity
+Implementation: Simplified staging delivery preparation resumed; production promotion remains deferred
 Slice: Hosted team trial
 
 ---
-## Current decision — 19 October 2026
+## Current decision — 19 October 2026, superseding earlier deferral
 
-Deferred by Jaco. This ticket does not block 06, 07 or the trial. Keep automatic delivery off; no QA session-secret acquisition, renewal work or live failure drills. Use the manual release runbook.
+Jaco authorized automatic main-to-stage delivery, staging migration, and a two-account
+isolation test by temporarily demoting his existing staging lead and restoring it.
+See [automatic staging](../../../docs/operations/automatic-staging.md). Separate
+readiness checks from authenticated acceptance; no Google-session secrets in CI are
+required. Production promotion automation and broad gate drills remain deferred.
+The future checklist below is historical scope, not a prerequisite for this narrower
+staging delivery. No hosted execution is claimed yet.
 
 ## Future outcome
 
@@ -28,10 +34,10 @@ Produce trustworthy exact-revision staging evidence using the existing workflows
 - [ ] Record the acceptance-record trust boundary: workflow currently validates an HTTPS URL, not its contents. Establish a versioned release checklist, accountable operator sign-off and protected evidence location; decide explicitly whether stronger machine enforcement is required before production. Keep sensitive evidence private while retaining sanitized references.
 - [ ] Record run, revision, deployment, schema, artifact, negative-gate outcomes and session renewal owner. Reset the switch to false if activation verification fails. Successful automation does not close ticket 06 or authorize promotion.
 
-## Boundary
+## Historical boundary — superseded for staging
 
 Ticket 11's latest-main input simplification remains optional. This planning update does not authorize enabling staging delivery, creating secrets, running drills or dispatching production.
 
-## Adopted simplification — 19 October 2026
+## Earlier simplification — superseded for staging
 
 Jaco approved the simplification described in the [current breakdown](../breakdown.md). Use the revised acceptance above and the [manual release procedure](../../../docs/operations/hosted-release.md). Historical execution notes remain evidence, not instructions to repeat completed work. Production execution remains separately authorized; two-member acceptance stays parked.

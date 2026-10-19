@@ -1,11 +1,11 @@
 # Hosted runtime and release runbook
 
-Current decision, 19 October 2026: Jaco approved manual trial releases. Staging
-schema 3 and separate database roles are recorded complete; PR #12's bounded
-preflight is open with passing CI. Production is inactive and automatic staging
-delivery off. IaC and automated release-gate setup are deferred. Agents prepare and
-rehearse; Jaco executes production under [operator assistance](production-operator-assistance.md).
-This runbook is not execution authorization.
+Current decision, 19 October 2026: automatic staging delivery and migration are
+resumed under [automatic staging](automatic-staging.md). This supersedes the
+staging-off/manual-stage passages below, which describe the earlier trial decision.
+Production remains inactive and human-run; automated promotion and IaC remain deferred.
+The authorized temporary lead-role test resumes two-member isolation acceptance.
+Prepared tooling is not evidence that hosted migration, deployment or acceptance ran.
 
 ## Human-run trial release
 

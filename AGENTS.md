@@ -10,11 +10,11 @@ For prototype additions or refinements, read `prototype/AGENTS.md` in the retain
 
 ## Trial delivery scope
 
-For release preparation and ticket selection, follow the [current trial breakdown](.scratch/team-trial/breakdown.md) and [human-run release procedure](docs/operations/hosted-release.md). Jaco approved manual trial releases on 19 October 2026: IaC adoption and automated release-gate work are deferred. Preserve existing database roles and CI; two-member live acceptance is parked and unpassed. This scope decision does not authorize deployment or production access.
+For release preparation and ticket selection, follow the [current trial breakdown](.scratch/team-trial/breakdown.md) and [human-run release procedure](docs/operations/hosted-release.md). Jaco resumed automatic staging delivery and schema migration on 19 October 2026; follow docs/operations/automatic-staging.md. Production releases remain manual, IaC and automated production promotion remain deferred. The existing lead may temporarily become an ordinary staging member for the authorized two-account isolation check, with verified restoration afterward. Preserve existing database roles and CI. This does not authorize production access.
 
 ## Production access and change records
 
-Agreed policy (2026-10-16, team-trial ticket 12); technical enforcement remains outstanding under ticket 13. Until Jaco explicitly authorizes implementation, work is planning only. Keep production inactive and automatic staging delivery disabled until their activation is separately authorized after the required gates pass. This policy does not itself authorize execution or infrastructure changes; agents remain prohibited from production access even during authorized implementation.
+Agreed policy (2026-10-16, team-trial ticket 12); technical enforcement remains outstanding under ticket 13. Until Jaco explicitly authorizes implementation, work is planning only. Keep production inactive. Automatic staging delivery is authorized under the staging-only procedure in docs/operations/automatic-staging.md; enable its switch only after required credential and runner checks pass. This policy does not itself authorize execution or infrastructure changes; agents remain prohibited from production access even during authorized implementation.
 
 - Jaco is the initial production access owner and sole approver/executor of releases, migrations and exceptional data corrections. No second approver is required; a backup owner remains undecided.
 - Agents use synthetic data locally and in staging. Agents must not access production, production credentials, or real conversation data. Future local/staging execution still requires task authorization and credentials that cannot access production.
