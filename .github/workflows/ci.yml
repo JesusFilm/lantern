@@ -97,11 +97,17 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: node tools/release/configuration.mjs
-      - name: Apply migrations in the private staging network
+      - name: Apply exact-revision schema migrations
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          RAILWAY_MIGRATION_SERVICE: ${{ vars.RAILWAY_MIGRATION_SERVICE }}
-        run: node tools/release/migrate-stage.mjs
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          MIGRATION_DATABASE_CA: ${{ secrets.MIGRATION_DATABASE_CA }}
+          LANTERN_DB_EXPECTED_ENDPOINT: ${{ vars.LANTERN_DB_EXPECTED_ENDPOINT }}
+          LANTERN_DB_NAME: ${{ vars.LANTERN_DB_NAME }}
+          LANTERN_DB_SCHEMA: lantern
+          LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
+          LANTERN_DB_MIGRATION_ROLE: ${{ vars.LANTERN_DB_MIGRATION_ROLE }}
+          LANTERN_DB_ADMIN_ROLE: ${{ vars.LANTERN_DB_ADMIN_ROLE }}
+        run: node tools/release/migrate.mjs
       - name: Upload the checked source revision
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

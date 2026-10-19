@@ -1,6 +1,6 @@
 # Lantern
 
-Language for the member position-focus workflow. This glossary distinguishes the agreed product model from delivered capability; see the PRD and milestone specifications for delivery status.
+Language for the member position-focus workflow. This glossary distinguishes the agreed product model from delivered capability; see the [PRD](docs/PRD.md) for delivery status.
 
 ## People and access
 
@@ -69,14 +69,3 @@ A concise generic illustration of one objective and two goals. Its targets do no
 
 **Department contribution**:
 The team's intended contribution to the organizational mission. It is context for conversations, not a required app field or customization feature.
-
-## Planning
-
-**Milestone**:
-A meaningful roadmap outcome with explicit scope and closure criteria. Closing a superseded milestone records its disposition without claiming withdrawn requirements were delivered.
-
-**Planning map**:
-A record of decisions and remaining questions for a milestone.
-
-**Implementation ticket**:
-A bounded change with acceptance criteria and dependencies. Readiness means specified work, not completed work.

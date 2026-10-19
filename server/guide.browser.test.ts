@@ -58,7 +58,6 @@ test('Guide browser acceptance: independent walkthroughs, navigation, context, e
       await page.getByRole('button', { name: 'SMART goals', exact: true }).click();
       await expect(page.getByRole('status')).toHaveText('Step 1 of 7');
       await page.getByRole('button', { name: '← Guide overview' }).click();
-      await page.screenshot({ path: 'captures/guide-overview.png', fullPage: true });
     });
     await t.test('full example is discoverable and preserves the reference and optional development', async () => {
       await page.getByRole('button', { name: /Read the full example/ }).click();
@@ -72,7 +71,6 @@ test('Guide browser acceptance: independent walkthroughs, navigation, context, e
       await expect(page.getByRole('heading', { name: 'Leadership development assignment · optional' })).toBeVisible();
       await page.getByRole('link', { name: 'Review, agreement and timing' }).click();
       await expect(page.getByText('Actual departmental review timing has not been supplied here.', { exact: false })).toBeVisible();
-      await page.screenshot({ path: 'captures/guide-example.png', fullPage: true });
     });
     await t.test('missing context is omitted and does not remove the objective requirement', async () => {
       await page.goto(origin + '/?context=none');
@@ -102,7 +100,6 @@ test('Guide browser acceptance: independent walkthroughs, navigation, context, e
       await expect(page.getByText(mission, { exact: true })).toBeVisible();
       assert.ok(await page.evaluate('document.documentElement.scrollWidth <= innerWidth'));
       await expect(page.getByRole('heading', { name: 'Connect your work to the mission' })).toBeInViewport();
-      await page.screenshot({ path: 'captures/guide-mobile.png', fullPage: true });
       await page.getByRole('button', { name: 'Engineering example', exact: true }).click();
       await page.getByRole('link', { name: 'Review, agreement and timing' }).click();
       assert.ok(await page.evaluate('document.documentElement.scrollWidth <= innerWidth'));

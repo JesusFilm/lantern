@@ -187,10 +187,8 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       await leadPage.setViewportSize({ width: 390, height: 844 });
       await leadPage.getByRole('button', { name: 'Add user', exact: true }).click();
       await expect(leadPage.getByRole('button', { name: 'Add selected user' })).toBeVisible();
-      await leadPage.screenshot({ path: 'captures/access-members-mobile.png', fullPage: true });
       assert.ok(await leadPage.evaluate('document.documentElement.scrollWidth <= innerWidth'));
       await leadPage.setViewportSize({ width: 1280, height: 900 });
-      await leadPage.screenshot({ path: 'captures/access-members.png', fullPage: true });
     });
     await t.test('an edited display name survives a later Google login', async () => {
       const result = await fetch(origin + '/api/account', {method:'PATCH',headers:{Cookie:lead.cookie,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({name:'Chosen name'})});

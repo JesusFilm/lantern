@@ -7,7 +7,7 @@ const { APP_ORIGIN: origin, RELEASE_SHA: sha, GITHUB_RUN_ID: runId } = env;
 const mode = env.RELEASE_SMOKE_MODE ?? 'authenticated';
 assert.ok(['readiness','authenticated'].includes(mode), 'Unknown smoke mode.');
 if (mode === 'readiness') {
- assert.equal(env.RELEASE_TARGET,'stage');
+ assert.ok(['stage','production'].includes(env.RELEASE_TARGET));
  assert.match(env.EXPECTED_SCHEMA_VERSION ?? '', /^[1-9][0-9]*$/);
 }
 assert.ok(env.EXPECTED_DEPLOYMENT_ID, 'Deployment receipt is required.');
