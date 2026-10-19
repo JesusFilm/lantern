@@ -13,8 +13,9 @@ is superseded; automatic production promotion is still deferred.
    `node dist/server/stage-migration.js` on the private staging network. It has only
    the staging migration connection, never runtime/admin/owner connections. Its
    restart policy is NEVER; no domain, healthcheck, source autodeploy or cron.
-   Set its Railway config path to `/railway.migration.json` so the application
-   config cannot override its command or restart policy.
+   Uploads use a temporary archive of the exact commit, with application Railway
+   configuration removed and the revision stamped. The service configuration
+   controls the migration command; no custom configuration-file path is needed.
 4. The delivery job requires the runner's exact-deployment completion log marker
    for that revision before uploading the application. Readiness alone is insufficient.
 5. The application retains only its runtime connection. Smoke checks exact SHA,
@@ -37,20 +38,20 @@ application; incompatible future changes require a separately planned transition
 Once any focus is confirmed, older pre-confirmation application code is not a valid
 rollback target. Serialize all manual staging releases with the automatic job.
 
-## Current provisioning gap
+## Provisioning status — 19 October 2026
 
-The VM staging token works. The Mac helper verified the separate migration/admin
-files and working noninteractive SSH authentication on 19 October. Migration
-credentials were privately transferred to the VM with owner-only permissions;
-they still target the closed loopback tunnel, and database validity is untested.
-Admin credentials remain on the Mac. Host-specific locations and connection
-setup belong in the VM operational runbook, outside this repository.
-No runner has been provisioned, migration applied, delivery enabled or
-authenticated test executed by this preparation alone.
+The staging-only migration service is `bc266967-1574-4770-a960-4e6fe1668cb0`.
+The stage environment has a source-environment relationship; the live API's
+service-create contract scopes creation to that fork. Creation and configuration
+used the staging-scoped token and explicit staging environment ID.
 
-Railway's service-create API describes new non-fork services as appearing across
-project environments. Agents must not create an unintended production instance.
-Resolve creation scope with the operator before provisioning the staging runner.
+Migration-only credentials were privately installed in the service, using
+`postgres.railway.internal:5432`, database `railway`, and role
+`lantern_stage_migration`. The endpoint guard matches that private endpoint.
+Application credentials were not changed. Host-specific private file locations
+are recorded in the VM operational runbook. No public endpoint was created.
+
+Hosted migration verification and delivery activation are still pending.
 
 ## Two-member isolation using the existing lead
 

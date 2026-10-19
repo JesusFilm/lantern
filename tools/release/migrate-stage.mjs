@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
+import {mkdtempSync,rmSync,writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {deploymentReceipt} from './gates.mjs';
 
@@ -24,7 +27,7 @@ export function validateRunner(config,vars,env) {
  assert.ok(Array.isArray(e.deploymentTriggers?.edges));
  assert.ok(e.deploymentTriggers.edges.every(edge=>typeof edge.node?.serviceId==='string' && edge.node.serviceId!==env.RAILWAY_MIGRATION_SERVICE));
  assert.equal(s?.serviceId,env.RAILWAY_MIGRATION_SERVICE);assert.equal(s?.environmentId,stage);
- assert.equal(s?.railwayConfigFile,'/railway.migration.json');
+ assert.equal(s?.railwayConfigFile,null);
  assert.equal(s?.startCommand,'node dist/server/stage-migration.js');
  assert.ok(s.preDeployCommand==null || (Array.isArray(s.preDeployCommand)&&s.preDeployCommand.length===0));
  assert.equal(s.healthcheckPath,null);assert.equal(s.restartPolicyType,'NEVER');assert.equal(s.cronSchedule,null);
@@ -46,13 +49,29 @@ export function migrationComplete(logs,sha) {
   try {return JSON.parse(line).message===`LANTERN_STAGE_MIGRATION_COMPLETE:${sha}`;} catch {return false;}
  });
 }
-export async function run(env, {call = args=>execFileSync('railway',args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:12*60*1000,maxBuffer:50*1024*1024}), wait = ()=>new Promise(resolve=>setTimeout(resolve,2000)), attempts=60} = {}) {
+// Build an upload from the exact commit, without the web app's provider config.
+export function prepareUpload(sha, cwd=process.cwd()) {
+ assert.match(sha,/^[a-f0-9]{40}$/);
+ assert.equal(execFileSync('git',['rev-parse','HEAD'],{cwd,encoding:'utf8'}).trim(),sha);
+ const path=mkdtempSync(join(tmpdir(),'lantern-migration-'));
+ const cleanup=()=>rmSync(path,{recursive:true,force:true});
+ try {
+  const archive=execFileSync('git',['archive','--format=tar',sha],{cwd,maxBuffer:50*1024*1024});
+  execFileSync('tar',['-xf','-','-C',path],{input:archive});
+  for(const config of ['railway.json','railway.toml','.railway']) rmSync(join(path,config),{recursive:true,force:true});
+  writeFileSync(join(path,'release.json'),JSON.stringify({sha})+'\n');
+  return {path,cleanup};
+ } catch(error) {cleanup();throw error;}
+}
+export async function run(env, {call = args=>execFileSync('railway',args,{encoding:'utf8',stdio:['ignore','pipe','pipe'],timeout:12*60*1000,maxBuffer:50*1024*1024}), wait = ()=>new Promise(resolve=>setTimeout(resolve,2000)), attempts=60, prepare=prepareUpload} = {}) {
  validateTarget(env);
  const {RAILWAY_ENVIRONMENT:environment,RAILWAY_MIGRATION_SERVICE:service}=env;
  const config=JSON.parse(call(['api','--compact','--variables',JSON.stringify({environment,service}),query]));
  const vars=JSON.parse(call(['variables','--json','--project',project,'--environment',environment,'--service',service]));
  validateRunner(config,vars,env);
- const deployment=deploymentReceipt(call(['up','--json','--project',project,'--environment',environment,'--service',service,'--message',env.RELEASE_SHA]),service,environment);
+ const upload=prepare(env.RELEASE_SHA);
+ try {
+ const deployment=deploymentReceipt(call(['up',upload.path,'--path-as-root','--json','--project',project,'--environment',environment,'--service',service,'--message',env.RELEASE_SHA]),service,environment);
  // Deploy readiness alone does not prove the one-shot migration committed.
  for(let i=0;i<attempts;i++) {
   const logs=call(['logs',deployment,'--json','--lines','100','--project',project,'--environment',environment,'--service',service]);
@@ -60,6 +79,7 @@ export async function run(env, {call = args=>execFileSync('railway',args,{encodi
   await wait();
  }
  throw new Error('No completion marker');
+ } finally {upload.cleanup();}
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
  try {await run(process.env);} catch {console.error('Staging migration runner failed or completion was not verified; application upload blocked.');process.exitCode=1;}
