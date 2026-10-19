@@ -1,73 +1,76 @@
 # Hosted team trial implementation breakdown
 
-Updated 19 October 2026 after PR #9 merged and authorization to prepare both database
-paths locally. This records preparation, not hosted execution authorization.
+Updated 19 October 2026: Jaco approved simplification after both session handoffs.
+This replaces the earlier automated-delivery prerequisites for the initial trial.
 
-## Current delivery decision — 19 October 2026
+## Current state
 
-Authenticated staging remains on the previously recorded schema-2 deployment;
-no hosted switch has occurred. Production resources exist but its app remains
-inactive. Jaco reported no application tables there. Automatic staging delivery
-stays disabled. Earlier staging proof is bounded manual evidence, not final acceptance.
+The later Mac-session handoff and sanitized records report staging revision
+`3349636a031d86b90c534e71e4a02d416a8f7df7`, schema 3, separate runtime/migration/admin
+roles and removal of the application pre-deploy migration hook. Preserve those
+controls and data; the older pending build/tunnel/transfer handoff is superseded.
+Single-member persistence, revocation/restoration and lead read-only checks are
+recorded. Two-member live acceptance is parked and unpassed; request no new
+accounts or resume that case without Jaco's instruction.
 
-Ticket 12 policy is agreed. PR #9 implemented and tested the local role split and
-required agent support through human production execution. The next local slice
-prepares a data-preserving staging transfer and a fresh production database in
-parallel, with recovery and target checks. No hosted credentials are installed by
-this work. Ticket 13 still owns full effective-access enforcement.
+PR #12 contains bounded configuration preflight and evidence; it is open with
+passing CI, not merged. Production remains inactive and automatic staging delivery
+off. This decision authorizes local scope/documentation changes, not deployment,
+production access, schema resets or reversal of working controls.
 
-The explicit sequence is: local rehearsal of both database paths → separately
-authorized staging role/runner transition and verification → separately authorized
-human production database preparation under 17, with the app inactive → final
-acceptance under 06 → separately authorized application activation/enrollment under 07.
-Production database readiness is a distinct checkpoint, not an implicit side effect
-of deployment. Confirmation/locking (03), transactional failure handling, configuration and release-gate
-proof remain required for full launch; no draft-only scope reduction is implied.
+## Trial operating model
 
-## Dependency order
+Use passing PR/main CI, manual staging acceptance of an exact revision, and one
+human-run production release procedure. [The runbook](../../docs/operations/hosted-release.md)
+is the release checklist. Jaco executes production steps; agents prepare and rehearse
+commands and support sanitized results. Reuse applicable rehearsal evidence;
+repeat checks when code, schema, configuration or an unresolved failure warrants it.
 
-| Order | Ticket | Current state | Blocked by |
-| --- | --- | --- | --- |
-| Delivered foundations | [01 approved access](issues/01-approved-access.md), [02 lead reads](issues/02-lead-member-focuses.md), [04 runtime/CI](issues/04-hosted-runtime.md) | Merged; bounded manual staging proof recorded | None |
-| Agreed policy | [12 production access policy](issues/12-production-access-policy.md) | Policy merged; effective-access inventory incomplete | None |
-| Parallel feature work | [03 confirm and lock](issues/03-confirm-and-lock.md) | Not implemented | 02 |
-| Parallel configuration work | [14 reproducible Railway configuration](issues/14-reproducible-railway-configuration.md) | Separate local migration command; app hook removed in preparation; hosted runner/settings unverified | 04 |
-| Parallel setup completion | [05 environments and Google setup](issues/05-railway-environments.md) | Stage active; production prepared/inactive; incomplete setup acceptance | 01, 04 |
-| Access controls | [13 enforce access governance](issues/13-enforce-production-access-governance.md) | Local role split merged; transition prepared; hosted verification outstanding | 12 |
-| After setup, controls and configuration | [15 automated release verification](issues/15-verify-automated-release-gates.md) | Existing workflows need credentials, two member sessions and live gate proof | 05, 13, 14 |
-| Deferred until value established | [16 production backups](issues/16-backup-restore-readiness.md) | No staging backups; production backups deferred | Dogfooding complete and Jaco’s value decision |
-| Convergence on final candidate | [06 real-account stage acceptance](issues/06-stage-verification.md) | Partial save/read proof only; all prerequisites required | 02, 03, 05, 13, 15 |
-| Database-only, separately authorized | [17 production database readiness](issues/17-production-database-readiness.md) | Empty-path preparation/rehearsal; human execution outstanding; app stays inactive | Staging transition and transactional failure checks; no dependency on 06 |
-| Last, separately authorized | [07 production promotion](issues/07-production-promotion.md) | Existing workflow; actual activation not performed | 06, 17 |
-| Optional/deferred | [11 promotion input simplification](issues/11-simplify-manual-promotion.md) | Proposed convenience only | No prerequisite for 07 |
+Keep authenticated identity, owner/lead authorization, privacy tests, restricted
+runtime credentials, separate privileged runners and synthetic agent environments.
+Keep existing access policy and sanitized operation records. No custom encryption,
+RLS project, general admin framework or provider-owner exclusion project is added.
+Jaco remains the trusted provider owner; agent/production separation must still be
+verified. Emergency policy remains available without a separate ceremony rehearsal.
 
-Ticket 10 retains provider setup findings; remaining environment-specific verification is owned by 05 and production login acceptance by 07. Ticket 09 records the superseded hosting-only route. Do not reopen the provider decision or deploy hosting-only mode merely because historical records mention them.
+## Delivery queue
 
-Ticket 05 owns environment readiness, not final release approval. Ticket 15 owns automation and failure-gate verification; 16 is deferred production backup planning, not a dogfooding gate. Their links from 05 are handoffs, not reverse dependencies. This prevents a bootstrap cycle: staging already exists, real sessions are acquired there, then automated delivery can be verified after separate authorization. Production credentials/privileged operations require the applicable 13 safeguards and Jaco's explicit authorization. Ticket 17 supplies production database verification back to 13; it does not require ticket 13 to claim that verification before the database exists.
+| Ticket | Remaining scope | Dependencies |
+| --- | --- | --- |
+| 01 / 02 / 04 | Preserve delivered identity, lead reads, runtime and CI | Delivered foundations |
+| 03 | Confirm and lock remains required product scope | 02 |
+| 05 | Finish bounded environment/authentication readiness | 01, 04 |
+| 13 | Verify concrete access boundaries; prepare usable enrollment/removal operations; preserve completed stage roles | 12; production findings supplied by 17 |
+| 14 | Review bounded preflight/configuration and evidence in PR #12; IaC is deferred | 04 |
+| 06 | Manual functional/privacy acceptance of selected revision; parked two-member case remains unresolved | 02, 03, 05, 13, 14 |
+| 17 | Database checkpoint within the single release procedure; prepared scripts retained | Applicable staging proof and separate human authorization |
+| 07 | Human-run release of the accepted revision, verification and sanitized record | 06, 17 |
+| 11 / 15 | Promotion convenience and automated release machinery deferred; not trial blockers | Future explicit resumption |
+| 16 | Backups deferred until dogfooding/value decision | Future explicit approval |
 
-## Release path and evidence
+No requirement to adopt IaC, maintain Google session secrets in CI, produce an
+automated stage artifact, or rehearse automated promotion-gate failures for this
+trial. Existing workflows retain their checks but remain unused for trial delivery;
+do not fabricate artifacts or weaken their code to bypass them.
 
-1. Complete reviewed feature/control/configuration changes with required PR tests; merge the currently local setup evidence and runbook reconciliation through review. Existing workflows are already merged; Renovate is unrelated.
-2. On the final merged candidate, obtain successful same-SHA CI and automated staging receipt/readiness/smoke artifact under 15. Earlier manual proof or a previous revision's artifact cannot substitute.
-3. After staging transition and transactional failure checks, complete 17's human-run, separately authorized production database checkpoint while the app stays inactive. This may proceed before final feature acceptance. If the final release needs newer migrations, rehearse and apply those through the same guided process and refresh evidence.
-4. Complete 06 using a real lead and at least two ordinary members: authoring, read access, confirmation/lock, isolation, denial/revocation, persistence and newcomer usability. Bind recovery and governance verification to the applicable configuration/schema; rerun affected checks after changes.
-5. An authorized operator inspects the protected acceptance record and explicitly dispatches the existing SHA/run promotion workflow only after 07's preflight. The URL input alone is not proof its contents passed. Production credentials and migration settings must be verified before dispatch; authenticated production acceptance happens after controlled activation and before inviting the trial group.
+## Release checkpoints
 
-No production deployment, ordinary data repair or privilege grant is authorized by this document. Ticket 12 assigns approval/execution to Jaco, with mandatory agent preparation and guidance; no second approver is required. No silent reduction to a draft-only trial; that requires a new scope decision. Later product milestones and admin UI remain deferred.
+1. Finish feature work and review/merge the intended code through normal CI.
+2. Manually deploy the checked revision to staging when authorized. Record its SHA,
+   deployment/schema and practical acceptance. Preserve current evidence where applicable.
+3. Prepare the single release record and exact commands. Ticket 17 is its database
+   checkpoint, not a second acceptance program. Database preparation can precede
+   final feature acceptance if separately authorized; application activation cannot.
+4. Jaco executes production preparation and then separately authorized activation
+   after required acceptance. Verify intended behavior, record results and cleanup.
 
-## Backup decision — 19 October 2026
+Two-member acceptance remains an outstanding launch requirement while parked;
+manual delivery does not turn partial acceptance into a pass. Confirmation/locking
+also remains required. No narrower draft-only trial has been approved.
 
-Jaco explicitly declined backups for staging and production at this point. Do not
-create staging snapshots, logical dumps or backup schedules as part of this rollout.
-Production backups are deferred until dogfooding is complete and Jaco has determined
-the application's value; that milestone triggers reconsideration, not automatic
-backup activation. Ticket 16 is deferred and does not block initial database setup,
-acceptance or dogfooding. A later production backup proposal needs explicit approval.
+## Backup decision
 
-Continue target/permission checks, transactional migrations, failure diagnosis and
-schema-compatible application rollback. Before migration 3, the rehearsed table
-transfer reversal remains available under its documented conditions. There is no
-backup-based data recovery promise during this period. A destructive reset, data
-removal or rebuild still requires a separate explicit decision; declining backups
-does not authorize discarding existing records. Earlier local synthetic dump/restore
-results remain historical evidence, not authorization for hosted backups.
+No staging backups or production backups now. Ticket 16 is deferred until dogfooding
+is complete and Jaco determines value. Keep transactional failure handling and
+schema-compatible code rollback. No backup recovery promise or destructive reset
+is authorized. Reconsideration is not automatic backup activation.

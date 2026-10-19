@@ -10,6 +10,13 @@ Assignee: Codex
 Slice: Hosted team trial planning
 
 ---
+## Superseding release decision — 19 October 2026
+
+Jaco approved CI plus manual staging acceptance and a human-run release for the
+trial. Automatic delivery, session-secret maintenance, automated evidence artifacts
+and promotion-gate drills are deferred under 15. The earlier automated-delivery
+decision below is historical; identity and product scope are unchanged.
+
 ## Question
 
 What is the priority and dependency-linked route from the existing application to stage and a limited production trial, including personal QA accounts, Google setup and enforced release checks?

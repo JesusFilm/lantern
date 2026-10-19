@@ -17,8 +17,8 @@ The runtime, approved Google access and lead-reading foundations are merged. Sta
 
 1. Decide [production access policy](../.scratch/team-trial/issues/12-production-access-policy.md), then [enforce privileged access and auditing](../.scratch/team-trial/issues/13-enforce-production-access-governance.md).
 2. In parallel where dependencies permit, implement [confirm and lock](../.scratch/team-trial/issues/03-confirm-and-lock.md), complete environment setup (05), and make [Railway configuration reproducible](../.scratch/team-trial/issues/14-reproducible-railway-configuration.md).
-3. After setup/controls/configuration, prove [automated release gates](../.scratch/team-trial/issues/15-verify-automated-release-gates.md) and [backup/recovery readiness](../.scratch/team-trial/issues/16-backup-restore-readiness.md).
-4. Converge on full final-revision stage acceptance (06), then separately authorized production promotion (07). The explicit SHA/run promotion workflow already exists; its proposed input simplification (11) is optional.
+3. Complete recorded manual staging acceptance after bounded setup/access/configuration checks. Automated release gates (15), IaC and backups (16) are deferred; use the [human-run release procedure](operations/hosted-release.md).
+4. Converge on full final-revision stage acceptance (06), then separately authorized production promotion (07). Use the human-run release procedure; the artifact-gated promotion workflow and its input simplification (11) are deferred.
 
 See the [dependency-ordered queue](../.scratch/team-trial/breakdown.md). Planning only: no ticket status authorizes implementation, credential installation or enabling delivery. Production data-change approval policy is separate from the existing one-operator release-promotion decision. Backend operations still avoid an admin UI, but now require production governance rather than unrestricted database access. Later product milestones remain deferred.
 

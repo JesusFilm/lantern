@@ -12,15 +12,12 @@ A prioritised, dependency-linked plan for taking the existing application to sta
 - Use wayfinder, grilling and domain-modeling for new decisions. [Tracker conventions](../../docs/agents/issue-tracker.md) define local claims and dependencies.
 - The [specification](spec.md) and ticket acceptance translate agreed policy into implementation requirements. Credentials and actual approved email lists remain private.
 
-## Current delivery decision — 16 October 2026
+## Current delivery decision — 19 October 2026
 
-Authenticated staging is live on checked main revision `8e4cd805e9e5c88dea534823859191627ee8402c`, with schema version 2. Real Google work/personal login, member draft save/reload and career-lead read-only access have been observed. [Activation and workflow evidence](../../docs/operations/staging-activation-evidence.md) records this bounded manual proof; it is not full stage acceptance or automated release evidence. Google setup resumed successfully; the earlier hosting-only/provider-pause route is historical.
-
-Production remains inactive and `STAGE_DELIVERY_ENABLED` remains unset/false. This reconciliation authorizes planning only: no code implementation, credentials, permissions, infrastructure, workflow runs or delivery activation. Future execution requires a separate instruction; ticket readiness alone does not grant it.
-
-The existing `ci.yml` stage job and `promote.yml` manual promotion workflow are merged. Stage automation lacks its token and two ordinary-member session secrets; no passing stage artifact exists. Ticket 11 is optional promotion-UI simplification, not a prerequisite for the existing explicit SHA/run workflow. Confirm-and-lock (03), full acceptance, recovery and production access governance remain required. A narrower draft-only production pilot would require an explicit scope change.
-
-Manual release promotion still requires one authorized operator, not a separate reviewer. Production **data-change** approval and emergency-access policy are unresolved in ticket 12; do not infer them from that release-promotion decision.
+Jaco approved [the simplified delivery plan](breakdown.md): manual trial releases,
+with CI and revision-bound practical acceptance; IaC and automated release gates
+are deferred. Staging role separation is complete. Production is inactive and
+two-member acceptance parked. Follow that plan rather than older handoff steps.
 
 ## Decisions so far
 
@@ -30,7 +27,7 @@ Manual release promotion still requires one authorized operator, not a separate 
 - Jaco confirmed the career lead performs confirmation/locking. No member-submission state or unlock in this milestone.
 - Use confirmed focuses as immutable baselines. Later phase copies/versioning belong to M04.
 - Railway stage/prod are independent runtime/data environments. Promote the exact tested revision, with production autodeploy disabled.
-- [Agree hosted-trial priority, admission policy and release gates](issues/08-agree-delivery-priority.md) — runtime/CI first; explicit local/stage personal-account eligibility; checked automatic stage delivery and same-revision manual production promotion.
+- [Agree hosted-trial priority, admission policy and release gates](issues/08-agree-delivery-priority.md) — runtime/CI first; explicit local/stage personal-account eligibility; original automated delivery decision, superseded for this trial by the 19 October manual release decision.
 
 ## Implementation choices
 
@@ -38,7 +35,7 @@ The spec fixes conservative defaults so tickets are buildable: current active me
 
 ## Not yet specified
 
-Google authentication works on stage. Production data-change approval, privileged access ownership, audit retention and emergency-access policy remain decisions under 12. Platform configuration details remain implementation/setup work: validate current provider capabilities and record the concrete commands, required check names, repository rules and revision-bound promotion mechanism in the release runbook. Surface a new decision only if implementation discovers a material trade-off that cannot satisfy the agreed policy.
+Google authentication works on stage. Production data-change approval, privileged access ownership, audit retention and emergency-access policy are agreed under 12; remaining enforcement belongs to 13. Platform configuration details remain implementation/setup work: validate current provider capabilities and record the concrete commands, required check names, repository rules and revision-bound promotion mechanism in the release runbook. Surface a new decision only if implementation discovers a material trade-off that cannot satisfy the agreed policy.
 
 ## Inputs for setup, not product ambiguities
 
@@ -48,6 +45,9 @@ Railway project/service access, repository-rule access and GitHub deployment int
 
 Later review cycles, engineer catch-up context and the first full team-cycle outcome remain deferred until trial feedback. Administration screens, multiple teams and notifications are not part of this delivery plan. Existing walkthrough data/services and prototype hosting are preserved.
 
-## Production prerequisites — 16 October 2026
+## Production prerequisites — 19 October 2026
 
-The operator requested planning only for the production gaps. Follow the [dependency order](breakdown.md): policy 12 → enforcement 13; configuration 14, setup 05 and confirm/lock 03 can progress independently where dependencies allow; automated gates 15 and recovery 16 converge on stage acceptance 06, then production 07. No new permission or delivery setting is granted by this plan.
+Follow the [current queue](breakdown.md): bounded configuration and access checks,
+confirmation/locking, manual practical acceptance, and one human-run release with
+a database checkpoint. Tickets 11, 15 and 16 are deferred. Current policy in 12
+and AGENTS.md remains binding; no production execution is authorized here.

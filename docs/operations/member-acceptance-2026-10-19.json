@@ -1,0 +1,29 @@
+{
+  "recordedAt": "2026-10-18T22:57:09.466757+00:00",
+  "environment": "staging",
+  "revision": "3349636a031d86b90c534e71e4a02d416a8f7df7",
+  "deployment": "fc083756-f5e7-4936-8d1c-29e9bff5641d",
+  "status": "deferred-by-user",
+  "passed": [
+    "Existing ordinary-member Google session remains valid",
+    "Member created synthetic focus with title, dates, Normal objective and SMART goal",
+    "Complete document persisted after browser reload; database values verified",
+    "Temporary approval revocation denied existing member session direct document request",
+    "Approval restored; same session regained access; document count unchanged",
+    "Lead department view shows matching synthetic content read-only without editing controls",
+    "Anonymous list, detail and roster HTTP requests return 401"
+  ],
+  "pending": [
+    "Two-member case parked by Jaco; second distinct Google member session unavailable.",
+    "Enroll second registered account through lead UI",
+    "Two-member list/read/write isolation and ordinary-member roster denial",
+    "Full two-session release smoke and remaining acceptance checks"
+  ],
+  "cleanup": {
+    "firstMemberApprovalRestored": true,
+    "existingMembershipsUnchanged": true,
+    "syntheticTestDocumentRetained": true,
+    "noSessionMinting": true,
+    "unusedNomineeApprovalsRemoved": true
+  }
+}

@@ -59,10 +59,20 @@ jobs:
       - run: npm install --global @railway/cli@5.68.0
       - run: node tools/release/stamp.mjs
         working-directory: candidate
+      - name: Check hosted configuration using protected main
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT }}
+          RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
+          RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
+          LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
+        run: node tools/release/configuration.mjs
       - name: Promote exact candidate
         working-directory: candidate
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT }}
+          LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
           RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
           RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
         run: node tools/release/deploy.mjs
