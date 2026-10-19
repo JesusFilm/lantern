@@ -185,10 +185,16 @@ finish() {
 # ──────────────────────────────────────────────────────────────────────────
 
 # Human-only: run on the owner's computer, never on an agent VM.
-# No existing private files are loaded. Never run with bash -x / shell tracing.
+# Existing private files are loaded only with explicit --resume-config. Never enable shell tracing.
 set +x
 umask 077
 TOTAL_STAGES=8
+RESUME_DIR=
+if [[ $# -ne 0 ]]; then
+  [[ $# -eq 2 && $1 == --resume-config && -n $2 ]] || { printf 'Usage: %s [--resume-config PRIVATE_DIR]\n' "$0" >&2; exit 1; }
+  RESUME_DIR=$2
+  TOTAL_STAGES=5
+fi
 ENV_FILE=/dev/null
 [[ -t 0 && -t 1 ]] || { printf 'Run interactively in your private terminal.\n' >&2; exit 1; }
 REPOSITORY=JesusFilm/lantern
@@ -215,15 +221,85 @@ github_secret() { printf '%s' "$2" | gh secret set "$1" --repo "$REPOSITORY" --e
 github_variable() { gh variable set "$1" --body "$2" --repo "$REPOSITORY" --env production >/dev/null; }
 railway_variable() { printf '%s' "$2" | railway variables set "$1" --stdin --skip-deploys --project "$RAILWAY_PROJECT" --environment "$RAILWAY_ENVIRONMENT" --service "$RAILWAY_SERVICE" >/dev/null 2>&1; }
 
+
+# RESUME_JS is deliberately standalone for synthetic validation tests.
+load_resume_config() {
+  export RESUME_DIR
+  node --input-type=module >"$TASK_TEMP/resume-values" <<'RESUME_JS'
+import assert from 'node:assert/strict';
+import {lstatSync,readFileSync} from 'node:fs';
+import {join} from 'node:path';
+import {X509Certificate} from 'node:crypto';
+try {
+ const dir=process.env.RESUME_DIR;
+ const check=(path,directory)=>{
+  const st=lstatSync(path);
+  assert(!st.isSymbolicLink() && (directory?st.isDirectory():st.isFile()));
+  assert.equal(st.uid,process.getuid());
+  assert.equal(st.mode&0o777,directory?0o700:0o600);
+ };
+ check(dir,true);check(join(dir,'operator.env'),false);check(join(dir,'root.crt'),false);
+ const keys=['LANTERN_ENV','LANTERN_DB_EXPECTED_ENDPOINT','LANTERN_DB_NAME','LANTERN_DB_SCHEMA','LANTERN_DB_RUNTIME_ROLE','LANTERN_DB_MIGRATION_ROLE','LANTERN_DB_ADMIN_ROLE','MIGRATION_DATABASE_URL'];
+ const allowed=new Set([...keys,'ADMIN_DATABASE_URL','PGSSLROOTCERT','PGSSLMODE']);
+ const values=new Map();
+ for(const line of readFileSync(join(dir,'operator.env'),'utf8').split('\n')) {
+  if(!line)continue;
+  const split=line.indexOf('=');assert(split>0);
+  const key=line.slice(0,split),value=line.slice(split+1);
+  assert(allowed.has(key) && !values.has(key) && !/[\x00-\x1f\x7f]/.test(value));
+  values.set(key,value);
+ }
+ for(const key of keys)assert(values.get(key));
+ assert.equal(values.get('LANTERN_ENV'),'production');
+ assert.equal(values.get('LANTERN_DB_SCHEMA'),'lantern');
+ for(const kind of ['runtime','migration','admin'])assert.equal(values.get(`LANTERN_DB_${kind.toUpperCase()}_ROLE`),`lantern_production_${kind}`);
+ const endpoint=values.get('LANTERN_DB_EXPECTED_ENDPOINT');
+ assert(/^[a-zA-Z0-9.-]+:[0-9]+$/.test(endpoint));
+ assert.notEqual(endpoint,'ballast.proxy.rlwy.net:56588');
+ const name=values.get('LANTERN_DB_NAME');assert(/^[a-z][a-z0-9_]{0,62}$/.test(name));
+ const u=new URL(values.get('MIGRATION_DATABASE_URL'));
+ assert(['postgres:','postgresql:'].includes(u.protocol));
+ assert.equal(u.host,endpoint);assert(!u.hostname.endsWith('.railway.internal'));
+ assert.equal(decodeURIComponent(u.username),'lantern_production_migration');
+ assert.equal(decodeURIComponent(u.pathname.slice(1)),name);
+ assert(u.password);decodeURIComponent(u.password);assert.equal(u.search,'');assert.equal(u.hash,'');
+ const ca=new X509Certificate(readFileSync(join(dir,'root.crt')));
+ assert(ca.ca && Date.parse(ca.validFrom)<=Date.now() && Date.parse(ca.validTo)>Date.now());
+ // Emit only after every check succeeds. The shell reads this as data, never code.
+ for(const key of keys)process.stdout.write(`${key}=${values.get(key)}\n`);
+} catch {console.error('Private resume configuration failed validation; no settings changed.');process.exit(1);}
+RESUME_JS
+  while IFS='=' read -r name value; do
+    case "$name" in
+      LANTERN_ENV|LANTERN_DB_EXPECTED_ENDPOINT|LANTERN_DB_NAME|LANTERN_DB_SCHEMA|LANTERN_DB_RUNTIME_ROLE|LANTERN_DB_MIGRATION_ROLE|LANTERN_DB_ADMIN_ROLE|MIGRATION_DATABASE_URL) printf -v "$name" '%s' "$value"; export "$name";;
+      *) fail 'Unexpected resume setting.';;
+    esac
+  done <"$TASK_TEMP/resume-values"
+  rm "$TASK_TEMP/resume-values"
+  PRIVATE_DIR=$RESUME_DIR
+  export SETUP_CA="$PRIVATE_DIR/root.crt"
+}
+
 stage 'Owner session and verified revision'
-say 'Run only on your own computer. This provisions an EMPTY production database; it never copies staging records.'
-say 'Stages: verify SHA; confirm target/CA; bootstrap; passwords; private settings; install configuration; deploy; verify/cleanup.'
-warn 'Not resumable by replay: after bootstrap succeeds, do not rerun bootstrap. Stop and inspect any failure; never drop/reset existing data.'
+say 'Run only on your own computer. No staging records are copied.'
+if [[ -n "$RESUME_DIR" ]]; then
+  say 'Resume configuration only: verify SHA/permissions; load retained migration settings; capture runtime/OAuth/token; install; deploy; verify.'
+  warn 'Bootstrap and role/password setup are skipped. Existing private files will not be changed.'
+else
+  say 'Fresh setup: verify SHA/permissions; target/CA; bootstrap; passwords; settings; install; deploy; verify.'
+  warn 'After bootstrap, do not replay fresh setup. Use --resume-config PRIVATE_DIR only if stage 5 retained settings exist.'
+fi
 confirm 'Are you the production owner, on your own computer with private Railway and GitHub access?' || exit 1
 for command in git node npm gh railway psql openssl; do command -v "$command" >/dev/null || fail "Install $command first."; done
 [[ $(node -p 'process.versions.node.split(".")[0]') == 24 ]] || fail 'Use Node 24.'
 [[ -z $(git -C "$ROOT" status --porcelain) ]] || fail 'Use a clean repository checkout.'
 gh auth status >/dev/null 2>&1 || fail 'Authenticate gh privately first.'
+# Catch account/key-access failures before database changes; writes still require separate authorization.
+gh api "repos/$REPOSITORY/environments/production/secrets/public-key" >/dev/null 2>&1 || fail 'GitHub production secret access denied. Switch gh to the repository owner account before continuing.'
+if [[ -n "$RESUME_DIR" ]]; then
+  [[ "$RESUME_DIR" == /* ]] || RESUME_DIR="$PWD/$RESUME_DIR"
+  load_resume_config
+fi
 git -C "$ROOT" fetch origin main
 [[ $(git -C "$ROOT" rev-parse HEAD) == "$(git -C "$ROOT" rev-parse origin/main)" ]] || fail 'Checkout current origin/main first.'
 ask RELEASE_SHA 'Full main SHA to deploy (must have successful staging delivery):'; export RELEASE_SHA
@@ -236,6 +312,7 @@ node "$ROOT/tools/release/verify-promotion.mjs"
 npm ci
 npm run build
 
+if [[ -z "$RESUME_DIR" ]]; then
 stage 'Production target and public certificate'
 open_url "https://railway.com/project/$RAILWAY_PROJECT?environmentId=$RAILWAY_ENVIRONMENT"
 say "Confirm environment production ($RAILWAY_ENVIRONMENT), webapp service $RAILWAY_SERVICE and its separate Postgres service."
@@ -296,19 +373,27 @@ JS
 unset OWNER_URL
 confirm 'All three password/login commands succeeded and you closed the owner session?' || exit 1
 
+fi
+
 stage 'Capture separate private settings'
+if [[ -z "$RESUME_DIR" ]]; then
 PRIVATE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/lantern-production-settings.XXXXXX")
 chmod 700 "$PRIVATE_DIR"
 cp "$SETUP_CA" "$PRIVATE_DIR/root.crt"
 ENV_FILE="$PRIVATE_DIR/operator.env"
 say "Private role settings will be retained at $PRIVATE_DIR (directory 700, files 600). Move this folder to secure owner storage after completion."
 say 'No owner password is retained. This file contains data; never source it as shell code.'
+else
+  say "Using validated migration settings and CA from $PRIVATE_DIR; existing files stay unchanged."
+fi
 ask APP_ORIGIN 'Production HTTPS origin, without trailing slash:'; export APP_ORIGIN
 node -e 'const u=new URL(process.env.APP_ORIGIN);if(u.protocol!=="https:"||u.origin!==process.env.APP_ORIGIN)process.exit(1)'
 ask PRIVATE_DB_ENDPOINT 'Production PRIVATE database host:port (from Postgres private networking):'; export PRIVATE_DB_ENDPOINT
 [[ "$PRIVATE_DB_ENDPOINT" =~ ^[a-zA-Z0-9.-]+\.railway\.internal:[0-9]+$ ]] || fail 'Expected private Railway host:port.'
-say 'Enter the role passwords you just set. URLs are constructed with correct password encoding; none are displayed.'
-for kind in RUNTIME MIGRATION ADMIN; do
+say 'Enter the existing role passwords requested below. URLs are constructed with correct password encoding; none are displayed.'
+ROLE_KINDS='RUNTIME MIGRATION ADMIN'
+[[ -z "$RESUME_DIR" ]] || ROLE_KINDS=RUNTIME
+for kind in $ROLE_KINDS; do
   ask_secret ROLE_PASSWORD "$kind role password:"; required ROLE_PASSWORD; export ROLE_PASSWORD ROLE_KIND="$kind"
   CONNECTION=$(node --input-type=module <<'JS'
 const kind=process.env.ROLE_KIND;
@@ -320,6 +405,7 @@ JS
   unset ROLE_PASSWORD CONNECTION
  done
 export DATABASE_URL MIGRATION_DATABASE_URL ADMIN_DATABASE_URL
+if [[ -z "$RESUME_DIR" ]]; then
 export RETAINED_CA="$PRIVATE_DIR/root.crt"
 ADMIN_DATABASE_URL=$(node --input-type=module <<'JS'
 const u=new URL(process.env.ADMIN_DATABASE_URL);
@@ -330,6 +416,7 @@ export ADMIN_DATABASE_URL
 for name in LANTERN_ENV LANTERN_DB_EXPECTED_ENDPOINT LANTERN_DB_NAME LANTERN_DB_SCHEMA LANTERN_DB_RUNTIME_ROLE LANTERN_DB_MIGRATION_ROLE LANTERN_DB_ADMIN_ROLE MIGRATION_DATABASE_URL ADMIN_DATABASE_URL; do write_env "$name" "${!name}"; done
 write_env PGSSLROOTCERT "$PRIVATE_DIR/root.crt"
 write_env PGSSLMODE verify-ca
+fi
 open_url 'https://console.cloud.google.com/apis/credentials'
 step "Use your Web OAuth client. Add authorized redirect URI $APP_ORIGIN/auth/google/callback."
 ask GOOGLE_CLIENT_ID 'Google client ID:'; required GOOGLE_CLIENT_ID
