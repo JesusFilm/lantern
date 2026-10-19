@@ -1,15 +1,9 @@
-name: Promote verified revision
+name: Deploy production
 on:
   workflow_dispatch:
     inputs:
       sha:
-        description: Full SHA with passing stage evidence
-        required: true
-      stage_run_id:
-        description: Successful Lantern CI main run ID
-        required: true
-      acceptance_record:
-        description: URL of exact-SHA human QA, backup/restore and compatibility evidence
+        description: Full main commit SHA with successful staging delivery
         required: true
 permissions:
   contents: read
@@ -25,26 +19,19 @@ jobs:
       cancel-in-progress: false
     env:
       RELEASE_SHA: ${{ inputs.sha }}
-      STAGE_RUN_ID: ${{ inputs.stage_run_id }}
       GH_TOKEN: ${{ github.token }}
       APP_ORIGIN: ${{ vars.APP_ORIGIN }}
       RELEASE_TARGET: production
-      ACCEPTANCE_RECORD: ${{ inputs.acceptance_record }}
     steps:
       # Gate implementation comes from protected main, not arbitrary dispatch input.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with: { node-version: '24.21.0', cache: npm }
-      - name: Validate inputs and retrieve trusted run artifact
-        run: |
-          node --input-type=module <<'JS'
-          import assert from 'node:assert/strict';
-          assert.match(process.env.RELEASE_SHA,/^[a-f0-9]{40}$/);
-          assert.match(process.env.STAGE_RUN_ID,/^\d+$/);
-          assert.equal(new URL(process.env.ACCEPTANCE_RECORD).protocol,'https:');
-          JS
-          gh run download "$STAGE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "stage-evidence-$RELEASE_SHA" --dir stage-evidence
-          node tools/release/verify-promotion.mjs
+      - run: npm ci
+      - name: Verify main revision and successful staging delivery
+        run: node tools/release/verify-promotion.mjs
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.sha }}
@@ -55,9 +42,10 @@ jobs:
       - run: npm ci
         working-directory: candidate
       - run: npx playwright install --with-deps chromium
+      - run: npm install --global @railway/cli@5.70.0
+      - run: npm run build
         working-directory: candidate
-      - run: npm install --global @railway/cli@5.68.0
-      - run: node tools/release/stamp.mjs
+      - run: node ../tools/release/stamp.mjs
         working-directory: candidate
       - name: Check hosted configuration using protected main
         env:
@@ -75,15 +63,18 @@ jobs:
           LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
           RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
           RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
-        run: node tools/release/deploy.mjs
-      - run: node tools/release/smoke.mjs
+        run: node ../tools/release/deploy.mjs
+      - run: node ../tools/release/smoke.mjs
         working-directory: candidate
-      - name: Record operator and acceptance evidence
+        env:
+          RELEASE_SMOKE_MODE: readiness
+          EXPECTED_SCHEMA_VERSION: '4'
+      - name: Record production release
         run: |
           node --input-type=module <<'JS'
           import {readFileSync,writeFileSync} from 'node:fs';
           const evidence=JSON.parse(readFileSync('candidate/release-evidence.json'));
-          writeFileSync('production-evidence.json',JSON.stringify({...evidence,stageRunId:process.env.STAGE_RUN_ID,operator:process.env.GITHUB_ACTOR,acceptanceRecord:process.env.ACCEPTANCE_RECORD},null,2));
+          writeFileSync('production-evidence.json',JSON.stringify({...evidence,stageRunId:process.env.STAGE_RUN_ID,operator:process.env.GITHUB_ACTOR},null,2));
           JS
       - uses: actions/upload-artifact@v4
         with:

@@ -2,7 +2,7 @@ export function stageGate({ event, ref, sha, checkedSha, checks }) {
  if (event !== 'push' || ref !== 'refs/heads/main' || !/^[a-f0-9]{40}$/.test(sha) || checkedSha !== sha || checks?.length !== 3 || checks.some(x => x !== 'success')) throw new Error('Stage requires successful checks for this main SHA.');
 }
 export function promotionGate(sha, evidence) {
- if (!/^[a-f0-9]{40}$/.test(sha) || evidence.sha !== sha || evidence.stage !== 'passed' || !evidence.deployment || !evidence.runId || !Number.isInteger(evidence.schemaVersion)) throw new Error('Passing stage evidence for the exact SHA is required.');
+ if (!/^[a-f0-9]{40}$/.test(sha) || evidence.sha !== sha || evidence.readiness !== 'passed' || evidence.target !== 'stage' || !evidence.deployment || !evidence.runId || !Number.isInteger(evidence.schemaVersion)) throw new Error('Passing stage readiness for the exact SHA is required.');
 }
 
 export function verifyStageRun(run, sha, repository) {

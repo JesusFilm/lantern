@@ -1,56 +1,52 @@
 # Lantern
 
-Lantern helps members write position focuses containing objectives and SMART goals. The current application provides a persisted, read-first workspace, focused editing dialogs, concise guides and account-name editing. Career leads can browse current members and read their focuses. The hosted team trial still requires confirmation locks and live Railway stage/production verification.
+Lantern helps members write objectives and SMART goals, discuss their position focus with a career lead, and confirm the agreed document. Google sign-in, department membership and server-enforced ownership control access.
 
-[Current product scope](docs/PRD.md) · [Roadmap](docs/ROADMAP.md) · [Next tickets](.scratch/team-trial/breakdown.md) · [Application details](docs/system/position-focus-application.md)
+[Product scope](docs/PRD.md) · [Roadmap](docs/ROADMAP.md) · [Architecture decisions](docs/adrs/AGENTS.md)
 
-## Current private walkthrough
+## Development
 
-The [local walkthrough](https://jacobuntu.tail5c6dbf.ts.net:8444/) runs on the Jacobuntu VM behind Tailscale. Everyone using it shares one persistent local account. It is not the upcoming hosted multi-user trial. Database-approved Google access, sessions and membership are implemented; real Google configuration and acceptance remain outstanding.
-
-The [prototype journey](https://jacobuntu.tail5c6dbf.ts.net/lantern-prototypes/) preserves the original guide, image concepts, layouts and refinements separately. The former standalone guide viewer was consolidated there. `npm run preview:dev` and `npm run preview:build` retain the **historical** guide entrypoint for regression/reference; the current application uses `client/workspace/LearningGuide.tsx`.
-
-## Run locally
-
-Requires Node.js 22.12+, Docker with Compose and Chromium for browser tests. PostgreSQL retains the existing `career-lead` Compose project/volume and loopback port 55439. The app defaults to loopback port 4391. Preserve an existing `.env` rather than replacing it.
+Requires Node.js 22.12+, Docker Compose and Chromium for browser tests. Preserve existing private environment files and database volumes.
 
 ```sh
-cp .env.example .env
 npm ci
 npx playwright install chromium
 npm run db:start
 npm run build
-```
-
-Prepare a dedicated local database and the three roles using [database privilege setup](docs/operations/database-privileges.md), then put the runtime URL in your private `.env` and run `npm run dev:local`.
-
-`dev:local` starts PostgreSQL and enables access to the pre-prepared local account. Startup no longer migrates or seeds accounts. Use `npm run dev` for normal Google/session authentication and follow [access setup](docs/system/access-setup.md). Local access is off by default, requires loopback and is rejected with `NODE_ENV=production`.
-
-```sh
 npm run typecheck
-npm run build
 npm run test:local
 ```
 
-Tests create isolated real PostgreSQL schemas and disposable databases/roles, preserving walkthrough data. The test connection needs local owner privileges; do not use the runtime URL. They cover persistence, HTTP/browser authoring, ownership/membership access, Google validation, guides, failures and tracker regressions. To serve the compiled build locally, stop the dev server and run `npm run start:local` (optional `.env`). `npm start` uses injected variables with no dotenv requirement. See the [hosted release runbook](docs/operations/hosted-release.md) for compiled migrations/operators, Railway configuration, CI checks, stage delivery and manual production promotion. Live infrastructure and Google setup remain M06/05 work.
+Tests use the synthetic loopback PostgreSQL fixture in `.env.example`, with isolated schemas and disposable databases/roles. The example database URL is an owner connection for tests; application startup requires a restricted runtime connection.
 
-`GET /health` runs a fresh database query and returns 200 or a generic 503 without connection details. `.env`, runtime credentials and personnel records stay outside Git. PostgreSQL data remains in the existing Docker volume; do not reset it to test releases.
+For a fresh local application database:
 
-## Planning and ticket board
+1. Create a dedicated database using the local PostgreSQL owner. Set `LANTERN_ENV=local`, `LANTERN_DB_SETUP_MODE=empty`, `LANTERN_DB_EXPECTED_ENDPOINT=127.0.0.1:55439`, `LANTERN_DB_SOURCE_OWNER=career_lead`, `LANTERN_DB_NAME`, `LANTERN_DB_SCHEMA`, and distinct `LANTERN_DB_RUNTIME_ROLE`, `LANTERN_DB_MIGRATION_ROLE`, `LANTERN_DB_ADMIN_ROLE` values.
+2. Supply `BOOTSTRAP_DATABASE_URL` privately and run `npm run db:bootstrap`. It creates the schema and three restricted NOLOGIN roles. Privately enable login with separate passwords for those roles.
+3. Put the target settings and migration-role `MIGRATION_DATABASE_URL` in `.env.migration`; run `npm run db:migrate:local`.
+4. Put the target settings and admin-role `ADMIN_DATABASE_URL` in `.env.admin`; run `npm run access:ops -- local-account` to prepare the synthetic local account.
+5. Copy `.env.example` to `.env` only if `.env` does not exist. Replace `DATABASE_URL` with the runtime-role connection. Run `npm run dev:local` for the loopback walkthrough or `npm run dev` for Google authentication.
 
-Start with [the roadmap map](.scratch/roadmap/map.md). Local Markdown milestones, specs and tickets live in `.scratch/<feature>/` under [tracker conventions](docs/agents/issue-tracker.md). Ready tickets are separate from delivered behavior. M01 is the accepted baseline; M06 is next. Later phases and administration are [deferred candidates](.scratch/position-focus-guide/deferred.md).
+For Google sign-in, configure a Web OAuth client with the callback `APP_ORIGIN/auth/google/callback`, then provide its credentials privately. Local access defaults off and is rejected in production. `server/operations.ts` provides approval and department setup commands; use the admin connection separately from application runtime.
 
-Run `npm run tickets` for the board on http://127.0.0.1:4393. The private VM [roadmap viewer](https://jacobuntu.tail5c6dbf.ts.net:8443/) reads the same files. The TypeScript board refreshes Markdown records without regenerating HTML. [Board tooling](tools/ticket-board/README.md) includes the optional macOS login-service installer; it is separate from application hosting.
+## Delivery
 
-## Repository
+GitHub Actions checks types, runs PostgreSQL/browser tests, and builds the application. [Staging delivery](.github/workflows/ci.yml) runs for successful main commits when repository variable `STAGE_DELIVERY_ENABLED=true`, using the GitHub `stage` environment. It currently migrates through the private Railway migration service before uploading the webapp.
 
-- `client/workspace/`: focus authoring, current guides, account and membership UI.
-- `server/`: HTTP identity/validation, Google sessions, domain/storage, operations and schema.
+[Production deployment](.github/workflows/promote.yml) accepts one full main commit SHA and verifies its successful staging readiness artifact. Once production configuration and schema migration are ready, invoke it with `gh workflow run promote.yml --ref main -f sha=<full-main-sha>`. The GitHub `production` environment requires `RAILWAY_TOKEN` as a secret and `RAILWAY_PROJECT`, `RAILWAY_ENVIRONMENT`, `RAILWAY_SERVICE`, `LANTERN_DB_RUNTIME_ROLE`, and `APP_ORIGIN` variables.
+
+Production is not ready for execution: its migration path and credentials still require configuration. Replacing the staging migration service also requires selecting and configuring its replacement before deletion. Database migrations and webapp source must use the same revision; deployment does not copy staging records.
+
+The Railway application uses the root Dockerfile, `node dist/server/index.js`, `/health`, a 120-second health timeout, and an on-failure restart policy with three retries. Hosted settings include `NODE_ENV=production`, `LOCAL_ACCESS=0`, `LANTERN_HOSTING_ONLY=0`, `HOST=0.0.0.0`, the environment-specific `LANTERN_ENV`, HTTPS `APP_ORIGIN`, Google credentials and the restricted runtime `DATABASE_URL`. Keep credentials outside Git.
+
+`GET /health` checks the database and reports the release revision, deployment and schema in response headers. A failed migration stops application delivery. A failed readiness check requires inspection before retry; do not automatically undo committed migrations or deploy code incompatible with the current schema.
+
+## Code
+
+- `client/workspace/`: member and career-lead UI.
+- `server/`: HTTP, authentication, persistence, migrations and administrative commands.
 - `shared/`: typed contracts.
-- `docs/system/`: operating notes, verification and review evidence.
-- `docs/research/`: supporting research; historical comparisons are not current requirements.
-- `.scratch/`: current plans and preserved decision history.
+- `tools/release/`: delivery gates and readiness checks.
+- `docs/`: product scope, priorities, domain language and architecture decisions.
 
-[AGENTS.md](AGENTS.md) requires TDD, server-authoritative identity/ownership and separated responsibilities. Product code and plans are tracked in the private `JesusFilm/lantern` upstream. The prototype worktree remains `/home/jacobuntu/Ops/worktrees/lantern-ui-prototypes` on `codex/lantern-ui-prototypes`; application code must not depend on it.
-
-Database rollout preparation: follow the [staging transfer and empty-production procedure](docs/operations/database-transition.md). Production database readiness (ticket 17) precedes application launch (ticket 07); hosted execution is separately authorized.
+[AGENTS.md](AGENTS.md) defines engineering principles. The optional [ticket-board tool](tools/ticket-board/README.md) works with an empty board; it does not define project direction.
