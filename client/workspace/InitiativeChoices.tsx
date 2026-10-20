@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { DepartmentDirection, ObjectiveAlignment } from "../../shared/direction.js";
 import { api } from "./api.js";
+import { InitiativeIdentity } from "./InitiativeIdentity.js";
 
 export function InitiativeChoices({ initial }: { initial?: ObjectiveAlignment }) {
   const [selection, setSelection] = useState<ObjectiveAlignment>(initial ?? { initiatives: [], other: false });
@@ -32,7 +33,7 @@ export function InitiativeChoices({ initial }: { initial?: ObjectiveAlignment })
                     ? [...selection.initiatives, { id: item.id, name: item.name }]
                     : selection.initiatives.filter(choice => choice.id !== item.id),
                 })} />
-              <span>{item.name}{item.archived && <small>Archived · retained on this objective</small>}</span>
+              <span><InitiativeIdentity name={item.name} appearance={item.appearance} />{item.archived && <small>Archived · retained on this objective</small>}</span>
             </label>)}
             <label className="initiative-option initiative-other">
               <input type="checkbox" checked={selection.other}
@@ -50,6 +51,6 @@ export function AlignmentSummary({ alignment }: { alignment?: ObjectiveAlignment
   return <div className="alignment-summary">
     <h3>Strategic initiatives</h3>
     {alignment.other ? <span className="badge">Other — none of these apply</span> :
-      <ul>{alignment.initiatives.map(item => <li key={item.id}><span className="badge">{item.name}</span></li>)}</ul>}
+      <ul>{alignment.initiatives.map(item => <li key={item.id}><InitiativeIdentity name={item.name} appearance={item.appearance} chip /></li>)}</ul>}
   </div>;
 }

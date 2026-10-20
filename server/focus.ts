@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 import { AccessError, membership, membershipWrite } from "./membership.js";
 import type { FocusDraft, PositionFocus } from "../shared/focus.js";
 import { resolveAlignment } from "./direction.js";
+import { validateInitiativeAppearance } from "../shared/initiative-appearance.js";
 
 const columns = `id,title,to_char(period_start,'YYYY-MM-DD') AS start,to_char(period_end,'YYYY-MM-DD') AS end,sections,version,updated_at AS "updatedAt",status,confirmed_at AS "confirmedAt",
   (SELECT jsonb_build_object('id',u.id,'name',u.name) FROM users u WHERE u.id=confirmed_by) AS "confirmedBy"`;
@@ -210,10 +211,13 @@ export function validateFocus(
       const ids = new Set<string>();
       for (const item of alignment.initiatives) {
         if (!item || typeof item !== "object" || Array.isArray(item) ||
-            Object.keys(item).some(k => !["id", "name"].includes(k)) ||
+            Object.keys(item).some(k => !["id", "name", "appearance"].includes(k)) ||
             typeof item.id !== "string" || !/^[a-f0-9-]{36}$/.test(item.id) ||
             !text(item.name, 120) || ids.has(item.id)) return fail();
         ids.add(item.id);
+        if (item.appearance !== undefined) {
+          try { validateInitiativeAppearance(item.appearance); } catch { return fail(); }
+        }
       }
     }
   }

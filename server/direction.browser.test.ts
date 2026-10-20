@@ -75,6 +75,65 @@ test("career lead configures team direction and members always see the mission",
       await expect(memberPage.getByRole("button", { name: "Department", exact: true })).toHaveCount(0);
     });
 
+    await t.test("quick palette offers only presets and persists the additional choices after save", async () => {
+      await leadPage.getByRole("button", { name: "Edit Language access", exact: true }).click();
+      const dialog = leadPage.getByRole("dialog", { name: "Edit initiative", exact: true });
+      assert.equal(await dialog.evaluate(el => el.matches(":modal")), true);
+      await dialog.getByRole("button", { name: "Heart", exact: true }).click();
+      await dialog.getByRole("button", { name: "Red", exact: true }).click();
+      await expect(dialog.getByLabel("Appearance preview")).toContainText("Language access");
+      await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(leadPage.getByRole("cell", { name: "Language access", exact: true }).locator("svg")).toHaveCount(0);
+      await leadPage.getByRole("button", { name: "Edit Language access", exact: true }).click();
+      await dialog.getByRole("button", { name: "Heart", exact: true }).click();
+      await dialog.getByRole("button", { name: "Red", exact: true }).click();
+      await dialog.getByRole("button", { name: "Update initiative", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Edit Partner pathways", exact: true }).click();
+      await expect(dialog.locator('input[type="file"], input[type="color"]')).toHaveCount(0);
+      for (const name of ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink", "Slate"])
+        await expect(dialog.getByRole("button", { name, exact: true })).toBeVisible();
+      await expect(dialog.locator(".initiative-icon-grid button")).toHaveCount(12);
+      await expect(dialog.getByRole("button", { name: "Book", exact: true })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Globe", exact: true })).toBeVisible();
+      await dialog.getByRole("button", { name: "Handshake", exact: true }).click();
+      await dialog.getByRole("button", { name: "Yellow", exact: true }).click();
+      await expect(dialog.getByLabel("Appearance preview").locator("svg")).toBeVisible();
+      await leadPage.setViewportSize({ width: 390, height: 844 });
+      assert.ok(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth));
+      await dialog.getByRole("button", { name: "Update initiative", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(leadPage.getByRole("cell", { name: "Language access", exact: true }).locator("svg")).toBeVisible();
+      await expect(leadPage.getByRole("cell", { name: "Partner pathways", exact: true }).locator("svg")).toBeVisible();
+      await leadPage.getByRole("button", { name: "Edit Partner pathways", exact: true }).click();
+      await expect(dialog.getByRole("button", { name: "Yellow", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await expect(dialog.getByRole("button", { name: "Handshake", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await expect(dialog.getByLabel("Appearance preview").locator("svg")).toBeVisible();
+      await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+      await leadPage.setViewportSize({ width: 1280, height: 900 });
+    });
+
+    await t.test("adding an initiative can use color without an icon and clearing appearance survives reload", async () => {
+      await leadPage.getByRole("button", { name: "Add initiative", exact: true }).click();
+      const dialog = leadPage.getByRole("dialog");
+      await dialog.getByLabel("Initiative name").fill("Color only");
+      await dialog.getByRole("button", { name: "Green", exact: true }).click();
+      await expect(dialog.getByLabel("Appearance preview").locator(".initiative-mark")).toBeVisible();
+      await dialog.getByRole("button", { name: "Add initiative", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(leadPage.getByRole("cell", { name: "Color only", exact: true }).locator(".initiative-mark")).toBeVisible();
+      await leadPage.getByRole("button", { name: "Edit Color only", exact: true }).click();
+      await dialog.getByRole("button", { name: "Clear appearance", exact: true }).click();
+      await dialog.getByRole("button", { name: "Update initiative", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(leadPage.getByRole("cell", { name: "Color only", exact: true }).locator(".initiative-mark")).toHaveCount(0);
+    });
+
     await t.test("member selects multiple initiatives without search, edits to Other and reopens saved choices", async () => {
       await memberPage.getByRole("button", { name: "New position focus", exact: true }).click();
       await memberPage.getByLabel("Document title").fill("My contribution");
@@ -88,12 +147,14 @@ test("career lead configures team direction and members always see the mission",
       await expect(dialog.getByPlaceholder("Find an initiative")).toHaveCount(0);
       await expect(dialog.getByText("Our mission", { exact: true })).toHaveCount(0);
       await dialog.getByRole("checkbox", { name: "Language access", exact: true }).check();
+      await expect(dialog.locator(".initiative-option").filter({ hasText: "Language access" }).locator("svg")).toBeVisible();
       await dialog.getByRole("checkbox", { name: "Partner pathways", exact: true }).check();
       await memberPage.screenshot({ path: "/tmp/lantern-alignment-dialog.png", fullPage: true });
       await dialog.getByRole("button", { name: "Save changes", exact: true }).click();
       await memberPage.reload();
       await expect(memberPage.locator(".read-section")).toContainText("Language access");
       await expect(memberPage.locator(".read-section")).toContainText("Partner pathways");
+      await expect(memberPage.locator(".alignment-summary svg")).toHaveCount(2);
       await memberPage.getByRole("button", { name: "Edit objective", exact: true }).click();
       dialog = memberPage.getByRole("dialog");
       await expect(dialog.getByRole("checkbox", { name: "Language access", exact: true })).toBeChecked();

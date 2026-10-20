@@ -33,8 +33,10 @@
     "db:rehearse:local": "node --env-file=.env.example --import tsx tools/database/rehearse-recovery.ts"
   },
   "dependencies": {
+    "@xmldom/xmldom": "^0.9.12",
     "express": "^5.3.0",
     "google-auth-library": "^10.9.1",
+    "lucide-react": "^1.59.0",
     "pg": "^8.23.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

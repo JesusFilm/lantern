@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { DepartmentDirection, DirectionDraft } from "../../shared/direction.js";
 import { api } from "./api.js";
-import { Dialog } from "./Dialog.js";
+import { InitiativeDialog } from "./InitiativeDialog.js";
+import { InitiativeIdentity } from "./InitiativeIdentity.js";
 import { MissionBanner } from "./MissionBanner.js";
 
 export function TeamDirection() {
@@ -55,7 +56,7 @@ export function TeamDirection() {
               {draft.initiatives.length ? <div className="initiative-table-scroll"><table className="initiative-table">
                 <thead><tr><th>Initiative</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>{draft.initiatives.map((item, index) => <tr key={item.id ?? `new-${index}`}>
-                  <td>{item.name}</td>
+                  <td><InitiativeIdentity name={item.name} appearance={item.appearance} /></td>
                   <td><span className={`badge ${item.archived ? "archived" : ""}`}>{item.archived ? "Archived" : "Active"}</span></td>
                   <td><div className="initiative-actions">
                     <button type="button" className="link" aria-label={`Edit ${item.name}`} onClick={() => setEditing(index)}>Edit</button>
@@ -76,23 +77,15 @@ export function TeamDirection() {
           {notice && <p role="status">{notice}</p>}
         </form>
       )}
-      {draft && editing !== undefined && <Dialog title={editing < draft.initiatives.length ? "Edit initiative" : "Add initiative"}
-        saveLabel={editing < draft.initiatives.length ? "Update initiative" : "Add initiative"}
+      {draft && editing !== undefined && <InitiativeDialog initial={draft.initiatives[editing]}
         onClose={() => setEditing(undefined)}
-        onSave={async data => {
-          const name = String(data.get("name")).trim();
-          if (!name) throw new Error("Enter an initiative name.");
-          if (draft.initiatives.some((item, index) => index !== editing && !item.archived && item.name.toLowerCase() === name.toLowerCase()))
+        onSave={initiative => {
+          if (!initiative.archived && draft.initiatives.some((item, index) => index !== editing && !item.archived && item.name.toLowerCase() === initiative.name.toLowerCase()))
             throw new Error("An active initiative already has this name.");
           const initiatives = [...draft.initiatives];
-          const existing = initiatives[editing];
-          initiatives[editing] = existing ? { ...existing, name } : { name, archived: false };
+          initiatives[editing] = initiative;
           change({ ...draft, initiatives }); setEditing(undefined);
-        }}>
-        <label htmlFor="initiative-name">Initiative name</label>
-        <input id="initiative-name" name="name" autoFocus required maxLength={120} defaultValue={draft.initiatives[editing]?.name ?? ""} />
-        <p className="muted">Use Save changes on the panel to save this initiative with the mission.</p>
-      </Dialog>}
+        }} />}
     </>
   );
 }
