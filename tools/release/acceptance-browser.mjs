@@ -134,6 +134,8 @@ export async function runAcceptanceBrowser({ origin, sessions, runId }, { chromi
     await memberPage.getByRole('checkbox', { name: initiative, exact: true }).check();
     await saveDialog(memberPage);
     await memberPage.getByRole('button', { name: 'Edit objective', exact: true }).click();
+    // Editing reloads initiative choices; wait for the retained selection before saving.
+    await expect(memberPage.getByRole('checkbox', { name: initiative, exact: true })).toBeChecked();
     await memberPage.getByLabel('Objective', { exact: true }).fill(objective);
     await saveDialog(memberPage);
     await memberPage.getByRole('button', { name: '+ Add SMART goal', exact: true }).click();
