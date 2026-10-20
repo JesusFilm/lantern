@@ -44,7 +44,7 @@ test('production-only package migrates, starts without dotenv, serves assets and
      if (n === 0) {
        const scoped = admin;
        try {
-         await scoped.query("INSERT INTO users VALUES($1,'personal-sub','personal@gmail.com','Personal',NULL)", [personalId]);
+         await scoped.query("INSERT INTO users(id,google_sub,email,name) VALUES($1,'personal-sub','personal@gmail.com','Personal')", [personalId]);
          await scoped.query("INSERT INTO sessions VALUES($1,$2,now()+interval '1 hour')", [createHash('sha256').update(personalToken).digest('hex'), personalId]);
        } finally { /* Fixture owns this pool. */ }
      }
@@ -53,7 +53,7 @@ test('production-only package migrates, starts without dotenv, serves assets and
      const origin: string = `http://127.0.0.1:${address.port}`;
      const health = await fetch(origin+'/health');
      assert.equal(health.status, 200);
-     assert.equal(health.headers.get('x-lantern-schema'), '5');
+     assert.equal(health.headers.get('x-lantern-schema'), '6');
      const session = await (await fetch(origin+'/api/session', { headers: { Cookie: `__Host-lantern-session=${personalToken}` } })).json() as { user: { id: string } | null };
      assert.equal(session.user?.id ?? null, personalId);
      if (n === 0) {

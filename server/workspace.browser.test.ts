@@ -27,7 +27,7 @@ test(
       const user = randomUUID(),
         dept = randomUUID();
       await db.query(
-        "INSERT INTO users VALUES($1,'workspace-user','user@example.test','Jordan Davis','example.test')",
+        "INSERT INTO users(id,google_sub,email,name) VALUES($1,'workspace-user','user@example.test','Jordan Davis')",
         [user],
       );
       await db.query(

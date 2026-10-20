@@ -32,7 +32,6 @@ test(
         outsider = randomUUID();
       const department = randomUUID(),
         otherDepartment = randomUUID();
-      await db.query("INSERT INTO allowed_domains VALUES('example.test')");
       for (const id of [department, otherDepartment])
         await db.query("INSERT INTO departments(id,name) VALUES($1,'Team')", [
           id,
@@ -44,7 +43,7 @@ test(
         [outsider, "Outsider", "career-lead", otherDepartment],
       ]) {
         await db.query(
-          "INSERT INTO users VALUES($1::uuid,$1::text,$2,$3,'example.test')",
+          "INSERT INTO users(id,google_sub,email,name) VALUES($1::uuid,$1::text,$2,$3)",
           [id, `${name}@example.test`, name],
         );
         await db.query("INSERT INTO approved_emails VALUES(lower($1))", [
@@ -475,7 +474,7 @@ test(
         async () => {
           const candidate = randomUUID();
           await db.query(
-            "INSERT INTO users VALUES($1::uuid,$1::text,'candidate@example.test','Candidate','example.test')",
+            "INSERT INTO users(id,google_sub,email,name) VALUES($1::uuid,$1::text,'candidate@example.test','Candidate')",
             [candidate],
           );
           await page.goto(`${origin}/?page=department`);

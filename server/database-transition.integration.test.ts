@@ -15,8 +15,9 @@ async function legacyFixture() {
   const fixture = await privilegeFixture();
   try {
     await migrate(fixture.bootstrap);
-    await fixture.bootstrap.query('DROP FUNCTION public.enroll_member(uuid,text,boolean), public.enroll_member(uuid,text)');
-    await fixture.bootstrap.query('DELETE FROM public.schema_migrations WHERE version IN (3,4,5)');
+    await fixture.bootstrap.query('CREATE TABLE public.allowed_domains(domain text PRIMARY KEY); ALTER TABLE public.users ADD COLUMN hosted_domain text');
+    await fixture.bootstrap.query('DROP FUNCTION public.enroll_member(uuid,text)');
+    await fixture.bootstrap.query('DELETE FROM public.schema_migrations WHERE version IN (3,4,5,6)');
     await fixture.bootstrap.query('ALTER TABLE public.position_focuses DROP COLUMN status, DROP COLUMN confirmed_at, DROP COLUMN confirmed_by');
     const user = randomUUID(), department = randomUUID(), focus = randomUUID();
     await fixture.bootstrap.query("INSERT INTO public.users VALUES($1,'synthetic-sub','person@example.test','Synthetic person','example.test')", [user]);
@@ -119,10 +120,10 @@ test('fresh setup creates the complete empty database under separate roles witho
   try {
     await migrate(fresh.migration, fresh.roles);
     await assertSchemaReady(fresh.runtime); await assertRuntimePrivileges(fresh.runtime);
-    for (const table of ['users','departments','memberships','position_focuses','sessions','login_attempts','approved_emails','allowed_domains']) {
+    for (const table of ['users','departments','memberships','position_focuses','sessions','login_attempts','approved_emails']) {
       assert.equal((await fresh.runtime.query(`SELECT count(*) AS count FROM ${table}`)).rows[0].count,'0');
     }
-    assert.deepEqual((await fresh.runtime.query('SELECT version FROM schema_migrations ORDER BY version')).rows,[{version:1},{version:2},{version:3},{version:4},{version:5}]);
+    assert.deepEqual((await fresh.runtime.query('SELECT version FROM schema_migrations ORDER BY version')).rows,[{version:1},{version:2},{version:3},{version:4},{version:5},{version:6}]);
     assert.equal((await stage.bootstrap.query('SELECT count(*) AS count FROM public.position_focuses')).rows[0].count,'1');
   } finally { await fresh.close(); await stage.close(); }
 });

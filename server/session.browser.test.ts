@@ -22,11 +22,10 @@ test("private browser state follows the current server session", { timeout: 6000
   try {
     await migrate(db);
     const memberA = randomUUID(), memberB = randomUUID(), department = randomUUID();
-    await db.query("INSERT INTO allowed_domains VALUES('example.test')");
     await db.query("INSERT INTO departments(id,name) VALUES($1,'Engineering')", [department]);
     for (const [id, name] of [[memberA, "Member A"], [memberB, "Member B"]]) {
       await db.query(
-        "INSERT INTO users VALUES($1::uuid,$1::text,$2,$3,'example.test')",
+        "INSERT INTO users(id,google_sub,email,name) VALUES($1::uuid,$1::text,$2,$3)",
         [id, `${id}@example.test`, name],
       );
       await db.query("INSERT INTO approved_emails VALUES($1)", [`${id}@example.test`]);
