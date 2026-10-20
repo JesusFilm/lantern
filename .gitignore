@@ -17,3 +17,6 @@ hosting-evidence.json
 stage-evidence/
 
 stage-isolation-evidence.json
+stage-acceptance.json
+stage-acceptance-diagnostics.json
+stage-acceptance-diagnostics.json.tmp

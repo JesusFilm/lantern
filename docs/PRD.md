@@ -26,9 +26,21 @@ PostgreSQL stores account, membership and focus data. Saves detect concurrent ed
 
 ## Delivery and scope
 
-Staging should receive application and schema changes automatically after a PR merges to main. Production releases are manually initiated for a selected full main commit SHA, with migrations and the application deployed from that same revision. Deployment commands and configuration belong in the repository's executable release tooling and README.
+Staging receives application and schema changes automatically after a PR merges to main. An opt-in authenticated acceptance journey exercises the deployed build with disposable synthetic accounts and ordinary sessions, without a public login bypass. After hosted rehearsal, the owner may enable automatic production promotion of the latest main SHA with successful CI, readiness, authenticated acceptance and cleanup from the same run. Automatic promotion requires matching advertised staging/production schema versions; schema-changing releases remain manual. Manual promotion of a selected full main SHA remains available. Migrations and the application deploy from that same revision. See [release confidence](operations/release-confidence.md) for the testing layers and limits; executable delivery commands and configuration remain in the release tooling and README.
 
 Current work prioritizes reliable delivery and a usable hosted product. New product scope is chosen directly by the owner. Later review cycles, unlocking or copying confirmed focuses, notifications, dashboards, and broader administration need a separate product decision before implementation.
+
+## Release testing scope
+
+Use synthetic staging data for Playwright mutation journeys and cleanup. Gate
+automatic production promotion on successful exact-revision acceptance, while
+retaining an engineer's manual SHA override with successful prerequisite checks
+and readiness. Use built-in GitHub notifications and engineer-led recovery; no
+automatic rollback is in scope. Production initially receives readiness smoke
+without synthetic business records or extra departments. Authenticated production
+reads and permanent staging password logins remain optional, unresolved extensions.
+[ADR 0008](adrs/0008-staging-gate-and-production-smoke.md) records the decision,
+coverage limits and the current manual-override implementation gap.
 
 ## Proposed weekly reporting
 

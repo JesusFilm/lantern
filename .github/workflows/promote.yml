@@ -1,5 +1,9 @@
 name: Deploy production
 on:
+  workflow_run:
+    workflows: [Lantern CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       sha:
@@ -8,9 +12,38 @@ on:
 permissions:
   contents: read
   actions: read
+env:
+  RELEASE_MODE: ${{ github.event_name == 'workflow_run' && 'automatic' || 'manual' }}
+  RELEASE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.sha }}
+  STAGE_RUN_ID: ${{ github.event.workflow_run.id }}
+  STAGE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+  GH_TOKEN: ${{ github.token }}
 jobs:
+  admission:
+    # This job has no production environment or production secrets.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+       vars.AUTO_PRODUCTION_ENABLED == 'true' &&
+       vars.STAGE_ACCEPTANCE_ENABLED == 'true' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.path == '.github/workflows/ci.yml' &&
+       github.event.workflow_run.repository.full_name == github.repository &&
+       github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with: { node-version: '24.21.0' }
+      - name: Admit only verified main release evidence
+        run: node tools/release/verify-promotion.mjs --admission
   promote:
-    if: github.ref == 'refs/heads/main'
+    needs: admission
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
@@ -18,23 +51,23 @@ jobs:
       group: lantern-production
       cancel-in-progress: false
     env:
-      RELEASE_SHA: ${{ inputs.sha }}
-      GH_TOKEN: ${{ github.token }}
       APP_ORIGIN: ${{ vars.APP_ORIGIN }}
+      STAGE_APP_ORIGIN: ${{ vars.STAGE_APP_ORIGIN }}
       RELEASE_TARGET: production
     steps:
       # Gate implementation comes from protected main, not arbitrary dispatch input.
       - uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with: { node-version: '24.21.0', cache: npm }
       - run: npm ci
-      - name: Verify main revision and successful staging delivery
+      - name: Verify release evidence and automatic freshness under the production lock
         run: node tools/release/verify-promotion.mjs
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.sha }}
+          ref: ${{ env.RELEASE_SHA }}
           path: candidate
       - name: Verify candidate checkout
         working-directory: candidate
@@ -55,6 +88,9 @@ jobs:
           RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
           LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
         run: node tools/release/configuration.mjs
+      - name: Recheck automatic release immediately before migrations
+        if: env.RELEASE_MODE == 'automatic'
+        run: node tools/release/verify-promotion.mjs --freshness
       - name: Apply exact-revision schema migrations
         working-directory: candidate
         env:
@@ -85,11 +121,12 @@ jobs:
           node --input-type=module <<'JS'
           import {readFileSync,writeFileSync} from 'node:fs';
           const evidence=JSON.parse(readFileSync('candidate/release-evidence.json'));
-          writeFileSync('production-evidence.json',JSON.stringify({...evidence,stageRunId:process.env.STAGE_RUN_ID,operator:process.env.GITHUB_ACTOR},null,2));
+          writeFileSync('production-evidence.json',JSON.stringify({...evidence,stageRunId:process.env.STAGE_RUN_ID,stageRunAttempt:process.env.STAGE_RUN_ATTEMPT || undefined,releaseMode:process.env.RELEASE_MODE,operator:process.env.GITHUB_ACTOR},null,2));
           JS
       - uses: actions/upload-artifact@v4
         with:
-          name: production-evidence-${{ inputs.sha }}
+          name: production-evidence-${{ env.RELEASE_SHA }}
           path: production-evidence.json
           if-no-files-found: error
+          overwrite: true
           retention-days: 90

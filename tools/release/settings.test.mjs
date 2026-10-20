@@ -2,7 +2,7 @@ import {fileURLToPath} from 'node:url';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync,spawnSync} from 'node:child_process';
-import {mkdtempSync,readFileSync,rmSync,statSync,writeFileSync,chmodSync,renameSync,symlinkSync,chownSync,readdirSync,mkdirSync} from 'node:fs';
+import {mkdtempSync,readFileSync,rmSync,unlinkSync,statSync,writeFileSync,chmodSync,renameSync,symlinkSync,chownSync,readdirSync,mkdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {writeProductionSettings,loadProductionSettings} from './settings.mjs';
@@ -47,7 +47,7 @@ test('resume rejects symlinks and unsafe permissions without altering the packag
   chmodSync(path,mode);
   renameSync(path,path+'.saved');symlinkSync(path+'.saved',path);
   expectPrivateFailure(()=>loadProductionSettings(directory));
-  rmSync(path);renameSync(path+'.saved',path);
+  unlinkSync(path);renameSync(path+'.saved',path);
  }
  assert.equal(loadProductionSettings(directory).MIGRATION_DATABASE_URL,settings.MIGRATION_DATABASE_URL);
 }));
