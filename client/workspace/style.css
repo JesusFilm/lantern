@@ -1446,3 +1446,16 @@ dialog:has(.confirmation-summary) { max-width: 760px; }
   .confirmation-summary dl { grid-template-columns: 52px minmax(0, 1fr); gap: 8px 12px; }
   .confirmation-warning { gap: 12px; }
 }
+
+/* Google's pre-approved light rectangular artwork, served locally.
+   Source: https://developers.google.com/identity/branding-guidelines */
+.google-sign-in {
+  display: inline-flex;
+  height: 40px;
+  border-radius: 4px;
+  text-decoration: none;
+}
+.google-sign-in img { display: block; width: auto; height: 40px; }
+.google-sign-in:hover { box-shadow: 0 1px 3px rgb(60 64 67 / 30%); }
+.google-sign-in:active { opacity: .85; }
+.google-sign-in:focus-visible { outline: 3px solid #0b57d0; outline-offset: 3px; }
