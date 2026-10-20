@@ -6,7 +6,7 @@ The historical storage is `users.hosted_domain` and the `allowed_domains` table.
 
 ## Required release order
 
-The release workflow migrates before replacing the serving application. **Do not promote the deletion release directly over the original domain-dependent app.** First deploy the compatibility release from PR #22 (schema 5), wait for successful readiness, then deploy the deletion release (schema 6). Both must have successful main staging delivery artifacts. Empty new installations can use schema 6 directly.
+The release workflow migrates before replacing the serving application. **Do not promote the deletion release directly over the original domain-dependent app.** First deploy the compatibility release from PR #22 (schema 5), wait for successful readiness, then deploy the deletion release from PR #23 (schema 6). Both must have successful main staging delivery artifacts. Empty new installations can use schema 6 directly.
 
 Perform these steps on your Mac with your existing GitHub production permissions. The production environment must already have its own migration credentials, certificate and Railway deployment settings as described in [Delivery](../../README.md#delivery). No production credentials or data should be copied to the VM. The normal production workflow runs the migration and cleanup; no additional DELETE script, Railway shell command or database bootstrap is needed.
 
@@ -21,10 +21,10 @@ Perform these steps on your Mac with your existing GitHub production permissions
    ```
 
 3. Open the newly dispatched **Deploy production** run. Verify it targets the compatibility SHA; complete any configured environment approval. Wait for its successful completion (`gh run watch RUN_ID --repo JesusFilm/lantern --exit-status`). Download its `production-evidence-<compatibility_sha>` artifact and confirm `sha`, `readiness: passed`, `schemaVersion: 5` and deployment ID. Independently check your production origin's `/health` response headers: `X-Lantern-Revision` must equal that SHA and `X-Lantern-Schema` must be `5`.
-4. Only after step 3, dispatch the schema-6 deletion release's full main SHA, supplied with this change:
+4. Only after step 3, dispatch the schema-6 deletion release's full main SHA from merged PR #23:
 
    ```bash
-   removal_sha=REPLACE_WITH_VERIFIED_SCHEMA_6_MAIN_SHA
+   removal_sha=$(gh pr view 23 --repo JesusFilm/lantern --json mergeCommit --jq '.mergeCommit.oid')
    gh workflow run promote.yml --repo JesusFilm/lantern --ref main -f sha="$removal_sha"
    gh run list --repo JesusFilm/lantern --workflow promote.yml --limit 5
    ```
