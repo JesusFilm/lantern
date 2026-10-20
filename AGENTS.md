@@ -6,4 +6,8 @@ Keep responsibilities separate: React presents data and captures intent; HTTP mo
 
 Server-resolved identity and active department membership are authoritative. Never accept ownership or role grants from client input. Preserve history and department scope when membership ends, except for explicitly requested data removal. Keep local access explicitly configured and unavailable by default; production requires authenticated sessions.
 
+Before product or data-model changes, read [the PRD](docs/PRD.md), [user and domain terms](GLOSSARY.md), and [current priorities](docs/ROADMAP.md). Keep requirements there and consequential technical decisions in ADRs.
+
+Before merging or releasing, read [Delivery](README.md#delivery). Successful main checks deploy to staging; production is a separate, explicitly authorized promotion of a selected main SHA. Verify the deployed SHA rather than assuming main is live.
+
 For architectural decisions or changes to an existing decision, read [docs/adrs/AGENTS.md](docs/adrs/AGENTS.md).

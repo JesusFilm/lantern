@@ -8,13 +8,13 @@ Language for the member position-focus workflow. This glossary distinguishes the
 An approved participant with active membership of the team who prepares and manages their own position focuses.
 
 **Career lead**:
-The person supporting members' development who can read their focuses and confirm an agreed baseline after discussion. The initial trial has one career lead, Jaco.
+The person supporting members' development who can read their focuses and confirm an agreed baseline after discussion. The supported setup has one active career lead per department; this is an application role, not a database administrator.
 
 **Approved account**:
-A verified Google account whose exact normalized email is approved in the environment’s database. All environments admit approved personal and work accounts without a domain restriction. Approval permits eligible sign-in; membership and career-lead authority are separate grants.
+A verified Google account whose exact normalized email is approved in the environment’s database. All environments admit approved personal and work accounts without a domain restriction. Approval permits eligible sign-in; membership and career-lead authority are separate grants. Google sign-in creates the account; approval alone creates neither an account nor a membership.
 
 **Department**:
-The team boundary within which membership and position focuses belong. The initial trial uses Engineering; multiple-department workflows are outside its scope.
+The team boundary within which membership and position focuses belong. An account has at most one department membership. Setup currently supports one department; transfer and rejoining workflows are unsupported. Ending membership preserves its history and department-scoped focuses.
 
 **Beneficiary**:
 A person or group whose needs a member's contribution serves, including colleagues within the team.
