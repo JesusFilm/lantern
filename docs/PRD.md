@@ -30,16 +30,17 @@ Staging receives application and schema changes automatically after a PR merges 
 
 Current work prioritizes reliable delivery and a usable hosted product. New product scope is chosen directly by the owner. Later review cycles, unlocking or copying confirmed focuses, notifications, dashboards, and broader administration need a separate product decision before implementation.
 
-## Proposed system test workspace
+## Release testing scope
 
-The owner is considering one permanent career-lead login and two member logins
-for an isolated system-test department in each environment, including production.
-These accounts would use dedicated password authentication and create disposable
-content through normal product workflows. Real users must not discover or join
-the test workspace, and test accounts must not discover or join real teams.
-A restricted reset operation would remove test content without changing ordinary
-history-retention rules. This is not implemented; the [draft plan](operations/system-test-team-plan.md)
-records cleanup gaps, isolation requirements and decisions needed before implementation.
+Use synthetic staging data for Playwright mutation journeys and cleanup. Gate
+automatic production promotion on successful exact-revision acceptance, while
+retaining an engineer's manual SHA override with successful prerequisite checks
+and readiness. Use built-in GitHub notifications and engineer-led recovery; no
+automatic rollback is in scope. Production initially receives readiness smoke
+without synthetic business records or extra departments. Authenticated production
+reads and permanent staging password logins remain optional, unresolved extensions.
+[ADR 0008](adrs/0008-staging-gate-and-production-smoke.md) records the decision,
+coverage limits and the current manual-override implementation gap.
 
 ## Proposed weekly reporting
 

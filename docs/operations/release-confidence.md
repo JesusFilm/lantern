@@ -1,5 +1,11 @@
 # Release confidence
 
+Current release policy is recorded in [ADR 0008](../adrs/0008-staging-gate-and-production-smoke.md).
+Production uses readiness smoke, with no synthetic business data. GitHub Actions
+notifications and engineer recovery are sufficient; no automatic rollback or
+custom persistent failure latch is implemented. Optional password logins are not
+part of the implemented runner.
+
 The missing release check is authenticated acceptance against the deployed staging
 application. The existing local suite already exercises browser workflows and HTTP
 interfaces with real PostgreSQL, including failures and access isolation. Adding a
@@ -112,9 +118,11 @@ Railway variable or production secret is required.
    repeats verification under its lock.
 
 Schema changes, first production setup and deliberate historical releases use
-the existing manual workflow. Manual dispatch requires successful readiness for
-the selected SHA; it deliberately retains that operator override rather than
-requiring a new acceptance artifact from historical releases.
+the existing manual workflow. Manual dispatch must retain successful prerequisite checks and readiness for
+the selected SHA without requiring acceptance. The current implementation still
+requires a successful whole CI run and uploads readiness after acceptance, so a
+failed acceptance can prevent this override. Resolve and test this gap before
+activation; historical successful releases remain manually selectable.
 
 Disabling `AUTO_PRODUCTION_ENABLED` stops new automatic admissions. Cancel already
 admitted or queued production runs separately. Leave acceptance enabled to retain

@@ -1,7 +1,12 @@
 # Draft plan for isolated system test accounts
 
-Status: Proposed for discussion, 21 October 2026. No application implementation or
-environment activation is authorized by this draft.
+Status: Historical proposal, superseded on 21 October 2026 by
+[ADR 0008](../adrs/0008-staging-gate-and-production-smoke.md). Do not implement the
+production workspace, password login, row-security/control-role expansion or
+scheduled reset described below. The owner now prefers extensive staging testing
+and minimal production smoke. Optional authenticated production reads and permanent
+staging logins remain unresolved. The inventory of existing deletion gaps remains
+useful for staging cleanup. No activation is authorized by this document.
 
 Provide three permanent password logins per environment: one career lead and two
 members in a dedicated system-test department. Exercise the deployed application

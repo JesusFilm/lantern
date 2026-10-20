@@ -1,7 +1,11 @@
 # Isolated system test accounts in staging and production
 
 Date: 2026-10-21
-Status: Proposed; owner decisions remain open
+Status: Superseded proposal — not implemented; see ADR 0008
+
+The owner subsequently preferred staging mutation tests and minimal production smoke.
+[ADR 0008](0008-staging-gate-and-production-smoke.md) records that narrower scope.
+The design below is historical, not the implementation backlog.
 
 ## Proposed decision
 

@@ -3,10 +3,11 @@
 Date: 2026-10-21
 Status: Accepted by the repository owner; hosted activation remains separate
 
-The owner is considering permanent password-authenticated test accounts in both
-environments. [ADR 0007](0007-isolated-system-test-accounts.md) is a proposed
-replacement for the authentication and fixture lifecycle below, not an implemented
-or accepted production change. Keep activation pending that decision.
+[ADR 0008](0008-staging-gate-and-production-smoke.md) refines the release policy:
+GitHub notifications, a usable manual acceptance override, engineer recovery and
+minimal production smoke. The broader ADR 0007 proposal is superseded. The private
+staging runner remains implemented; permanent password login is not implemented.
+Hosted activation still requires rehearsal and owner authorization.
 
 ## Decision
 

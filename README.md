@@ -31,10 +31,11 @@ For Google sign-in, configure a Web OAuth client with the callback `APP_ORIGIN/a
 
 ## Delivery
 
-The [system test workspace proposal](docs/operations/system-test-team-plan.md)
-reconsiders authentication and cleanup for staging and production. It is a draft,
-not implemented by the release tooling below. Keep acceptance and automatic
-production activation pending that design decision.
+[ADR 0008](docs/adrs/0008-staging-gate-and-production-smoke.md) records the current
+scope: staging Playwright gates automatic promotion, manual override remains,
+and production uses readiness smoke with engineer-led recovery. The earlier
+production test workspace proposal is superseded. Keep this PR in draft and
+activation pending review, the manual-override gap and hosted rehearsal.
 
 GitHub Actions checks types, runs PostgreSQL/browser tests, and builds the application. [Staging delivery](.github/workflows/ci.yml) runs for successful main commits when repository variable `STAGE_DELIVERY_ENABLED=true`, using the GitHub `stage` environment. It applies migrations directly from the runner, then uploads the matching webapp revision.
 
