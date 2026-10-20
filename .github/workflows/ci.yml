@@ -60,7 +60,7 @@ jobs:
     # This must be a repository variable: environment variables are unavailable here.
     if: vars.STAGE_DELIVERY_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     environment: stage
     concurrency:
       group: lantern-stage
@@ -69,6 +69,7 @@ jobs:
       RELEASE_SHA: ${{ github.sha }}
       APP_ORIGIN: ${{ vars.APP_ORIGIN }}
       RELEASE_TARGET: stage
+      EXPECTED_SCHEMA_VERSION: '8'
       RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT }}
       RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
       RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
@@ -119,11 +120,30 @@ jobs:
       - name: Verify deployed revision, schema, login and anonymous denial
         env:
           RELEASE_SMOKE_MODE: readiness
-          EXPECTED_SCHEMA_VERSION: '8'
         run: node tools/release/smoke.mjs
+      - name: Exercise authenticated staging journeys and clean synthetic fixtures
+        if: vars.STAGE_ACCEPTANCE_ENABLED == 'true'
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          MIGRATION_DATABASE_CA: ${{ secrets.MIGRATION_DATABASE_CA }}
+          LANTERN_DB_EXPECTED_ENDPOINT: ${{ vars.LANTERN_DB_EXPECTED_ENDPOINT }}
+          LANTERN_DB_NAME: ${{ vars.LANTERN_DB_NAME }}
+          LANTERN_DB_SCHEMA: lantern
+          LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
+          LANTERN_DB_MIGRATION_ROLE: ${{ vars.LANTERN_DB_MIGRATION_ROLE }}
+          LANTERN_DB_ADMIN_ROLE: ${{ vars.LANTERN_DB_ADMIN_ROLE }}
+        run: node tools/release/acceptance.mjs
+      - uses: actions/upload-artifact@v4
+        if: vars.STAGE_ACCEPTANCE_ENABLED == 'true'
+        with:
+          name: stage-acceptance-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: stage-acceptance.json
+          if-no-files-found: error
+          retention-days: 90
       - uses: actions/upload-artifact@v4
         with:
           name: stage-readiness-${{ github.sha }}
           path: release-evidence.json
           if-no-files-found: error
+          overwrite: true
           retention-days: 90

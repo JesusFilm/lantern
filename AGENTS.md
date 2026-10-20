@@ -8,6 +8,6 @@ Server-resolved identity and active department membership are authoritative. Nev
 
 Before product or data-model changes, read [the PRD](docs/PRD.md), [user and domain terms](GLOSSARY.md), and [current priorities](docs/ROADMAP.md). Keep requirements there and consequential technical decisions in ADRs.
 
-Before merging or releasing, read [Delivery](README.md#delivery). Successful main checks deploy to staging; production is a separate, explicitly authorized promotion of a selected main SHA. Verify the deployed SHA rather than assuming main is live.
+Before merging, releasing, or changing delivery switches, read [Delivery](README.md#delivery). Successful main checks deploy to staging; production uses manual promotion or the explicitly enabled authenticated-acceptance gate. Verify the deployed SHA rather than assuming main is live.
 
 For architectural decisions or changes to an existing decision, read [docs/adrs/AGENTS.md](docs/adrs/AGENTS.md).

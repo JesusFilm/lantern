@@ -33,14 +33,37 @@ For Google sign-in, configure a Web OAuth client with the callback `APP_ORIGIN/a
 
 GitHub Actions checks types, runs PostgreSQL/browser tests, and builds the application. [Staging delivery](.github/workflows/ci.yml) runs for successful main commits when repository variable `STAGE_DELIVERY_ENABLED=true`, using the GitHub `stage` environment. It applies migrations directly from the runner, then uploads the matching webapp revision.
 
-**Main represents the staging delivery path. Production is deployed separately from a selected main SHA and may lag behind main.** [ADR 0001](docs/adrs/0001-release-migrations.md) records the release architecture. Staging and production keep separate data.
+**Main represents the staging delivery path. Production is deployed separately from a verified main SHA and may lag behind main.** [ADR 0001](docs/adrs/0001-release-migrations.md) records the migration architecture; [ADR 0006](docs/adrs/0006-authenticated-release-acceptance.md) adds opt-in authenticated acceptance and automatic promotion. Staging and production keep separate data.
 
-For an ordinary [production release](.github/workflows/promote.yml) (initial provisioning is described below):
+For a manual [production release](.github/workflows/promote.yml) (initial provisioning is described below):
 
 1. Merge a reviewed PR with passing checks. Wait for that main commit's **stage delivery and smoke** job to pass; unit tests/build alone do not make it eligible.
 2. With production release authorization and permitted access, select that full 40-character SHA and run `gh workflow run promote.yml --ref main -f sha=<full-main-sha>`, or use **Actions → Deploy production → Run workflow** on `main` with the same SHA input.
 3. Follow the new run through configuration checks, migrations, deployment and smoke. Confirm its `production-evidence-<sha>` artifact reports the selected `sha`, `readiness: passed`, deployment ID and schema version. The workflow's own main/head SHA can differ from the selected application SHA; use the artifact and `/health` release headers to identify what is deployed.
 4. Report the selected SHA and run link. Readiness checks health, anonymous access denial and the login screen; authenticated user workflows need separate verification. On failure, inspect the reported checkpoint and stop before retrying; migrations may already have committed.
+
+For automatic promotion, first enable repository variable `STAGE_ACCEPTANCE_ENABLED=true`.
+The stage job then uses its existing migration secrets to create disposable synthetic
+members and a career lead, run browser/HTTP acceptance against the deployed app,
+revoke sessions and remove its fixtures. It adds no public login bypass or Railway
+webapp setting. The resulting `stage-acceptance-<sha>-<run-id>-<attempt>` artifact
+must report acceptance and cleanup passed.
+
+Keep production manual while rehearsing hosted success, failure, interruption
+recovery and superseded revisions as described in
+[release confidence](docs/operations/release-confidence.md#activation-and-operation).
+Then set repository variable `STAGE_APP_ORIGIN` to staging's exact HTTPS origin and
+`AUTO_PRODUCTION_ENABLED=true`. A successful main CI run becomes eligible for
+automatic promotion only with its own acceptance artifact, while it remains the
+latest main revision and staging still serves the accepted deployment. Existing
+GitHub production-environment approval requirements still apply.
+
+Automatic promotion requires production's advertised schema version to match
+staging's. Use the manual procedure for schema changes or initial provisioning.
+Set `AUTO_PRODUCTION_ENABLED=false` to stop new automatic admissions; cancel any
+already admitted/waiting production run separately. Both switches default off;
+merging the implementation does not activate them. Manual dispatch retains
+readiness-only eligibility for deliberate operator releases, including older SHAs.
 
 The workflow controllers come from main and deploy the selected revision's application and migrations. Keep schema changes compatible with the application serving during deployment; check both workflows' expected schema version when adding a migration. Promote with this workflow so independent Railway deploy triggers cannot bypass its checks.
 
@@ -82,6 +105,13 @@ Store these under repository **Settings → Environments → `stage` or `product
 | `LANTERN_DB_ADMIN_ROLE` | Variable | Administrative account name used when granting permissions: `lantern_stage_admin` or `lantern_production_admin`. This is not its password or connection string. |
 
 `STAGE_DELIVERY_ENABLED` is a **repository Actions variable**, under **Settings → Secrets and variables → Actions → Variables**, rather than an environment variable. Set it to `true` to enable automatic staging delivery after successful main checks.
+
+The same repository-variable location holds `STAGE_ACCEPTANCE_ENABLED` (enable
+authenticated staging journeys), `AUTO_PRODUCTION_ENABLED` (enable the gated
+production trigger), and `STAGE_APP_ORIGIN` (the staging HTTPS origin used by the
+production gate). Keep both switches off until their documented rollout step.
+Acceptance reuses the existing **stage** migration secrets and role settings;
+it requires no additional secret or production authentication bypass.
 
 The workflows supply `LANTERN_DB_SCHEMA=lantern`, `RELEASE_TARGET`, `RELEASE_SHA`, `RELEASE_SMOKE_MODE` and `EXPECTED_SCHEMA_VERSION`. GitHub supplies the workflow token used as `GH_TOKEN`; release steps generate `STAGE_RUN_ID` and `EXPECTED_DEPLOYMENT_ID`. These are not manually configured settings.
 
