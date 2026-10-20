@@ -8,7 +8,7 @@ import { migrate } from '../../dist/server/schema.js';
 import { runAcceptanceBrowser } from './acceptance-browser.mjs';
 import { withAcceptanceFixture } from './acceptance-fixture.mjs';
 
-async function fixture(work, { rejectFocusSave = false, rejectImageSave = false } = {}) {
+async function fixture(work, { rejectFocusSave = false, rejectImageSave = false, directionDelay = 0 } = {}) {
   const database = await privilegeFixture();
   const server = createServer();
   try {
@@ -17,6 +17,10 @@ async function fixture(work, { rejectFocusSave = false, rejectImageSave = false 
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const origin = `http://127.0.0.1:${server.address().port}`;
     const app = express();
+    if (directionDelay) app.get('/api/department/direction', async (_request, _response, next) => {
+      await new Promise(resolve => setTimeout(resolve, directionDelay));
+      next();
+    });
     if (rejectFocusSave) {
       app.post('/api/focuses', (_request, response) => response.status(503).json({ error: `Private diagnostic ${sessions.member}` }));
     }
@@ -82,4 +86,13 @@ test('a failed deployed focus save blocks acceptance, hides private diagnostics 
       assert.equal(response.status, 401, 'A failed journey must revoke every supplied session.');
     }
   }, { rejectFocusSave: true });
+});
+
+// Hosted latency must not make the runner submit an objective before its
+// initiative choices have loaded through the real application boundary.
+test('deployed acceptance waits for delayed initiative choices before editing an objective', { timeout: 120000 }, async () => {
+  await fixture(async input => {
+    const checks = await runAcceptanceBrowser(input);
+    assert.ok(checks.includes('focus-authoring-persistence'));
+  }, { directionDelay: 750 });
 });
