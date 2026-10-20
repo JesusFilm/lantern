@@ -1,4 +1,4 @@
-# Engineering principles
+# Lantern agent guide
 
 Use TDD for application changes: choose public behavior, write and run a failing test, implement the smallest complete change, then verify it passes before the next slice. Test browser workflows and HTTP interfaces against isolated real PostgreSQL schemas. Cover persistence, validation, access isolation and failure paths. Preserve existing regressions; update assertions only when an approved behavior changes.
 
@@ -6,8 +6,14 @@ Keep responsibilities separate: React presents data and captures intent; HTTP mo
 
 Server-resolved identity and active department membership are authoritative. Never accept ownership or role grants from client input. Preserve history and department scope when membership ends, except for explicitly requested data removal. Keep local access explicitly configured and unavailable by default; production requires authenticated sessions.
 
-Before product or data-model changes, read [the PRD](docs/PRD.md), [user and domain terms](GLOSSARY.md), and [current priorities](docs/ROADMAP.md). Keep requirements there and consequential technical decisions in ADRs.
+## Read for the task
 
-Before merging, releasing, or changing delivery switches, read [Delivery](README.md#delivery). Successful main checks deploy to staging; production uses manual promotion or the explicitly enabled authenticated-acceptance gate. Verify the deployed SHA rather than assuming main is live.
+Load the relevant guide when its task applies; follow its source links only for implementation details.
 
-For architectural decisions or changes to an existing decision, read [docs/adrs/AGENTS.md](docs/adrs/AGENTS.md).
+| Task | Start here |
+| --- | --- |
+| Run/write tests, explain coverage, or assess what a green check proves | [Testing](docs/development/testing.md): local commands, staging journeys, production checks and limits |
+| Merge, release, change schema or delivery switches, or recover a failed release | [Releasing](docs/operations/releasing.md): automatic/manual paths, evidence and recovery |
+| Inspect completed rollout evidence or rehearse activation | [Release confidence](docs/operations/release-confidence.md) |
+| Change product or data-model behavior | [PRD](docs/PRD.md), [domain terms](GLOSSARY.md), [priorities](docs/ROADMAP.md) |
+| Choose/change an architectural approach or record a decision | [ADR instructions](docs/adrs/AGENTS.md) |

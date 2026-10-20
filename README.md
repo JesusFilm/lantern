@@ -6,18 +6,7 @@ Lantern helps members write objectives and SMART goals, discuss their position f
 
 ## Development
 
-Requires Node.js 22.12+, Docker Compose and Chromium for browser tests. Preserve existing private environment files and database volumes.
-
-```sh
-npm ci
-npx playwright install chromium
-npm run db:start
-npm run build
-npm run typecheck
-npm run test:local
-```
-
-Tests use the synthetic loopback PostgreSQL fixture in `.env.example`, with isolated schemas and disposable databases/roles. The example database URL is an owner connection for tests; application startup requires a restricted runtime connection.
+For test setup, focused/full commands, coverage and limits, read [Testing](docs/development/testing.md). Test fixtures use an isolated local owner connection; application setup below uses restricted runtime/migration/admin connections. Preserve existing private environment files and database volumes.
 
 For a fresh local application database:
 
@@ -31,49 +20,9 @@ For Google sign-in, configure a Web OAuth client with the callback `APP_ORIGIN/a
 
 ## Delivery
 
-[ADR 0008](docs/adrs/0008-staging-gate-and-production-smoke.md) records the current
-scope: staging Playwright gates automatic promotion, manual override remains,
-and production uses readiness smoke with engineer-led recovery. The earlier
-production test workspace proposal is superseded. Hosted activation requires
-successful staging rehearsal and explicit owner approval.
+For automatic/manual releases, schema changes, evidence verification and failure recovery, read [Releasing](docs/operations/releasing.md). For completed hosted rollout evidence or activation rehearsal, read [Release confidence](docs/operations/release-confidence.md). [ADR 0008](docs/adrs/0008-staging-gate-and-production-smoke.md) records the policy and supersedes the production test-workspace proposal.
 
-GitHub Actions checks types, runs PostgreSQL/browser tests, and builds the application. [Staging delivery](.github/workflows/ci.yml) runs for successful main commits when repository variable `STAGE_DELIVERY_ENABLED=true`, using the GitHub `stage` environment. It applies migrations directly from the runner, then uploads the matching webapp revision.
-
-**Main represents the staging delivery path. Production is deployed separately from a verified main SHA and may lag behind main.** [ADR 0001](docs/adrs/0001-release-migrations.md) records the migration architecture; [ADR 0006](docs/adrs/0006-authenticated-release-acceptance.md) adds opt-in authenticated acceptance and automatic promotion. Staging and production keep separate data.
-
-For a manual [production release](.github/workflows/promote.yml) (initial provisioning is described below):
-
-1. Merge a reviewed PR with passing checks. Require successful type, PostgreSQL/browser and build checks plus staging deployment/readiness for that exact main SHA. Manual promotion may intentionally override failed authenticated acceptance or fixture cleanup; failed prerequisites, migrations, deployment or readiness remain ineligible.
-2. With production release authorization and permitted access, select that full 40-character SHA and run `gh workflow run promote.yml --ref main -f sha=<full-main-sha>`, or use **Actions → Deploy production → Run workflow** on `main` with the same SHA input.
-3. Follow the new run through configuration checks, migrations, deployment and smoke. Confirm its `production-evidence-<sha>` artifact reports the selected `sha`, `readiness: passed`, deployment ID and schema version. The workflow's own main/head SHA can differ from the selected application SHA; use the artifact and `/health` release headers to identify what is deployed.
-4. Report the selected SHA and run link. Readiness checks health, anonymous access denial and the login screen; authenticated user workflows need separate verification. On failure, inspect the reported checkpoint and stop before retrying; migrations may already have committed.
-
-For automatic promotion, first enable repository variable `STAGE_ACCEPTANCE_ENABLED=true`.
-The stage job then uses its existing migration secrets to create disposable synthetic
-members and a career lead, run browser/HTTP acceptance against the deployed app,
-revoke sessions and remove its fixtures. It adds no public login bypass or Railway
-webapp setting. The resulting `stage-acceptance-<sha>-<run-id>-<attempt>` artifact
-must report acceptance and cleanup passed.
-
-Keep production manual while rehearsing hosted success, failure, interruption
-recovery and superseded revisions as described in
-[release confidence](docs/operations/release-confidence.md#activation-and-operation).
-Then set repository variable `STAGE_APP_ORIGIN` to staging's exact HTTPS origin and
-`AUTO_PRODUCTION_ENABLED=true`. A successful main CI run becomes eligible for
-automatic promotion only with its own acceptance artifact, while it remains the
-latest main revision and staging still serves the accepted deployment. Existing
-GitHub production-environment approval requirements still apply.
-
-Automatic promotion requires production's advertised schema version to match
-staging's. Use the manual procedure for schema changes or initial provisioning.
-Set `AUTO_PRODUCTION_ENABLED=false` to stop new automatic admissions; cancel any
-already admitted/waiting production run separately. Both switches default off;
-merging the implementation does not activate them. Manual dispatch retains
-readiness-only eligibility for deliberate operator releases, including older SHAs.
-
-The workflow controllers come from main and deploy the selected revision's application and migrations. Keep schema changes compatible with the application serving during deployment; check both workflows' expected schema version when adding a migration. Promote with this workflow so independent Railway deploy triggers cannot bypass its checks.
-
-For the domain-field removal, follow the [two-release production procedure](docs/operations/remove-hosted-domain.md). Existing installations must deploy the schema-5 compatibility app before applying schema 6.
+Main is the staging delivery path; production can lag. Verify the deployed SHA. The following setup reference is for initial provisioning or credential/hosting changes.
 
 Configure the settings listed under [Environment variables](#environment-variables) separately for staging and production.
 

@@ -1,171 +1,36 @@
 # Release confidence
 
-Current release policy is recorded in [ADR 0008](../adrs/0008-staging-gate-and-production-smoke.md).
-Production uses readiness smoke, with no synthetic business data. GitHub Actions
-notifications and engineer recovery are sufficient; no automatic rollback or
-custom persistent failure latch is implemented. Optional password logins are not
-part of the implemented runner.
+Use this record for completed rollout evidence and activation rehearsal. For the checks themselves, read [Testing](../development/testing.md); for ongoing automatic/manual releases and incident handling, read [Releasing](releasing.md). Policy and rationale live in [ADR 0008](../adrs/0008-staging-gate-and-production-smoke.md) and [ADR 0006](../adrs/0006-authenticated-release-acceptance.md).
 
-The missing release check is authenticated acceptance against the deployed staging
-application. The existing local suite already exercises browser workflows and HTTP
-interfaces with real PostgreSQL, including failures and access isolation. Adding a
-second large unit suite would not establish that the hosted application works.
+## Verified rollout — 21 October 2026 (Pacific/Auckland)
 
-## Evidence and limits
+[PR #31](https://github.com/JesusFilm/lantern/pull/31) implemented authenticated staging acceptance, exact-evidence automatic promotion, preserved manual override and independent journey/cleanup diagnostics. [PR #32](https://github.com/JesusFilm/lantern/pull/32) fixed a hosted timing failure by waiting for initiative choices before saving an edited objective. Both were merged.
 
-| Layer | What it establishes | What it does not establish |
-| --- | --- | --- |
-| Pull-request and main CI | Types, production build/package, PostgreSQL persistence and privileges, browser workflows, validation, concurrency, access isolation, signed Google-token validation | Hosted configuration and networking |
-| Deployed readiness | Exact revision, deployment and schema; database connectivity; anonymous denial; rendered login screen | Authenticated product workflows |
-| Deployed acceptance | Synthetic member/peer/lead workflows using normal sessions, real browser assets and staging persistence | Google's interactive login, production data migrations, every possible regression |
-| Real Google sign-in acceptance | OAuth client, callback, consent and actual Google authentication work together | The whole product's correctness |
+| Rehearsal | Observed result |
+| --- | --- |
+| [First hosted run](https://github.com/JesusFilm/lantern/actions/runs/39502027711) | Acceptance failed at focus authoring; readiness survived, cleanup passed, no passing acceptance evidence. Read-only verifier evaluation allowed manual admission and denied automatic admission. |
+| Delayed-response regression | A real PostgreSQL/browser test reproduced the initiative-loading failure and passed after the #32 correction; deliberate save/image failures remain covered. |
+| [Main attempt 1](https://github.com/JesusFilm/lantern/actions/runs/39503701366/attempts/1) | Recovered four users/two departments left by an intentionally terminated private staging fixture runner, then passed acceptance and cleanup. |
+| [Main attempt 2](https://github.com/JesusFilm/lantern/actions/runs/39503701366/attempts/2) | Repeated success on a new deployment. Read-only gate evaluation rejected the old attempt/deployment and an older successful main revision. |
+| [Full main attempt 3](https://github.com/JesusFilm/lantern/actions/runs/39503701366/attempts/3) | After explicit owner approval, all CI, staging readiness, acceptance and cleanup passed. Staging deployment: `0082e724-154d-4283-99d3-37d2bbd67200`. |
+| [Automatic production release](https://github.com/JesusFilm/lantern/actions/runs/39508385327) | Admission, configuration, freshness checks, migrations, deployment and readiness passed. Artifact links staging run `39503701366`, attempt `3`, mode `automatic`. |
 
-The initial review on 21 October 2026 found 34 test files and 171 test/subtest
-declarations. This is an inventory, not a coverage percentage or evidence that any
-particular revision passed. Most local browser tests use Vite over HTTP; acceptance
-adds the compiled deployed assets, HTTPS session cookies, hosted database roles and
-network configuration.
+At completion, live production and its artifact agreed on SHA `d8384ccb970ce66c7efe3153329b30896fb13871`, deployment `1d8690e1-a58c-4c18-a813-35e3a2d8b509`, schema `8`. Staging had zero synthetic users/departments and unchanged other user/department identity sets. Real Google sign-in on staging passed using the owner's existing browser session. Combined journey/cleanup failures were exercised in isolated local PostgreSQL, not by corrupting hosted production.
 
-Keep detailed validation, failure injection, concurrency, revocation and migration
-regressions in isolated local PostgreSQL tests. Keep the hosted journey short and
-deterministic. A failed journey must block promotion; rerun after investigating the
-cause rather than silently retrying assertions until they pass.
+Repository staging delivery, acceptance and automatic production switches were all `true` at completion. Production was restricted to main with no required reviewer. Independent Railway source-deploy triggers were absent; existing failed-workflow GitHub/email notifications were verified. These are **dated observations**, not assertions about current configuration. Read live variables, environment protections, workflows and health before operating.
 
-## Authentication recommendation
+## Activation rehearsal
 
-Provision fresh synthetic accounts and ordinary, short-lived Lantern sessions from
-the private staging runner. The runner already has a protected, staging-specific
-migration connection capable of preparing that data. Use it only for fixture setup
-and cleanup; exercise product actions through the browser and HTTP interfaces.
-Neither the running webapp nor production receives a new credential, authentication
-route, environment bypass or privilege.
+For a new environment or changed gate, keep production manual while establishing evidence. This is not a checklist to repeat for every normal merge.
 
-This deliberately begins acceptance after Google identity verification. The
-application still resolves sessions, approval, active membership, ownership and
-career-lead permissions normally. Local tests exercise the OAuth callback and
-signed-token checks through the existing identity-provider seam. Complete a real
-Google sign-in after OAuth credentials, callback URLs, admission policy or
-authentication code changes, and during initial rollout. A passing synthetic
-journey must never be described as a successful Google login.
+1. Inspect Railway/GitHub targets and independent deployment paths. Use existing protected staging migration credentials, CA and role settings. No extra runtime privilege, Google account or production synthetic data is needed. Set repository `STAGE_ACCEPTANCE_ENABLED=true`, `AUTO_PRODUCTION_ENABLED=false`, and exact HTTPS `STAGE_APP_ORIGIN`; verify staging delivery is enabled, environment variables do not shadow controls, and queued production runs are handled.
+2. Merge reviewed changes with passing CI and follow the main push run. Verify its exact SHA/deployment/schema/run/attempt, all ten checkpoints, acceptance and cleanup in the [artifacts](releasing.md#evidence-and-failure-handling). Complete a real Google sign-in separately.
+3. Rehearse failure blocking, cleanup/retry and interrupted-fixture recovery with synthetic isolated data. A staging interruption requires controlled private fixtures and recovery verification; do not widen cleanup scope or disturb human records. Keep combined failure and destructive injection in isolated local PostgreSQL. Assess manual override and stale revision/attempt/deployment rejection through read-only verifier evaluation, without dispatching production as a test.
+4. Repeat a successful current-main push CI run and verify its new attempt/deployment evidence. Review production environment approval rules and built-in failure notifications. A summary alone cannot qualify a release.
+5. With owner authorization, enable `AUTO_PRODUCTION_ENABLED=true`. Rerun current-main push CI if needed for a fresh completion event, then observe automatic production through completed success. Match the production artifact to source staging evidence and live health; record the SHA, deployment/schema, run links and cleanup outcome.
 
-A work-account email alias cannot supply an independent Google identity:
-[Google documents that aliases are not Google Accounts and cannot sign in](https://support.google.com/a/answer/33327).
-A separate Workspace user would need administrator provisioning.
-[Google service accounts](https://developers.google.com/identity/protocols/oauth2/service-account)
-are for server-to-server Google API access; domain-wide delegation adds substantial
-authority and is unnecessary for testing Lantern.
-[Playwright supports authenticated browser contexts](https://playwright.dev/docs/auth),
-but their stored state contains impersonation credentials. Keep test session tokens
-in runner memory and never upload cookie state, traces or network captures.
+The [fixture helper](../../tools/release/acceptance-fixture.mjs) serializes fixture work with a database lock. A crash releases the lock; the next run recovers only exactly marked abandoned graphs. Sessions expire after 15 minutes, with sign-out and cleanup normally revoking them earlier. Keep session tokens in memory and private: the synthetic lead has ordinary staging lead authority, including access to the registered-user directory.
 
-## Promotion recommendation
+## Maintenance
 
-Enable authenticated acceptance first, while continuing manual production
-promotion. Rehearse consecutive hosted successes, a deliberate failure that blocks
-promotion, cleanup/retry, and a superseded commit. Enable automatic promotion only
-after reviewing that evidence.
-
-Automatic eligibility should require the exact successful main CI run and attempt,
-readiness and authenticated acceptance for the same SHA/deployment/schema, and
-successful fixture cleanup. Recheck the current main revision and deployed staging
-revision immediately before production mutation. Serialize production delivery.
-Do not infer execution order from GitHub concurrency:
-[GitHub does not guarantee ordering](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
-
-Initially keep schema-changing releases manual. Staging's synthetic data cannot
-prove a production backfill or destructive migration is safe. Require the live
-production schema to equal the accepted staging schema for automatic promotion.
-Manual schema releases still need compatibility review and the existing migration
-procedure; failed or committed migrations are not automatically rolled back.
-The health header reports the application's expected schema, not the entire
-database migration ledger; a failed manual migration needs operator recovery
-before automatic delivery resumes.
-
-The existing workflow rebuilds the selected source for production; it does not
-promote an identical container image. Lockfile installation and the same source
-revision reduce variance, but immutable image promotion would provide a stronger
-artifact identity guarantee if the hosting workflow later supports it.
-
-## Activation and operation
-
-This PR does not enable either switch or claim hosted acceptance has passed.
-Use the existing protected GitHub `stage` environment and its staging migration
-URL, CA, target and role settings. No additional database grant, Google account,
-Railway variable or production secret is required.
-
-1. Before merging, inspect the existing Railway/GitHub targets and disable any
-   independent deployment path. Set **repository Actions variables** (Settings →
-   Secrets and variables → Actions → Variables): `STAGE_ACCEPTANCE_ENABLED=true`,
-   `AUTO_PRODUCTION_ENABLED=false`, and `STAGE_APP_ORIGIN` equal to the stage
-   environment’s exact `APP_ORIGIN`. Verify `STAGE_DELIVERY_ENABLED=true`; investigate
-   an intentional disable instead of overriding it. Check environment-level shadows
-   and already queued production runs. Merge after review and passing CI. The stage
-   job holds its existing staging lock through acceptance and cleanup.
-2. Follow the resulting main **push** CI run and inspect the artifact
-   `stage-acceptance-<sha>-<run-id>-<attempt>`. It must identify that SHA,
-   deployment, schema, CI run and attempt, `acceptance: passed`, `cleanup: passed`,
-   and suite version 1. Check the ten recorded areas: identities, direction, mission
-   image, focus authoring/persistence, isolation, stale/forged writes, confirmation,
-   account/guide, browser errors and session revocation.
-3. Complete a real Google sign-in in staging. Rehearse several normal releases
-   while keeping manual production promotion. Review a deliberately failed journey
-   in an isolated/local test and confirm its failure prevents evidence; rehearse a
-   cancelled staging acceptance run and verify the next run recovers its fixtures.
-   Verify that a superseded main revision cannot pass the automatic gate.
-   Do not intentionally break a shared production deployment to test these cases.
-4. Repeat successful staging acceptance by rerunning the current-main push CI run
-   (CI has no manual-dispatch trigger), tracking its new attempt and deployment.
-   Evaluate rejection and manual override through verifier/admission-only execution;
-   do not dispatch production to demonstrate them. Check production environment
-   protection rules: required reviewers will still pause an automatic job.
-5. With owner authorization for activation, set repository
-   `AUTO_PRODUCTION_ENABLED=true`. Both switches must be true. A successful main
-   CI completion starts the production workflow; admission validates the original
-   run before accessing the production environment, then the production job
-   repeats verification under its lock.
-
-Schema changes, first production setup and deliberate historical releases use
-the existing manual workflow. Manual dispatch must retain successful prerequisite
-checks and readiness for the selected SHA without requiring acceptance. Readiness
-is uploaded before acceptance. The verifier independently checks the
-trusted completed main push run, successful prerequisite jobs and staging steps,
-and readiness artifact identity and upload time for that attempt. A failed journey
-or cleanup can be overridden manually; failed builds, migrations, deployments and
-readiness cannot. Historical successful releases remain manually selectable.
-
-Disabling `AUTO_PRODUCTION_ENABLED` stops new automatic admissions. Cancel already
-admitted or queued production runs separately. Leave acceptance enabled to retain
-release evidence. For authentication/OAuth configuration changes, keep automatic
-promotion disabled until a real Google-login check passes.
-
-The fixture helper uses random run markers, exact synthetic subject/email pairs
-and separate departments. It creates only normal approved accounts and
-memberships; product requests use normal runtime authority. Sessions expire
-after 15 minutes. Browser sign-out and fixture cleanup normally revoke them sooner.
-A synthetic lead can view the staging-wide registered-user directory, so its
-token must never be logged or uploaded.
-
-A process crash releases the database advisory lock. The next acceptance run
-recovers only exactly marked abandoned fixture graphs before creating new data.
-If relationships no longer match the fixture's scope, cleanup rolls back and
-acceptance fails. Inspect that staging fixture through authorized operator access;
-do not broaden deletion predicates or delete human staging data to get a green
-run. No evidence is emitted until the browser journey and cleanup both succeed.
-
-## Independent design review — 21 October 2026
-
-The review supported staging mutation tests with minimal production readiness.
-The two identified implementation gaps are now addressed:
-
-- Readiness survives a later acceptance/cleanup failure, and manual admission
-  independently verifies prerequisites and exact candidate/run/attempt evidence.
-  Automatic admission continues to require both acceptance and cleanup success.
-- The GitHub run summary preserves separate journey and cleanup outcomes, safe
-  checkpoint and candidate identifiers, including unknown/not-reached outcomes.
-  Diagnostic reports contain no raw exceptions or browser/session/application data
-  and cannot qualify as passing acceptance evidence.
-
-Hosted rehearsal remains required; local tests alone do not prove deployed
-behavior or Google interactive sign-in. The hosted journey does not exercise
-Google login/session issuance, enrollment or every initiative lifecycle action.
-Local tests cover broader behavior; hosted acceptance is not exhaustive coverage.
+Update the testing guide with changed checks/limits and the release guide with changed operator steps. Keep dated execution evidence here or in linked PR/run artifacts; do not rewrite a past success as evidence for a newer revision. Historical proposals such as [system-test-team-plan](system-test-team-plan.md) are not operating instructions. No permanent password login, production test workspace, custom alert service or automatic rollback was added by this rollout.

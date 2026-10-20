@@ -1,13 +1,15 @@
 # Authenticated staging acceptance before automatic promotion
 
 Date: 2026-10-21
-Status: Accepted by the repository owner; hosted activation remains separate
+Status: Accepted by the repository owner
 
 [ADR 0008](0008-staging-gate-and-production-smoke.md) refines the release policy:
 GitHub notifications, a usable manual acceptance override, engineer recovery and
 minimal production smoke. The broader ADR 0007 proposal is superseded. The private
 staging runner remains implemented; permanent password login is not implemented.
-Hosted activation still requires rehearsal and owner authorization.
+Initial hosted activation was subsequently rehearsed and owner-authorized; see the
+dated [rollout record](../operations/release-confidence.md). Future activation
+still requires rehearsal and owner authorization.
 
 ## Decision
 
@@ -62,7 +64,7 @@ production database inventory. Failed manual migrations require operator
 recovery. This change preserves [ADR 0001's](0001-release-migrations.md)
 same-revision migration/deployment and does not implement automatic rollback.
 
-Both acceptance and automatic production switches start unset/off. The owner
-approved this design during the investigation; that approval does not activate
-delivery switches or claim hosted rehearsal has passed. Configuration, rollout
-and remaining limitations are in [release confidence](../operations/release-confidence.md).
+Both acceptance and automatic production switches default unset/off. Design
+approval alone does not activate them. Current operator steps are in
+[Releasing](../operations/releasing.md), coverage in [Testing](../development/testing.md),
+and dated execution evidence in [release confidence](../operations/release-confidence.md).
