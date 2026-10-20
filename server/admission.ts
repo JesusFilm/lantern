@@ -19,18 +19,7 @@ export async function approvedEmails(db: Database): Promise<string[]> {
   return result.rows.map(row => row.email as string);
 }
 
-export type AdmissionPolicy = 'local' | 'stage' | 'production';
-export function admissionPolicy(environment: string | undefined): AdmissionPolicy {
-  if (environment === undefined) return 'production';
-  if (environment === 'local' || environment === 'stage' || environment === 'production') return environment;
-  throw new Error('LANTERN_ENV must be local, stage or production.');
-}
-
-// Null means Google supplied no hosted-domain claim. A claimed work domain must
-// always be approved; an email suffix is never a substitute for that claim.
-export async function isAdmitted(db: Database, identity: { email: string; hostedDomain: string | null }, policy: AdmissionPolicy = 'production') {
-  const result = await db.query(`SELECT 1 FROM approved_emails WHERE email=$1 AND (
-    ($2::text IS NULL AND $3::boolean) OR EXISTS (SELECT 1 FROM allowed_domains WHERE domain=$2)
-  )`, [normalizeEmail(identity.email), identity.hostedDomain, policy === 'local' || policy === 'stage']);
+export async function isAdmitted(db: Database, identity: { email: string }) {
+  const result = await db.query('SELECT 1 FROM approved_emails WHERE email=$1', [normalizeEmail(identity.email)]);
   return result.rowCount === 1;
 }

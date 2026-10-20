@@ -11,7 +11,7 @@ An approved participant with active membership of the team who prepares and mana
 The person supporting members' development who can read their focuses and confirm an agreed baseline after discussion. The supported setup has one active career lead per department; this is an application role, not a database administrator.
 
 **Approved account**:
-A verified Google account whose exact normalized email is approved in the environment’s database. Local and stage permit approved personal accounts; production additionally requires an approved work hosted domain. Work accounts require an approved hosted domain everywhere. Approval permits eligible sign-in; membership and career-lead authority are separate grants. Google sign-in creates the account; approval alone creates neither an account nor a membership.
+A verified Google account whose exact normalized email is approved in the environment’s database. All environments admit approved personal and work accounts without a domain restriction. Approval permits eligible sign-in; membership and career-lead authority are separate grants. Google sign-in creates the account; approval alone creates neither an account nor a membership.
 
 **Department**:
 The team boundary within which membership and position focuses belong. An account has at most one department membership. Setup currently supports one department; transfer and rejoining workflows are unsupported. Ending membership preserves its history and department-scoped focuses.
