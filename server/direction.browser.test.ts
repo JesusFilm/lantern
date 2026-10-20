@@ -9,7 +9,7 @@ import { migrate } from "./schema.js";
 import { createApp } from "./app.js";
 import { hash } from "./access.js";
 
-test("career lead configures team direction and members remember mission visibility", { timeout: 90000 }, async (t) => {
+test("career lead configures team direction and members always see the mission", { timeout: 90000 }, async (t) => {
   const f = await privilegeFixture(), server = createServer(), browser = await chromium.launch();
   let vite: Awaited<ReturnType<typeof createViteServer>> | undefined;
   try {
@@ -35,9 +35,10 @@ test("career lead configures team direction and members remember mission visibil
     leadPage.setDefaultTimeout(5000); memberPage.setDefaultTimeout(5000);
     const mission = "We partner with the Body of Christ through heart language media, so everyone, everywhere can encounter Jesus.";
 
-    await t.test("save department configuration and show an editorial banner that remembers its state", async () => {
+    await t.test("save department configuration and always show its mission while keeping preview optional", async () => {
       await memberPage.goto(origin);
       await expect(memberPage.getByRole("heading", { name: "Position focuses", exact: true })).toBeVisible();
+      await expect(memberPage.getByText("Your documents, organised by period.", { exact: true })).toHaveCount(0);
       await expect(memberPage.getByRole("region", { name: "Our mission" })).toHaveCount(0);
       await leadPage.goto(origin + "/?page=department");
       await leadPage.getByRole("button", { name: "Mission & initiatives", exact: true }).click();
@@ -54,13 +55,23 @@ test("career lead configures team direction and members remember mission visibil
       await expect(leadPage.getByRole("cell", { name: "Language access", exact: true })).toBeVisible();
       await memberPage.goto(origin);
       await expect(memberPage.getByRole("region", { name: "Our mission" })).toContainText(mission);
-      await memberPage.getByRole("button", { name: "Hide mission", exact: true }).click();
-      await expect(memberPage.getByText(mission, { exact: true })).toBeHidden();
+      const memberArtwork = memberPage.getByRole("region", { name: "Our mission" }).locator("img");
+      await expect(memberArtwork).toBeVisible();
+      await expect.poll(() => memberArtwork.evaluate((image) => { const loaded = image as unknown as { complete: boolean; naturalWidth: number }; return loaded.complete && loaded.naturalWidth > 0; })).toBe(true);
+      await expect(memberPage.getByRole("button", { name: /^(Hide|Show) mission$/ })).toHaveCount(0);
+      await memberPage.evaluate(key => localStorage.setItem(key, "false"), `lantern:mission:${member}:${team}:expanded:v1`);
       await memberPage.reload();
-      await expect(memberPage.getByRole("button", { name: "Show mission", exact: true })).toHaveAttribute("aria-expanded", "false");
-      await memberPage.getByRole("button", { name: "Show mission", exact: true }).click();
-      await memberPage.reload();
-      await expect(memberPage.getByRole("region", { name: "Our mission" })).toContainText(mission);
+      await expect(memberPage.getByText(mission, { exact: true })).toBeVisible();
+      await leadPage.getByRole("button", { name: "Preview banner", exact: true }).click();
+      await expect(leadPage.getByRole("region", { name: "Our mission" })).toContainText(mission);
+      const previewArtwork = leadPage.getByRole("region", { name: "Our mission" }).locator("img");
+      await expect(previewArtwork).toBeVisible();
+      await expect.poll(() => previewArtwork.evaluate((image) => { const loaded = image as unknown as { complete: boolean; naturalWidth: number }; return loaded.complete && loaded.naturalWidth > 0; })).toBe(true);
+      await expect(leadPage.getByRole("button", { name: /^(Hide|Show) mission$/ })).toHaveCount(0);
+      await leadPage.getByRole("button", { name: "Close preview", exact: true }).click();
+      await expect(leadPage.getByRole("region", { name: "Our mission" })).toHaveCount(0);
+      await leadPage.getByRole("button", { name: "Preview banner", exact: true }).click();
+      await expect(leadPage.getByRole("region", { name: "Our mission" }).getByText(mission, { exact: true })).toBeVisible();
       await expect(memberPage.getByRole("button", { name: "Department", exact: true })).toHaveCount(0);
     });
 
@@ -142,25 +153,22 @@ test("career lead configures team direction and members remember mission visibil
       await memberPage.setViewportSize({ width: 1440, height: 1000 });
       await expect(memberPage.getByRole("region", { name: "Our mission" })).toContainText(mission);
       await memberPage.screenshot({ path: "/tmp/lantern-mission-expanded.png", fullPage: true });
-      await memberPage.getByRole("button", { name: "Hide mission", exact: true }).click();
-      await memberPage.screenshot({ path: "/tmp/lantern-mission-collapsed.png", fullPage: true });
       await memberPage.getByRole("button", { name: "My contribution", exact: true }).click();
       await memberPage.getByRole("button", { name: "+ Add objective", exact: true }).click();
       await expect(memberPage.getByRole("checkbox", { name: "Partner pathways", exact: true })).toBeVisible();
       await expect(memberPage.getByRole("checkbox", { name: /Language access/ })).toHaveCount(0);
       await memberPage.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
-      // Browser storage failure must not stop the banner toggle or the workspace.
+      // Browser storage failure must not stop the mission or the workspace.
       const blockedContext = await browser.newContext();
       await blockedContext.addInitScript("Object.defineProperty(window, 'localStorage', { get() { throw new Error('Storage disabled'); } })");
       await blockedContext.addCookies([{ name: "lantern-session", value: member, url: origin }]);
       const blocked = await blockedContext.newPage();
       await blocked.goto(origin);
-      await blocked.getByRole("button", { name: "Hide mission", exact: true }).click();
-      await expect(blocked.getByRole("button", { name: "Show mission", exact: true })).toBeVisible();
+      await expect(blocked.getByText(mission, { exact: true })).toBeVisible();
       await blockedContext.close();
       await memberContext.addCookies([{ name: "lantern-session", value: lead, url: origin }]);
       await memberPage.goto(origin);
-      await expect(memberPage.getByRole("button", { name: "Hide mission", exact: true })).toBeVisible();
+      await expect(memberPage.getByText(mission, { exact: true })).toBeVisible();
       await memberPage.setViewportSize({ width: 390, height: 844 });
       await memberPage.screenshot({ path: "/tmp/lantern-mission-mobile.png", fullPage: true });
       assert.ok(await memberPage.evaluate("document.documentElement.scrollWidth <= window.innerWidth"));

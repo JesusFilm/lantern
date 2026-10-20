@@ -239,7 +239,6 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
           <header>
             <div>
               <h1>Position focuses</h1>
-              <p className="muted">Your documents, organised by period.</p>
             </div>
             <button
               className="primary"
@@ -251,8 +250,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
               New position focus
             </button>
           </header>
-          {direction && <MissionBanner key={`${member.id}:${departmentId}`} mission={direction.mission}
-            storageKey={`lantern:mission:${member.id}:${departmentId}:expanded:v1`} />}
+          {direction && <MissionBanner mission={direction.mission} />}
           {items.length ? (
             <table className="focus-list">
               <thead>
