@@ -11,7 +11,7 @@ An approved participant with active membership of the team who prepares and mana
 The person supporting members' development who can read their focuses and confirm an agreed baseline after discussion. The initial trial has one career lead, Jaco.
 
 **Approved account**:
-A verified Google account whose exact normalized email is approved in the environment’s database. Local and stage permit approved personal accounts; production additionally requires an approved work hosted domain. Work accounts require an approved hosted domain everywhere. Approval permits eligible sign-in; membership and career-lead authority are separate grants.
+A verified Google account whose exact normalized email is approved in the environment’s database. All environments admit approved personal and work accounts without a domain restriction. Approval permits eligible sign-in; membership and career-lead authority are separate grants.
 
 **Department**:
 The team boundary within which membership and position focuses belong. The initial trial uses Engineering; multiple-department workflows are outside its scope.

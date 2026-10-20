@@ -15,8 +15,8 @@ async function legacyFixture() {
   const fixture = await privilegeFixture();
   try {
     await migrate(fixture.bootstrap);
-    await fixture.bootstrap.query('DROP FUNCTION public.enroll_member(uuid,text,boolean)');
-    await fixture.bootstrap.query('DELETE FROM public.schema_migrations WHERE version IN (3,4)');
+    await fixture.bootstrap.query('DROP FUNCTION public.enroll_member(uuid,text,boolean), public.enroll_member(uuid,text)');
+    await fixture.bootstrap.query('DELETE FROM public.schema_migrations WHERE version IN (3,4,5)');
     await fixture.bootstrap.query('ALTER TABLE public.position_focuses DROP COLUMN status, DROP COLUMN confirmed_at, DROP COLUMN confirmed_by');
     const user = randomUUID(), department = randomUUID(), focus = randomUUID();
     await fixture.bootstrap.query("INSERT INTO public.users VALUES($1,'synthetic-sub','person@example.test','Synthetic person','example.test')", [user]);
@@ -122,7 +122,7 @@ test('fresh setup creates the complete empty database under separate roles witho
     for (const table of ['users','departments','memberships','position_focuses','sessions','login_attempts','approved_emails','allowed_domains']) {
       assert.equal((await fresh.runtime.query(`SELECT count(*) AS count FROM ${table}`)).rows[0].count,'0');
     }
-    assert.deepEqual((await fresh.runtime.query('SELECT version FROM schema_migrations ORDER BY version')).rows,[{version:1},{version:2},{version:3},{version:4}]);
+    assert.deepEqual((await fresh.runtime.query('SELECT version FROM schema_migrations ORDER BY version')).rows,[{version:1},{version:2},{version:3},{version:4},{version:5}]);
     assert.equal((await stage.bootstrap.query('SELECT count(*) AS count FROM public.position_focuses')).rows[0].count,'1');
   } finally { await fresh.close(); await stage.close(); }
 });
@@ -161,7 +161,7 @@ test('read-only verification checks each credential scope and optional empty-dat
     await migrate(f.migration,f.roles);
     for (const scope of ['runtime','migration','admin'] as const) await verifyDatabase(f[scope],config,scope,true);
     await assert.rejects(verifyDatabase(f.admin,config,'runtime',true));
-    await f.admin.query("INSERT INTO allowed_domains VALUES('example.test')");
+    await f.admin.query("INSERT INTO approved_emails VALUES('person@example.test')");
     await assert.rejects(verifyDatabase(f.runtime,config,'runtime',true));
     await verifyDatabase(f.runtime,config,'runtime',false);
   } finally { await f.close(); }
@@ -206,7 +206,7 @@ test('runtime verification rejects missing session, focus and enrollment permiss
     for (const permission of [
       'INSERT ON lantern.sessions',
       'UPDATE (title) ON lantern.position_focuses',
-      'EXECUTE ON FUNCTION lantern.enroll_member(uuid,text,boolean)',
+      'EXECUTE ON FUNCTION lantern.enroll_member(uuid,text)',
     ]) {
       await f.bootstrap.query(`REVOKE ${permission} FROM "${f.roles.runtime}"`);
       await assert.rejects(verifyDatabase(f.runtime,config,'runtime',true), /permission is missing/);

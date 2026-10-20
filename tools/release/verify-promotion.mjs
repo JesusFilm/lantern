@@ -16,5 +16,5 @@ execFileSync('gh',['run','download',String(run.id),'--repo',repository,'--name',
 const evidence = JSON.parse(await readFile('stage-evidence/release-evidence.json','utf8'));
 promotionGate(sha,evidence);
 assert.equal(String(evidence.runId),String(run.id),'Evidence run mismatch.');
-await appendFile(output,`STAGE_RUN_ID=${run.id}\n`);
+await appendFile(output,`STAGE_RUN_ID=${run.id}\nEXPECTED_SCHEMA_VERSION=${evidence.schemaVersion}\n`);
 console.log('Exact main revision has successful staging readiness.');

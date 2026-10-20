@@ -80,7 +80,6 @@ jobs:
         working-directory: candidate
         env:
           RELEASE_SMOKE_MODE: readiness
-          EXPECTED_SCHEMA_VERSION: '4'
       - name: Record production release
         run: |
           node --input-type=module <<'JS'

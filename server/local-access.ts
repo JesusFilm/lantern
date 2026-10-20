@@ -13,7 +13,7 @@ export async function prepareLocalAccount(db: Pool) {
     const id = randomUUID(),
       department = randomUUID();
     await client.query(
-      "INSERT INTO users(id,google_sub,email,name,hosted_domain) VALUES($1,'local:lantern-workspace','local@lantern.test','Local user','lantern.test')",
+      "INSERT INTO users(id,google_sub,email,name) VALUES($1,'local:lantern-workspace','local@lantern.test','Local user')",
       [id],
     );
     await client.query(

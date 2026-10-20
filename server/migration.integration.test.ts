@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createDatabase } from './database.js';
 import { migrate, assertSchemaReady } from './schema.js';
-import { configureDomains } from './membership.js';
+import { approveEmail } from './admission.js';
 test('empty schema is unready; concurrent and repeated migrations preserve operator configuration', async () => {
   const admin = createDatabase(process.env.DATABASE_URL!);
   const schema = `migration_${randomUUID().replaceAll('-', '')}`;
@@ -13,11 +13,11 @@ test('empty schema is unready; concurrent and repeated migrations preserve opera
   try {
     await assert.rejects(assertSchemaReady(db));
     await Promise.all([migrate(db), migrate(db), migrate(db)]);
-    await configureDomains(db, ['example.test']);
+    await approveEmail(db, 'person@example.test');
     await migrate(db);
     await assertSchemaReady(db);
     // Migration/operator storage boundary: verify existing rows, not just successful DDL.
-    assert.deepEqual((await db.query('SELECT domain FROM allowed_domains')).rows, [{ domain: 'example.test' }]);
+    assert.deepEqual((await db.query('SELECT email FROM approved_emails')).rows, [{ email: 'person@example.test' }]);
     await db.query('ALTER TABLE users RENAME TO unavailable_users');
     await assert.rejects(assertSchemaReady(db));
   } finally { await db.end(); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.end(); }

@@ -459,7 +459,7 @@ confirm 'Did the exact-SHA production workflow finish successfully with matching
 
 stage 'Finish verification and private cleanup'
 say 'Production now has the schema/application. No staging records have been copied.'
-say 'An empty database admits nobody. Before real sign-in, use the existing access:ops domains and approve-email commands privately; production needs an approved hosted domain AND email. Set up departments only after the lead has registered.'
+say 'An empty database admits nobody. Before real sign-in, use the existing access:ops approve-email command privately; every environment requires an exact approved email. Set up departments only after the lead has registered.'
 say 'Verify sign-in and access boundaries as owner; share only sanitized success/failure, never user records, credentials or conversation content.'
 say "Keep $PRIVATE_DIR securely for separate admin/migration access; do not commit/upload it or source operator.env."
 say 'Owner URL is already discarded and psql closed. Remove any temporary owner credentials/grants you created; retain only deliberately needed scoped credentials.'

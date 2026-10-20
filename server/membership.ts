@@ -1,4 +1,3 @@
-import { type AdmissionPolicy } from './admission.js';
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 
@@ -28,9 +27,9 @@ export async function membership(db: Pool | PoolClient, userId: string) {
   return rows[0] as { id: string; name: string; role: 'member' | 'career-lead' } | undefined;
 }
 
-export async function addMember(db: Pool, actorId: string, userId: string, policy: AdmissionPolicy = 'production') {
+export async function addMember(db: Pool, actorId: string, userId: string) {
   try {
-    await db.query('SELECT enroll_member($1::uuid,$2::text,$3::boolean)', [actorId, userId, policy !== 'production']);
+    await db.query('SELECT enroll_member($1::uuid,$2::text)', [actorId, userId]);
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && ['P0400','P0403','P0409'].includes(String(error.code))) {
       throw new AccessError(Number(String(error.code).slice(2)), error instanceof Error ? error.message : 'Enrollment rejected.');
@@ -39,27 +38,13 @@ export async function addMember(db: Pool, actorId: string, userId: string, polic
   }
 }
 
-export async function configureDomains(db: Pool, domains: string[]) {
-  const normalized = [...new Set(domains.map((value) => value.trim().toLowerCase()))];
-  if (!normalized.length || normalized.some((value) => !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(value))) {
-    throw new Error('Supply at least one valid work domain.');
-  }
-  await membershipWrite(db, async (client) => {
-    const leads = await client.query(`SELECT u.hosted_domain FROM memberships m JOIN users u ON u.id=m.user_id
-      WHERE m.role='career-lead' AND m.deleted_at IS NULL`);
-    if (leads.rows.some((row) => !normalized.includes(row.hosted_domain))) throw new Error('Preserve the career lead’s approved domain.');
-    await client.query('DELETE FROM allowed_domains');
-    await client.query('INSERT INTO allowed_domains SELECT unnest($1::text[])', [normalized]);
-  });
-}
-
 export async function setupDepartment(db: Pool, name: string, leadEmail: string) {
   if (!name.trim() || !leadEmail.trim()) throw new Error('Department name and registered career-lead email are required.');
   await membershipWrite(db, async (client) => {
-    const users = await client.query(`SELECT u.id FROM users u JOIN allowed_domains a ON a.domain=u.hosted_domain
+    const users = await client.query(`SELECT u.id FROM users u
       JOIN approved_emails e ON e.email=lower(btrim(u.email))
       WHERE lower(btrim(u.email))=lower($1)`, [leadEmail.trim()]);
-    if (users.rowCount !== 1) throw new Error('Career lead must first register with an approved Google work account; email must identify one account.');
+    if (users.rowCount !== 1) throw new Error('Career lead must first register with an approved Google account; email must identify one account.');
     const leadId = users.rows[0].id;
     const departments = await client.query('SELECT id, name, deleted_at FROM departments');
     if (departments.rowCount) {

@@ -39,7 +39,6 @@ test('production-only package migrates, starts without dotenv, serves assets and
        ['operations', {ADMIN_DATABASE_URL:url.href}],
        ['operations', {LANTERN_DB_NAME:'wrong_target'}],
      ] as const) assert.throws(() => execFileSync(process.execPath, [`dist/server/${file}.js`, 'approve-email', 'forbidden@example.test'], {cwd:dir,env:{...commandEnv,...patch},stdio:'pipe'}));
-     execFileSync(process.execPath, ['dist/server/operations.js', 'domains', 'example.test'], { cwd: dir, env: commandEnv, stdio: 'pipe' });
      execFileSync(process.execPath, ['dist/server/operations.js', 'approve-email', 'personal@gmail.com'], { cwd: dir, env: commandEnv, stdio: 'pipe' });
      assert.match(execFileSync(process.execPath, ['dist/server/operations.js', 'list-approved-emails'], { cwd: dir, env: commandEnv, encoding: 'utf8' }), /personal@gmail.com/);
      if (n === 0) {
@@ -54,9 +53,9 @@ test('production-only package migrates, starts without dotenv, serves assets and
      const origin: string = `http://127.0.0.1:${address.port}`;
      const health = await fetch(origin+'/health');
      assert.equal(health.status, 200);
-     assert.equal(health.headers.get('x-lantern-schema'), '4');
+     assert.equal(health.headers.get('x-lantern-schema'), '5');
      const session = await (await fetch(origin+'/api/session', { headers: { Cookie: `__Host-lantern-session=${personalToken}` } })).json() as { user: { id: string } | null };
-     assert.equal(session.user?.id ?? null, n === 0 ? personalId : null);
+     assert.equal(session.user?.id ?? null, personalId);
      if (n === 0) {
        await stop();
        child = spawn(process.execPath, ['dist/server/index.js'], { cwd: dir, env: { ...env, LANTERN_HOSTING_ONLY:'1', GOOGLE_CLIENT_ID:'', GOOGLE_CLIENT_SECRET:'' }, stdio: ['ignore','pipe','pipe'] });

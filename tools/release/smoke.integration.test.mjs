@@ -53,7 +53,7 @@ test('stage smoke exercises real HTTPS/browser/PostgreSQL and refuses expired QA
   assert.equal(production.readiness,'passed');
   assert.equal(production.target,'production');
   assert.equal(production.stage,undefined);
-  assert.deepEqual(await smoke(env,transport),{sha,stage:'passed',target:'stage',deployment:'isolated-test-deployment',schemaVersion:4,runId:'123'});
+  assert.deepEqual(await smoke(env,transport),{sha,stage:'passed',target:'stage',deployment:'isolated-test-deployment',schemaVersion:5,runId:'123'});
   await db.query('DELETE FROM sessions');
   await assert.rejects(smoke(env,transport));
   const readiness = await smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'4'},transport);
