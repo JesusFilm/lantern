@@ -86,7 +86,7 @@ test('invalid fresh inputs leave no package and do not expose values',()=>fixtur
  assert.deepEqual(readdirSync(parent),before);
 }));
 test('write and resume command adapters round trip a package without emitting admin credentials',()=>fixture((parent,ca)=>{
- const command=new URL('./settings-command.mjs',import.meta.url).pathname;
+ const command=fileURLToPath(new URL('./settings-command.mjs',import.meta.url));
  const result=spawnSync(process.execPath,[command,'write'],{env:{...settings,SETUP_CA:join(parent,'ca.pem'),TMPDIR:parent},encoding:'utf8'});
  assert.equal(result.status,0,result.stderr);
  const directory=result.stdout.trim();assert.equal(directory.startsWith(parent+'/lantern-production-settings.'),true);
