@@ -33,7 +33,16 @@ For Google sign-in, configure a Web OAuth client with the callback `APP_ORIGIN/a
 
 GitHub Actions checks types, runs PostgreSQL/browser tests, and builds the application. [Staging delivery](.github/workflows/ci.yml) runs for successful main commits when repository variable `STAGE_DELIVERY_ENABLED=true`, using the GitHub `stage` environment. It applies migrations directly from the runner, then uploads the matching webapp revision.
 
-[Production deployment](.github/workflows/promote.yml) accepts one full main commit SHA and verifies its successful staging readiness artifact. Run `gh workflow run promote.yml --ref main -f sha=<full-main-sha>` after configuring production. The selected revision must include the GitHub migration runner's TLS-compatible operator validation. Production receives schema changes only; staging records are never copied.
+**Main represents the staging delivery path. Production is deployed separately from a selected main SHA and may lag behind main.** [ADR 0001](docs/adrs/0001-release-migrations.md) records the release architecture. Staging and production keep separate data.
+
+For an ordinary [production release](.github/workflows/promote.yml) (initial provisioning is described below):
+
+1. Merge a reviewed PR with passing checks. Wait for that main commit's **stage delivery and smoke** job to pass; unit tests/build alone do not make it eligible.
+2. With production release authorization and permitted access, select that full 40-character SHA and run `gh workflow run promote.yml --ref main -f sha=<full-main-sha>`, or use **Actions → Deploy production → Run workflow** on `main` with the same SHA input.
+3. Follow the new run through configuration checks, migrations, deployment and smoke. Confirm its `production-evidence-<sha>` artifact reports the selected `sha`, `readiness: passed`, deployment ID and schema version. The workflow's own main/head SHA can differ from the selected application SHA; use the artifact and `/health` release headers to identify what is deployed.
+4. Report the selected SHA and run link. Readiness checks health, anonymous access denial and the login screen; authenticated user workflows need separate verification. On failure, inspect the reported checkpoint and stop before retrying; migrations may already have committed.
+
+The workflow controllers come from main and deploy the selected revision's application and migrations. Keep schema changes compatible with the application serving during deployment; check both workflows' expected schema version when adding a migration. Promote with this workflow so independent Railway deploy triggers cannot bypass its checks.
 
 Configure the settings listed under [Environment variables](#environment-variables) separately for staging and production.
 

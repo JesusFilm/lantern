@@ -13,6 +13,8 @@ Lantern helps team members prepare a position focus and agree it with their care
 
 Hosted access uses Google sign-in and server-issued sessions. Admission requires an approved email; production additionally requires the configured work domain. Active department membership and server-assigned roles determine access. Members cannot read another member's focuses; career leads can read and confirm focuses within their department, but cannot edit another member's draft.
 
+See [People and access](../GLOSSARY.md#people-and-access) for the account, approval, membership and career-lead relationships. A manager does not automatically gain access through their job title; application permissions come from active membership and role.
+
 PostgreSQL stores account, membership and focus data. Saves detect concurrent edits. Ending membership removes access while preserving department-scoped history. Local access is explicitly configured and disabled by default.
 
 ## Delivery and scope
@@ -20,3 +22,7 @@ PostgreSQL stores account, membership and focus data. Saves detect concurrent ed
 Staging should receive application and schema changes automatically after a PR merges to main. Production releases are manually initiated for a selected full main commit SHA, with migrations and the application deployed from that same revision. Deployment commands and configuration belong in the repository's executable release tooling and README.
 
 Current work prioritizes reliable delivery and a usable hosted product. New product scope is chosen directly by the owner. Later review cycles, unlocking or copying confirmed focuses, notifications, dashboards, and broader administration need a separate product decision before implementation.
+
+## Proposed weekly reporting
+
+The intended addition lets people state plans for a week and report whether they achieved them, alongside their position focuses in Lantern's UI using its existing authentication and database. This is not implemented. Before implementation, agree who can see/edit reports, how weeks and outcomes are defined, and whether reports link to particular focuses or goals. Confirmation of a focus records agreement, not achievement. Record consequential architecture choices through the [ADR process](adrs/AGENTS.md); sharing infrastructure does not grant access to another person's records.
