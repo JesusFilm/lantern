@@ -67,8 +67,8 @@ A concise generic illustration of one objective and two goals. Its targets do no
 **Organizational mission**:
 “We partner with the Body of Christ through heart language media, so everyone, everywhere can encounter Jesus.”
 The career lead configures the wording shown to their department in Lantern. The
-mission appears as an optional expandable reminder on Position Focuses, outside
-the objective editor. Configuration is department-scoped; it does not confer
+configured mission remains visible on Position Focuses, outside the objective
+editor. Configuration is department-scoped; it does not confer
 organization-wide administrative permissions.
 
 **Strategic initiative**:

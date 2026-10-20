@@ -56,18 +56,14 @@
 }
 .mission-banner .mission-quote { color: #bce0e6; font: 100px/1 Georgia, serif; height: 64px; }
 .mission-banner .mission-body { flex: 1; min-width: 0; }
+.mission-banner .mission-art { width: clamp(140px, 22vw, 240px); height: auto; flex-shrink: 0; align-self: center; object-fit: contain; transform: scaleX(-1); }
 .mission-banner h2 { color: #007e95; text-transform: uppercase; letter-spacing: .12em; font-size: 12px; margin: 6px 0; }
 .mission-banner p { font-size: 24px; font-weight: 650; line-height: 1.5; margin: 14px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
-.mission-banner button { white-space: nowrap; flex-shrink: 0; }
-.mission-banner button span { margin-left: 10px; }
-.mission-banner.collapsed { align-items: center; padding: 12px 24px; }
-.mission-banner.collapsed .mission-quote { font-size: 48px; height: 32px; }
 @media (max-width: 700px) {
   .mission-banner { gap: 12px; padding: 20px; flex-wrap: wrap; }
   .mission-banner .mission-quote { font-size: 64px; width: 26px; }
   .mission-banner p { font-size: 20px; }
-  .mission-banner button { margin-left: auto; }
-  .mission-banner.collapsed { gap: 10px; padding: 12px; }
+  .mission-banner .mission-art { grid-column: 2; width: 150px; justify-self: end; }
   .initiative-table td, .initiative-table th { padding: 12px 6px; }
   .initiative-actions { flex-direction: column; gap: 4px; align-items: flex-start; }
   .direction-save { flex-wrap: wrap; }
@@ -1539,9 +1535,9 @@ dialog:has(.initiative-choices) .type-choice {
 }
 dialog:has(.initiative-choices) .type-choice strong { font-size: 13px; font-weight: 500; }
 dialog .initiative-choices .initiative-option { font-size: 14px; color: #17324e; }
+
 @media (max-width: 700px) {
-  .mission-banner.expanded { display: grid; grid-template-columns: 26px minmax(0, 1fr); }
-  .mission-banner.expanded button { grid-column: 2; justify-self: end; }
+  .mission-banner { display: grid; grid-template-columns: 26px minmax(0, 1fr); }
 }
 .confirmation-summary { padding: 20px 24px; background: #f1f5f9; border-radius: 8px; margin: 24px 0; }
 .confirmation-summary h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #61768e; margin: 0 0 12px; }
