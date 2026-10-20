@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
@@ -35,7 +36,7 @@ test("department direction persists through the authenticated HTTP interface", a
     await t.test("lead saves mission and initiatives, which members can reopen", async () => {
       const initial = await request(lead);
       assert.equal(initial.status, 200);
-      assert.deepEqual(await initial.json(), { mission: "", initiatives: [], version: 0 });
+      assert.deepEqual(await initial.json(), { mission: "", missionImage: "/mission-jesus-geometric.png", initiatives: [], version: 0 });
       const response = await request(lead, undefined, "PUT", {
         mission: "Help people find hope in their heart language.", version: 0,
         initiatives: [{ name: "Language access", archived: false }, { name: "Partner pathways", archived: false }],
@@ -49,7 +50,38 @@ test("department direction persists through the authenticated HTTP interface", a
       server.removeAllListeners("request");
       server.on("request", createApp(f.runtime, { origin }));
       assert.deepEqual(await (await request(member)).json(), saved);
-      assert.deepEqual(await (await request(outsider)).json(), { mission: "", initiatives: [], version: 0 });
+      assert.deepEqual(await (await request(outsider)).json(), { mission: "", missionImage: "/mission-jesus-geometric.png", initiatives: [], version: 0 });
+    });
+
+    await t.test("mission artwork persists atomically, is isolated and rejects invalid uploads", async () => {
+      const before = await (await request(lead)).json() as DepartmentDirection;
+      const png = await sharp({ create: { width: 1600, height: 400, channels: 4, background: "#007e95" } }).png().toBuffer();
+      const missionImage = `data:image/png;base64,${png.toString("base64")}`;
+      const response = await request(lead, undefined, "PUT", { ...before, missionImage });
+      assert.equal(response.status, 200);
+      const saved = await response.json() as DepartmentDirection;
+      assert.equal(typeof saved.missionImage, "string");
+      assert.match(saved.missionImage!, /^data:image\/webp;base64,/);
+      const metadata = await sharp(Buffer.from(saved.missionImage!.split(",")[1]!, "base64")).metadata();
+      assert.equal(metadata.width, 1280); assert.equal(metadata.height, 320);
+      server.removeAllListeners("request"); server.on("request", createApp(f.runtime, { origin }));
+      assert.deepEqual(await (await request(member)).json(), saved);
+      assert.notEqual(((await (await request(outsider)).json()) as DepartmentDirection).missionImage, saved.missionImage);
+      assert.equal((await request(member, undefined, "PUT", { ...saved, missionImage: null })).status, 403);
+      assert.equal((await request(lead, undefined, "PUT", { ...before, missionImage: null })).status, 409);
+      for (const invalid of ["https://example.test/image.png", "data:image/svg+xml;base64,PHN2Zy8+", "data:image/png;base64,YmFk", missionImage.replace("image/png", "image/jpeg"), 4,
+        `data:image/png;base64,${Buffer.alloc(513 * 1024).toString("base64")}`]) {
+        assert.equal((await request(lead, undefined, "PUT", { ...saved, mission: "Must not save", missionImage: invalid })).status, 400);
+      }
+      assert.deepEqual(await (await request(lead)).json(), saved);
+      // Older clients that omit the image must preserve the saved image.
+      const { missionImage: ignored, ...legacy } = saved;
+      const retained = await (await request(lead, undefined, "PUT", legacy)).json() as DepartmentDirection;
+      assert.equal(retained.missionImage, saved.missionImage);
+      const removed = await (await request(lead, undefined, "PUT", { ...retained, missionImage: null })).json() as DepartmentDirection;
+      assert.equal(removed.missionImage, null);
+      const reset = await (await request(lead, undefined, "PUT", { ...removed, missionImage: "/mission-jesus-geometric.png" })).json() as DepartmentDirection;
+      assert.equal(reset.missionImage, "/mission-jesus-geometric.png");
     });
 
     await t.test("initiative appearance persists for the department and is validated atomically", async () => {
@@ -213,7 +245,7 @@ test("department direction persists through the authenticated HTTP interface", a
     await t.test("failed and concurrent configuration saves cannot partially replace the mission or initiatives", async () => {
       const before = await (await request(lead)).json() as DepartmentDirection;
       await f.migration.query("ALTER TABLE department_direction ADD CONSTRAINT synthetic_direction_failure CHECK (mission <> 'Fail this write')");
-      const failed = await request(lead, undefined, "PUT", { ...before, mission: "Fail this write",
+      const failed = await request(lead, undefined, "PUT", { ...before, mission: "Fail this write", missionImage: null,
         initiatives: [...before.initiatives, { name: "Should not persist", archived: false }] });
       assert.equal(failed.status, 503);
       assert.deepEqual(await failed.json(), { error: "The service is temporarily unavailable. Please try again." });
@@ -274,7 +306,7 @@ test("schema 6 upgrades add empty direction without rewriting existing focus doc
   try {
     await migrate(f.migration, f.roles);
     await f.migration.query("DROP TABLE department_direction");
-    await f.migration.query("DELETE FROM schema_migrations WHERE version=7");
+    await f.migration.query("DELETE FROM schema_migrations WHERE version IN (7,8)");
     const user = randomUUID(), department = randomUUID(), id = randomUUID();
     await f.admin.query("INSERT INTO users VALUES($1::uuid,$1::text,'legacy@example.test','Legacy member')", [user]);
     await f.admin.query("INSERT INTO departments(id,name) VALUES($1,'Legacy team')", [department]);
@@ -289,7 +321,7 @@ test("schema 6 upgrades add empty direction without rewriting existing focus doc
     const address = server.address(); assert.ok(address && typeof address !== "string");
     const origin = `http://127.0.0.1:${address.port}`;
     server.on("request", createApp(f.runtime, { origin, localUserId: user }));
-    assert.deepEqual(await (await fetch(origin + "/api/department/direction")).json(), { mission: "", initiatives: [], version: 0 });
+    assert.deepEqual(await (await fetch(origin + "/api/department/direction")).json(), { mission: "", missionImage: "/mission-jesus-geometric.png", initiatives: [], version: 0 });
     const focus = await (await fetch(origin + "/api/focuses/" + id)).json() as PositionFocus;
     assert.deepEqual(focus.sections, sections);
     assert.equal(focus.version, 1);
@@ -300,5 +332,35 @@ test("schema 6 upgrades add empty direction without rewriting existing focus doc
     server.closeAllConnections();
     await new Promise<void>(resolve => server.close(() => resolve()));
     await f.close();
+  }
+});
+
+test("schema 7 upgrade preserves existing direction and adds the default artwork", async () => {
+  const f = await privilegeFixture();
+  const server = createServer();
+  try {
+    await migrate(f.migration, f.roles);
+    const user = randomUUID(), department = randomUUID();
+    await f.admin.query("INSERT INTO users VALUES($1::uuid,$1::text,'upgrade@example.test','Lead')", [user]);
+    await f.admin.query("INSERT INTO departments(id,name) VALUES($1,'Upgrade team')", [department]);
+    await f.admin.query("INSERT INTO memberships VALUES($1,$2,'career-lead',NULL)", [user, department]);
+    await f.admin.query("INSERT INTO department_direction(department_id,mission,version) VALUES($1,'Keep this mission',3)", [department]);
+    await f.migration.query("ALTER TABLE department_direction DROP COLUMN mission_image");
+    await f.migration.query("DELETE FROM schema_migrations WHERE version=8");
+    await assert.rejects(assertSchemaReady(f.runtime));
+    await migrate(f.migration, f.roles);
+    await migrate(f.migration, f.roles);
+    await assertSchemaReady(f.runtime);
+    await new Promise<void>(r => server.listen(0, "127.0.0.1", r));
+    const address = server.address(); assert.ok(address && typeof address !== "string");
+    const origin = `http://127.0.0.1:${address.port}`;
+    server.on("request", createApp(f.runtime, { origin, localUserId: user }));
+    const direction = await (await fetch(origin + "/api/department/direction")).json() as DepartmentDirection;
+    assert.deepEqual(direction, { mission: "Keep this mission", initiatives: [], version: 3, missionImage: "/mission-jesus-geometric.png" });
+    // The previous deployed application's SQL remains valid during migration-before-deploy.
+    await f.runtime.query("UPDATE department_direction SET mission='Older app edit',version=version+1 WHERE department_id=$1", [department]);
+    assert.equal(((await (await fetch(origin + "/api/department/direction")).json()) as DepartmentDirection).missionImage, "/mission-jesus-geometric.png");
+  } finally {
+    server.closeAllConnections(); await new Promise<void>(r => server.close(() => r())); await f.close();
   }
 });

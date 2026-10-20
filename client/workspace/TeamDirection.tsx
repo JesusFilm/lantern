@@ -1,3 +1,4 @@
+import { MissionImageDialog } from "./MissionImageDialog.js";
 import { useEffect, useState } from "react";
 import type { DepartmentDirection, DirectionDraft } from "../../shared/direction.js";
 import { api } from "./api.js";
@@ -9,7 +10,7 @@ export function TeamDirection() {
   const [saved, setSaved] = useState<DepartmentDirection>();
   const [draft, setDraft] = useState<DirectionDraft>();
   const [error, setError] = useState(""), [notice, setNotice] = useState("");
-  const [busy, setBusy] = useState(false), [preview, setPreview] = useState(false);
+  const [busy, setBusy] = useState(false), [choosingImage, setChoosingImage] = useState(false);
   const [editing, setEditing] = useState<number>();
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -38,13 +39,19 @@ export function TeamDirection() {
         }}>
           <fieldset className="direction-fields" disabled={busy}>
             <section className="card mission-editor">
-              <h2><label htmlFor="organizational-mission">Organizational mission</label></h2>
-              <p className="muted">A short reminder on Position Focuses. Leave blank to hide the banner.</p>
-              <textarea id="organizational-mission" maxLength={1000} rows={3} value={draft.mission}
+              <h2>Organizational mission</h2>
+              <p className="muted">A short reminder on Position focuses. Leave blank to hide the banner.</p>
+              <div className="mission-editor-preview">
+                {draft.mission.trim() ? <MissionBanner mission={draft.mission.trim()} image={draft.missionImage}
+                  onChooseImage={() => setChoosingImage(true)} /> : <div className="mission-empty-preview">
+                  <p>The banner is hidden while the mission statement is blank.</p>
+                  <button type="button" onClick={() => setChoosingImage(true)}>Choose banner image</button>
+                </div>}
+              </div>
+              <label htmlFor="organizational-mission">Mission statement</label>
+              <textarea id="organizational-mission" aria-label="Organizational mission" maxLength={1000} rows={3} value={draft.mission}
                 onChange={event => change({ ...draft, mission: event.target.value })} />
-              <button type="button" className="link" aria-expanded={preview} disabled={!draft.mission.trim()}
-                onClick={() => setPreview(value => !value)}>{preview ? "Close preview" : "Preview banner"}</button>
-              {preview && <MissionBanner mission={draft.mission.trim()} />}
+              <p className="muted">Change the image directly in the preview. The whole image fits without cropping.</p>
             </section>
             <section className="card">
               <div className="row">
@@ -77,6 +84,10 @@ export function TeamDirection() {
           {notice && <p role="status">{notice}</p>}
         </form>
       )}
+      {draft && choosingImage && <MissionImageDialog initial={draft.missionImage}
+        onClose={() => setChoosingImage(false)} onSave={missionImage => {
+          change({ ...draft, missionImage }); setChoosingImage(false);
+        }} />}
       {draft && editing !== undefined && <InitiativeDialog initial={draft.initiatives[editing]}
         onClose={() => setEditing(undefined)}
         onSave={initiative => {

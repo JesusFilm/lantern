@@ -7,6 +7,7 @@ export function Dialog({
   onClose,
   saveLabel = "Save changes",
   saveIcon,
+  saveDisabled = false,
 }: {
   title: string;
   children: ReactNode;
@@ -14,6 +15,7 @@ export function Dialog({
   onClose: () => void;
   saveLabel?: string;
   saveIcon?: ReactNode;
+  saveDisabled?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [busy, setBusy] = useState(false),
@@ -35,7 +37,7 @@ export function Dialog({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (busy) return;
+          if (busy || saveDisabled) return;
           const data = new FormData(e.currentTarget);
           setBusy(true);
           setError("");
@@ -55,7 +57,7 @@ export function Dialog({
           <button type="button" disabled={busy} onClick={onClose}>
             Cancel
           </button>
-          <button className={saveIcon ? "primary button-with-icon" : "primary"} disabled={busy}>
+          <button className={saveIcon ? "primary button-with-icon" : "primary"} disabled={busy || saveDisabled}>
             {!busy && saveIcon}
             {busy ? "Saving…" : saveLabel}
           </button>

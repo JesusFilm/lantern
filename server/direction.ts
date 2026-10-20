@@ -1,3 +1,4 @@
+import { normalizeMissionImage } from "./mission-image.js";
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import type { DepartmentDirection, DirectionDraft, ObjectiveAlignment } from "../shared/direction.js";
@@ -7,6 +8,7 @@ import { isPresetAppearance, validateInitiativeAppearance } from "../shared/init
 
 export async function readDirection(db: Pool | PoolClient, actorId: string): Promise<DepartmentDirection> {
   const result = await db.query(`SELECT COALESCE(c.mission,'') AS mission,
+    CASE WHEN c.department_id IS NULL THEN '/mission-jesus-geometric.png' ELSE c.mission_image END AS "missionImage",
     COALESCE(c.initiatives,'[]'::jsonb) AS initiatives, COALESCE(c.version,0) AS version
     FROM memberships m JOIN departments d ON d.id=m.department_id AND d.deleted_at IS NULL
     LEFT JOIN department_direction c ON c.department_id=d.id
@@ -19,7 +21,8 @@ export function validateDirection(value: unknown): DirectionDraft {
   const fail = (): never => { throw new AccessError(400, "Enter a mission of up to 1,000 characters and uniquely named initiatives of 1–120 characters."); };
   if (!value || typeof value !== "object" || Array.isArray(value)) return fail();
   const data = value as DirectionDraft;
-  if (Object.keys(data).some(k => !["mission", "initiatives", "version"].includes(k)) ||
+  if (Object.keys(data).some(k => !["mission", "missionImage", "initiatives", "version"].includes(k)) ||
+      (data.missionImage !== undefined && data.missionImage !== null && typeof data.missionImage !== "string") ||
       typeof data.mission !== "string" || data.mission.length > 1000 ||
       !Number.isSafeInteger(data.version) || data.version < 0 ||
       !Array.isArray(data.initiatives) || data.initiatives.length > 100) return fail();
@@ -39,6 +42,7 @@ export function validateDirection(value: unknown): DirectionDraft {
   }
   try {
     return { mission: data.mission.trim(), version: data.version,
+      ...(data.missionImage !== undefined ? { missionImage: data.missionImage } : {}),
       initiatives: data.initiatives.map(item => ({ ...item, name: item.name.trim(),
         ...(item.appearance !== undefined ? { appearance: validateInitiativeAppearance(item.appearance) } : {}) })) };
   } catch (error) { throw new AccessError(400, (error as Error).message); }
@@ -63,11 +67,13 @@ export async function saveDirection(db: Pool, actorId: string, draft: DirectionD
       if (!original || JSON.stringify(validateInitiativeAppearance(original)) !== JSON.stringify(item.appearance))
         throw new AccessError(400, "Choose an icon and color from the initiative presets.");
     }
+    const missionImage = draft.missionImage === undefined || draft.missionImage === previous.missionImage
+      ? previous.missionImage : await normalizeMissionImage(draft.missionImage);
     const initiatives = draft.initiatives.map(item => ({ ...item, id: item.id ?? randomUUID() }));
-    const result = await client.query(`INSERT INTO department_direction(department_id,mission,initiatives,version)
-      VALUES($1,$2,$3,1) ON CONFLICT(department_id) DO UPDATE
-      SET mission=EXCLUDED.mission,initiatives=EXCLUDED.initiatives,version=department_direction.version+1
-      RETURNING mission,initiatives,version`, [department.id, draft.mission, JSON.stringify(initiatives)]);
+    const result = await client.query(`INSERT INTO department_direction(department_id,mission,initiatives,version,mission_image)
+      VALUES($1,$2,$3,1,$4) ON CONFLICT(department_id) DO UPDATE
+      SET mission=EXCLUDED.mission,mission_image=EXCLUDED.mission_image,initiatives=EXCLUDED.initiatives,version=department_direction.version+1
+      RETURNING mission,initiatives,version,mission_image AS "missionImage"`, [department.id, draft.mission, JSON.stringify(initiatives), missionImage]);
     return result.rows[0];
   });
 }

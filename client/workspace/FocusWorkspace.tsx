@@ -250,7 +250,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
               New position focus
             </button>
           </header>
-          {direction && <MissionBanner mission={direction.mission} />}
+          {direction && <MissionBanner mission={direction.mission} image={direction.missionImage} />}
           {items.length ? (
             <table className="focus-list">
               <thead>
