@@ -142,3 +142,26 @@ If relationships no longer match the fixture's scope, cleanup rolls back and
 acceptance fails. Inspect that staging fixture through authorized operator access;
 do not broaden deletion predicates or delete human staging data to get a green
 run. No evidence is emitted until the browser journey and cleanup both succeed.
+
+## Independent design review — 21 October 2026
+
+An Astra Ultra review supports staging mutation tests with minimal production
+readiness, and identified these changes before activation:
+
+- **Manual override:** preserve readiness evidence before acceptance and verify
+  successful build/type/database prerequisites separately for a completed main
+  run. Test manual promotion after failed acceptance and cleanup, plus rejection
+  after failed build or readiness. Keep automatic admission strict.
+- **Failure diagnosis:** retain separate fixed-field journey and cleanup outcomes
+  in the GitHub run summary, including failure and skipped/not-reached states.
+  Currently a fixture cleanup error masks the original browser failure. Never
+  upload raw exceptions, session state, personnel content or traces to solve this.
+  Diagnostic output is not passing promotion evidence.
+
+These are review findings, not implemented corrections. Hosted rehearsal remains
+required; review does not prove deployed behavior or Google interactive sign-in.
+
+The reviewer also confirmed that the hosted journey does not yet exercise login/
+session issuance, enrollment or every initiative lifecycle action. Local tests
+cover broader behavior; do not describe hosted acceptance as exhaustive coverage.
+The review was static: no tests were rerun and no hosted systems were accessed.
