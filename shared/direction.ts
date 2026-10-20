@@ -20,8 +20,3 @@ export interface DirectionDraft {
   initiatives: Array<Omit<StrategicInitiative, "id"> & { id?: string }>;
   version: number;
 }
-
-export interface ObjectiveAlignment {
-  initiatives: Array<Pick<StrategicInitiative, "id" | "name" | "appearance">>;
-  other: boolean;
-}

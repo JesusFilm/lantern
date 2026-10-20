@@ -242,6 +242,131 @@ test("department direction persists through the authenticated HTTP interface", a
       assert.deepEqual(leadView.focus.sections, focus.sections);
     });
 
+    await t.test("members save ID-only choices and receive trusted snapshots on create and update", async () => {
+      const before = await (await request(lead)).json() as DepartmentDirection;
+      const configured = await request(lead, undefined, "PUT", { ...before, initiatives: [...before.initiatives,
+        { name: "ID-only selection", archived: false, appearance: { icon: "heart", color: "#d13d46" } }] });
+      assert.equal(configured.status, 200);
+      const direction = await configured.json() as DepartmentDirection;
+      const choice = direction.initiatives.at(-1)!;
+      const draft = { title: "Member intent", start: "2026-01-01", end: "2026-12-31", sections: [
+        { kind: "normal", objective: "Choose by identity", goals: ["Deliver by June"], alignment: { other: false, initiatives: [{ id: choice.id }] } },
+      ] };
+      const created = await request(member, "/api/focuses", "POST", draft);
+      assert.equal(created.status, 201);
+      let focus = await created.json() as PositionFocus;
+      const expected = { id: choice.id, name: "ID-only selection", appearance: { icon: "heart", color: "#d13d46" } };
+      assert.deepEqual(focus.sections[0]!.alignment!.initiatives, [expected]);
+      const path = `/api/focuses/${focus.id}`;
+      const updated = await request(member, path, "PUT", { ...draft, title: "Edited intent", version: focus.version });
+      assert.equal(updated.status, 200);
+      focus = await updated.json() as PositionFocus;
+      assert.deepEqual(focus.sections[0]!.alignment!.initiatives, [expected]);
+      for (const initiatives of [
+        [{ id: choice.id }, { id: choice.id }], [{ id: "invalid" }], [{ id: randomUUID() }],
+        [{ id: choice.id, name: "" }], [{ id: choice.id, appearance: { icon: "unknown" } }],
+      ]) {
+        assert.equal((await request(member, path, "PUT", { ...draft, version: focus.version,
+          sections: [{ ...draft.sections[0], alignment: { other: false, initiatives } }] })).status, 400);
+      }
+      assert.equal((await request(outsider, "/api/focuses", "POST", draft)).status, 400);
+      assert.deepEqual(await (await request(member, path)).json(), focus);
+    });
+
+    await t.test("draft saves retain archived identity across objectives and refresh active identity", async () => {
+      let direction = await (await request(lead)).json() as DepartmentDirection;
+      const configured = await request(lead, undefined, "PUT", { ...direction, initiatives: [
+        ...direction.initiatives,
+        { name: "Historical identity", archived: false, appearance: { icon: "heart", color: "#d13d46" } },
+        { name: "Active identity", archived: false, appearance: { icon: "sprout", color: "#267c65" } },
+      ] });
+      assert.equal(configured.status, 200);
+      direction = await configured.json() as DepartmentDirection;
+      const archived = direction.initiatives.at(-2)!, active = direction.initiatives.at(-1)!;
+      const draft = { title: "Retained identities", start: "2026-01-01", end: "2026-12-31", sections: [
+        { kind: "normal", objective: "Original objective", goals: [], alignment: { other: false, initiatives: [archived, active].map(({ id, name }) => ({ id, name })) } },
+      ] };
+      const created = await request(member, "/api/focuses", "POST", draft);
+      assert.equal(created.status, 201);
+      let focus = await created.json() as PositionFocus;
+      const historical = focus.sections[0]!.alignment!.initiatives[0]!;
+      const changed = await request(lead, undefined, "PUT", { ...direction, initiatives: direction.initiatives.map(item =>
+        item.id === archived.id ? { ...item, archived: true, name: "Archived rename", appearance: { icon: "flag", color: "#8560bb" } } :
+        item.id === active.id ? { ...item, name: "Current identity", appearance: { icon: "globe", color: "#e4bf24" } } : item) });
+      assert.equal(changed.status, 200);
+      const path = `/api/focuses/${focus.id}`;
+      const moved = { ...draft, sections: [
+        { kind: "normal", objective: "Replacement objective", goals: [], alignment: { other: false, initiatives: [{ id: archived.id, name: "Forged", appearance: { icon: "flag", color: "#000000" } }] } },
+        { ...draft.sections[0]!, alignment: { other: false, initiatives: [{ id: active.id, name: "Stale label" }] } },
+      ] };
+      const saved = await request(member, path, "PUT", { ...moved, version: focus.version });
+      assert.equal(saved.status, 200);
+      focus = await saved.json() as PositionFocus;
+      assert.deepEqual(focus.sections[0]!.alignment!.initiatives, [historical]);
+      assert.deepEqual(focus.sections[1]!.alignment!.initiatives, [{ id: active.id, name: "Current identity", appearance: { icon: "globe", color: "#e4bf24" } }]);
+      assert.deepEqual(await (await request(member, path)).json(), focus);
+      const extra = await request(member, path, "PUT", { ...moved, version: focus.version, sections: [...moved.sections, moved.sections[0]] });
+      assert.equal(extra.status, 400);
+      assert.deepEqual(await (await request(member, path)).json(), focus);
+    });
+
+    await t.test("archive and focus saves serialize without introducing archived references", async () => {
+      for (const first of ["archive", "save"]) {
+        const before = await (await request(lead)).json() as DepartmentDirection;
+        const configured = await request(lead, undefined, "PUT", { ...before, initiatives: [...before.initiatives,
+          { name: `Concurrent ${first}`, archived: false, appearance: { icon: "heart", color: "#d13d46" } }] });
+        assert.equal(configured.status, 200);
+        const direction = await configured.json() as DepartmentDirection;
+        const choice = direction.initiatives.at(-1)!;
+        const draft = { title: `Concurrent ${first}`, start: "2026-01-01", end: "2026-12-31", sections: [] };
+        const created = await request(member, "/api/focuses", "POST", draft);
+        assert.equal(created.status, 201);
+        const focus = await created.json() as PositionFocus;
+        const path = `/api/focuses/${focus.id}`;
+        const save = () => request(member, path, "PUT", { ...draft, version: focus.version, sections: [
+          { kind: "normal", objective: "New alignment", goals: [], alignment: { other: false, initiatives: [{ id: choice.id }] } },
+        ] });
+        const archive = () => request(lead, undefined, "PUT", { ...direction, initiatives: direction.initiatives.map(item =>
+          item.id === choice.id ? { ...item, archived: true, name: "Archived during save", appearance: { icon: "flag", color: "#8560bb" } } : item) });
+        // Hold the real shared transaction lock until both HTTP writes are queued.
+        // This makes both orderings deterministic without substituting storage.
+        const blocker = await f.admin.connect();
+        const pending: Array<Promise<Response>> = [];
+        try {
+          await blocker.query("BEGIN");
+          await blocker.query("SELECT pg_advisory_xact_lock(603106)");
+          const waitForWriters = async (count: number) => {
+            for (let attempt = 0; attempt < 200; attempt++) {
+              const locks = await f.admin.query(`SELECT count(*)::int AS count FROM pg_locks
+                WHERE locktype='advisory' AND objid=603106 AND NOT granted
+                AND database=(SELECT oid FROM pg_database WHERE datname=current_database())`);
+              if (locks.rows[0].count === count) return;
+              await new Promise(resolve => setTimeout(resolve, 10));
+            }
+            assert.fail("HTTP writes did not queue on the shared transaction lock");
+          };
+          pending.push(first === "archive" ? archive() : save());
+          await waitForWriters(1);
+          pending.push(first === "archive" ? save() : archive());
+          await waitForWriters(2);
+        } finally {
+          await blocker.query("ROLLBACK");
+          blocker.release();
+        }
+        const results = await Promise.all(pending);
+        const archiveResult = results[first === "archive" ? 0 : 1]!;
+        const saveResult = results[first === "save" ? 0 : 1]!;
+        assert.equal(archiveResult.status, 200);
+        assert.equal(saveResult.status, first === "archive" ? 400 : 200);
+        const reopened = await (await request(member, path)).json() as PositionFocus;
+        if (first === "archive") assert.deepEqual(reopened, focus);
+        else {
+          assert.equal(reopened.version, focus.version + 1);
+          assert.deepEqual(reopened.sections[0]!.alignment!.initiatives, [{ id: choice.id, name: `Concurrent ${first}`, appearance: { icon: "heart", color: "#d13d46" } }]);
+        }
+      }
+    });
+
     await t.test("failed and concurrent configuration saves cannot partially replace the mission or initiatives", async () => {
       const before = await (await request(lead)).json() as DepartmentDirection;
       await f.migration.query("ALTER TABLE department_direction ADD CONSTRAINT synthetic_direction_failure CHECK (mission <> 'Fail this write')");

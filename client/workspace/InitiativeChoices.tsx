@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import type { DepartmentDirection, ObjectiveAlignment } from "../../shared/direction.js";
+import type { DepartmentDirection } from "../../shared/direction.js";
+import type { ObjectiveAlignment, ObjectiveAlignmentChoice } from "../../shared/focus.js";
 import { api } from "./api.js";
 import { InitiativeIdentity } from "./InitiativeIdentity.js";
 
 export function InitiativeChoices({ initial }: { initial?: ObjectiveAlignment }) {
-  const [selection, setSelection] = useState<ObjectiveAlignment>(initial ?? { initiatives: [], other: false });
+  const [selection, setSelection] = useState<ObjectiveAlignmentChoice>({ initiatives: initial?.initiatives.map(({ id }) => ({ id })) ?? [], other: initial?.other ?? false });
   const [direction, setDirection] = useState<DepartmentDirection>();
   const [error, setError] = useState(""), [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -30,7 +31,7 @@ export function InitiativeChoices({ initial }: { initial?: ObjectiveAlignment })
                 onChange={event => setSelection({
                   other: false,
                   initiatives: event.target.checked
-                    ? [...selection.initiatives, { id: item.id, name: item.name }]
+                    ? [...selection.initiatives, { id: item.id }]
                     : selection.initiatives.filter(choice => choice.id !== item.id),
                 })} />
               <span><InitiativeIdentity name={item.name} appearance={item.appearance} />{item.archived && <small>Archived · retained on this objective</small>}</span>

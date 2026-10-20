@@ -7,7 +7,8 @@ import type {
 import { FocusConfirmation } from "./FocusConfirmation.js";
 import { api } from "./api.js";
 import { Dialog } from "./Dialog.js";
-import type { DepartmentDirection, ObjectiveAlignment } from "../../shared/direction.js";
+import type { DepartmentDirection } from "../../shared/direction.js";
+import type { ObjectiveAlignment } from "../../shared/focus.js";
 import { MissionBanner } from "./MissionBanner.js";
 import { AlignmentSummary, InitiativeChoices } from "./InitiativeChoices.js";
 const date = (value: string) =>

@@ -1,9 +1,8 @@
 import { normalizeMissionImage } from "./mission-image.js";
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
-import type { DepartmentDirection, DirectionDraft, ObjectiveAlignment } from "../shared/direction.js";
+import type { DepartmentDirection, DirectionDraft } from "../shared/direction.js";
 import { AccessError, membership, membershipWrite } from "./membership.js";
-import type { FocusSection } from "../shared/focus.js";
 import { isPresetAppearance, validateInitiativeAppearance } from "../shared/initiative-appearance.js";
 
 export async function readDirection(db: Pool | PoolClient, actorId: string): Promise<DepartmentDirection> {
@@ -75,32 +74,5 @@ export async function saveDirection(db: Pool, actorId: string, draft: DirectionD
       SET mission=EXCLUDED.mission,mission_image=EXCLUDED.mission_image,initiatives=EXCLUDED.initiatives,version=department_direction.version+1
       RETURNING mission,initiatives,version,mission_image AS "missionImage"`, [department.id, draft.mission, JSON.stringify(initiatives), missionImage]);
     return result.rows[0];
-  });
-}
-
-// Run under the same membership-write transaction as the focus save. Snapshot names
-// and appearance from trusted configuration so edits cannot rewrite a confirmed baseline.
-export async function resolveAlignment(client: PoolClient, actorId: string, sections: FocusSection[], previous: FocusSection[] = []): Promise<FocusSection[]> {
-  const direction = await readDirection(client, actorId);
-  const retained = new Map<string, ObjectiveAlignment["initiatives"]>();
-  for (const section of previous) for (const item of section.alignment?.initiatives ?? []) {
-    const names = retained.get(item.id) ?? [];
-    names.push(item);
-    retained.set(item.id, names);
-  }
-  return sections.map(section => {
-    if (!section.alignment) return section;
-    return { ...section, alignment: {
-      other: section.alignment.other,
-      initiatives: section.alignment.initiatives.map(choice => {
-        const initiative = direction.initiatives.find(item => item.id === choice.id);
-        const retainedNames = retained.get(choice.id);
-        if (!initiative || (initiative.archived && !retainedNames?.length))
-          throw new AccessError(400, "An initiative is no longer available. Reopen the objective and choose an active initiative or Other.");
-        if (initiative.archived) return retainedNames!.shift()!;
-        return { id: initiative.id, name: initiative.name,
-          ...(initiative.appearance ? { appearance: initiative.appearance } : {}) };
-      }),
-    } };
   });
 }

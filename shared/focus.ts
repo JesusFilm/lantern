@@ -1,4 +1,9 @@
-import type { ObjectiveAlignment } from "./direction.js";
+import type { InitiativeAppearance } from "./initiative-appearance.js";
+
+export interface ObjectiveAlignment {
+  initiatives: Array<{ id: string; name: string; appearance?: InitiativeAppearance }>;
+  other: boolean;
+}
 export type ObjectiveKind = "normal" | "personal-development" | "leadership";
 export interface FocusSection {
   kind: ObjectiveKind;
@@ -6,13 +11,22 @@ export interface FocusSection {
   goals: string[];
   alignment?: ObjectiveAlignment;
 }
+// Member intent contains no historical labels or appearance.
+export interface ObjectiveAlignmentChoice {
+  initiatives: Array<{ id: string }>;
+  other: boolean;
+}
+export interface FocusDraftSection extends Omit<FocusSection, "alignment"> {
+  alignment?: ObjectiveAlignmentChoice;
+}
 export interface FocusDraft {
   title: string;
   start: string;
   end: string;
-  sections: FocusSection[];
+  sections: FocusDraftSection[];
 }
-export interface PositionFocus extends FocusDraft {
+export interface PositionFocus extends Omit<FocusDraft, "sections"> {
+  sections: FocusSection[];
   id: string;
   version: number;
   updatedAt: string;
