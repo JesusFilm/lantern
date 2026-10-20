@@ -222,53 +222,9 @@ github_variable() { gh variable set "$1" --body "$2" --repo "$REPOSITORY" --env 
 railway_variable() { printf '%s' "$2" | railway variables set "$1" --stdin --skip-deploys --project "$RAILWAY_PROJECT" --environment "$RAILWAY_ENVIRONMENT" --service "$RAILWAY_SERVICE" >/dev/null 2>&1; }
 
 
-# RESUME_JS is deliberately standalone for synthetic validation tests.
 load_resume_config() {
   export RESUME_DIR
-  node --input-type=module >"$TASK_TEMP/resume-values" <<'RESUME_JS'
-import assert from 'node:assert/strict';
-import {lstatSync,readFileSync} from 'node:fs';
-import {join} from 'node:path';
-import {X509Certificate} from 'node:crypto';
-try {
- const dir=process.env.RESUME_DIR;
- const check=(path,directory)=>{
-  const st=lstatSync(path);
-  assert(!st.isSymbolicLink() && (directory?st.isDirectory():st.isFile()));
-  assert.equal(st.uid,process.getuid());
-  assert.equal(st.mode&0o777,directory?0o700:0o600);
- };
- check(dir,true);check(join(dir,'operator.env'),false);check(join(dir,'root.crt'),false);
- const keys=['LANTERN_ENV','LANTERN_DB_EXPECTED_ENDPOINT','LANTERN_DB_NAME','LANTERN_DB_SCHEMA','LANTERN_DB_RUNTIME_ROLE','LANTERN_DB_MIGRATION_ROLE','LANTERN_DB_ADMIN_ROLE','MIGRATION_DATABASE_URL'];
- const allowed=new Set([...keys,'ADMIN_DATABASE_URL','PGSSLROOTCERT','PGSSLMODE']);
- const values=new Map();
- for(const line of readFileSync(join(dir,'operator.env'),'utf8').split('\n')) {
-  if(!line)continue;
-  const split=line.indexOf('=');assert(split>0);
-  const key=line.slice(0,split),value=line.slice(split+1);
-  assert(allowed.has(key) && !values.has(key) && !/[\x00-\x1f\x7f]/.test(value));
-  values.set(key,value);
- }
- for(const key of keys)assert(values.get(key));
- assert.equal(values.get('LANTERN_ENV'),'production');
- assert.equal(values.get('LANTERN_DB_SCHEMA'),'lantern');
- for(const kind of ['runtime','migration','admin'])assert.equal(values.get(`LANTERN_DB_${kind.toUpperCase()}_ROLE`),`lantern_production_${kind}`);
- const endpoint=values.get('LANTERN_DB_EXPECTED_ENDPOINT');
- assert(/^[a-zA-Z0-9.-]+:[0-9]+$/.test(endpoint));
- assert.notEqual(endpoint,'ballast.proxy.rlwy.net:56588');
- const name=values.get('LANTERN_DB_NAME');assert(/^[a-z][a-z0-9_]{0,62}$/.test(name));
- const u=new URL(values.get('MIGRATION_DATABASE_URL'));
- assert(['postgres:','postgresql:'].includes(u.protocol));
- assert.equal(u.host,endpoint);assert(!u.hostname.endsWith('.railway.internal'));
- assert.equal(decodeURIComponent(u.username),'lantern_production_migration');
- assert.equal(decodeURIComponent(u.pathname.slice(1)),name);
- assert(u.password);decodeURIComponent(u.password);assert.equal(u.search,'');assert.equal(u.hash,'');
- const ca=new X509Certificate(readFileSync(join(dir,'root.crt')));
- assert(ca.ca && Date.parse(ca.validFrom)<=Date.now() && Date.parse(ca.validTo)>Date.now());
- // Emit only after every check succeeds. The shell reads this as data, never code.
- for(const key of keys)process.stdout.write(`${key}=${values.get(key)}\n`);
-} catch {console.error('Private resume configuration failed validation; no settings changed.');process.exit(1);}
-RESUME_JS
+  node "$ROOT/tools/release/settings-command.mjs" load >"$TASK_TEMP/resume-values"
   while IFS='=' read -r name value; do
     case "$name" in
       LANTERN_ENV|LANTERN_DB_EXPECTED_ENDPOINT|LANTERN_DB_NAME|LANTERN_DB_SCHEMA|LANTERN_DB_RUNTIME_ROLE|LANTERN_DB_MIGRATION_ROLE|LANTERN_DB_ADMIN_ROLE|MIGRATION_DATABASE_URL) printf -v "$name" '%s' "$value"; export "$name";;
@@ -377,12 +333,8 @@ fi
 
 stage 'Capture separate private settings'
 if [[ -z "$RESUME_DIR" ]]; then
-PRIVATE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/lantern-production-settings.XXXXXX")
-chmod 700 "$PRIVATE_DIR"
-cp "$SETUP_CA" "$PRIVATE_DIR/root.crt"
-ENV_FILE="$PRIVATE_DIR/operator.env"
-say "Private role settings will be retained at $PRIVATE_DIR (directory 700, files 600). Move this folder to secure owner storage after completion."
-say 'No owner password is retained. This file contains data; never source it as shell code.'
+say 'Separate operator settings will be retained in a new private folder after password capture.'
+say 'No owner password is retained. The file contains data; never source it as shell code.'
 else
   say "Using validated migration settings and CA from $PRIVATE_DIR; existing files stay unchanged."
 fi
@@ -406,16 +358,8 @@ JS
  done
 export DATABASE_URL MIGRATION_DATABASE_URL ADMIN_DATABASE_URL
 if [[ -z "$RESUME_DIR" ]]; then
-export RETAINED_CA="$PRIVATE_DIR/root.crt"
-ADMIN_DATABASE_URL=$(node --input-type=module <<'JS'
-const u=new URL(process.env.ADMIN_DATABASE_URL);
-u.searchParams.set('sslmode','verify-ca');u.searchParams.set('uselibpqcompat','true');u.searchParams.set('sslrootcert',process.env.RETAINED_CA);process.stdout.write(u.href);
-JS
-)
-export ADMIN_DATABASE_URL
-for name in LANTERN_ENV LANTERN_DB_EXPECTED_ENDPOINT LANTERN_DB_NAME LANTERN_DB_SCHEMA LANTERN_DB_RUNTIME_ROLE LANTERN_DB_MIGRATION_ROLE LANTERN_DB_ADMIN_ROLE MIGRATION_DATABASE_URL ADMIN_DATABASE_URL; do write_env "$name" "${!name}"; done
-write_env PGSSLROOTCERT "$PRIVATE_DIR/root.crt"
-write_env PGSSLMODE verify-ca
+PRIVATE_DIR=$(node "$ROOT/tools/release/settings-command.mjs" write)
+say "Private role settings retained at $PRIVATE_DIR (directory 700, files 600). Move this folder to secure owner storage after completion."
 fi
 open_url 'https://console.cloud.google.com/apis/credentials'
 step "Use your Web OAuth client. Add authorized redirect URI $APP_ORIGIN/auth/google/callback."
