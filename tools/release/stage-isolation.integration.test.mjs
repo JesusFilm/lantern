@@ -14,7 +14,7 @@ test('temporary member role is restored after success or a failed isolation chec
  try {
   await migrate(db);
   const member={userId:randomUUID(),departmentId:randomUUID()};
-  await db.query("INSERT INTO users VALUES($1::uuid,$1::text,'synthetic@example.test','Synthetic','example.test')",[member.userId]);
+  await db.query("INSERT INTO users(id,google_sub,email,name) VALUES($1::uuid,$1::text,'synthetic@example.test','Synthetic')",[member.userId]);
   await db.query("INSERT INTO departments(id,name) VALUES($1,'Synthetic')",[member.departmentId]);
   await db.query("INSERT INTO memberships VALUES($1,$2,'career-lead',NULL)",[member.userId,member.departmentId]);
   const role=async()=> (await db.query('SELECT role FROM memberships WHERE user_id=$1',[member.userId])).rows[0].role;

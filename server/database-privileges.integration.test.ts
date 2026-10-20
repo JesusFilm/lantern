@@ -20,7 +20,7 @@ test('separate database roles migrate and administer while runtime is denied DDL
       'CREATE TEMP TABLE forbidden(id integer)', 'CREATE SCHEMA forbidden',
       'ALTER TABLE users ADD COLUMN forbidden text', 'DROP TABLE memberships',
       'TRUNCATE users CASCADE', "CREATE ROLE forbidden", `SET ROLE ${roles.migration}`, `SET ROLE ${roles.admin}`,
-      "INSERT INTO approved_emails VALUES ('forbidden@example.test')", 'DELETE FROM allowed_domains',
+      "INSERT INTO approved_emails VALUES ('forbidden@example.test')", 'DELETE FROM approved_emails',
       "INSERT INTO departments VALUES (gen_random_uuid(),'forbidden',NULL)",
       "INSERT INTO memberships VALUES (gen_random_uuid(),gen_random_uuid(),'career-lead',NULL)",
       "UPDATE memberships SET role='career-lead'", 'DELETE FROM memberships',

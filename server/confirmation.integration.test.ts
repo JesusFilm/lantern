@@ -18,10 +18,9 @@ async function fixture() {
     await migrate(f.migration,f.roles);
     const lead=randomUUID(), member=randomUUID(), peer=randomUUID(), outsider=randomUUID();
     const team=randomUUID(), otherTeam=randomUUID();
-    await f.admin.query("INSERT INTO allowed_domains VALUES ('example.test')");
     for(const id of [team,otherTeam]) await f.admin.query("INSERT INTO departments(id,name) VALUES($1,'Team')",[id]);
     for(const [id,name,role,department] of [[lead,'Lead','career-lead',team],[member,'Member','member',team],[peer,'Peer','member',team],[outsider,'Other lead','career-lead',otherTeam]]) {
-      await f.admin.query("INSERT INTO users VALUES($1::uuid,$1::text,$2,$3,'example.test')",[id,`${id}@example.test`,name]);
+      await f.admin.query("INSERT INTO users(id,google_sub,email,name) VALUES($1::uuid,$1::text,$2,$3)",[id,`${id}@example.test`,name]);
       await f.admin.query('INSERT INTO approved_emails VALUES($1)',[`${id}@example.test`]);
       await f.admin.query('INSERT INTO memberships VALUES($1,$2,$3,NULL)',[id,department,role]);
       await f.admin.query("INSERT INTO sessions VALUES($1,$2,now()+interval '1 day')",[hash(id!),id]);
@@ -160,7 +159,7 @@ test('migration upgrades existing drafts without data loss and confirmed state s
     try {
       assert.equal((await fetch(health)).status,503);
       await migrate(f.migration,f.roles);
-      const ready=await fetch(health);assert.equal(ready.status,200);assert.equal(ready.headers.get('x-lantern-schema'),'5');
+      const ready=await fetch(health);assert.equal(ready.status,200);assert.equal(ready.headers.get('x-lantern-schema'),'6');
     } finally {healthServer.closeAllConnections();await new Promise<void>(r=>healthServer.close(()=>r()));}
     assert.deepEqual(await (await f.request(f.member,`/api/focuses/${existing.id}`)).json(),existing);
     const confirmed=await (await f.confirm(existing.id,1)).json();

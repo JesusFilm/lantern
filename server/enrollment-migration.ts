@@ -35,7 +35,7 @@ export async function migrateEnrollment(client: PoolClient) {
   `);
 }
 
-// Email-only enrollment; the legacy overload remains until the old app is replaced.
+// Migration 5: email-only enrollment. Migration 6 removes the legacy overload.
 export async function migrateEmailEnrollment(client: PoolClient) {
   const context = await client.query('SELECT current_schema() AS schema');
   const schema = identifier(context.rows[0].schema);

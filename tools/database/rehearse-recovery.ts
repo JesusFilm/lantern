@@ -19,8 +19,9 @@ const server = createServer();
 try {
   restored = await privilegeFixture();
   await migrate(source.bootstrap);
-  await source.bootstrap.query('DROP FUNCTION public.enroll_member(uuid,text,boolean), public.enroll_member(uuid,text)');
-  await source.bootstrap.query('DELETE FROM public.schema_migrations WHERE version IN (3,4,5)');
+  await source.bootstrap.query('CREATE TABLE public.allowed_domains(domain text PRIMARY KEY); ALTER TABLE public.users ADD COLUMN hosted_domain text');
+  await source.bootstrap.query('DROP FUNCTION public.enroll_member(uuid,text)');
+  await source.bootstrap.query('DELETE FROM public.schema_migrations WHERE version IN (3,4,5,6)');
   const user = await prepareLocalAccount(source.bootstrap);
   const department = (await membership(source.bootstrap,user))!;
   await focusStore(source.bootstrap).create(user,department.id,{title:'Synthetic recovery focus',start:'2026-01-01',end:'2026-12-31',sections:[]});

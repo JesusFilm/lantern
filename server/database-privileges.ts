@@ -65,14 +65,14 @@ export async function grantApplicationPrivileges(db: Database, roles: DatabaseRo
   await db.query(`REVOKE ALL ON ALL TABLES IN SCHEMA ${schema} FROM PUBLIC, ${runtime}, ${admin}`);
   await db.query(`REVOKE ALL ON ALL FUNCTIONS IN SCHEMA ${schema} FROM PUBLIC, ${runtime}, ${admin}`);
   await db.query(`GRANT USAGE ON SCHEMA ${schema} TO ${runtime}, ${admin}`);
-  await db.query(`GRANT SELECT ON schema_migrations, allowed_domains, approved_emails, users, departments, memberships, position_focuses, sessions, login_attempts TO ${runtime}, ${admin}`);
+  await db.query(`GRANT SELECT ON schema_migrations, approved_emails, users, departments, memberships, position_focuses, sessions, login_attempts TO ${runtime}, ${admin}`);
   await db.query(`GRANT INSERT ON users TO ${runtime}`);
-  await db.query(`GRANT UPDATE (name, email, hosted_domain) ON users TO ${runtime}`);
+  await db.query(`GRANT UPDATE (name, email) ON users TO ${runtime}`);
   await db.query(`GRANT INSERT, DELETE ON sessions, login_attempts TO ${runtime}`);
   await db.query(`GRANT INSERT ON position_focuses TO ${runtime}`);
   await db.query(`GRANT UPDATE (title, period_start, period_end, sections, version, updated_at, status, confirmed_at, confirmed_by) ON position_focuses TO ${runtime}`);
-  await db.query(`GRANT EXECUTE ON FUNCTION enroll_member(uuid,text,boolean), enroll_member(uuid,text) TO ${runtime}, ${admin}`);
-  await db.query(`GRANT INSERT, UPDATE, DELETE ON allowed_domains, approved_emails, users, departments, memberships, position_focuses, sessions, login_attempts TO ${admin}`);
+  await db.query(`GRANT EXECUTE ON FUNCTION enroll_member(uuid,text) TO ${runtime}, ${admin}`);
+  await db.query(`GRANT INSERT, UPDATE, DELETE ON approved_emails, users, departments, memberships, position_focuses, sessions, login_attempts TO ${admin}`);
 }
 
 export async function assertDatabaseTarget(db: Database, expected: { database: string; schema: string; role: string }) {

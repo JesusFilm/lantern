@@ -67,7 +67,6 @@ async function httpFixture(db: pg.Pool, work: (request: (path: string, cookie?: 
 const workIdentity = { sub: 'work-sub', email: 'person@example.test', name: 'Person', hostedDomain: 'example.test' };
 test('Google callback requires exact email approval before registration and rechecks active sessions', async () => {
   await fixture(async db => {
-    await db.query("INSERT INTO allowed_domains VALUES('example.test')");
     await httpFixture(db, async (request, login) => {
       const denied = await login(workIdentity, '&role=career-lead&owner=someone&environment=stage');
       assert.equal(denied.response.headers.get('location'), '/?signInError=1');
@@ -118,7 +117,6 @@ for (const environment of ['local', 'stage', 'production', undefined]) {
 
 test('stage lead assigns approved personal members; revoked eligibility and forged authority are denied', async () => {
   await fixture(async db => {
-    await db.query("INSERT INTO allowed_domains VALUES('example.test')");
     await approveEmail(db, workIdentity.email);
     await approveEmail(db, 'member@gmail.com');
     await httpFixture(db, async (request, login) => {
@@ -174,7 +172,6 @@ test('operator command adds, lists and removes approvals without interpolating e
 test('provider and database failures fail closed with safe feedback; failed session creation is atomic', async () => {
   await fixture(async db => {
     await approveEmail(db, workIdentity.email);
-    await db.query("INSERT INTO allowed_domains VALUES('example.test')");
     await httpFixture(db, async (request, login) => {
       const failedProvider = await login({ ...workIdentity, sub: 'provider-failure' });
       assert.equal(failedProvider.response.headers.get('location'), '/?signInError=1');
@@ -225,7 +222,7 @@ test('runtime remains usable after legacy domain storage and overload are remove
     await migrate(f.migration, f.roles);
     await approveEmail(f.admin, 'person@example.test');
     // Rehearse the next release's destructive DDL against this compatibility app.
-    await f.migration.query('DROP FUNCTION enroll_member(uuid,text,boolean); ALTER TABLE users DROP COLUMN hosted_domain; DROP TABLE allowed_domains');
+    await f.migration.query('DROP FUNCTION IF EXISTS enroll_member(uuid,text,boolean); ALTER TABLE users DROP COLUMN IF EXISTS hosted_domain; DROP TABLE IF EXISTS allowed_domains');
     const { assertRuntimePrivileges } = await import('./database-privileges.js');
     const { assertSchemaReady } = await import('./schema.js');
     const { verifyDatabase } = await import('./database-verification.js');

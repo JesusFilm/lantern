@@ -44,6 +44,8 @@ For an ordinary [production release](.github/workflows/promote.yml) (initial pro
 
 The workflow controllers come from main and deploy the selected revision's application and migrations. Keep schema changes compatible with the application serving during deployment; check both workflows' expected schema version when adding a migration. Promote with this workflow so independent Railway deploy triggers cannot bypass its checks.
 
+For the domain-field removal, follow the [two-release production procedure](docs/operations/remove-hosted-domain.md). Existing installations must deploy the schema-5 compatibility app before applying schema 6.
+
 Configure the settings listed under [Environment variables](#environment-variables) separately for staging and production.
 
 The workflows use schema `lantern`. Create the database TCP proxy to port 5432. Supply the migration URL without TLS query parameters; the runner adds TLS verification against the supplied private CA and removes its temporary certificate file afterward. Export only the public `/var/lib/postgresql/data/certs/root.crt` through trusted Railway access; never export private keys. Add the two migration secrets privately using the GitHub environment settings or `gh secret set NAME --env ENVIRONMENT` (interactive hidden input). The public proxy hostname does not match Railway's database certificate, so the client verifies the database-specific CA. See [the release decision](docs/adrs/0001-release-migrations.md).
