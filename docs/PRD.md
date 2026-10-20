@@ -8,6 +8,10 @@ Lantern helps team members prepare a position focus and agree it with their care
 - Separate guides explain objectives and SMART goals, with a worked example. Focuses open in a compact reading view and are edited through dialogs.
 - Career leads browse current department members and their focuses. After discussion, the lead confirms and locks a focus. Confirmation records who confirmed it and when; the title, dates, objectives and goals become read-only for both people.
 - Account display names persist. Career leads can add eligible registered users to their department. Rejoining former members is not currently supported.
+- A career lead configures the organizational mission and strategic initiatives in Department → Mission & initiatives. Saves persist the department's configuration atomically and reject concurrent stale edits. An empty mission hides the banner; no mission is seeded automatically.
+- Position Focuses shows the mission in an editorial card that members can expand or collapse. Browser storage remembers this preference separately for each account and department; it defaults to expanded and still works for the current visit when storage is unavailable.
+- The objective dialog presents initiative checkboxes beneath the objective, without search or a selected-chip field. Members can choose several active initiatives, or **Other — none of these apply**, which excludes named initiatives. Unselected initiatives remain valid in partial drafts. Objective selections persist with the focus and are visible to its member and career lead.
+- Initiatives can be renamed, archived, or restored. Archived initiatives disappear from new choices; existing selections remain. Saved objectives snapshot initiative names, so later configuration edits cannot rewrite confirmed focus history. The mission provides context outside objective authoring rather than a required alignment field.
 
 ## Access and data
 

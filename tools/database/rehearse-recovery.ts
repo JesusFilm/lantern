@@ -20,11 +20,12 @@ try {
   restored = await privilegeFixture();
   await migrate(source.bootstrap);
   await source.bootstrap.query('DROP FUNCTION public.enroll_member(uuid,text,boolean)');
-  await source.bootstrap.query('DELETE FROM public.schema_migrations WHERE version IN (3,4)');
+  await source.bootstrap.query('DELETE FROM public.schema_migrations WHERE version IN (3,4,5)');
   const user = await prepareLocalAccount(source.bootstrap);
   const department = (await membership(source.bootstrap,user))!;
   await focusStore(source.bootstrap).create(user,department.id,{title:'Synthetic recovery focus',start:'2026-01-01',end:'2026-12-31',sections:[]});
   await source.bootstrap.query('ALTER TABLE public.position_focuses DROP COLUMN status, DROP COLUMN confirmed_at, DROP COLUMN confirmed_by');
+  await source.bootstrap.query('DROP TABLE public.department_direction');
   const owner = (await source.bootstrap.query('SELECT current_user AS name')).rows[0].name;
   const dump = spawnSync('docker',['exec',container,'pg_dump','-U',owner,'-d',source.databaseName,'--format=custom','--schema=public','--no-owner','--no-acl'],{maxBuffer:16*1024*1024});
   assert.equal(dump.status,0,'Synthetic pg_dump failed');

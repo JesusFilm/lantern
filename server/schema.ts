@@ -70,6 +70,16 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
         )`);
       await client.query('INSERT INTO schema_migrations(version) VALUES (4)');
     }
+    const direction = await client.query('SELECT version FROM schema_migrations WHERE version = 5');
+    if (!direction.rowCount) {
+      await client.query(`CREATE TABLE department_direction (
+        department_id uuid PRIMARY KEY REFERENCES departments(id),
+        mission text NOT NULL DEFAULT '' CHECK (length(mission) <= 1000),
+        initiatives jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(initiatives)='array'),
+        version integer NOT NULL DEFAULT 1 CHECK (version > 0)
+      )`);
+      await client.query('INSERT INTO schema_migrations(version) VALUES (5)');
+    }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
@@ -79,8 +89,9 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4)');
-  if (result.rowCount !== 4) throw new Error('Required migration is missing.');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5)');
+  if (result.rowCount !== 5) throw new Error('Required migration is missing.');
+  await database.query('SELECT department_id,mission,initiatives,version FROM department_direction LIMIT 0');
   await database.query(`SELECT u.id, d.id, m.user_id, f.id, f.status, f.confirmed_at, f.confirmed_by, s.token_hash, l.state_hash, a.domain, e.email
     FROM users u, departments d, memberships m, position_focuses f, sessions s, login_attempts l, allowed_domains a, approved_emails e LIMIT 0`);
 }

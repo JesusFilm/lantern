@@ -66,6 +66,20 @@ A concise generic illustration of one objective and two goals. Its targets do no
 
 **Organizational mission**:
 “We partner with the Body of Christ through heart language media, so everyone, everywhere can encounter Jesus.”
+The career lead configures the wording shown to their department in Lantern. The
+mission appears as an optional expandable reminder on Position Focuses, outside
+the objective editor. Configuration is department-scoped; it does not confer
+organization-wide administrative permissions.
+
+**Strategic initiative**:
+A named team priority configured by the career lead. An objective can support
+several active initiatives. Archiving removes an initiative from new choices
+without deleting existing objective references.
+
+**Other (initiative alignment)**:
+An explicit statement that none of the listed initiatives applies to an objective.
+It is a valid choice without a required explanation, and cannot accompany named
+initiatives. An empty selection instead means that alignment has not been chosen yet.
 
 **Department contribution**:
 The team's intended contribution to the organizational mission. It is context for conversations, not a required app field or customization feature.

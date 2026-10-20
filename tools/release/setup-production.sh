@@ -449,7 +449,7 @@ confirm 'Have you applied exactly those service settings and removed independent
 node "$ROOT/tools/release/configuration.mjs"
 
 stage 'Deploy the verified main revision'
-say "The workflow will migrate production schema, deploy $RELEASE_SHA, and check readiness/schema 4. Data stays separate."
+say "The workflow will migrate production schema, deploy $RELEASE_SHA, and check readiness/schema 5. Data stays separate."
 confirm 'Dispatch production deployment now?' || exit 1
 gh workflow run promote.yml --repo "$REPOSITORY" --ref main -f "sha=$RELEASE_SHA"
 open_url "https://github.com/$REPOSITORY/actions/workflows/promote.yml"

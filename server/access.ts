@@ -6,6 +6,7 @@ import type { Request, Response, NextFunction } from 'express';
 import type { Pool } from 'pg';
 import type { IdentityProvider } from './google.js';
 import { focusRoutes } from './focus-http.js';
+import { directionRoutes } from './direction-http.js';
 import { guideContent } from './guide-content.js';
 import { AccessError, addMember, membership } from './membership.js';
 import type { RegisteredUser } from '../shared/access.js';
@@ -81,6 +82,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     res.json({ user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !config.hostingOnly && !!config.provider, localAccess: !!config.localUserId });
   });
   router.use(focusRoutes(db, requireUser));
+  router.use(directionRoutes(db, requireUser));
   router.patch('/api/account', async (req, res) => {
     const user = await requireUser(req);
     if (!req.body || Object.keys(req.body).some(k => k !== 'name') || typeof req.body.name !== 'string' || !req.body.name.trim() || req.body.name.trim().length > 100) throw new AccessError(400, 'Enter a display name of 1–100 characters.');

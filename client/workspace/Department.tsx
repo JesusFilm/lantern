@@ -2,6 +2,7 @@ import { MemberFocuses } from "./MemberFocuses.js";
 import { useEffect, useState } from "react";
 import type { RegisteredUser, SessionView } from "../../shared/access.js";
 import { api as request } from "./api.js";
+import { TeamDirection } from "./TeamDirection.js";
 const api = <T,>(path: string, body?: unknown) =>
   request<T>(path, body === undefined ? "GET" : "POST", body);
 const explanation = (user: RegisteredUser) =>
@@ -25,6 +26,13 @@ export function Department({
     focus: new URLSearchParams(location.search).get("memberFocus"),
   });
   const [selection, setSelection] = useState(route);
+  const [tab, setTab] = useState(() => new URLSearchParams(location.search).get("departmentTab") === "direction" ? "direction" : "people");
+  function selectTab(value: string) {
+    setTab(value);
+    const url = new URL(location.href);
+    url.searchParams.set("departmentTab", value);
+    history.replaceState(null, "", url);
+  }
   function navigate(member?: string, focus?: string) {
     const url = new URL(location.href);
     url.searchParams.set("page", "department");
@@ -117,10 +125,10 @@ export function Department({
       </p>
       <header>
         <div>
-          <h1>Department users</h1>
+          <h1>Department</h1>
           <p>Signed in as {session.user?.email}</p>
         </div>
-        {session.department.role === "career-lead" && (
+        {session.department.role === "career-lead" && tab === "people" && (
           <button
             className="primary"
             disabled={busy}
@@ -147,6 +155,11 @@ export function Department({
           </button>
         )}
       </header>
+      <div className="tabs department-tabs" aria-label="Department panels">
+        <button type="button" className={tab === "people" ? "active" : ""} aria-pressed={tab === "people"} onClick={() => selectTab("people")}>People</button>
+        <button type="button" className={tab === "direction" ? "active" : ""} aria-pressed={tab === "direction"} onClick={() => selectTab("direction")}>Mission & initiatives</button>
+      </div>
+      {tab === "direction" ? <TeamDirection /> : <>
       <ul className="members">
         {members.map((member) => (
           <li key={member.id}>
@@ -236,6 +249,7 @@ export function Department({
           )}
         </>
       )}
+      </>}
     </section>
   );
 }

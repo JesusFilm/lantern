@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import { AccessError, membership, membershipWrite } from "./membership.js";
 import type { FocusDraft, PositionFocus } from "../shared/focus.js";
+import { resolveAlignment } from "./direction.js";
 
 const columns = `id,title,to_char(period_start,'YYYY-MM-DD') AS start,to_char(period_end,'YYYY-MM-DD') AS end,sections,version,updated_at AS "updatedAt",status,confirmed_at AS "confirmedAt",
   (SELECT jsonb_build_object('id',u.id,'name',u.name) FROM users u WHERE u.id=confirmed_by) AS "confirmedBy"`;
@@ -34,20 +35,25 @@ export function focusStore(db: Pool) {
       departmentId: string,
       draft: FocusDraft,
     ): Promise<PositionFocus> {
-      return (
-        await db.query(
-          `INSERT INTO position_focuses(id,user_id,department_id,title,period_start,period_end,sections) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING ${columns}`,
-          [
-            randomUUID(),
-            userId,
-            departmentId,
-            draft.title,
-            draft.start,
-            draft.end,
-            JSON.stringify(draft.sections),
-          ],
-        )
-      ).rows[0];
+      return membershipWrite(db, async (client) => {
+        if ((await membership(client, userId))?.id !== departmentId)
+          throw new AccessError(403, "Active department membership is required.");
+        const sections = await resolveAlignment(client, userId, draft.sections);
+        return (
+          await client.query(
+            `INSERT INTO position_focuses(id,user_id,department_id,title,period_start,period_end,sections) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING ${columns}`,
+            [
+              randomUUID(),
+              userId,
+              departmentId,
+              draft.title,
+              draft.start,
+              draft.end,
+              JSON.stringify(sections),
+            ],
+          )
+        ).rows[0];
+      });
     },
     async confirm(
       actorId: string,
@@ -101,29 +107,35 @@ export function focusStore(db: Pool) {
       draft: FocusDraft,
       version: number,
     ): Promise<PositionFocus> {
-      const result = await db.query(
-        `UPDATE position_focuses SET title=$4,period_start=$5,period_end=$6,sections=$7,version=version+1,updated_at=now() WHERE user_id=$1 AND department_id=$2 AND id::text=$3 AND version=$8 AND status='draft' RETURNING ${columns}`,
-        [
-          userId,
-          departmentId,
-          id,
-          draft.title,
-          draft.start,
-          draft.end,
-          JSON.stringify(draft.sections),
-          version,
-        ],
-      );
-      if (!result.rowCount) {
-        const current = await this.get(userId, departmentId, id);
+      return membershipWrite(db, async (client) => {
+        if ((await membership(client, userId))?.id !== departmentId)
+          throw new AccessError(403, "Active department membership is required.");
+        const currentResult = await client.query(
+          `SELECT ${columns} FROM position_focuses WHERE user_id=$1 AND department_id=$2 AND id::text=$3 FOR UPDATE`,
+          [userId, departmentId, id],
+        );
+        if (!currentResult.rowCount) throw new AccessError(404, "Position focus not found.");
+        const current = currentResult.rows[0] as PositionFocus;
         if (current.status === "confirmed")
           throw new AccessError(409, "This focus is confirmed and read-only. Your unsaved text is still here; copy it before closing this dialog.");
-        throw new AccessError(
-          409,
-          "This focus changed in another window. Close this dialog and reopen the focus before editing.",
+        if (current.version !== version)
+          throw new AccessError(409, "This focus changed in another window. Close this dialog and reopen the focus before editing.");
+        const sections = await resolveAlignment(client, userId, draft.sections, current.sections);
+        const result = await client.query(
+          `UPDATE position_focuses SET title=$4,period_start=$5,period_end=$6,sections=$7,version=version+1,updated_at=now() WHERE user_id=$1 AND department_id=$2 AND id::text=$3 AND version=$8 AND status='draft' RETURNING ${columns}`,
+          [
+            userId,
+            departmentId,
+            id,
+            draft.title,
+            draft.start,
+            draft.end,
+            JSON.stringify(sections),
+            version,
+          ],
         );
-      }
-      return result.rows[0];
+        return result.rows[0];
+      });
     },
   };
 }
@@ -177,7 +189,7 @@ export function validateFocus(
       !section ||
       typeof section !== "object" ||
       Object.keys(section).some(
-        (k) => !["kind", "objective", "goals"].includes(k),
+        (k) => !["kind", "objective", "goals", "alignment"].includes(k),
       ) ||
       !["normal", "personal-development", "leadership"].includes(
         section.kind,
@@ -188,6 +200,22 @@ export function validateFocus(
       !section.goals.every((g: unknown) => text(g, 10000))
     )
       return fail();
+    if (section.alignment !== undefined) {
+      const alignment = section.alignment;
+      if (!alignment || typeof alignment !== "object" || Array.isArray(alignment) ||
+          Object.keys(alignment).some(k => !["initiatives", "other"].includes(k)) ||
+          typeof alignment.other !== "boolean" || !Array.isArray(alignment.initiatives) ||
+          alignment.initiatives.length > 100 || (alignment.other && alignment.initiatives.length))
+        return fail();
+      const ids = new Set<string>();
+      for (const item of alignment.initiatives) {
+        if (!item || typeof item !== "object" || Array.isArray(item) ||
+            Object.keys(item).some(k => !["id", "name"].includes(k)) ||
+            typeof item.id !== "string" || !/^[a-f0-9-]{36}$/.test(item.id) ||
+            !text(item.name, 120) || ids.has(item.id)) return fail();
+        ids.add(item.id);
+      }
+    }
   }
   if (
     updating &&

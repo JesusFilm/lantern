@@ -76,7 +76,7 @@ function App() {
             ["account", "Account"],
             ...(session?.department?.role === "career-lead" &&
             !session.localAccess
-              ? [["department", "Department users"]]
+              ? [["department", "Department"]]
               : []),
           ].map(([id, label]) => (
             <button
@@ -163,7 +163,7 @@ function App() {
               ) : page === "focuses" ||
                 (page === "department" &&
                   session.department.role !== "career-lead") ? (
-                <FocusWorkspace member={session.user} canConfirm={session.department.role === "career-lead"} />
+                <FocusWorkspace member={session.user} departmentId={session.department.id} canConfirm={session.department.role === "career-lead"} />
               ) : page === "department" &&
                 session.department.role === "career-lead" ? (
                 <Department
