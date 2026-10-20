@@ -93,10 +93,15 @@ Use the existing protected GitHub `stage` environment and its staging migration
 URL, CA, target and role settings. No additional database grant, Google account,
 Railway variable or production secret is required.
 
-1. Merge with passing CI. Set the **repository** Actions variable
-   `STAGE_ACCEPTANCE_ENABLED=true`, leaving `AUTO_PRODUCTION_ENABLED` unset/false.
-   The stage job holds its existing staging lock through acceptance and cleanup.
-2. Run main CI and inspect the artifact
+1. Before merging, inspect the existing Railway/GitHub targets and disable any
+   independent deployment path. Set **repository Actions variables** (Settings →
+   Secrets and variables → Actions → Variables): `STAGE_ACCEPTANCE_ENABLED=true`,
+   `AUTO_PRODUCTION_ENABLED=false`, and `STAGE_APP_ORIGIN` equal to the stage
+   environment’s exact `APP_ORIGIN`. Verify `STAGE_DELIVERY_ENABLED=true`; investigate
+   an intentional disable instead of overriding it. Check environment-level shadows
+   and already queued production runs. Merge after review and passing CI. The stage
+   job holds its existing staging lock through acceptance and cleanup.
+2. Follow the resulting main **push** CI run and inspect the artifact
    `stage-acceptance-<sha>-<run-id>-<attempt>`. It must identify that SHA,
    deployment, schema, CI run and attempt, `acceptance: passed`, `cleanup: passed`,
    and suite version 1. Check the ten recorded areas: identities, direction, mission
@@ -108,8 +113,10 @@ Railway variable or production secret is required.
    cancelled staging acceptance run and verify the next run recovers its fixtures.
    Verify that a superseded main revision cannot pass the automatic gate.
    Do not intentionally break a shared production deployment to test these cases.
-4. Set repository `STAGE_APP_ORIGIN` to the same HTTPS origin configured in GitHub
-   `stage` and Railway staging. Check existing GitHub production-environment
+4. Repeat successful staging acceptance by rerunning the current-main push CI run
+   (CI has no manual-dispatch trigger), tracking its new attempt and deployment.
+   Evaluate rejection and manual override through verifier/admission-only execution;
+   do not dispatch production to demonstrate them. Check production environment
    protection rules: required reviewers will still pause an automatic job.
 5. With owner authorization for activation, set repository
    `AUTO_PRODUCTION_ENABLED=true`. Both switches must be true. A successful main
@@ -118,11 +125,13 @@ Railway variable or production secret is required.
    repeats verification under its lock.
 
 Schema changes, first production setup and deliberate historical releases use
-the existing manual workflow. Manual dispatch must retain successful prerequisite checks and readiness for
-the selected SHA without requiring acceptance. The current implementation still
-requires a successful whole CI run and uploads readiness after acceptance, so a
-failed acceptance can prevent this override. Resolve and test this gap before
-activation; historical successful releases remain manually selectable.
+the existing manual workflow. Manual dispatch must retain successful prerequisite
+checks and readiness for the selected SHA without requiring acceptance. Readiness
+is uploaded before acceptance. The verifier independently checks the
+trusted completed main push run, successful prerequisite jobs and staging steps,
+and readiness artifact identity and upload time for that attempt. A failed journey
+or cleanup can be overridden manually; failed builds, migrations, deployments and
+readiness cannot. Historical successful releases remain manually selectable.
 
 Disabling `AUTO_PRODUCTION_ENABLED` stops new automatic admissions. Cancel already
 admitted or queued production runs separately. Leave acceptance enabled to retain
@@ -145,23 +154,18 @@ run. No evidence is emitted until the browser journey and cleanup both succeed.
 
 ## Independent design review — 21 October 2026
 
-An Astra Ultra review supports staging mutation tests with minimal production
-readiness, and identified these changes before activation:
+The review supported staging mutation tests with minimal production readiness.
+The two identified implementation gaps are now addressed:
 
-- **Manual override:** preserve readiness evidence before acceptance and verify
-  successful build/type/database prerequisites separately for a completed main
-  run. Test manual promotion after failed acceptance and cleanup, plus rejection
-  after failed build or readiness. Keep automatic admission strict.
-- **Failure diagnosis:** retain separate fixed-field journey and cleanup outcomes
-  in the GitHub run summary, including failure and skipped/not-reached states.
-  Currently a fixture cleanup error masks the original browser failure. Never
-  upload raw exceptions, session state, personnel content or traces to solve this.
-  Diagnostic output is not passing promotion evidence.
+- Readiness survives a later acceptance/cleanup failure, and manual admission
+  independently verifies prerequisites and exact candidate/run/attempt evidence.
+  Automatic admission continues to require both acceptance and cleanup success.
+- The GitHub run summary preserves separate journey and cleanup outcomes, safe
+  checkpoint and candidate identifiers, including unknown/not-reached outcomes.
+  Diagnostic reports contain no raw exceptions or browser/session/application data
+  and cannot qualify as passing acceptance evidence.
 
-These are review findings, not implemented corrections. Hosted rehearsal remains
-required; review does not prove deployed behavior or Google interactive sign-in.
-
-The reviewer also confirmed that the hosted journey does not yet exercise login/
-session issuance, enrollment or every initiative lifecycle action. Local tests
-cover broader behavior; do not describe hosted acceptance as exhaustive coverage.
-The review was static: no tests were rerun and no hosted systems were accessed.
+Hosted rehearsal remains required; local tests alone do not prove deployed
+behavior or Google interactive sign-in. The hosted journey does not exercise
+Google login/session issuance, enrollment or every initiative lifecycle action.
+Local tests cover broader behavior; hosted acceptance is not exhaustive coverage.

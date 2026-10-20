@@ -30,7 +30,10 @@ run and attempt succeeds with matching readiness, authenticated acceptance and
 cleanup evidence. Check current main, staging deployment and advertised schema
 again under the production lock immediately before migrations. Initially require
 production's advertised schema to match staging; keep schema-changing releases
-manual. Retain explicit manual promotion of a selected main SHA.
+manual. Retain explicit manual promotion of a selected main SHA: preserve readiness
+before acceptance and independently verify successful prerequisites and staging
+readiness even when the later journey or cleanup fails. Keep both outcomes in a
+safe diagnostic summary that never substitutes for passing acceptance evidence.
 
 ## Rationale and alternatives
 

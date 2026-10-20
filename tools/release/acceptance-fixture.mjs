@@ -1,4 +1,5 @@
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
+import {safeJourneyCheckpoint} from './acceptance-diagnostics.mjs';
 
 const actorNames=['member','peer','lead','outsider'];
 const subjectPrefix='lantern-acceptance:v1:';
@@ -76,7 +77,7 @@ async function cleanup(client,runId) {
   await client.query('DELETE FROM departments WHERE id=ANY($1::uuid[])',[departments]);
  });
 }
-async function recover(client) {
+async function recover(client,report) {
  const users=await client.query("SELECT google_sub AS marker FROM users WHERE google_sub LIKE $1||'%'",[subjectPrefix]);
  const departments=await client.query("SELECT name AS marker FROM departments WHERE name LIKE $1||'%'",[departmentPrefix]);
  const runs=new Set();
@@ -87,12 +88,19 @@ async function recover(client) {
    runs.add(match[1]);
   }
  }
- for(const runId of runs)await cleanup(client,runId);
+ for(const runId of runs) {
+  report({cleanup:'unknown'});
+  try {await cleanup(client,runId);report({cleanup:'passed'});}
+  catch(error) {report({cleanup:'failed'});throw error;}
+ }
+ return runs.size;
 }
 
 /** Private runner only: the caller must verify the staging target before connecting. */
-export async function withAcceptanceFixture(db,work) {
+export async function withAcceptanceFixture(db,work,{onProgress=()=>{}}={}) {
  let client,result,callbackError,callbackFailed=false,operationError,locked=false;
+ const report=event=>{try {onProgress(event);} catch {}};
+ report({journey:'not-reached',journeyCheckpoint:'not-reached',cleanup:'not-reached'});
  try {
   client=await db.connect();
   // The lock connection stays checked out while the browser runs. Pool error
@@ -102,11 +110,20 @@ export async function withAcceptanceFixture(db,work) {
   locked=(await client.query("SELECT pg_try_advisory_lock(hashtext('lantern-acceptance-v1'),hashtext(current_schema())) AS locked")).rows[0].locked;
   if(!locked)throw new FixtureError('ACCEPTANCE_FIXTURE_BUSY');
   // Holding the run lock proves that any existing marked fixture is abandoned.
-  await recover(client);
+  if(await recover(client,report))report({cleanup:'not-reached'});
   const runId=randomUUID();
   const fixture=await seed(client,runId);
-  try {result=await work(fixture);} catch(error) {callbackFailed=true;callbackError=error;}
-  await cleanup(client,runId);
+  report({journey:'unknown',journeyCheckpoint:'journey'});
+  try {
+   result=await work(fixture);
+   report({journey:'passed',journeyCheckpoint:'complete'});
+  } catch(error) {
+   callbackFailed=true;callbackError=error;
+   report({journey:'failed',journeyCheckpoint:safeJourneyCheckpoint(error)});
+  }
+  report({cleanup:'unknown'});
+  try {await cleanup(client,runId);report({cleanup:'passed'});}
+  catch(error) {report({cleanup:'failed'});throw error;}
  } catch(error) {operationError=error instanceof FixtureError?error:new FixtureError();}
  finally {
   if(locked)try {await client.query("SELECT pg_advisory_unlock(hashtext('lantern-acceptance-v1'),hashtext(current_schema()))");}

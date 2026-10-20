@@ -6,9 +6,10 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { validateHostedMigrationTarget } from './settings.mjs';
 import { runAcceptanceBrowser, ACCEPTANCE_CHECKS } from './acceptance-browser.mjs';
+import { acceptanceDiagnostics, persistAcceptanceDiagnostics } from './acceptance-diagnostics.mjs';
 
 class AcceptanceFailure extends Error {
-  constructor(checkpoint) { super(`Staging acceptance failed [${checkpoint}].`); }
+  constructor(checkpoint) { super(`Staging acceptance failed [${checkpoint}].`); this.checkpoint = checkpoint; }
 }
 
 function target(env) {
@@ -26,8 +27,10 @@ function target(env) {
 
 // The execution callback owns the journey AND its fixture cleanup. Only its
 // successful completion can produce evidence; no browser state is retained.
-export async function acceptanceEvidence(env, readiness, execute, { fetch = globalThis.fetch } = {}) {
+export async function acceptanceEvidence(env, readiness, execute, { fetch = globalThis.fetch, onDiagnostic } = {}) {
   let checkpoint = 'configuration';
+  const diagnostics = acceptanceDiagnostics(env, onDiagnostic);
+  diagnostics.report();
   try {
     target(env);
     assert.equal(readiness.readiness, 'passed');
@@ -44,11 +47,17 @@ export async function acceptanceEvidence(env, readiness, execute, { fetch = glob
       assert.deepEqual(await response.json(), { status: 'ok', database: 'ok' });
     }
     checkpoint = 'stage-health-before';
+    diagnostics.report({ checkpoint });
     await health();
     checkpoint = 'journey-and-cleanup';
-    const checks = await execute();
+    diagnostics.report({ checkpoint, journey: 'unknown', journeyCheckpoint: 'journey', cleanup: 'unknown' });
+    const checks = await execute(update => diagnostics.report(Object.fromEntries(
+      ['journey', 'journeyCheckpoint', 'cleanup'].filter(key => Object.hasOwn(update, key)).map(key => [key, update[key]]),
+    )));
     assert.deepEqual(checks, ACCEPTANCE_CHECKS);
+    diagnostics.report({ journey: 'passed', journeyCheckpoint: 'complete', cleanup: 'passed' });
     checkpoint = 'stage-health-after';
+    diagnostics.report({ checkpoint });
     await health();
     return {
       sha: env.RELEASE_SHA, target: 'stage', deployment: env.EXPECTED_DEPLOYMENT_ID,
@@ -67,12 +76,15 @@ export async function acceptanceEvidence(env, readiness, execute, { fetch = glob
       ]).get(error.code);
       checkpoint = journey ?? fixture ?? checkpoint;
     }
+    diagnostics.report({ checkpoint });
     throw new AcceptanceFailure(checkpoint);
   }
 }
 
 async function run(env) {
-  let directory, database, evidence, checkpoint = 'configuration';
+  let directory, database, evidence, failure;
+  const diagnostics = acceptanceDiagnostics(env, persistAcceptanceDiagnostics);
+  diagnostics.report();
   try {
     target(env);
     assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), env.RELEASE_SHA);
@@ -92,24 +104,40 @@ async function run(env) {
     const { createDatabase } = await import('../../dist/server/database.js');
     const { assertDatabaseTarget } = await import('../../dist/server/database-privileges.js');
     const { withAcceptanceFixture } = await import('./acceptance-fixture.mjs');
-    evidence = await acceptanceEvidence(env, readiness, async () => {
+    evidence = await acceptanceEvidence(env, readiness, async report => {
+      report({ journey: 'not-reached', journeyCheckpoint: 'not-reached', cleanup: 'not-reached' });
       database = createDatabase(url.href);
       await assertDatabaseTarget(database, {
         database: env.LANTERN_DB_NAME, schema: 'lantern', role: 'lantern_stage_migration',
       });
       return withAcceptanceFixture(database, fixture => runAcceptanceBrowser({
         origin: env.APP_ORIGIN, sessions: fixture.sessions, runId: fixture.runId,
-      }));
-    });
+      }), { onProgress: report });
+    }, { onDiagnostic: snapshot => diagnostics.report(snapshot) });
   } catch (error) {
-    throw error instanceof AcceptanceFailure ? error : new AcceptanceFailure(checkpoint);
+    failure = error instanceof AcceptanceFailure ? error : new AcceptanceFailure('configuration');
+    diagnostics.report({ checkpoint: failure.checkpoint });
   } finally {
-    await database?.end();
-    if (directory) await rm(directory, { recursive: true, force: true });
+    // Neither shutdown failure may mask the journey/cleanup result or prevent the
+    // other resource from closing. Raw database/filesystem errors stay private.
+    for (const close of [() => database?.end(), () => directory && rm(directory, { recursive: true, force: true })]) {
+      try { await close(); }
+      catch {
+        if (!failure) {
+          failure = new AcceptanceFailure('shutdown');
+          diagnostics.report({ checkpoint: 'shutdown' });
+        }
+      }
+    }
   }
+  if (failure) throw failure;
   try {
     await writeFile('stage-acceptance.json', JSON.stringify(evidence, null, 2), { mode: 0o600, flag: 'wx' });
-  } catch { throw new AcceptanceFailure('evidence-write'); }
+  } catch {
+    diagnostics.report({ checkpoint: 'evidence-write' });
+    throw new AcceptanceFailure('evidence-write');
+  }
+  diagnostics.report({ checkpoint: 'complete', passingEvidenceProduced: true });
   console.log('Authenticated staging acceptance and fixture cleanup passed.');
 }
 

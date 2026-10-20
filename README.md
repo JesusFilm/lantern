@@ -34,8 +34,8 @@ For Google sign-in, configure a Web OAuth client with the callback `APP_ORIGIN/a
 [ADR 0008](docs/adrs/0008-staging-gate-and-production-smoke.md) records the current
 scope: staging Playwright gates automatic promotion, manual override remains,
 and production uses readiness smoke with engineer-led recovery. The earlier
-production test workspace proposal is superseded. Keep this PR in draft and
-activation pending review, the manual-override gap and hosted rehearsal.
+production test workspace proposal is superseded. Hosted activation requires
+successful staging rehearsal and explicit owner approval.
 
 GitHub Actions checks types, runs PostgreSQL/browser tests, and builds the application. [Staging delivery](.github/workflows/ci.yml) runs for successful main commits when repository variable `STAGE_DELIVERY_ENABLED=true`, using the GitHub `stage` environment. It applies migrations directly from the runner, then uploads the matching webapp revision.
 
@@ -43,7 +43,7 @@ GitHub Actions checks types, runs PostgreSQL/browser tests, and builds the appli
 
 For a manual [production release](.github/workflows/promote.yml) (initial provisioning is described below):
 
-1. Merge a reviewed PR with passing checks. Wait for that main commit's **stage delivery and smoke** job to pass; unit tests/build alone do not make it eligible.
+1. Merge a reviewed PR with passing checks. Require successful type, PostgreSQL/browser and build checks plus staging deployment/readiness for that exact main SHA. Manual promotion may intentionally override failed authenticated acceptance or fixture cleanup; failed prerequisites, migrations, deployment or readiness remain ineligible.
 2. With production release authorization and permitted access, select that full 40-character SHA and run `gh workflow run promote.yml --ref main -f sha=<full-main-sha>`, or use **Actions → Deploy production → Run workflow** on `main` with the same SHA input.
 3. Follow the new run through configuration checks, migrations, deployment and smoke. Confirm its `production-evidence-<sha>` artifact reports the selected `sha`, `readiness: passed`, deployment ID and schema version. The workflow's own main/head SHA can differ from the selected application SHA; use the artifact and `/health` release headers to identify what is deployed.
 4. Report the selected SHA and run link. Readiness checks health, anonymous access denial and the login screen; authenticated user workflows need separate verification. On failure, inspect the reported checkpoint and stop before retrying; migrations may already have committed.

@@ -80,12 +80,41 @@ test('release diagnostics retain only known safe journey or fixture checkpoints'
   }
 });
 
-test('the executable refuses production before reading credentials or attempting connections', () => {
-  const result = spawnSync(process.execPath, ['tools/release/acceptance.mjs'], {
-    env: { PATH: process.env.PATH, RELEASE_TARGET: 'production', MIGRATION_DATABASE_URL: 'private-password' },
-    encoding: 'utf8',
+test('failure diagnostics preserve independent journey and cleanup outcomes without becoming evidence', async () => {
+  const diagnostics = [];
+  await assert.rejects(acceptanceEvidence(env, readiness, async report => {
+    report({ journey: 'failed', journeyCheckpoint: 'mission-image' });
+    report({ cleanup: 'failed' });
+    throw Object.assign(new Error('private database token'), { code: 'ACCEPTANCE_FIXTURE_FAILED' });
+  }, { fetch: async () => health(), onDiagnostic: report => diagnostics.push(report) }), /fixture-lifecycle/);
+  assert.deepEqual(diagnostics.at(-1), {
+    type: 'acceptance-diagnostics', sha, runId: '123', runAttempt: 2,
+    journey: 'failed', journeyCheckpoint: 'mission-image', cleanup: 'failed',
+    checkpoint: 'fixture-lifecycle', passingEvidenceProduced: false,
   });
-  assert.equal(result.status, 1);
-  assert.equal(result.stdout, '');
-  assert.equal(result.stderr.trim(), 'Staging acceptance failed [configuration]. No passing evidence recorded.');
+  assert.doesNotMatch(JSON.stringify(diagnostics), /private database token/);
+  assert.equal(diagnostics.at(-1).acceptance, undefined);
+});
+
+test('the executable records safe not-reached diagnostics when configuration fails', async () => {
+  const { mkdtemp, readFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const directory = await mkdtemp(join(tmpdir(), 'lantern-diagnostics-test-'));
+  try {
+    const result = spawnSync(process.execPath, [new URL('./acceptance.mjs', import.meta.url).pathname], {
+      cwd: directory, encoding: 'utf8',
+      env: { PATH: process.env.PATH, ...env, RELEASE_TARGET: 'production', MIGRATION_DATABASE_URL: 'private-password' },
+    });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, '');
+    assert.equal(result.stderr.trim(), 'Staging acceptance failed [configuration]. No passing evidence recorded.');
+    assert.deepEqual(JSON.parse(await readFile(join(directory, 'stage-acceptance-diagnostics.json'), 'utf8')), {
+      type: 'acceptance-diagnostics', sha, runId: '123', runAttempt: 2,
+      journey: 'not-reached', journeyCheckpoint: 'not-reached', cleanup: 'not-reached',
+      checkpoint: 'configuration', passingEvidenceProduced: false,
+    });
+    await assert.rejects(readFile(join(directory, 'stage-acceptance.json')), { code: 'ENOENT' });
+    assert.doesNotMatch(result.stdout + result.stderr, /private-password/);
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });

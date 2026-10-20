@@ -41,12 +41,23 @@ only a successful trusted push run with both opt-in switches enabled. Admission
 checks exact run/attempt evidence before accessing the production environment;
 the production job repeats verification under its concurrency lock and rechecks
 freshness before migration. Required production environment reviewers still apply.
-The same workflow accepts `workflow_dispatch` for manual SHA promotion.
+The same workflow accepts `workflow_dispatch` for manual SHA promotion. Readiness
+is uploaded before acceptance. Manual verification inspects successful prerequisite
+jobs and deployment/readiness steps from a trusted completed main push run,
+binding its artifact to the selected SHA and staging attempt even when acceptance
+or cleanup failed. Historical readiness artifacts remain supported through their
+trusted upload metadata. Automatic admission still requires successful acceptance
+and cleanup from the exact successful run and attempt.
 Schema-changing automatic releases remain excluded under ADR 0006.
 
 ## Failure and triage
 
 Staging failures leave production unchanged and provide no automatic acceptance.
+The GitHub run summary records the candidate/run/attempt, journey outcome and safe
+checkpoint, cleanup outcome (including unknown/not reached), and whether passing
+evidence was written. Journey and cleanup failures remain independently visible;
+diagnostic output cannot qualify as passing promotion evidence. No raw exceptions,
+session state, browser traces or personnel data are published.
 Inspect the failed Actions step and safe checkpoint output; distinguish a product
 regression, infrastructure failure and cleanup failure. Fix regressions by PR;
 rerun infrastructure failures only after investigation. Investigate unexpected
@@ -59,7 +70,7 @@ cannot undo that deployment. The engineer assesses impact, pauses automation if
 needed, and decides fix-forward or manual recovery. No automatic rollback,
 migration reversal or custom incident acknowledgement workflow is added.
 
-## Open choices and implementation gaps
+## Remaining optional choices
 
 - Optional authenticated production smoke remains proposed. A synthetic login is
   still an account/session and an authentication surface. An unassigned account
@@ -71,10 +82,6 @@ migration reversal or custom incident acknowledgement workflow is added.
 - Permanent staging password accounts remain an optional convenience for manual
   testing. Existing code uses private temporary sessions; it does not implement
   password login. Choose that convenience separately from the promotion gate.
-- Current manual verification searches only successful whole CI runs, and readiness
-  upload follows acceptance. This must be reconciled with the approved override:
-  independently preserve and verify successful prerequisite/readiness evidence even
-  when acceptance fails, without allowing failed builds/deployments to be bypassed.
 
 ## Rationale and consequences
 

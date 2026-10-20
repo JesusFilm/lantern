@@ -10,8 +10,49 @@ export function promotionGate(sha, evidence, {requireAcceptance = false, runId, 
  )) throw new Error('Passing authenticated stage acceptance and cleanup from the exact run attempt are required.');
 }
 
-export function verifyStageRun(run, sha, repository) {
- if (run.head_sha !== sha || run.event !== 'push' || run.head_branch !== 'main' || run.path !== '.github/workflows/ci.yml' || run.status !== 'completed' || run.conclusion !== 'success' || run.repository?.full_name !== repository) throw new Error('Stage run is not a successful main CI run for this SHA.');
+export function verifyStageRun(run, sha, repository, {requireSuccess = true} = {}) {
+ if (run.head_sha !== sha || run.event !== 'push' || run.head_branch !== 'main' || run.path !== '.github/workflows/ci.yml' || run.status !== 'completed' || (requireSuccess && run.conclusion !== 'success') || run.repository?.full_name !== repository) throw new Error('Stage run is not a trusted completed main CI run for this SHA.');
+}
+export function verifyManualPromotion({sha,run,repository,jobs,artifact,evidence}) {
+ verifyStageRun(run,sha,repository,{requireSuccess:false});
+ promotionGate(sha,evidence);
+ const reject=()=>{throw new Error('Manual promotion requires successful prerequisites and readiness from the exact completed staging attempt.');};
+ if (!Number.isSafeInteger(run.run_attempt) || run.run_attempt < 1 || !/^[1-9][0-9]*$/.test(String(run.id))) reject();
+ const successful=item=>item?.status === 'completed' && item.conclusion === 'success';
+ const latestJob=name=>{
+  const matches=jobs.filter(job=>job.name === name);
+  if (!matches.length || matches.some(job=>job.head_sha !== sha || String(job.run_id) !== String(run.id)
+   || !Number.isSafeInteger(job.run_attempt) || job.run_attempt < 1 || job.run_attempt > run.run_attempt)) reject();
+  const attempt=Math.max(...matches.map(job=>job.run_attempt));
+  const latest=matches.filter(job=>job.run_attempt === attempt);
+  if (latest.length !== 1) reject();
+  return latest[0];
+ };
+ for (const name of ['typecheck','PostgreSQL HTTP and browser tests','production build']) {
+  if (!successful(latestJob(name))) reject();
+ }
+ const stage=latestJob('stage delivery and smoke');
+ if (stage.run_attempt !== run.run_attempt || stage.status !== 'completed') reject();
+ // Both migration labels are from trusted historical CI workflows. Require
+ // exactly one successful migration step; an alias never bypasses migration.
+ const required=['Enforce exact revision and successful checks','Verify staging configuration before migrations',['Apply exact-revision schema migrations','Apply migrations in the private staging network'],'Upload the checked source revision','Verify deployed revision, schema, login and anonymous denial'];
+ let previous=0;
+ for (const name of required) {
+  const names=Array.isArray(name)?name:[name];
+  const steps=stage.steps.filter(step=>names.includes(step.name));
+  if (steps.length !== 1 || !successful(steps[0]) || !Number.isInteger(steps[0].number) || steps[0].number <= previous) reject();
+  previous=steps[0].number;
+ }
+ if (stage.steps.some(step=>step.number <= previous && !successful(step))) reject();
+ // Older readiness JSON has no attempt. Trusted artifact metadata must place
+ // its upload after this attempt's readiness, and before its stage job ended.
+ const ready=stage.steps.find(step=>step.number === previous);
+ const created=Date.parse(artifact?.created_at);
+ if (String(evidence.runId) !== String(run.id)
+  || (evidence.runAttempt !== undefined && evidence.runAttempt !== run.run_attempt)
+  || ![`stage-readiness-${sha}-${run.id}-${run.run_attempt}`,`stage-readiness-${sha}`].includes(artifact?.name)
+  || artifact.expired !== false || String(artifact.workflow_run?.id) !== String(run.id) || artifact.workflow_run?.head_sha !== sha
+  || !(created >= Date.parse(ready.completed_at) && created >= Date.parse(stage.started_at) && created <= Date.parse(stage.completed_at))) reject();
 }
 export function verifyAutomaticPromotion({sha,currentMainSha,run,repository,runId,runAttempt}) {
  verifyStageRun(run,sha,repository);
