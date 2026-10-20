@@ -105,6 +105,10 @@ test("department direction persists through the authenticated HTTP interface", a
       const archived = await request(lead, undefined, "PUT", direction);
       assert.equal(archived.status, 200); direction = await archived.json() as DepartmentDirection;
       assert.equal((await request(member, "/api/focuses", "POST", draft)).status, 400);
+      const newlyAlignedObjective = { ...draft, version: focus.version,
+        sections: [...draft.sections, { kind: "normal", objective: "A new objective", goals: [],
+          alignment: { initiatives: [{ id: first!.id, name: first!.name }], other: false } }] };
+      assert.equal((await request(member, path, "PUT", newlyAlignedObjective)).status, 400);
       const retained = await request(member, path, "PUT", { ...draft, version: focus.version });
       assert.equal(retained.status, 200); focus = await retained.json() as PositionFocus;
       const confirmed = await request(lead, `/api/department/members/${member}/focuses/${focus.id}/confirm`, "POST", { version: focus.version });

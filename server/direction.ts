@@ -64,16 +64,22 @@ export async function saveDirection(db: Pool, actorId: string, draft: DirectionD
 // from trusted configuration so later renames cannot rewrite a confirmed baseline.
 export async function resolveAlignment(client: PoolClient, actorId: string, sections: FocusSection[], previous: FocusSection[] = []): Promise<FocusSection[]> {
   const direction = await readDirection(client, actorId);
-  const retained = new Map(previous.flatMap(section => section.alignment?.initiatives ?? []).map(item => [item.id, item]));
+  const retained = new Map<string, string[]>();
+  for (const section of previous) for (const item of section.alignment?.initiatives ?? []) {
+    const names = retained.get(item.id) ?? [];
+    names.push(item.name);
+    retained.set(item.id, names);
+  }
   return sections.map(section => {
     if (!section.alignment) return section;
     return { ...section, alignment: {
       other: section.alignment.other,
       initiatives: section.alignment.initiatives.map(choice => {
         const initiative = direction.initiatives.find(item => item.id === choice.id);
-        if (!initiative || (initiative.archived && !retained.has(choice.id)))
+        const retainedNames = retained.get(choice.id);
+        if (!initiative || (initiative.archived && !retainedNames?.length))
           throw new AccessError(400, "An initiative is no longer available. Reopen the objective and choose an active initiative or Other.");
-        return { id: initiative.id, name: initiative.archived ? retained.get(choice.id)!.name : initiative.name };
+        return { id: initiative.id, name: initiative.archived ? retainedNames!.shift()! : initiative.name };
       }),
     } };
   });
