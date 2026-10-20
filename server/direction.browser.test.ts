@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { chromium, expect } from "@playwright/test";
 import { createServer as createViteServer } from "vite";
 import assert from "node:assert/strict";
@@ -35,7 +36,7 @@ test("career lead configures team direction and members always see the mission",
     leadPage.setDefaultTimeout(5000); memberPage.setDefaultTimeout(5000);
     const mission = "We partner with the Body of Christ through heart language media, so everyone, everywhere can encounter Jesus.";
 
-    await t.test("save department configuration and always show its mission while keeping preview optional", async () => {
+    await t.test("save department configuration and show a live preview above the mission editor", async () => {
       await memberPage.goto(origin);
       await expect(memberPage.getByRole("heading", { name: "Position focuses", exact: true })).toBeVisible();
       await expect(memberPage.getByText("Your documents, organised by period.", { exact: true })).toHaveCount(0);
@@ -62,17 +63,78 @@ test("career lead configures team direction and members always see the mission",
       await memberPage.evaluate(key => localStorage.setItem(key, "false"), `lantern:mission:${member}:${team}:expanded:v1`);
       await memberPage.reload();
       await expect(memberPage.getByText(mission, { exact: true })).toBeVisible();
-      await leadPage.getByRole("button", { name: "Preview banner", exact: true }).click();
       await expect(leadPage.getByRole("region", { name: "Our mission" })).toContainText(mission);
       const previewArtwork = leadPage.getByRole("region", { name: "Our mission" }).locator("img");
       await expect(previewArtwork).toBeVisible();
       await expect.poll(() => previewArtwork.evaluate((image) => { const loaded = image as unknown as { complete: boolean; naturalWidth: number }; return loaded.complete && loaded.naturalWidth > 0; })).toBe(true);
       await expect(leadPage.getByRole("button", { name: /^(Hide|Show) mission$/ })).toHaveCount(0);
-      await leadPage.getByRole("button", { name: "Close preview", exact: true }).click();
-      await expect(leadPage.getByRole("region", { name: "Our mission" })).toHaveCount(0);
-      await leadPage.getByRole("button", { name: "Preview banner", exact: true }).click();
       await expect(leadPage.getByRole("region", { name: "Our mission" }).getByText(mission, { exact: true })).toBeVisible();
       await expect(memberPage.getByRole("button", { name: "Department", exact: true })).toHaveCount(0);
+    });
+
+    await t.test("preview-first image chooser saves, cancels, removes and restores artwork", async () => {
+      const preview = leadPage.getByRole("region", { name: "Our mission" });
+      await preview.getByRole("button", { name: "Change image", exact: true }).click();
+      const chooser = leadPage.getByRole("dialog", { name: "Banner image", exact: true });
+      await expect(chooser).toBeVisible();
+      const image = await sharp({ create: { width: 700, height: 200, channels: 4, background: "#007e95" } }).png().toBuffer();
+      await chooser.getByLabel("Choose image").setInputFiles({ name: "seasonal.png", mimeType: "image/png", buffer: image });
+      await expect(chooser.getByRole("button", { name: "Use image", exact: true })).toBeEnabled();
+      await chooser.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(preview.locator("img")).toHaveAttribute("src", "/mission-jesus-geometric.png");
+      await preview.getByRole("button", { name: "Change image", exact: true }).click();
+      await chooser.getByLabel("Choose image").setInputFiles({ name: "seasonal.png", mimeType: "image/png", buffer: image });
+      await chooser.getByRole("button", { name: "Use image", exact: true }).click();
+      await expect(preview.locator("img")).toHaveAttribute("src", /^data:image\/webp;base64,/);
+      await leadPage.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(preview.locator("img")).toHaveAttribute("src", "/mission-jesus-geometric.png");
+      await preview.getByRole("button", { name: "Change image", exact: true }).click();
+      await chooser.getByLabel("Choose image").setInputFiles({ name: "seasonal.png", mimeType: "image/png", buffer: image });
+      await chooser.getByRole("button", { name: "Use image", exact: true }).click();
+      await f.migration.query("ALTER TABLE department_direction ADD CONSTRAINT synthetic_image_failure CHECK (mission_image IS NULL OR mission_image NOT LIKE 'data:%')");
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("alert")).toContainText("temporarily unavailable");
+      await expect(preview.locator("img")).toHaveAttribute("src", /^data:image\/webp;base64,/);
+      await memberPage.reload();
+      await expect(memberPage.getByRole("region", { name: "Our mission" }).locator("img")).toHaveAttribute("src", "/mission-jesus-geometric.png");
+      await f.migration.query("ALTER TABLE department_direction DROP CONSTRAINT synthetic_image_failure");
+      const stale = await leadContext.newPage();
+      await stale.goto(origin + "/?page=department&departmentTab=direction");
+      await expect(stale.getByRole("region", { name: "Our mission" }).locator("img")).toHaveAttribute("src", "/mission-jesus-geometric.png");
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(preview.locator("img")).toHaveAttribute("src", /^data:image\/webp;base64,/);
+      await memberPage.reload();
+      await expect(memberPage.getByRole("region", { name: "Our mission" }).locator("img")).toHaveAttribute("src", /^data:image\/webp;base64,/);
+      await expect(preview.locator("img")).toHaveCSS("object-fit", "contain");
+      await expect(preview.locator("img")).toHaveCSS("transform", "none");
+      await stale.getByRole("button", { name: "Change image", exact: true }).click();
+      await stale.getByRole("dialog").getByRole("button", { name: "Remove image", exact: true }).click();
+      await stale.getByRole("dialog").getByRole("button", { name: "Use image", exact: true }).click();
+      await stale.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(stale.getByRole("alert")).toContainText("changed in another window");
+      await expect(stale.getByRole("region", { name: "Our mission" }).locator("img")).toHaveCount(0);
+      await stale.getByRole("button", { name: "Reload saved settings", exact: true }).click();
+      await expect(stale.getByRole("region", { name: "Our mission" }).locator("img")).toHaveAttribute("src", /^data:image\/webp;base64,/);
+      await stale.close();
+      await preview.getByRole("button", { name: "Change image", exact: true }).click();
+      await chooser.getByRole("button", { name: "Remove image", exact: true }).click();
+      await chooser.getByRole("button", { name: "Use image", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(preview.locator("img")).toHaveCount(0);
+      await leadPage.getByLabel("Organizational mission", { exact: true }).fill("");
+      await expect(preview).toHaveCount(0);
+      await leadPage.getByRole("button", { name: "Choose banner image", exact: true }).click();
+      await chooser.getByRole("button", { name: "Use default", exact: true }).click();
+      await chooser.getByRole("button", { name: "Use image", exact: true }).click();
+      await leadPage.getByLabel("Organizational mission", { exact: true }).fill(mission);
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(preview.locator("img")).toHaveAttribute("src", "/mission-jesus-geometric.png");
     });
 
     await t.test("quick palette offers only presets and persists the additional choices after save", async () => {

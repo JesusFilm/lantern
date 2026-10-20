@@ -56,14 +56,28 @@
 }
 .mission-banner .mission-quote { color: #bce0e6; font: 100px/1 Georgia, serif; height: 64px; }
 .mission-banner .mission-body { flex: 1; min-width: 0; }
-.mission-banner .mission-art { width: clamp(140px, 22vw, 240px); height: auto; flex-shrink: 0; align-self: center; object-fit: contain; transform: scaleX(-1); }
+.mission-art-slot { width: clamp(140px, 22vw, 240px); flex-shrink: 0; align-self: center; }
+.mission-banner .mission-art { width: 100%; height: 240px; display: block; object-fit: contain; }
+.default-mission-art { transform: scaleX(-1); }
+.mission-art-slot.editable { border: 1px dashed #9cb9c7; border-radius: 6px; padding: 8px; text-align: center; }
+.mission-art-slot.editable button { margin-top: 8px; font-size: 13px; }
+.mission-editor-preview { background: #f6f9fa; padding: 18px; border-radius: 6px; margin: 18px 0 24px; }
+.mission-editor-preview .mission-banner { margin: 0; }
+.mission-empty-preview { padding: 20px; color: #61768e; }
+.mission-image-dialog img { display: block; width: 100%; height: 180px; object-fit: contain; margin: 16px 0; }
+.mission-image-dialog input { max-width: 100%; }
+.mission-image-dialog .muted { font-size: 13px; }
+dialog:has(.mission-image-dialog) { max-height: 90dvh; overflow-y: auto; }
 .mission-banner h2 { color: #007e95; text-transform: uppercase; letter-spacing: .12em; font-size: 12px; margin: 6px 0; }
-.mission-banner p { font-size: 24px; font-weight: 650; line-height: 1.5; margin: 14px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.mission-banner .mission-body p { font-size: 24px; font-weight: 650; line-height: 1.5; margin: 14px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 @media (max-width: 700px) {
   .mission-banner { gap: 12px; padding: 20px; flex-wrap: wrap; }
   .mission-banner .mission-quote { font-size: 64px; width: 26px; }
-  .mission-banner p { font-size: 20px; }
-  .mission-banner .mission-art { grid-column: 2; width: 150px; justify-self: end; }
+  .mission-banner .mission-body p { font-size: 20px; }
+  .mission-art-slot { grid-column: 2; width: 150px; justify-self: end; }
+  .mission-banner .mission-art { height: 150px; }
+  .mission-editor-preview { padding: 10px; }
+  .mission-editor-preview .mission-banner { padding: 12px; }
   .initiative-table td, .initiative-table th { padding: 12px 6px; }
   .initiative-actions { flex-direction: column; gap: 4px; align-items: flex-start; }
   .direction-save { flex-wrap: wrap; }

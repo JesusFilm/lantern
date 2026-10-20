@@ -94,6 +94,12 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
       )`);
       await client.query('INSERT INTO schema_migrations(version) VALUES (7)');
     }
+    const missionImage = await client.query('SELECT version FROM schema_migrations WHERE version = 8');
+    if (!missionImage.rowCount) {
+      await client.query(`ALTER TABLE department_direction ADD COLUMN mission_image text DEFAULT '/mission-jesus-geometric.png'
+        CHECK (mission_image IS NULL OR octet_length(mission_image) <= 699092)`);
+      await client.query('INSERT INTO schema_migrations(version) VALUES (8)');
+    }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
@@ -103,9 +109,9 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7)');
-  if (result.rowCount !== 7) throw new Error('Required migration is missing.');
-  await database.query('SELECT department_id,mission,initiatives,version FROM department_direction LIMIT 0');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8)');
+  if (result.rowCount !== 8) throw new Error('Required migration is missing.');
+  await database.query('SELECT department_id,mission,mission_image,initiatives,version FROM department_direction LIMIT 0');
   const legacy = await database.query(`SELECT to_regclass('allowed_domains') IS NOT NULL
     OR to_regprocedure('enroll_member(uuid,text,boolean)') IS NOT NULL
     OR EXISTS (SELECT 1 FROM information_schema.columns

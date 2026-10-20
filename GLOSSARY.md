@@ -69,7 +69,9 @@ A concise generic illustration of one objective and two goals. Its targets do no
 The career lead configures the wording shown to their department in Lantern. The
 configured mission remains visible on Position Focuses, outside the objective
 editor. Configuration is department-scoped; it does not confer
-organization-wide administrative permissions.
+organization-wide administrative permissions. Its optional **mission artwork** is a
+department-scoped image chosen by the career lead; it provides visual context and
+does not replace the mission statement. An empty mission hides both text and artwork.
 
 **Strategic initiative**:
 A named team priority configured by the career lead. An objective can support

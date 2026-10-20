@@ -9,12 +9,14 @@ export interface StrategicInitiative {
 
 export interface DepartmentDirection {
   mission: string;
+  missionImage?: string | null;
   initiatives: StrategicInitiative[];
   version: number;
 }
 
 export interface DirectionDraft {
   mission: string;
+  missionImage?: string | null;
   initiatives: Array<Omit<StrategicInitiative, "id"> & { id?: string }>;
   version: number;
 }

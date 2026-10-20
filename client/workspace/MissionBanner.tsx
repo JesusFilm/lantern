@@ -1,6 +1,9 @@
 import { useId } from "react";
+import { DEFAULT_MISSION_IMAGE } from "../../shared/mission-image.js";
 
-export function MissionBanner({ mission }: { mission: string }) {
+export function MissionBanner({ mission, image = DEFAULT_MISSION_IMAGE, onChooseImage }: {
+  mission: string; image?: string | null; onChooseImage?: () => void;
+}) {
   const headingId = useId();
   if (!mission) return null;
   return (
@@ -10,7 +13,11 @@ export function MissionBanner({ mission }: { mission: string }) {
         <h2 id={headingId}>Our mission</h2>
         <p>{mission}</p>
       </div>
-      <img className="mission-art" src="/mission-jesus-geometric.png" alt="" width="240" height="240" />
+      {(image || onChooseImage) && <div className={`mission-art-slot${onChooseImage ? " editable" : ""}`}>
+        {image ? <img className={`mission-art${image === DEFAULT_MISSION_IMAGE ? " default-mission-art" : ""}`}
+          src={image} alt="" width="240" height="240" /> : <span className="muted">No image</span>}
+        {onChooseImage && <button type="button" onClick={onChooseImage}>Change image</button>}
+      </div>}
     </section>
   );
 }
