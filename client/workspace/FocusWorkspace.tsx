@@ -1,110 +1,40 @@
-import { useEffect, useState } from "react";
-import type {
-  FocusDraft,
-  PositionFocus,
-  ObjectiveKind,
-} from "../../shared/focus.js";
+import type { ObjectiveKind } from "../../shared/focus.js";
 import { FocusConfirmation } from "./FocusConfirmation.js";
-import { api } from "./api.js";
 import { Dialog } from "./Dialog.js";
-import type { DepartmentDirection } from "../../shared/direction.js";
-import type { ObjectiveAlignmentChoice, FocusDraftSection } from "../../shared/focus.js";
 import { MissionBanner } from "./MissionBanner.js";
 import { AlignmentSummary, InitiativeChoices } from "./InitiativeChoices.js";
+import { useDraftFocusWorkflow } from "./useDraftFocusWorkflow.js";
 const date = (value: string) =>
   new Date(value + "T12:00:00").toLocaleDateString("en-NZ", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
-type Edit = {
-  type: "objective" | "goal" | "remove-objective" | "remove-goal";
-  section: number;
-  goal?: number;
-  adding?: boolean;
-};
 const kindLabels: Record<ObjectiveKind, string> = {
   normal: "Normal Objectives",
   "personal-development": "Personal Development Objectives",
   leadership: "Leadership Objectives",
 };
-export function FocusWorkspace({ member, canConfirm, departmentId }: {
+export function FocusWorkspace({ member, canConfirm }: {
   member: { id: string; name: string };
   canConfirm: boolean;
   departmentId: string;
 }) {
-  const [edit, setEdit] = useState<Edit>();
-  const [direction, setDirection] = useState<DepartmentDirection>();
-
-  const [items, setItems] = useState<PositionFocus[]>([]),
-    [focus, setFocus] = useState<PositionFocus>(),
-    [loading, setLoading] = useState(true),
-    [error, setError] = useState(""),
-    [metadata, setMetadata] = useState(false),
-    [creating, setCreating] = useState(false);
-  async function load() {
-    setLoading(true);
-    setError("");
-    try {
-      setItems(await api("/api/focuses"));
-      setDirection(await api("/api/department/direction"));
-      const id = new URLSearchParams(location.search).get("focus");
-      setFocus(id ? await api("/api/focuses/" + id) : undefined);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => {
-    void load();
-    const pop = () => void load();
-    window.addEventListener("popstate", pop);
-    return () => window.removeEventListener("popstate", pop);
-  }, []);
-  function open(value?: PositionFocus) {
-    setFocus(value);
-    const url = new URL(location.href);
-    if (value) url.searchParams.set("focus", value.id);
-    else url.searchParams.delete("focus");
-    history.pushState(null, "", url);
-    window.scrollTo(0, 0);
-  }
-  async function openSaved(id: string) {
-    setError("");
-    try {
-      open(await api<PositionFocus>("/api/focuses/" + id));
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
-  async function persist(draft: FocusDraft, newDocument = creating) {
-    const result = await api<PositionFocus>(
-      "/api/focuses" + (newDocument ? "" : "/" + focus!.id),
-      newDocument ? "POST" : "PUT",
-      { ...draft, ...(newDocument ? {} : { version: focus!.version }) },
-    );
-    setItems((old) =>
-      [result, ...old.filter((x) => x.id !== result.id)].sort((a, b) =>
-        b.start.localeCompare(a.start),
-      ),
-    );
-    open(result);
-    setMetadata(false);
-    setEdit(undefined);
-  }
+  const {
+    items, focus, direction, loading, error, edit,
+    reload, select, begin, change, cancel, save, retryInitiatives, acceptConfirmed,
+  } = useDraftFocusWorkflow();
   const editable = focus?.status === "draft";
-  if (loading) return <p role="status">Loading position focuses…</p>;
   return (
     <>
       {error && (
         <p role="alert">
-          {error} <button onClick={() => void load()}>Try again</button>
+          {error} <button onClick={() => void reload()}>Try again</button>
         </p>
       )}
-      {focus ? (
+      {loading ? <p role="status">Loading position focuses…</p> : focus ? (
         <>
-          <button className="link back" onClick={() => open()}>
+          <button className="link back" onClick={() => select()}>
             ← Position focuses
           </button>
           <header>
@@ -115,19 +45,13 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
               </p>
             </div>
             {editable && <button
-              onClick={() => {
-                setCreating(false);
-                setMetadata(true);
-              }}
+              onClick={() => begin({ type: "metadata" })}
             >
               Edit title & dates
             </button>}
           </header>
           <FocusConfirmation key={focus.id} focus={focus} member={member}
-            onConfirmed={canConfirm ? (saved) => {
-              setFocus(saved);
-              setItems(old => old.map(item => item.id === saved.id ? saved : item));
-            } : undefined} />
+            onConfirmed={canConfirm ? acceptConfirmed : undefined} />
           {focus.sections.length ? (
             focus.sections.map((section, i) => (
               <section className="read-section" key={i}>
@@ -145,7 +69,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
                       <button
                         className="link edit-action"
                         onClick={() =>
-                          setEdit({ type: "objective", section: i })
+                          begin({ type: "objective", section: i })
                         }
                       >
                         Edit objective
@@ -153,7 +77,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
                       <button
                         className="link danger small-action"
                         onClick={() =>
-                          setEdit({ type: "remove-objective", section: i })
+                          begin({ type: "remove-objective", section: i })
                         }
                       >
                         Remove
@@ -173,7 +97,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
                         <button
                           className="link"
                           onClick={() =>
-                            setEdit({ type: "goal", section: i, goal: j })
+                            begin({ type: "goal", section: i, goal: j })
                           }
                         >
                           Edit
@@ -181,7 +105,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
                         <button
                           className="link danger small-action"
                           onClick={() =>
-                            setEdit({
+                            begin({
                               type: "remove-goal",
                               section: i,
                               goal: j,
@@ -199,7 +123,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
                   {editable && <button
                     className="link"
                     onClick={() =>
-                      setEdit({ type: "goal", section: i, adding: true })
+                      begin({ type: "goal", section: i, adding: true })
                     }
                   >
                     + Add SMART goal
@@ -214,7 +138,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
               <button
                 className="primary"
                 onClick={() =>
-                  setEdit({ type: "objective", section: 0, adding: true })
+                  begin({ type: "objective", section: 0, adding: true })
                 }
               >
                 Add objective
@@ -224,7 +148,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
           {editable && <div className="editor-actions">
             <button
               onClick={() =>
-                setEdit({
+                begin({
                   type: "objective",
                   section: focus.sections.length,
                   adding: true,
@@ -243,10 +167,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
             </div>
             <button
               className="primary"
-              onClick={() => {
-                setCreating(true);
-                setMetadata(true);
-              }}
+              onClick={() => begin({ type: "create" })}
             >
               New position focus
             </button>
@@ -267,7 +188,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
                     <td>
                       <button
                         className="link"
-                        onClick={() => void openSaved(x.id)}
+                        onClick={() => select(x.id)}
                       >
                         {x.title}
                       </button>
@@ -276,7 +197,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
                       {date(x.start)} – {date(x.end)}
                     </td>
                     <td>
-                      <button onClick={() => void openSaved(x.id)}>Open</button>
+                      <button onClick={() => select(x.id)}>Open</button>
                     </td>
                   </tr>
                 ))}
@@ -290,10 +211,11 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
           )}
         </>
       )}
-      {edit && focus && (
+      {edit && edit.type !== "metadata" && (
         <Dialog
+          key={edit.key}
           title={
-            edit.type.startsWith("remove")
+            edit.type === "remove-goal" || edit.type === "remove-objective"
               ? "Remove this " +
                 (edit.type === "remove-goal"
                   ? "goal"
@@ -303,46 +225,11 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
                 (edit.type === "goal" ? "SMART goal" : "objective")
           }
           saveLabel={edit.type.startsWith("remove") ? "Remove" : "Save changes"}
-          onClose={() => setEdit(undefined)}
-          onSave={async (data) => {
-            const sections: FocusDraftSection[] = structuredClone(focus.sections);
-            if (edit.type === "remove-objective")
-              sections.splice(edit.section, 1);
-            else if (edit.type === "remove-goal")
-              sections[edit.section]!.goals.splice(edit.goal!, 1);
-            else {
-              const text = String(data.get("text")).trim();
-              if (!text) throw new Error("Enter some text before saving.");
-              if (edit.type === "objective") {
-                const value = data.get("alignment");
-                if (typeof value !== "string") throw new Error("Wait for initiatives to load, or retry loading them before saving.");
-                const alignment = JSON.parse(value) as ObjectiveAlignmentChoice;
-                if (edit.adding)
-                  sections.push({
-                    kind: data.get("kind") as ObjectiveKind,
-                    objective: text,
-                    goals: [],
-                    alignment,
-                  });
-                else {
-                  sections[edit.section]!.objective = text;
-                  sections[edit.section]!.alignment = alignment;
-                }
-              } else if (edit.adding) sections[edit.section]!.goals.push(text);
-              else sections[edit.section]!.goals[edit.goal!] = text;
-            }
-            await persist(
-              {
-                title: focus.title,
-                start: focus.start,
-                end: focus.end,
-                sections,
-              },
-              false,
-            );
-          }}
+          onClose={cancel}
+          onSave={save}
         >
-          {edit.type.startsWith("remove") ? (
+          <p className="muted">Position focus: {edit.source.title}</p>
+          {edit.type === "remove-goal" || edit.type === "remove-objective" ? (
             <p>This removes the content from your saved position focus.</p>
           ) : (
             <>
@@ -355,7 +242,8 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
                         type="radio"
                         name="kind"
                         value={kind}
-                        defaultChecked={kind === "normal"}
+                        checked={edit.kind === kind}
+                        onChange={() => change({ type: "kind", kind: kind as ObjectiveKind })}
                       />
                       <strong>{label}</strong>
                     </label>
@@ -371,45 +259,36 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
                 required
                 maxLength={10000}
                 autoFocus
-                defaultValue={
-                  edit.adding
-                    ? ""
-                    : edit.type === "goal"
-                      ? focus.sections[edit.section]!.goals[edit.goal!]
-                      : focus.sections[edit.section]!.objective
-                }
+                value={edit.text}
+                onChange={event => change({ type: "text", text: event.target.value })}
               />
-              {edit.type === "objective" && <InitiativeChoices initial={edit.adding ? undefined : focus.sections[edit.section]!.alignment} />}
+              {edit.type === "objective" && <InitiativeChoices
+                selection={edit.alignment}
+                readiness={edit.initiatives}
+                onInitiative={(id, checked) => change({ type: "initiative", id, checked })}
+                onOther={checked => change({ type: "other", checked })}
+                onRetry={retryInitiatives}
+              />}
             </>
           )}
         </Dialog>
       )}
-      {metadata && (
+      {edit?.type === "metadata" && (
         <Dialog
-          title={creating ? "New position focus" : "Edit title & dates"}
-          onClose={() => setMetadata(false)}
-          onSave={async (data) => {
-            const start = String(data.get("start")),
-              end = String(data.get("end"));
-            if (end < start)
-              throw new Error(
-                "The end date must be on or after the start date.",
-              );
-            await persist({
-              title: String(data.get("title")),
-              start,
-              end,
-              sections: creating ? [] : focus!.sections,
-            });
-          }}
+          key={edit.key}
+          title={edit.source ? "Edit title & dates" : "New position focus"}
+          onClose={cancel}
+          onSave={save}
         >
+          {edit.source && <p className="muted">Position focus: {edit.source.title}</p>}
           <label htmlFor="title">Document title</label>
           <input
             id="title"
             name="title"
             required
             maxLength={200}
-            defaultValue={creating ? "" : focus?.title}
+            value={edit.values.title}
+            onChange={event => change({ type: "metadata", values: { title: event.target.value } })}
           />
           <div className="metadata">
             <div>
@@ -419,7 +298,8 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
                 name="start"
                 type="date"
                 required
-                defaultValue={creating ? "" : focus?.start}
+                value={edit.values.start}
+                onChange={event => change({ type: "metadata", values: { start: event.target.value } })}
               />
             </div>
             <div>
@@ -429,7 +309,8 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
                 name="end"
                 type="date"
                 required
-                defaultValue={creating ? "" : focus?.end}
+                value={edit.values.end}
+                onChange={event => change({ type: "metadata", values: { end: event.target.value } })}
               />
             </div>
           </div>

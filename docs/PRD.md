@@ -6,6 +6,7 @@ Lantern helps team members prepare a position focus and agree it with their care
 
 - Members create and edit their own titled, dated focuses with objectives and SMART goals. Empty and partial drafts are valid. Objectives can include Personal Development and Leadership types.
 - Separate guides explain objectives and SMART goals, with a worked example. Focuses open in a compact reading view and are edited through dialogs.
+- Within Position Focuses, browser Back/Forward retains a pending dialog and its input against the original document/version. Save writes that source and opens the saved document; Cancel reveals the navigation destination. Failed or stale saves retain input. Leaving Position Focuses or reloading the page ends the in-memory edit.
 - Career leads browse current department members and their focuses. After discussion, the lead confirms and locks a focus. Confirmation records who confirmed it and when; the title, dates, objectives and goals become read-only for both people.
 - Account display names persist. Career leads can add eligible registered users to their department. Rejoining former members is not currently supported.
 - A career lead configures the organizational mission and strategic initiatives in Department → Mission & initiatives. Saves persist the department's configuration atomically and reject concurrent stale edits. An empty mission hides the banner; no mission is seeded automatically.
