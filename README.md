@@ -116,6 +116,25 @@ Private local files are ignored by Git. `.env.example` contains only synthetic l
 
 Database target settings are `LANTERN_DB_NAME`, `LANTERN_DB_SCHEMA`, the three role names above, and `LANTERN_DB_EXPECTED_ENDPOINT` for commands that check the connection endpoint. Locally use `LANTERN_ENV=local` and the loopback endpoint; production owner commands use production-specific targets. Setup commands are described under [Development](#development) and [Delivery](#delivery).
 
+### Optional initiative appearance setup
+
+After deploying the initiative appearance feature, run
+[`tools/database/seed-initiative-appearance.sql`](tools/database/seed-initiative-appearance.sql)
+using the intended environment's operator connection. Replace
+`REPLACE_WITH_DEPARTMENT_UUID` with the department ID returned by
+`SELECT id, name FROM lantern.departments WHERE deleted_at IS NULL;`, then execute
+the entire file in one connection. It is plain SQL, suitable for a SQL editor or
+`psql -v ON_ERROR_STOP=1 -f tools/database/seed-initiative-appearance.sql` with your
+connection already configured outside the command.
+
+The script adds missing agreed initiatives and assigns their bundled SVG icons
+and colors. Existing names are matched ignoring case and surrounding whitespace;
+IDs, archive status, mission, unrelated initiatives and focus history are preserved.
+It is safe to rerun and only advances the department configuration version when
+data changes. Open settings pages must reload after a change. Appearance uses the
+existing JSON document fields, so this feature needs no schema migration beyond
+schema 7. The data setup is optional and is not run automatically on deployment.
+
 ## Code
 
 - `client/workspace/`: member and career-lead UI.

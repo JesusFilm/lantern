@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { test } from "node:test";
+import { readFile } from "node:fs/promises";
 import { privilegeFixture } from "./privilege-test-support.js";
 import { migrate, assertSchemaReady } from "./schema.js";
 import { createApp } from "./app.js";
@@ -49,6 +50,61 @@ test("department direction persists through the authenticated HTTP interface", a
       server.on("request", createApp(f.runtime, { origin }));
       assert.deepEqual(await (await request(member)).json(), saved);
       assert.deepEqual(await (await request(outsider)).json(), { mission: "", initiatives: [], version: 0 });
+    });
+
+    await t.test("initiative appearance persists for the department and is validated atomically", async () => {
+      const before = await (await request(lead)).json() as DepartmentDirection;
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 12 L12 4 L20 12 Z" fill="currentColor"/></svg>';
+      const payload = { ...before, initiatives: before.initiatives.map((item, index) => ({
+        ...item, appearance: index === 0 ? { icon: "globe", color: "#d13d46" } : { icon: "handshake", color: "#e4bf24" },
+      })) };
+      const response = await request(lead, undefined, "PUT", payload);
+      assert.equal(response.status, 200);
+      const saved = await response.json() as DepartmentDirection;
+      assert.deepEqual(saved.initiatives[0]!.appearance, { icon: "globe", color: "#d13d46" });
+      assert.deepEqual(saved.initiatives[1]!.appearance, { icon: "handshake", color: "#e4bf24" });
+      assert.deepEqual(await (await request(member)).json(), saved);
+      assert.deepEqual(((await (await request(outsider)).json()) as DepartmentDirection).initiatives, []);
+      for (const appearance of [
+        { svg, color: "#8560bb" }, { icon: "heart", color: "#123456" },
+        { icon: "unknown", color: "#b43e65" }, { icon: "heart", color: "red;display:none" },
+        { icon: "heart", svg, color: "#b43e65" },
+        { svg: '<svg viewBox="0 0 24 24" onload="alert(1)"/>', color: "#b43e65" },
+        { svg: '<svg viewBox="0 0 24 24"><script>alert(1)</script></svg>', color: "#b43e65" },
+        { svg: '<svg viewBox="0 0 24 24"><image href="https://example.test/track"/></svg>', color: "#b43e65" },
+        { svg: '<!DOCTYPE svg [<!ENTITY x "boom">]><svg viewBox="0 0 24 24">&x;</svg>', color: "#b43e65" },
+        { svg: '<svg viewBox="0 0 24 24"><path fill="url(https://example.test/track)"/></svg>', color: "#b43e65" },
+        { svg: '<svg viewBox="0 0 24 24"><foreignObject>hello</foreignObject></svg>', color: "#b43e65" },
+        { svg: '<svg viewBox="0 0 24 24"><path></svg>', color: "#b43e65" },
+        { svg: "x".repeat(25000), color: "#b43e65" },
+      ]) {
+        assert.equal((await request(lead, undefined, "PUT", { ...saved, initiatives: [
+          { ...saved.initiatives[0], appearance }, saved.initiatives[1],
+        ] })).status, 400);
+      }
+      assert.equal((await request(member, undefined, "PUT", saved)).status, 403);
+      assert.deepEqual(await (await request(lead)).json(), saved);
+      // Preserve the legacy fixture for the independent alignment regression below.
+      assert.equal((await request(lead, undefined, "PUT", { ...before, version: saved.version })).status, 200);
+    });
+
+    await t.test("legacy custom appearances remain readable and retainable but cannot be changed to another custom value", async () => {
+      const before = await (await request(lead)).json() as DepartmentDirection;
+      const legacyAppearance = { color: "#123456", svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>' };
+      // Fixture for data saved before editing was restricted to presets.
+      await f.admin.query("UPDATE department_direction SET initiatives=$1,version=version+1 WHERE department_id=$2",
+        [JSON.stringify(before.initiatives.map((item, index) => index === 0 ? { ...item, appearance: legacyAppearance } : item)), team]);
+      const legacy = await (await request(lead)).json() as DepartmentDirection;
+      assert.deepEqual(legacy.initiatives[0]!.appearance, legacyAppearance);
+      const retained = await request(lead, undefined, "PUT", { ...legacy, mission: "Updated mission" });
+      assert.equal(retained.status, 200);
+      const saved = await retained.json() as DepartmentDirection;
+      assert.deepEqual(saved.initiatives[0]!.appearance, legacyAppearance);
+      const changed = { ...saved, initiatives: saved.initiatives.map((item, index) => index === 0 ?
+        { ...item, appearance: { ...legacyAppearance, color: "#abcdef" } } : item) };
+      assert.equal((await request(lead, undefined, "PUT", changed)).status, 400);
+      assert.deepEqual(await (await request(member)).json(), saved);
+      assert.equal((await request(lead, undefined, "PUT", { ...before, version: saved.version })).status, 200);
     });
 
     await t.test("direction rejects unauthorized, invalid and stale writes without losing saved content", async () => {
@@ -130,6 +186,30 @@ test("department direction persists through the authenticated HTTP interface", a
       assert.equal((await request(member, "/api/focuses", "POST", { ...draft, sections: [] })).status, 201);
     });
 
+    await t.test("objective appearance comes from department configuration and survives confirmation and later edits", async () => {
+      let direction = await (await request(lead)).json() as DepartmentDirection;
+      direction.initiatives[1]!.appearance = { icon: "sprout", color: "#267c65" };
+      direction = await (await request(lead, undefined, "PUT", direction)).json() as DepartmentDirection;
+      const choice = direction.initiatives[1]!;
+      const draft = { title: "Visual alignment", start: "2026-01-01", end: "2026-12-31",
+        sections: [{ kind: "normal", objective: "Grow capability", goals: ["Finish a guide by June"],
+          alignment: { other: false, initiatives: [{ id: choice.id, name: "Forged",
+            appearance: { icon: "flag", color: "#000000" } }] } }] };
+      const created = await request(member, "/api/focuses", "POST", draft);
+      assert.equal(created.status, 201);
+      let focus = await created.json() as PositionFocus;
+      assert.deepEqual(focus.sections[0]!.alignment!.initiatives[0]!.appearance, { icon: "sprout", color: "#267c65" });
+      const confirmed = await request(lead, `/api/department/members/${member}/focuses/${focus.id}/confirm`, "POST", { version: focus.version });
+      assert.equal(confirmed.status, 200); focus = await confirmed.json() as PositionFocus;
+      direction.initiatives[1]!.appearance = { icon: "heart", color: "#d13d46" };
+      direction.initiatives[1]!.archived = true;
+      assert.equal((await request(lead, undefined, "PUT", direction)).status, 200);
+      const reopened = await (await request(member, `/api/focuses/${focus.id}`)).json() as PositionFocus;
+      assert.deepEqual(reopened.sections, focus.sections);
+      const leadView = await (await request(lead, `/api/department/members/${member}/focuses/${focus.id}`)).json() as { focus: PositionFocus };
+      assert.deepEqual(leadView.focus.sections, focus.sections);
+    });
+
     await t.test("failed and concurrent configuration saves cannot partially replace the mission or initiatives", async () => {
       const before = await (await request(lead)).json() as DepartmentDirection;
       await f.migration.query("ALTER TABLE department_direction ADD CONSTRAINT synthetic_direction_failure CHECK (mission <> 'Fail this write')");
@@ -148,6 +228,38 @@ test("department direction persists through the authenticated HTTP interface", a
       assert.equal((await request(lead, undefined, "PUT", after)).status, 403);
       await f.admin.query("UPDATE memberships SET deleted_at=NULL WHERE user_id=$1", [lead]);
       assert.deepEqual(await (await request(lead)).json(), after);
+    });
+
+    await t.test("operator SQL adds missing identities once and preserves existing IDs, mission and archive status", async () => {
+      const sql = await readFile(new URL("../tools/database/seed-initiative-appearance.sql", import.meta.url), "utf8");
+      const untouched = await (await request(lead)).json();
+      const response = await request(outsider, undefined, "PUT", { mission: "Keep this mission", version: 0,
+        initiatives: [{ name: " love what we build ", archived: true }, { name: "Unrelated", archived: false }] });
+      assert.equal(response.status, 200);
+      const before = await response.json() as DepartmentDirection;
+      const run = async (department: string) => {
+        const client = await f.admin.connect();
+        try { await client.query(sql.replace("REPLACE_WITH_DEPARTMENT_UUID", department)); }
+        catch (error) { await client.query("ROLLBACK"); throw error; }
+        finally { client.release(); }
+      };
+      await run(otherTeam);
+      const seeded = await (await request(outsider)).json() as DepartmentDirection;
+      assert.equal(seeded.mission, "Keep this mission");
+      assert.equal(seeded.initiatives.length, 5);
+      assert.equal(seeded.initiatives[0]!.id, before.initiatives[0]!.id);
+      assert.equal(seeded.initiatives[0]!.archived, true);
+      assert.deepEqual(seeded.initiatives[0]!.appearance, { icon: "heart", color: "#d13d46" });
+      assert.deepEqual(seeded.initiatives[1], before.initiatives[1]);
+      assert.deepEqual(seeded.initiatives.slice(2).map(item => [item.name, item.appearance]), [
+        ["Rethink How We Build", { icon: "lightbulb", color: "#8560bb" }],
+        ["Role Clarity And Growth", { icon: "sprout", color: "#267c65" }],
+        ["Team Connectedness", { icon: "users", color: "#df741b" }],
+      ]);
+      await run(otherTeam);
+      assert.deepEqual(await (await request(outsider)).json(), seeded);
+      await assert.rejects(run(randomUUID()), /active department/i);
+      assert.deepEqual(await (await request(lead)).json(), untouched);
     });
   } finally {
     server.closeAllConnections();

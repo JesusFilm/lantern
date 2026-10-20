@@ -1536,6 +1536,36 @@ dialog:has(.initiative-choices) .type-choice {
 dialog:has(.initiative-choices) .type-choice strong { font-size: 13px; font-weight: 500; }
 dialog .initiative-choices .initiative-option { font-size: 14px; color: #17324e; }
 
+/* Initiative identity is decorative; the name remains the accessible label. */
+.initiative-identity { display: inline-flex; gap: 9px; align-items: center; min-width: 0; color: #17324e; }
+.initiative-identity > span:last-child { overflow-wrap: anywhere; }
+.initiative-mark { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; flex: 0 0 34px; border-radius: 8px; background: color-mix(in srgb, var(--initiative-color) 13%, white); color: color-mix(in srgb, var(--initiative-color) 60%, #17324e); }
+.initiative-mark img, .initiative-mark svg { width: 20px; height: 20px; object-fit: contain; }
+.initiative-mark:empty { width: 12px; height: 12px; flex-basis: 12px; border-radius: 50%; background: var(--initiative-color); border: 1px solid #536984; }
+.initiative-chip { padding: 5px 9px; border-radius: 4px; background: #edf5f6; font-size: 13px; }
+.initiative-chip.has-appearance { background: color-mix(in srgb, var(--initiative-color) 12%, white); border-left: 3px solid var(--initiative-color); }
+.initiative-chip .initiative-mark { width: 20px; height: 20px; flex-basis: 20px; background: transparent; }
+.initiative-option:has(.initiative-mark) { align-items: center; }
+.initiative-palette-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin: 22px 0; }
+.initiative-palette { padding: 0; margin: 0 0 16px; border: 0; min-width: 0; }
+.initiative-palette legend { color: #556a7b; font-size: 13px; margin-bottom: 9px; padding: 0; }
+.initiative-icon-grid, .initiative-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.initiative-icon-grid button { display: inline-flex; justify-content: center; align-items: center; padding: 8px; width: 44px; height: 44px; border: 1px solid #c5d5e0; background: white; }
+.initiative-icon-grid button[aria-pressed="true"] { border-color: #007e95; box-shadow: 0 0 0 1px #007e95; background: #edf5f6; }
+.initiative-swatches button { width: 32px; height: 32px; border-radius: 50%; padding: 0; border: 3px solid white; box-shadow: 0 0 0 1px #c5d5e0; }
+.initiative-swatches button[aria-pressed="true"] { box-shadow: 0 0 0 2px #007e95; }
+.initiative-editor .muted { font-size: 13px; line-height: 1.5; }
+.initiative-preview-title { color: #536984; font-size: 13px; font-weight: 500; margin: 16px 0 8px; }
+.initiative-preview { min-height: 38px; }
+dialog:has(.initiative-editor) { max-height: 90dvh; }
+dialog:has(.initiative-editor) > form { display: flex; flex-direction: column; max-height: calc(90dvh - 64px); }
+dialog:has(.initiative-editor) .dialog-content { overflow-y: auto; min-height: 0; padding: 3px; }
+dialog:has(.initiative-editor) h2, dialog:has(.initiative-editor) .dialog-actions { flex-shrink: 0; }
+@media (max-width: 560px) {
+  .initiative-palette-layout { grid-template-columns: 1fr; gap: 16px; }
+  .initiative-swatches { gap: 12px; padding: 3px; }
+  .initiative-swatches button { width: 36px; height: 36px; }
+}
 @media (max-width: 700px) {
   .mission-banner { display: grid; grid-template-columns: 26px minmax(0, 1fr); }
 }
