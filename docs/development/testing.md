@@ -1,6 +1,6 @@
 # Testing
 
-Use this guide to run tests or explain coverage. [Releasing](../operations/releasing.md) covers promotion decisions and failures; [release confidence](../operations/release-confidence.md) records hosted rehearsal evidence.
+Use this guide to run tests or explain coverage. [Releasing](../operations/releasing.md) covers promotion decisions and failures.
 
 ## Run locally
 

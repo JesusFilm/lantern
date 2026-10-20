@@ -38,7 +38,5 @@ credential/recovery operations. Shared hosting still has shared resource costs,
 and password acceptance does not test Google login. A fourth synthetic outsider
 is optional if live production cross-department proof is required.
 
-The [draft plan](../operations/system-test-team-plan.md) contains the data lifecycle,
-security model, implementation sequence, proof obligations and unresolved owner
-choices. Keep this record proposed until those choices are agreed; do not treat
-it as authorization to provision accounts, change production or activate delivery.
+This proposal was not implemented. Follow [ADR 0008](0008-staging-gate-and-production-smoke.md)
+for the accepted release policy; the superseded implementation plan remains in Git history.

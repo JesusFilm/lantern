@@ -1,6 +1,6 @@
 # Architecture decision records
 
-Before choosing or changing an architectural approach, list the records in this directory and read those relevant to the affected behavior or boundary. Search by domain terms as well as filenames. If an existing decision conflicts with the proposed work, bring that conflict to the repository owner.
+Before choosing or changing an architectural approach, list the records in this directory and read those relevant to the affected behavior or boundary. Search by domain terms as well as filenames. Check each record’s status and follow supersession links to the current decision; read superseded proposals only for historical rationale. If a current accepted decision conflicts with the proposed work, bring that conflict to the repository owner.
 
 Discuss consequential decisions with the repository owner before implementing them: explain the problem, simplest viable options, recommendation, and effects on interfaces, persistence, access, deployment, and future maintenance where applicable. Record the decision once the owner has agreed; routine implementation details do not need an ADR.
 

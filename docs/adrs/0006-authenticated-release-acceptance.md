@@ -7,9 +7,7 @@ Status: Accepted by the repository owner
 GitHub notifications, a usable manual acceptance override, engineer recovery and
 minimal production smoke. The broader ADR 0007 proposal is superseded. The private
 staging runner remains implemented; permanent password login is not implemented.
-Initial hosted activation was subsequently rehearsed and owner-authorized; see the
-dated [rollout record](../operations/release-confidence.md). Future activation
-still requires rehearsal and owner authorization.
+Hosted activation requires rehearsal and owner authorization.
 
 ## Decision
 
@@ -67,4 +65,4 @@ same-revision migration/deployment and does not implement automatic rollback.
 Both acceptance and automatic production switches default unset/off. Design
 approval alone does not activate them. Current operator steps are in
 [Releasing](../operations/releasing.md), coverage in [Testing](../development/testing.md),
-and dated execution evidence in [release confidence](../operations/release-confidence.md).
+and activation steps in [Activating delivery](../operations/activating-delivery.md).

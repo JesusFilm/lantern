@@ -20,7 +20,7 @@ For Google sign-in, configure a Web OAuth client with the callback `APP_ORIGIN/a
 
 ## Delivery
 
-For automatic/manual releases, schema changes, evidence verification and failure recovery, read [Releasing](docs/operations/releasing.md). For completed hosted rollout evidence or activation rehearsal, read [Release confidence](docs/operations/release-confidence.md). [ADR 0008](docs/adrs/0008-staging-gate-and-production-smoke.md) records the policy and supersedes the production test-workspace proposal.
+For automatic/manual releases, schema changes, evidence verification and failure recovery, read [Releasing](docs/operations/releasing.md). [ADR 0008](docs/adrs/0008-staging-gate-and-production-smoke.md) records the current release policy.
 
 Main is the staging delivery path; production can lag. Verify the deployed SHA. The following setup reference is for initial provisioning or credential/hosting changes.
 
@@ -64,7 +64,8 @@ Store these under repository **Settings → Environments → `stage` or `product
 The same repository-variable location holds `STAGE_ACCEPTANCE_ENABLED` (enable
 authenticated staging journeys), `AUTO_PRODUCTION_ENABLED` (enable the gated
 production trigger), and `STAGE_APP_ORIGIN` (the staging HTTPS origin used by the
-production gate). Keep both switches off until their documented rollout step.
+production gate). For a new environment, enable these through the
+[activation procedure](docs/operations/activating-delivery.md).
 Acceptance reuses the existing **stage** migration secrets and role settings;
 it requires no additional secret or production authentication bypass.
 

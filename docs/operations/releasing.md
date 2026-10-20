@@ -1,6 +1,6 @@
 # Releasing Lantern
 
-Read before merging, releasing, changing schema/delivery switches or recovering a release. [Testing](../development/testing.md) explains what the checks do; [release confidence](release-confidence.md) records activation evidence. [README setup](../../README.md#delivery) covers first provisioning and credentials.
+Read before merging, releasing, changing schema/delivery switches or recovering a release. [Testing](../development/testing.md) explains what the checks do. [README setup](../../README.md#delivery) covers first provisioning and credentials.
 
 ## Normal automatic release
 
@@ -11,7 +11,7 @@ main push: same checks → configuration → migrate → deploy staging → read
   → automatic admission → production configuration/migrate/deploy → readiness
 ```
 
-Repository Actions variables `STAGE_DELIVERY_ENABLED`, `STAGE_ACCEPTANCE_ENABLED` and `AUTO_PRODUCTION_ENABLED` control the stages; `STAGE_APP_ORIGIN` identifies the accepted staging target. Read current values when operating; a historical rollout record does not establish today's settings.
+Repository Actions variables `STAGE_DELIVERY_ENABLED`, `STAGE_ACCEPTANCE_ENABLED` and `AUTO_PRODUCTION_ENABLED` control the stages; `STAGE_APP_ORIGIN` identifies the accepted staging target. Read current values when operating.
 
 Automatic promotion requires a successful trusted main push run and its exact SHA/run/attempt evidence, passing acceptance **and cleanup**, latest-main freshness, the accepted staging deployment still live, and matching advertised staging/production schema versions. Production verifies again under its lock and immediately before migrations. Configured environment reviewers still apply. A newer main revision supersedes a queued automatic candidate.
 
@@ -19,7 +19,7 @@ Implementation: [CI](../../.github/workflows/ci.yml), [production workflow](../.
 
 ## Manual release and schema changes
 
-1. Review compatibility with the application still serving: migrations run **before** app replacement. Check expected schema settings in both workflows when adding a migration. Destructive changes may need a compatibility release first and a production backup; see the concrete [two-release removal procedure](remove-hosted-domain.md). Staging cannot prove a production backfill is safe.
+1. Review compatibility with the application still serving: migrations run **before** app replacement. Check expected schema settings in both workflows when adding a migration. Destructive changes may need a compatibility release first and a production backup; for installations still before schema 6, use the [legacy domain-removal procedure](remove-hosted-domain.md). Staging cannot prove a production backfill is safe.
 2. Select the full 40-character main SHA with successful type/test/build checks and staging configuration, migrations, deployment and readiness. Normally require acceptance/cleanup too; manual dispatch permits an intentional override of those two failures only. It also supports historical main SHAs with trusted readiness evidence.
 3. With production release authorization, use GitHub **Actions → Deploy production → Run workflow**, branch `main`, and the selected SHA, or:
 
@@ -45,4 +45,4 @@ For staging failure, inspect the failed step and safe checkpoint, distinguish pr
 
 A production smoke failure happens **after deployment**; a migration may already have committed. Inspect before retrying, assess the serving app/schema, and choose compatible fix-forward or manual recovery. There is no automatic rollback or persistent failure stop. To stop further releases, set repository `AUTO_PRODUCTION_ENABLED=false` and separately cancel already admitted/queued production runs. Keep staging acceptance enabled for evidence. Engineers own recovery and their built-in GitHub Actions notification preferences.
 
-For auth/OAuth/admission-policy changes, disable automatic promotion before the merge and cancel pending admissions. Complete real Google sign-in on staging before releasing that SHA. Restore automatic promotion with release authorization; rerun the current-main push CI run if a fresh automatic event is needed (CI has no manual-dispatch trigger). First activation or a changed gate needs the [rehearsal procedure](release-confidence.md#activation-rehearsal).
+For auth/OAuth/admission-policy changes, disable automatic promotion before the merge and cancel pending admissions. Complete real Google sign-in on staging before releasing that SHA. Restore automatic promotion with release authorization; rerun the current-main push CI run if a fresh automatic event is needed (CI has no manual-dispatch trigger). First activation or a changed gate needs the [activation procedure](activating-delivery.md).
