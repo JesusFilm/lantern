@@ -38,9 +38,10 @@ async function holdResponse(page: Page, url: string, method = "GET") {
 test("draft workflow keeps edits and asynchronous reads with their source", { timeout: 60000 }, async t => {
   const fixture = await privilegeFixture();
   const server = createServer();
-  const browser = await chromium.launch();
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
   let vite: Awaited<ReturnType<typeof createViteServer>> | undefined;
   try {
+    browser = await chromium.launch();
     await migrate(fixture.migration, fixture.roles);
     const user = randomUUID(), department = randomUUID();
     await fixture.admin.query(
@@ -311,7 +312,7 @@ test("draft workflow keeps edits and asynchronous reads with their source", { ti
       }
     });
   } finally {
-    await browser.close();
+    await browser?.close();
     await vite?.close();
     server.closeAllConnections();
     await new Promise<void>(resolve => server.close(() => resolve()));
