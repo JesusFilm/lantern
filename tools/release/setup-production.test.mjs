@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync,spawnSync} from 'node:child_process';
@@ -5,9 +6,8 @@ import {mkdtempSync,writeFileSync,readFileSync,chmodSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 
-// Exercise only the isolated parser; never run the interactive owner wizard.
-const script=readFileSync(new URL('./setup-production.sh',import.meta.url),'utf8');
-const parser=script.match(/<<'RESUME_JS'\n([\s\S]*?)\nRESUME_JS/)[1];
+// Exercise the same command adapter as the wizard, never the interactive setup.
+const command=new URL('./settings-command.mjs',import.meta.url);
 const settings={LANTERN_ENV:'production',LANTERN_DB_EXPECTED_ENDPOINT:'proxy.example.test:5432',LANTERN_DB_NAME:'railway',LANTERN_DB_SCHEMA:'lantern',LANTERN_DB_RUNTIME_ROLE:'lantern_production_runtime',LANTERN_DB_MIGRATION_ROLE:'lantern_production_migration',LANTERN_DB_ADMIN_ROLE:'lantern_production_admin',MIGRATION_DATABASE_URL:'postgresql://lantern_production_migration:synthetic%2540password@proxy.example.test:5432/railway',ADMIN_DATABASE_URL:'ignored-private-admin-value',PGSSLROOTCERT:'/old/path/root.crt',PGSSLMODE:'verify-ca'};
 function fixture(check) {
  const dir=mkdtempSync(join(tmpdir(),'lantern-resume-test-'));chmodSync(dir,0o700);
@@ -16,7 +16,7 @@ function fixture(check) {
   chmodSync(join(dir,'root.crt'),0o600);
   const run=(patch={},suffix='')=>{
    writeFileSync(join(dir,'operator.env'),Object.entries({...settings,...patch}).map(([key,value])=>`${key}=${value}\n`).join('')+suffix,{mode:0o600});
-   return spawnSync(process.execPath,['--input-type=module','-e',parser],{env:{RESUME_DIR:dir},encoding:'utf8'});
+   return spawnSync(process.execPath,[fileURLToPath(command),'load'],{env:{RESUME_DIR:dir},encoding:'utf8'});
   };
   check(run,dir);
  } finally {rmSync(dir,{recursive:true,force:true});}

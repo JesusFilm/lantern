@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
-import {X509Certificate} from 'node:crypto';
+import {validateHostedMigrationTarget} from './settings.mjs';
 import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -13,18 +13,7 @@ try {
  assert.equal(execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),sha);
  assert.ok(['stage','production'].includes(target));
  for(const name of ['DATABASE_URL','ADMIN_DATABASE_URL','BOOTSTRAP_DATABASE_URL']) assert.ok(!env[name]);
- for(const kind of ['runtime','migration','admin']) assert.equal(env[`LANTERN_DB_${kind.toUpperCase()}_ROLE`],`lantern_${target}_${kind}`);
- assert.equal(env.LANTERN_DB_SCHEMA,'lantern');
- assert.match(env.LANTERN_DB_NAME??'',/^[a-z][a-z0-9_]{0,62}$/);
- const url=new URL(env.MIGRATION_DATABASE_URL);
- assert.ok(['postgres:','postgresql:'].includes(url.protocol));
- assert.equal(url.host,env.LANTERN_DB_EXPECTED_ENDPOINT);
- assert.ok(url.hostname && !url.hostname.endsWith('.railway.internal'));
- assert.equal(decodeURIComponent(url.username),env.LANTERN_DB_MIGRATION_ROLE);
- assert.equal(decodeURIComponent(url.pathname.slice(1)),env.LANTERN_DB_NAME);
- assert.equal(url.search,'');
- const ca=new X509Certificate(env.MIGRATION_DATABASE_CA);
- assert.ok(ca.ca && Date.parse(ca.validFrom)<=Date.now() && Date.parse(ca.validTo)>Date.now());
+ const {url,certificate:ca}=validateHostedMigrationTarget(env,target,env.MIGRATION_DATABASE_CA);
  directory=mkdtempSync(join(tmpdir(),'lantern-migration-ca-'));
  const certificate=join(directory,'ca.pem');
  writeFileSync(certificate,ca.toString(),{mode:0o600});
