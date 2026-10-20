@@ -1,7 +1,18 @@
 import { useEffect, useRef, useState } from "react";
+import { useSwipeNavigation } from "./useSwipeNavigation.js";
+import { usePhoneLayout } from "./usePhoneLayout.js";
 import { lessons } from "./lessons.js";
 type Topic = "Objectives" | "SMART goals" | "Example";
 export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
+  const compact = usePhoneLayout();
+  const [example, setExample] = useState<"weak" | "strong">("strong");
+  const weakExample = useRef<HTMLDivElement>(null), strongExample = useRef<HTMLDivElement>(null);
+  function compare(next: "weak" | "strong") {
+    setExample(next);
+    // Reveal the chosen example even when a small phone needs vertical reading.
+    requestAnimationFrame(() => (next === "weak" ? weakExample : strongExample)
+      .current?.scrollIntoView({ block: "nearest" }));
+  }
   const [topic, setTopic] = useState<Topic>("Objectives"),
     [step, setStep] = useState(0);
   const heading = useRef<HTMLHeadingElement>(null),
@@ -9,16 +20,19 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
   function choose(t: Topic) {
     interacted.current = true;
     setTopic(t);
+    setExample("strong");
     setStep(0);
   }
   function advance(n: number) {
     interacted.current = true;
     setStep(n);
+    setExample("strong");
   }
   useEffect(() => {
     if (interacted.current) {
-      heading.current?.focus();
-      heading.current?.scrollIntoView({ block: "nearest" });
+      heading.current?.focus({ preventScroll: true });
+      if (compact) document.querySelector(".guide-layout")?.scrollIntoView({ block: "start" });
+      else heading.current?.scrollIntoView({ block: "nearest" });
     }
   }, [topic, step]);
   const steps = topic === "Example" ? [] : lessons[topic],
@@ -51,11 +65,22 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
           "Directly supports the objective",
           "A clear completion date",
         ][step];
+  const swipe = useSwipeNavigation(compact, () => {
+    if (step > 0) advance(step - 1);
+    else if (topic !== "Objectives") {
+      const previousTopic = topic === "Example" ? "SMART goals" : "Objectives";
+      choose(previousTopic);
+      setStep(lessons[previousTopic].length - 1);
+    }
+  }, () => {
+    if (step < steps.length - 1) advance(step + 1);
+    else if (topic !== "Example") choose(topic === "Objectives" ? "SMART goals" : "Example");
+  });
   return (
     <>
-      <header>
+      <header className="guide-header">
         <h1>
-          {topic === "Example"
+          {compact ? "Guide" : topic === "Example"
             ? "A simple position focus"
             : topic === "Objectives"
               ? "What makes a useful objective?"
@@ -75,7 +100,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
                 >
                   {t}
                 </button>
-                {topic === t && x && (
+                {topic === t && x && !compact && (
                   <div
                     className="lesson-steps"
                     aria-label={"Steps within " + topic}
@@ -96,7 +121,13 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
             ))}
           </div>
         </div>
-        <div className="lesson-body">
+        {compact && x && <label className="lesson-chooser">
+          <span>Lesson<span className="gesture-hint" aria-hidden="true">Swipe to move</span></span>
+          <select aria-label="Lesson" value={step} onChange={event => advance(Number(event.target.value))}>
+            {steps.map((lesson, i) => <option key={lesson[0]} value={i}>{i + 1} / {steps.length} · {topic === "Objectives" ? lesson[0] : lesson[1]}</option>)}
+          </select>
+        </label>}
+        <div className="lesson-body" {...swipe}>
           {x ? (
             <>
               <section className="lesson-card">
@@ -105,8 +136,12 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
                 </h2>
                 <p className="lesson-intro">{x[2]}</p>
                 <div className="comparison-heading">Compare the examples</div>
+                {compact && <div className="example-switch" aria-label="Compare examples">
+                  <button aria-pressed={example === "weak"} onClick={() => compare("weak")}>Needs work</button>
+                  <button aria-pressed={example === "strong"} onClick={() => compare("strong")}>Stronger</button>
+                </div>}
                 <div className="example-pair">
-                  <div className="weak-example">
+                  <div ref={weakExample} className="weak-example" hidden={compact && example !== "weak"}>
                     <div className="example-title">
                       <span className="example-icon" aria-hidden="true">
                         ×
@@ -116,7 +151,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
                     <p>{x[4]}</p>
                     <div className="example-reason">{weak}</div>
                   </div>
-                  <div className="strong-example">
+                  <div ref={strongExample} className="strong-example" hidden={compact && example !== "strong"}>
                     <div className="example-title">
                       <span className="example-icon" aria-hidden="true">
                         ✓
@@ -135,9 +170,12 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
               <div className="lesson-footer">
                 {step > 0 ? (
                   <button onClick={() => advance(step - 1)}>← Previous</button>
-                ) : (
-                  <span />
-                )}
+                ) : compact ? (
+                  <button disabled={topic === "Objectives"} onClick={() => {
+                    choose("Objectives");
+                    setStep(lessons.Objectives.length - 1);
+                  }}>← Previous</button>
+                ) : <span /> }
                 {step < steps.length - 1 ? (
                   <button className="primary" onClick={() => advance(step + 1)}>
                     Next →
@@ -182,7 +220,10 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
                 </div>
               </section>
               <div className="lesson-footer">
-                <button onClick={() => choose("SMART goals")}>
+                <button onClick={() => {
+                  choose("SMART goals");
+                  if (compact) setStep(lessons["SMART goals"].length - 1);
+                }}>
                   ← Review SMART goals
                 </button>
                 <button className="primary" onClick={onFocuses}>

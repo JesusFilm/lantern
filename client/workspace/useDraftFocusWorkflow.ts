@@ -3,7 +3,7 @@ import type { DepartmentDirection, StrategicInitiative } from "../../shared/dire
 import type { FocusDraft, ObjectiveAlignmentChoice, ObjectiveKind, PositionFocus } from "../../shared/focus.js";
 import { api } from "./api.js";
 
-type EditTarget =
+export type EditTarget =
   | { type: "create" }
   | { type: "metadata" }
   | { type: "objective"; section: number; adding?: boolean }

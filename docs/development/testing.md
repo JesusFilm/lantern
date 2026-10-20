@@ -67,3 +67,27 @@ Both deployed environments use [readiness smoke](../../tools/release/smoke.mjs):
 Staging acceptance does not cover real Google login, enrollment, every initiative lifecycle, production backfills/data conditions, load/stress behavior or every regression. Local tests cover some of those functional gaps, but do not prove them on the hosted deployment. Complete a real Google sign-in during initial rollout and after auth/OAuth/admission-policy changes; use the [release procedure](../operations/releasing.md) to hold automatic promotion for that check. Schema changes require compatibility review and manual release. Production is rebuilt from the selected source, not promoted as an identical container image.
 
 When changing a checkpoint or coverage boundary, update this guide alongside its runner/tests. Keep test counts in run results, not as a coverage claim here.
+
+## Responsive UI review
+
+Desktop and mobile are supported. For UI changes:
+
+1. Identify the member's task and check empty, ordinary, long-content, failed-save
+   and read-only states. Prioritize Position Focus reading/writing and the Guide;
+   also check affected account, access and career-lead screens.
+2. Review at 320px and 390px portrait, short landscape, a tablet and desktop.
+   Use Chromium and WebKit where available. Critique the actual first viewport:
+   task hierarchy, wasted space, readable text and actions hidden by fixed bars.
+   Full-page captures and overflow checks alone do not prove a useful phone view.
+3. Exercise swipe and button alternatives, direct section selection, long vertical
+   reads, full-document mode, active-objective add/delete, editing a later objective,
+   failed saves and rotation with unsaved input. Compare the desktop composition.
+4. Run the existing automated browser suite. Before release, check real iOS/Android
+   keyboards, native pickers, browser chrome, pinch/OS gestures and enlarged text;
+   check desktop text enlargement and browser zoom. Emulation does not certify these.
+5. Summarize coverage, critique and unverified checks in the PR. Keep generated
+   screenshots and disposable verification scripts out of Git; remove them after
+   review. Retain only the minimum evidence needed for an active review.
+
+Existing browser tests run in CI. This checklist does not imply a dedicated
+responsive regression suite or automatic visual approval.

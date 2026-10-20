@@ -16,6 +16,28 @@ Lantern helps team members prepare a position focus and agree it with their care
 - Initiative add/edit dialogs offer a quick palette of twelve predefined SVG icons and eight distinct preset colors (red, orange, yellow, green, blue, purple, pink and slate). There is no SVG upload or custom color picker; new appearance writes are restricted to the presets. Previously saved custom appearances can be retained unchanged or replaced with presets. The list, objective choices and saved alignment badges show the configured identity alongside its name. Appearance is optional for existing initiatives and can be cleared. Newly saved objectives snapshot appearance from department configuration alongside names; confirmed documents and old documents without appearance are not rewritten. Dialog updates remain pending until the department panel's Save changes action succeeds.
 - The optional post-deployment [initiative setup script](../tools/database/seed-initiative-appearance.sql) adds the four agreed initiatives if missing and assigns red/heart, purple/light bulb, green/sprout and orange/people. It targets an explicitly chosen department and preserves existing IDs, mission, archive status and focus history.
 
+## Desktop and mobile support
+
+Lantern supports desktop and mobile browsers. Preserve the desktop composition;
+phone layouts prioritize the member's immediate task, not simply stacked panels.
+On phones:
+
+- Show one objective and its goals at a time. For multiple objectives, provide
+  swipe, Previous/Next, a direct chooser and optional full-document reading.
+  Keep navigation reachable during long reads. Dates/status details are available
+  on demand, and document records precede mission context.
+- Keep Guide topic/lesson choices compact, with persistent progression controls.
+  Example choices reveal their content. Swipe has tap and keyboard alternatives;
+  long content scrolls freely without forced vertical snapping or auto-advance.
+- Use full-screen objective/goal writing with stable Save/Cancel and one content
+  scroll area. Preserve input and the existing source-bound editing behavior.
+- Support 320 CSS pixels and short landscape: wrap prose, stack simple records,
+  constrain artwork, keep standalone touch targets at least 44px and form text
+  at least 16px. Do not conceal broken reflow with page-level overflow clipping.
+
+Apply the [responsive review checklist](development/testing.md#responsive-ui-review)
+to UI work. Native apps and offline operation are outside this decision.
+
 ## Access and data
 
 Hosted access uses Google sign-in and server-issued sessions. Admission requires an exact approved email, with no domain restriction in any environment. Active department membership and server-assigned roles determine access. Members cannot read another member's focuses; career leads can read and confirm focuses within their department, but cannot edit another member's draft.
