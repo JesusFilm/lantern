@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync,spawnSync} from 'node:child_process';
@@ -15,7 +16,7 @@ function fixture(check) {
   chmodSync(join(dir,'root.crt'),0o600);
   const run=(patch={},suffix='')=>{
    writeFileSync(join(dir,'operator.env'),Object.entries({...settings,...patch}).map(([key,value])=>`${key}=${value}\n`).join('')+suffix,{mode:0o600});
-   return spawnSync(process.execPath,[command.pathname,'load'],{env:{RESUME_DIR:dir},encoding:'utf8'});
+   return spawnSync(process.execPath,[fileURLToPath(command),'load'],{env:{RESUME_DIR:dir},encoding:'utf8'});
   };
   check(run,dir);
  } finally {rmSync(dir,{recursive:true,force:true});}
