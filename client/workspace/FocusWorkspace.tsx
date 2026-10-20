@@ -1,8 +1,9 @@
+import { FocusObjectives } from "./FocusObjectives.js";
 import type { ObjectiveKind } from "../../shared/focus.js";
-import { FocusConfirmation } from "./FocusConfirmation.js";
+import { FocusHeading } from "./FocusHeading.js";
 import { Dialog } from "./Dialog.js";
 import { MissionBanner } from "./MissionBanner.js";
-import { AlignmentSummary, InitiativeChoices } from "./InitiativeChoices.js";
+import { InitiativeChoices } from "./InitiativeChoices.js";
 import { useDraftFocusWorkflow } from "./useDraftFocusWorkflow.js";
 const date = (value: string) =>
   new Date(value + "T12:00:00").toLocaleDateString("en-NZ", {
@@ -24,7 +25,6 @@ export function FocusWorkspace({ member, canConfirm }: {
     items, focus, direction, loading, error, edit,
     reload, select, begin, change, cancel, save, retryInitiatives, acceptConfirmed,
   } = useDraftFocusWorkflow();
-  const editable = focus?.status === "draft";
   return (
     <>
       {error && (
@@ -34,133 +34,13 @@ export function FocusWorkspace({ member, canConfirm }: {
       )}
       {loading ? <p role="status">Loading position focuses…</p> : focus ? (
         <>
-          <button className="link back" onClick={() => select()}>
-            ← Position focuses
-          </button>
-          <header>
-            <div>
-              <h1>{focus.title}</h1>
-              <p className="muted">
-                {date(focus.start)} – {date(focus.end)}
-              </p>
-            </div>
-            {editable && <button
-              onClick={() => begin({ type: "metadata" })}
-            >
-              Edit title & dates
-            </button>}
-          </header>
-          <FocusConfirmation key={focus.id} focus={focus} member={member}
+          <FocusHeading key={"heading-" + focus.id} focus={focus} member={member}
+            onBack={() => select()} onMetadata={() => begin({ type: "metadata" })}
             onConfirmed={canConfirm ? acceptConfirmed : undefined} />
-          {focus.sections.length ? (
-            focus.sections.map((section, i) => (
-              <section className="read-section" key={i}>
-                <div className="read-objective">
-                  <div className="row section-heading">
-                    <div className="section-label">
-                      <h2>Objective {i + 1}</h2>
-                      {section.kind !== "normal" && (
-                        <span className="badge">
-                          {kindLabels[section.kind]}
-                        </span>
-                      )}
-                    </div>
-                    {editable && <div className="section-tools">
-                      <button
-                        className="link edit-action"
-                        onClick={() =>
-                          begin({ type: "objective", section: i })
-                        }
-                      >
-                        Edit objective
-                      </button>
-                      <button
-                        className="link danger small-action"
-                        onClick={() =>
-                          begin({ type: "remove-objective", section: i })
-                        }
-                      >
-                        Remove
-                      </button>
-                    </div>}
-                  </div>
-                  <p className="read-text">{section.objective}</p>
-                  <AlignmentSummary alignment={section.alignment} />
-                </div>
-                <div className="read-goals">
-                  <h3>SMART goals</h3>
-                  {section.goals.map((goal, j) => (
-                    <div className="read-goal" key={j}>
-                      <span className="goal-number">{j + 1}</span>
-                      <p className="read-text">{goal}</p>
-                      {editable && <div>
-                        <button
-                          className="link"
-                          onClick={() =>
-                            begin({ type: "goal", section: i, goal: j })
-                          }
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="link danger small-action"
-                          onClick={() =>
-                            begin({
-                              type: "remove-goal",
-                              section: i,
-                              goal: j,
-                            })
-                          }
-                        >
-                          Remove
-                        </button>
-                      </div>}
-                    </div>
-                  ))}
-                  {!section.goals.length && (
-                    <p className="muted">No goals yet.</p>
-                  )}
-                  {editable && <button
-                    className="link"
-                    onClick={() =>
-                      begin({ type: "goal", section: i, adding: true })
-                    }
-                  >
-                    + Add SMART goal
-                  </button>}
-                </div>
-              </section>
-            ))
-          ) : (
-            <div className="empty-base">
-              <h2>A blank position focus</h2>
-              <p>Add your first objective when you’re ready.</p>
-              <button
-                className="primary"
-                onClick={() =>
-                  begin({ type: "objective", section: 0, adding: true })
-                }
-              >
-                Add objective
-              </button>
-            </div>
-          )}
-          {editable && <div className="editor-actions">
-            <button
-              onClick={() =>
-                begin({
-                  type: "objective",
-                  section: focus.sections.length,
-                  adding: true,
-                })
-              }
-            >
-              + Add objective
-            </button>
-          </div>}
+          <FocusObjectives key={"reader-" + focus.id} focus={focus} onEdit={begin} />
         </>
       ) : (
-        <>
+        <div className="focus-overview">
           <header>
             <div>
               <h1>Position focuses</h1>
@@ -209,7 +89,7 @@ export function FocusWorkspace({ member, canConfirm }: {
               <p>Create a document for the period you want to focus on.</p>
             </div>
           )}
-        </>
+        </div>
       )}
       {edit && edit.type !== "metadata" && (
         <Dialog
