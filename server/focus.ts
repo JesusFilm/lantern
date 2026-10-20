@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { AccessError, membership, membershipWrite } from "./membership.js";
-import type { FocusDraft, PositionFocus } from "../shared/focus.js";
-import { resolveAlignment } from "./direction.js";
+import type { FocusDraft, FocusDraftSection, FocusSection, PositionFocus } from "../shared/focus.js";
+import { readDirection } from "./direction.js";
 import { validateInitiativeAppearance } from "../shared/initiative-appearance.js";
 
 const columns = `id,title,to_char(period_start,'YYYY-MM-DD') AS start,to_char(period_end,'YYYY-MM-DD') AS end,sections,version,updated_at AS "updatedAt",status,confirmed_at AS "confirmedAt",
@@ -213,7 +213,7 @@ export function validateFocus(
         if (!item || typeof item !== "object" || Array.isArray(item) ||
             Object.keys(item).some(k => !["id", "name", "appearance"].includes(k)) ||
             typeof item.id !== "string" || !/^[a-f0-9-]{36}$/.test(item.id) ||
-            !text(item.name, 120) || ids.has(item.id)) return fail();
+            (item.name !== undefined && !text(item.name, 120)) || ids.has(item.id)) return fail();
         ids.add(item.id);
         if (item.appearance !== undefined) {
           try { validateInitiativeAppearance(item.appearance); } catch { return fail(); }
@@ -226,7 +226,42 @@ export function validateFocus(
     (!Number.isSafeInteger(data.version) || Number(data.version) < 1)
   )
     return fail();
-  return { ...data, title: data.title.trim() } as unknown as FocusDraft & {
-    version?: number;
-  };
+  // Legacy clients may send snapshots; only validated member intent crosses
+  // the write interface. Supplied identity is never a source of saved history.
+  const draft = data as unknown as FocusDraft & { version?: number };
+  return { ...draft, title: draft.title.trim(), sections: draft.sections.map(section => ({
+    ...section,
+    ...(section.alignment ? { alignment: {
+      other: section.alignment.other,
+      initiatives: section.alignment.initiatives.map(({ id }) => ({ id })),
+    } } : {}),
+  })) };
+}
+
+// Private to focus writes: configuration and previous history are read under the
+// same membership-write lock as persistence. Confirmation never refreshes snapshots.
+async function resolveAlignment(client: PoolClient, actorId: string, sections: FocusDraftSection[], previous: FocusSection[] = []): Promise<FocusSection[]> {
+  const direction = await readDirection(client, actorId);
+  const retained = new Map<string, NonNullable<FocusSection["alignment"]>["initiatives"]>();
+  // Preserve whole-focus use counts and traversal order, not objective identity.
+  for (const section of previous) for (const item of section.alignment?.initiatives ?? []) {
+    const snapshots = retained.get(item.id) ?? [];
+    snapshots.push(item);
+    retained.set(item.id, snapshots);
+  }
+  return sections.map(section => {
+    if (!section.alignment) return { ...section, alignment: undefined };
+    return { ...section, alignment: {
+      other: section.alignment.other,
+      initiatives: section.alignment.initiatives.map(choice => {
+        const initiative = direction.initiatives.find(item => item.id === choice.id);
+        const retainedSnapshots = retained.get(choice.id);
+        if (!initiative || (initiative.archived && !retainedSnapshots?.length))
+          throw new AccessError(400, "An initiative is no longer available. Reopen the objective and choose an active initiative or Other.");
+        if (initiative.archived) return retainedSnapshots!.shift()!;
+        return { id: initiative.id, name: initiative.name,
+          ...(initiative.appearance ? { appearance: initiative.appearance } : {}) };
+      }),
+    } };
+  });
 }

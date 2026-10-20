@@ -7,7 +7,8 @@ import type {
 import { FocusConfirmation } from "./FocusConfirmation.js";
 import { api } from "./api.js";
 import { Dialog } from "./Dialog.js";
-import type { DepartmentDirection, ObjectiveAlignment } from "../../shared/direction.js";
+import type { DepartmentDirection } from "../../shared/direction.js";
+import type { ObjectiveAlignmentChoice, FocusDraftSection } from "../../shared/focus.js";
 import { MissionBanner } from "./MissionBanner.js";
 import { AlignmentSummary, InitiativeChoices } from "./InitiativeChoices.js";
 const date = (value: string) =>
@@ -304,7 +305,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
           saveLabel={edit.type.startsWith("remove") ? "Remove" : "Save changes"}
           onClose={() => setEdit(undefined)}
           onSave={async (data) => {
-            const sections = structuredClone(focus.sections);
+            const sections: FocusDraftSection[] = structuredClone(focus.sections);
             if (edit.type === "remove-objective")
               sections.splice(edit.section, 1);
             else if (edit.type === "remove-goal")
@@ -315,7 +316,7 @@ export function FocusWorkspace({ member, canConfirm, departmentId }: {
               if (edit.type === "objective") {
                 const value = data.get("alignment");
                 if (typeof value !== "string") throw new Error("Wait for initiatives to load, or retry loading them before saving.");
-                const alignment = JSON.parse(value) as ObjectiveAlignment;
+                const alignment = JSON.parse(value) as ObjectiveAlignmentChoice;
                 if (edit.adding)
                   sections.push({
                     kind: data.get("kind") as ObjectiveKind,

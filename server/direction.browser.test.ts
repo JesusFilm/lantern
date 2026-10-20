@@ -212,7 +212,10 @@ test("career lead configures team direction and members always see the mission",
       await expect(dialog.locator(".initiative-option").filter({ hasText: "Language access" }).locator("svg")).toBeVisible();
       await dialog.getByRole("checkbox", { name: "Partner pathways", exact: true }).check();
       await memberPage.screenshot({ path: "/tmp/lantern-alignment-dialog.png", fullPage: true });
+      const savedRequest = memberPage.waitForRequest(request => request.method() === "PUT" && new URL(request.url()).pathname.startsWith("/api/focuses/"));
       await dialog.getByRole("button", { name: "Save changes", exact: true }).click();
+      const submitted = (await savedRequest).postDataJSON();
+      assert.deepEqual(submitted.sections[0].alignment.initiatives.map((item: object) => Object.keys(item)), [["id"], ["id"]]);
       await memberPage.reload();
       await expect(memberPage.locator(".read-section")).toContainText("Language access");
       await expect(memberPage.locator(".read-section")).toContainText("Partner pathways");
