@@ -18,7 +18,7 @@ export function createApp(database: Pool, config: AccessConfig = { origin: 'http
       else await database.query('SELECT 1');
       if (runtime?.revision) response.set('X-Lantern-Revision', runtime.revision);
       if (runtime?.deployment) response.set('X-Lantern-Deployment', runtime.deployment);
-      if (runtime) response.set('X-Lantern-Schema', '5');
+      if (runtime) response.set('X-Lantern-Schema', '7');
       response.status(200).json({ status: 'ok', database: 'ok' } satisfies HealthResponse);
     } catch {
       response.status(503).json({

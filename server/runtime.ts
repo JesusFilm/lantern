@@ -1,8 +1,12 @@
-import { admissionPolicy, type AdmissionPolicy } from './admission.js';
-/** Server-owned identity. Authentication must use this, never a request value. */
-export type LanternEnvironment = AdmissionPolicy;
+export type LanternEnvironment = 'local' | 'stage' | 'production';
+export function lanternEnvironment(environment: string | undefined): LanternEnvironment {
+  if (environment === undefined) return 'production';
+  if (environment === 'local' || environment === 'stage' || environment === 'production') return environment;
+  throw new Error('LANTERN_ENV must be local, stage or production.');
+}
+
 export function resolveRuntime(env: NodeJS.ProcessEnv = process.env) {
-  const environment = admissionPolicy(env.LANTERN_ENV);
+  const environment = lanternEnvironment(env.LANTERN_ENV);
   const hosted = env.LANTERN_ENV === 'stage' || env.LANTERN_ENV === 'production' || env.NODE_ENV === 'production';
   if (hosted && env.NODE_ENV !== 'production') throw new Error('Hosted environments require NODE_ENV=production.');
   const connectionString = env.DATABASE_URL;

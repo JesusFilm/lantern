@@ -28,13 +28,12 @@ test('stage smoke exercises real HTTPS/browser/PostgreSQL and refuses expired QA
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const origin = `https://127.0.0.1:${server.address().port}`;
   await migrate(db);
-  await db.query("INSERT INTO allowed_domains VALUES('example.test')");
   await db.query("INSERT INTO approved_emails VALUES('qa@example.test')");
   const dept = randomUUID(); await db.query("INSERT INTO departments(id,name) VALUES($1,'Synthetic QA')",[dept]);
   const tokens = [randomUUID(),randomUUID()];
   for (const token of tokens) {
    const id = randomUUID();
-   await db.query("INSERT INTO users VALUES($1,$2,'qa@example.test','Synthetic QA','example.test')",[id,id]);
+   await db.query("INSERT INTO users(id,google_sub,email,name) VALUES($1,$2,'qa@example.test','Synthetic QA')",[id,id]);
    await db.query("INSERT INTO memberships VALUES($1,$2,'member',NULL)",[id,dept]);
    await db.query("INSERT INTO sessions VALUES($1,$2,now()+interval '1 hour')",[createHash('sha256').update(token).digest('hex'),id]);
   }
@@ -47,16 +46,16 @@ test('stage smoke exercises real HTTPS/browser/PostgreSQL and refuses expired QA
    chromium: {launch:async()=>{const b=await chromium.launch();return {newPage:()=>b.newPage({ignoreHTTPSErrors:true}),newContext:()=>b.newContext({ignoreHTTPSErrors:true}),close:()=>b.close()};}}
   };
   const env={EXPECTED_DEPLOYMENT_ID:'isolated-test-deployment',APP_ORIGIN:origin,RELEASE_SHA:sha,RELEASE_TARGET:'stage',GITHUB_RUN_ID:'123',QA_MEMBER_A_SESSION:tokens[0],QA_MEMBER_B_SESSION:tokens[1]};
-  const basic = await smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'5',QA_MEMBER_A_SESSION:undefined,QA_MEMBER_B_SESSION:undefined},transport);
+  const basic = await smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'7',QA_MEMBER_A_SESSION:undefined,QA_MEMBER_B_SESSION:undefined},transport);
   assert.equal(basic.readiness,'passed');
-  const production = await smoke({...env,RELEASE_TARGET:'production',RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'5',QA_MEMBER_A_SESSION:undefined,QA_MEMBER_B_SESSION:undefined},transport);
+  const production = await smoke({...env,RELEASE_TARGET:'production',RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'7',QA_MEMBER_A_SESSION:undefined,QA_MEMBER_B_SESSION:undefined},transport);
   assert.equal(production.readiness,'passed');
   assert.equal(production.target,'production');
   assert.equal(production.stage,undefined);
-  assert.deepEqual(await smoke(env,transport),{sha,stage:'passed',target:'stage',deployment:'isolated-test-deployment',schemaVersion:5,runId:'123'});
+  assert.deepEqual(await smoke(env,transport),{sha,stage:'passed',target:'stage',deployment:'isolated-test-deployment',schemaVersion:7,runId:'123'});
   await db.query('DELETE FROM sessions');
   await assert.rejects(smoke(env,transport));
-  const readiness = await smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'5'},transport);
+  const readiness = await smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'7'},transport);
   assert.equal(readiness.readiness,'passed');
   assert.equal(readiness.stage,undefined,'readiness must not create full acceptance evidence');
   await assert.rejects(smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'3'},transport));

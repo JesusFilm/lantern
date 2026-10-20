@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createDatabase } from './database.js';
 import { migrate, assertSchemaReady } from './schema.js';
-import { configureDomains } from './membership.js';
+import { approveEmail } from './admission.js';
 test('empty schema is unready; concurrent and repeated migrations preserve operator configuration', async () => {
   const admin = createDatabase(process.env.DATABASE_URL!);
   const schema = `migration_${randomUUID().replaceAll('-', '')}`;
@@ -13,11 +13,11 @@ test('empty schema is unready; concurrent and repeated migrations preserve opera
   try {
     await assert.rejects(assertSchemaReady(db));
     await Promise.all([migrate(db), migrate(db), migrate(db)]);
-    await configureDomains(db, ['example.test']);
+    await approveEmail(db, 'person@example.test');
     await migrate(db);
     await assertSchemaReady(db);
     // Migration/operator storage boundary: verify existing rows, not just successful DDL.
-    assert.deepEqual((await db.query('SELECT domain FROM allowed_domains')).rows, [{ domain: 'example.test' }]);
+    assert.deepEqual((await db.query('SELECT email FROM approved_emails')).rows, [{ email: 'person@example.test' }]);
     await db.query('ALTER TABLE users RENAME TO unavailable_users');
     await assert.rejects(assertSchemaReady(db));
   } finally { await db.end(); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.end(); }
@@ -57,8 +57,8 @@ test('upgrading the hosted baseline preserves existing accounts and requires the
     await migrate(db);
     // Reconstruct migration 1's deployed shape without destroying its legacy account.
     await db.query('DROP TABLE IF EXISTS approved_emails');
-    await db.query('DELETE FROM schema_migrations WHERE version=2');
-    await db.query('ALTER TABLE users ALTER COLUMN hosted_domain SET NOT NULL');
+    await db.query('DELETE FROM schema_migrations WHERE version IN (2,3,5,6)');
+    await db.query('ALTER TABLE users ADD COLUMN hosted_domain text NOT NULL; CREATE TABLE allowed_domains(domain text PRIMARY KEY); DROP FUNCTION enroll_member(uuid,text)');
     const userId = randomUUID();
     await db.query("INSERT INTO users VALUES($1,'legacy-sub','legacy@example.test','Legacy person','example.test')", [userId]);
     await assert.rejects(assertSchemaReady(db));
@@ -66,7 +66,7 @@ test('upgrading the hosted baseline preserves existing accounts and requires the
     await assertSchemaReady(db);
     assert.deepEqual((await db.query('SELECT id,name FROM users')).rows, [{id:userId,name:'Legacy person'}]);
     assert.deepEqual((await db.query('SELECT email FROM approved_emails')).rows, []);
-    await db.query("INSERT INTO users VALUES($1,'personal-sub','personal@gmail.com','Personal',NULL)", [randomUUID()]);
+    await db.query("INSERT INTO users(id,google_sub,email,name) VALUES($1,'personal-sub','personal@gmail.com','Personal')", [randomUUID()]);
     await migrate(db);
     assert.equal((await db.query('SELECT count(*) FROM users')).rows[0].count, '2');
   } finally { await db.end(); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.end(); }

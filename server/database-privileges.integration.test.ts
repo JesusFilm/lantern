@@ -20,7 +20,7 @@ test('separate database roles migrate and administer while runtime is denied DDL
       'CREATE TEMP TABLE forbidden(id integer)', 'CREATE SCHEMA forbidden',
       'ALTER TABLE users ADD COLUMN forbidden text', 'DROP TABLE memberships',
       'TRUNCATE users CASCADE', "CREATE ROLE forbidden", `SET ROLE ${roles.migration}`, `SET ROLE ${roles.admin}`,
-      "INSERT INTO approved_emails VALUES ('forbidden@example.test')", 'DELETE FROM allowed_domains',
+      "INSERT INTO approved_emails VALUES ('forbidden@example.test')", 'DELETE FROM approved_emails',
       "INSERT INTO departments VALUES (gen_random_uuid(),'forbidden',NULL)",
       "INSERT INTO memberships VALUES (gen_random_uuid(),gen_random_uuid(),'career-lead',NULL)",
       "UPDATE memberships SET role='career-lead'", 'DELETE FROM memberships',
@@ -40,13 +40,12 @@ test('runtime enrollment only adds approved ordinary members and cannot restore,
   const { migration, runtime, admin, roles } = fixture;
   try {
     await migrate(migration); await grantApplicationPrivileges(migration, roles);
-    const { configureDomains, setupDepartment, addMember, membership, removeMember } = await import('./membership.js');
+    const { setupDepartment, addMember, membership, removeMember } = await import('./membership.js');
     const { registerSession } = await import('./accounts.js');
-    await configureDomains(admin, ['example.test']);
     const ids: string[] = [];
     for (const name of ['lead', 'member', 'other']) {
       await approveEmail(admin, `${name}@example.test`);
-      assert.equal(await registerSession(runtime, {sub:name,email:`${name}@example.test`,hostedDomain:'example.test',name}, name, undefined), true);
+      assert.equal(await registerSession(runtime, {sub:name,email:`${name}@example.test`,name}, name, undefined), true);
       ids.push((await admin.query('SELECT id FROM users WHERE google_sub=$1', [name])).rows[0].id);
     }
     const [lead, member, other] = ids as [string,string,string];

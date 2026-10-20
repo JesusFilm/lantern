@@ -1,5 +1,5 @@
 import { registerSession } from './accounts.js';
-import { isAdmitted, type AdmissionPolicy } from './admission.js';
+import { isAdmitted } from './admission.js';
 import { createHash, randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
@@ -16,7 +16,7 @@ const random = () => randomBytes(32).toString('base64url');
 function cookie(request: Request, name: string) {
   return request.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1);
 }
-export interface AccessConfig { origin: string; provider?: IdentityProvider; localUserId?: string; admissionPolicy?: AdmissionPolicy; hostingOnly?: boolean }
+export interface AccessConfig { origin: string; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean }
 export function accessRoutes(db: Pool, config: AccessConfig) {
   const router = Router();
   const secure = config.origin.startsWith('https:');
@@ -36,10 +36,10 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     }
     const token = cookie(req, sessionCookie);
     if (!token) return undefined;
-    const result = await db.query(`SELECT u.id,u.name,u.email,u.hosted_domain FROM sessions s JOIN users u ON u.id=s.user_id
+    const result = await db.query(`SELECT u.id,u.name,u.email FROM sessions s JOIN users u ON u.id=s.user_id
       WHERE s.token_hash=$1 AND s.expires_at>now()`, [hash(token)]);
     const user = result.rows[0];
-    if (!user || !await isAdmitted(db, { email: user.email, hostedDomain: user.hosted_domain }, config.admissionPolicy)) return undefined;
+    if (!user || !await isAdmitted(db, user)) return undefined;
     return { id: user.id as string, name: user.name as string, email: user.email as string };
   }
   async function requireUser(req: Request) {
@@ -66,7 +66,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     catch { return res.redirect('/?signInError=1'); }
     const token = random();
     const old = cookie(req, sessionCookie);
-    if (!await registerSession(db, identity, hash(token), old ? hash(old) : undefined, config.admissionPolicy)) {
+    if (!await registerSession(db, identity, hash(token), old ? hash(old) : undefined)) {
       return res.redirect('/?signInError=1');
     }
     res.cookie(sessionCookie, token, { ...options, maxAge: 7 * 86400000 });
@@ -117,7 +117,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     if (!req.body || Object.keys(req.body).some((key) => key !== 'userId') || typeof req.body.userId !== 'string') {
       throw new AccessError(400, 'Select a registered user; no roles or departments may be supplied.');
     }
-    await addMember(db, user.id, req.body.userId, config.admissionPolicy);
+    await addMember(db, user.id, req.body.userId);
     res.sendStatus(204);
   });
   router.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {

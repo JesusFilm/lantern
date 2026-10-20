@@ -1,3 +1,4 @@
+import { lanternEnvironment } from './runtime.js';
 import { privilegeFixture } from './privilege-test-support.js';
 import type { SessionView } from '../shared/access.js';
 import { execFile } from 'node:child_process';
@@ -11,7 +12,7 @@ import { createApp } from './app.js';
 import type { Identity } from './google.js';
 import { setupDepartment, removeMember } from './membership.js';
 import { migrate } from './schema.js';
-import { approveEmail, revokeEmail, approvedEmails, admissionPolicy } from './admission.js';
+import { approveEmail, revokeEmail, approvedEmails } from './admission.js';
 
 async function fixture(work: (db: pg.Pool) => Promise<void>) {
   const schema = `admission_${randomUUID().replaceAll('-', '')}`;
@@ -43,8 +44,9 @@ async function httpFixture(db: pg.Pool, work: (request: (path: string, cookie?: 
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   const address = server.address(); assert.ok(address && typeof address !== 'string');
   const origin = `http://127.0.0.1:${address.port}`;
+  lanternEnvironment(environment);
   let identity: Identity;
-  server.on('request', createApp(db, { origin, admissionPolicy: admissionPolicy(environment), provider: {
+  server.on('request', createApp(db, { origin, provider: {
     authorizationUrl: state => `/auth/google/callback?state=${state}&code=test`,
     exchange: async () => { if (identity.sub === 'provider-failure') throw new Error('secret provider detail'); return identity; },
   } }));
@@ -65,7 +67,6 @@ async function httpFixture(db: pg.Pool, work: (request: (path: string, cookie?: 
 const workIdentity = { sub: 'work-sub', email: 'person@example.test', name: 'Person', hostedDomain: 'example.test' };
 test('Google callback requires exact email approval before registration and rechecks active sessions', async () => {
   await fixture(async db => {
-    await db.query("INSERT INTO allowed_domains VALUES('example.test')");
     await httpFixture(db, async (request, login) => {
       const denied = await login(workIdentity, '&role=career-lead&owner=someone&environment=stage');
       assert.equal(denied.response.headers.get('location'), '/?signInError=1');
@@ -89,29 +90,26 @@ test('Google callback requires exact email approval before registration and rech
 });
 
 test('environment configuration defaults restrictively and rejects invalid identities', () => {
-  assert.equal(admissionPolicy(undefined), 'production');
-  for (const value of ['', 'test', 'Production', ' stage ']) assert.throws(() => admissionPolicy(value));
+  assert.equal(lanternEnvironment(undefined), 'production');
+  for (const value of ['', 'test', 'Production', ' stage ']) assert.throws(() => lanternEnvironment(value));
 });
 for (const environment of ['local', 'stage', 'production', undefined]) {
-  test(`${environment ?? 'omitted'} admission respects personal exceptions and work domain approval`, async () => {
+  test(`${environment ?? 'omitted'} admits exact approved emails regardless of hosted domain`, async () => {
     await fixture(async db => {
       await approveEmail(db, 'personal@gmail.com');
       await approveEmail(db, workIdentity.email);
       await httpFixture(db, async (request, login) => {
-        const personal = { sub: 'personal', email: 'personal@gmail.com', name: 'Personal', hostedDomain: null };
-        const result = await login(personal, '&environment=stage&LANTERN_ENV=stage');
-        if (environment === 'local' || environment === 'stage') {
+        for (const identity of [
+          { sub: 'personal', email: 'personal@gmail.com', name: 'Personal', hostedDomain: null },
+          workIdentity,
+          { ...workIdentity, hostedDomain: 'unlisted.test' },
+        ]) {
+          const result = await login(identity, '&environment=stage&LANTERN_ENV=stage');
           assert.ok(result.cookie);
-          assert.equal((await (await request('/api/session', result.cookie)).json() as SessionView).user!.email, personal.email);
+          assert.equal((await (await request('/api/session', result.cookie)).json() as SessionView).user!.email, identity.email);
           assert.equal((await request('/api/guide', result.cookie)).status, 403);
-        } else assert.equal(result.cookie, '');
-        assert.equal((await login(workIdentity)).cookie, '');
-        await db.query("INSERT INTO allowed_domains VALUES('example.test')");
-        const work = await login(workIdentity);
-        assert.ok(work.cookie);
-        await db.query('DELETE FROM allowed_domains');
-        assert.equal((await (await request('/api/session', work.cookie)).json() as SessionView).user, null);
-        assert.equal((await login({ ...personal, email: 'unapproved@gmail.com' })).cookie, '');
+        }
+        assert.equal((await login({ ...workIdentity, email: 'unapproved@example.test' })).cookie, '');
       }, environment);
     });
   });
@@ -119,7 +117,6 @@ for (const environment of ['local', 'stage', 'production', undefined]) {
 
 test('stage lead assigns approved personal members; revoked eligibility and forged authority are denied', async () => {
   await fixture(async db => {
-    await db.query("INSERT INTO allowed_domains VALUES('example.test')");
     await approveEmail(db, workIdentity.email);
     await approveEmail(db, 'member@gmail.com');
     await httpFixture(db, async (request, login) => {
@@ -175,7 +172,6 @@ test('operator command adds, lists and removes approvals without interpolating e
 test('provider and database failures fail closed with safe feedback; failed session creation is atomic', async () => {
   await fixture(async db => {
     await approveEmail(db, workIdentity.email);
-    await db.query("INSERT INTO allowed_domains VALUES('example.test')");
     await httpFixture(db, async (request, login) => {
       const failedProvider = await login({ ...workIdentity, sub: 'provider-failure' });
       assert.equal(failedProvider.response.headers.get('location'), '/?signInError=1');
@@ -200,25 +196,44 @@ test('provider and database failures fail closed with safe feedback; failed sess
   });
 });
 
-test('production rechecks stage-issued personal sessions and member assignment against current policy', async () => {
+test('production permits approved personal leads and members and rechecks revoked email eligibility', async () => {
   await fixture(async db => {
-    await db.query("INSERT INTO allowed_domains VALUES('example.test')");
-    await approveEmail(db, workIdentity.email); await approveEmail(db, 'member@gmail.com');
-    let memberCookie = '', userId = '';
+    const personal = { sub: 'lead-personal', email: 'lead@gmail.com', name: 'Lead', hostedDomain: null };
+    await approveEmail(db, personal.email); await approveEmail(db, workIdentity.email);
     await httpFixture(db, async (request, login) => {
-      memberCookie = (await login({ sub: 'member', email: 'member@gmail.com', name: 'Member', hostedDomain: null })).cookie;
-      userId = (await (await request('/api/session', memberCookie)).json() as SessionView).user!.id;
-    }, 'stage');
-    await httpFixture(db, async (request, login) => {
-      const lead = await login(workIdentity);
-      await setupDepartment(db, 'Team', workIdentity.email);
-      assert.equal((await (await request('/api/session', memberCookie)).json() as SessionView).user, null);
+      const lead = await login(personal);
+      await setupDepartment(db, 'Team', personal.email);
+      const member = await login(workIdentity);
+      const userId = (await (await request('/api/session', member.cookie)).json() as SessionView).user!.id;
+      await revokeEmail(db, workIdentity.email);
       assert.equal((await request('/api/department/members', lead.cookie, { userId })).status, 403);
-      await approveEmail(db, 'member@example.test');
-      const work = await login({ ...workIdentity, sub: 'member-work', email: 'member@example.test' });
-      const workId = (await (await request('/api/session', work.cookie)).json() as SessionView).user!.id;
-      await db.query("UPDATE users SET hosted_domain='removed.test' WHERE id=$1", [workId]);
-      assert.equal((await request('/api/department/members', lead.cookie, { userId: workId })).status, 403);
+      await approveEmail(db, workIdentity.email);
+      assert.equal((await request('/api/department/members', lead.cookie, { userId })).status, 204);
+      assert.equal((await request('/api/guide', member.cookie)).status, 200);
+      await revokeEmail(db, workIdentity.email);
+      assert.equal((await request('/api/guide', member.cookie)).status, 401);
     }, 'production');
   });
+});
+
+test('runtime remains usable after legacy domain storage and overload are removed', async () => {
+  const f = await privilegeFixture();
+  try {
+    await migrate(f.migration, f.roles);
+    await approveEmail(f.admin, 'person@example.test');
+    // Rehearse the next release's destructive DDL against this compatibility app.
+    await f.migration.query('DROP FUNCTION IF EXISTS enroll_member(uuid,text,boolean); ALTER TABLE users DROP COLUMN IF EXISTS hosted_domain; DROP TABLE IF EXISTS allowed_domains');
+    const { assertRuntimePrivileges } = await import('./database-privileges.js');
+    const { assertSchemaReady } = await import('./schema.js');
+    const { verifyDatabase } = await import('./database-verification.js');
+    await assertRuntimePrivileges(f.runtime);
+    await assertSchemaReady(f.runtime);
+    await verifyDatabase(f.runtime, {...f.roles, expectedDatabase:f.databaseName, schema:'lantern'}, 'runtime');
+    await httpFixture(f.runtime, async (request, login) => {
+      const signedIn = await login(workIdentity);
+      assert.ok(signedIn.cookie);
+      await setupDepartment(f.admin, 'Synthetic team', workIdentity.email);
+      assert.equal((await request('/api/guide', signedIn.cookie)).status, 200);
+    }, 'production');
+  } finally { await f.close(); }
 });

@@ -1,8 +1,7 @@
 import type { Pool } from 'pg';
 import { assertDatabaseTarget, assertRuntimePrivileges, identifier, type DatabaseRoles } from './database-privileges.js';
 import { assertSchemaReady } from './schema.js';
-import { legacyTables } from './database-transition.js';
-const applicationTables = [...legacyTables, 'department_direction'];
+const applicationTables = ['department_direction','approved_emails','departments','login_attempts','memberships','position_focuses','schema_migrations','sessions','users'];
 
 export async function verifyDatabase(db: Pool, config: DatabaseRoles & {expectedDatabase:string;schema:string}, scope: keyof DatabaseRoles, expectEmpty = false) {
   const client = await db.connect();
@@ -22,11 +21,11 @@ export async function verifyDatabase(db: Pool, config: DatabaseRoles & {expected
         AND has_table_privilege('position_focuses','INSERT')
         AND has_table_privilege('department_direction','SELECT')
         AND has_table_privilege('department_direction','INSERT')
-        AND has_function_privilege('enroll_member(uuid,text,boolean)','EXECUTE')
+        AND has_function_privilege('enroll_member(uuid,text)','EXECUTE')
         AND NOT EXISTS (
           SELECT 1 FROM (VALUES
-            ('users','name'), ('users','email'), ('users','hosted_domain'),
             ('department_direction','mission'), ('department_direction','initiatives'), ('department_direction','version'),
+            ('users','name'), ('users','email'),
             ('position_focuses','title'), ('position_focuses','period_start'),
             ('position_focuses','period_end'), ('position_focuses','sections'),
             ('position_focuses','version'), ('position_focuses','updated_at'),

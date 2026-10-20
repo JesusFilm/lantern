@@ -9,7 +9,7 @@ import { chromium } from '@playwright/test';
 import { createServer as createViteServer } from 'vite';
 import { createApp } from './app.js';
 import { migrate } from './schema.js';
-import { configureDomains, setupDepartment, removeMember } from './membership.js';
+import { setupDepartment, removeMember } from './membership.js';
 import type { RegisteredUser, SessionView } from '../shared/access.js';
 import type { IdentityProvider } from './google.js';
 
@@ -25,8 +25,7 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
   try {
     await migrate(migration);
     await grantApplicationPrivileges(migration, roles);
-    await configureDomains(admin, ['example.test']);
-    for (const name of ['lead', 'member', 'other', 'outsider']) await approveEmail(admin, `${name}@example.test`);
+    for (const name of ['lead', 'member', 'other']) await approveEmail(admin, `${name}@example.test`);
     let nextIdentity = 'lead';
     const provider: IdentityProvider = {
       authorizationUrl: (state, nonce, challenge) => {
@@ -36,14 +35,14 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       exchange: async (code, verifier, nonce) => {
         assert.ok(verifier); assert.ok(nonce);
         if (code === 'invalid') throw new Error('Invalid token');
-        if (code === 'browser-member') return { sub: code, name: 'Test browser-member', email: 'browser-member@gmail.com', hostedDomain: null };
-        return { sub: code, name: `Test ${code}`, email: `${code}@example.test`, hostedDomain: code === 'outsider' ? 'other.test' : 'example.test' };
+        if (code === 'browser-member') return { sub: code, name: 'Test browser-member', email: 'browser-member@gmail.com' };
+        return { sub: code, name: `Test ${code}`, email: `${code}@example.test` };
       },
     };
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address(); assert.ok(address && typeof address !== 'string');
     const origin = `http://127.0.0.1:${address.port}`;
-    const app = createApp(db, { origin, provider, admissionPolicy: 'stage' });
+    const app = createApp(db, { origin, provider });
     vite = await createViteServer({ server: { middlewareMode: {server}, hmr: {server} }, appType: 'spa' });
     app.use(vite.middlewares);
     server.on('request', app);
@@ -60,7 +59,7 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       const result = await request(callback, loginCookie);
       return { response: result, cookie: result.headers.get('set-cookie')?.match(/(?:^|, )lantern-session=[^;]+/)?.[0].replace(/^, /, '') ?? '', callback, loginCookie };
     }
-    await t.test('state is bound to browser, single-use, and invalid identities/domains cannot register', async () => {
+    await t.test('state is bound to browser, single-use, and invalid identities and unapproved emails cannot register', async () => {
       const start = await request('/auth/google');
       const callback = start.headers.get('location')!;
       assert.equal((await request(callback)).headers.get('location'), '/?signInError=1');
@@ -91,7 +90,6 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
     await setupDepartment(admin, 'Engineering test', 'lead@example.test');
     await t.test('backend safeguards and server authority reject privilege changes and forged writes', async () => {
       await assert.rejects(setupDepartment(admin, 'Engineering test', 'member@example.test'));
-      await assert.rejects(configureDomains(admin, ['other.test']));
       const leadId = (await (await request('/api/session', lead.cookie)).json() as SessionView).user!.id;
       await assert.rejects(removeMember(admin, leadId));
       assert.equal((await request('/api/department/members', lead.cookie, { userId: memberId, role: 'career-lead' })).status, 400);

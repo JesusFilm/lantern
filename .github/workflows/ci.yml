@@ -119,7 +119,7 @@ jobs:
       - name: Verify deployed revision, schema, login and anonymous denial
         env:
           RELEASE_SMOKE_MODE: readiness
-          EXPECTED_SCHEMA_VERSION: '5'
+          EXPECTED_SCHEMA_VERSION: '7'
         run: node tools/release/smoke.mjs
       - uses: actions/upload-artifact@v4
         with:

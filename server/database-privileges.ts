@@ -65,17 +65,17 @@ export async function grantApplicationPrivileges(db: Database, roles: DatabaseRo
   await db.query(`REVOKE ALL ON ALL TABLES IN SCHEMA ${schema} FROM PUBLIC, ${runtime}, ${admin}`);
   await db.query(`REVOKE ALL ON ALL FUNCTIONS IN SCHEMA ${schema} FROM PUBLIC, ${runtime}, ${admin}`);
   await db.query(`GRANT USAGE ON SCHEMA ${schema} TO ${runtime}, ${admin}`);
-  await db.query(`GRANT SELECT ON schema_migrations, allowed_domains, approved_emails, users, departments, memberships, position_focuses, sessions, login_attempts TO ${runtime}, ${admin}`);
+  await db.query(`GRANT SELECT ON schema_migrations, approved_emails, users, departments, memberships, position_focuses, sessions, login_attempts TO ${runtime}, ${admin}`);
   await db.query(`GRANT INSERT ON users TO ${runtime}`);
-  await db.query(`GRANT UPDATE (name, email, hosted_domain) ON users TO ${runtime}`);
+  await db.query(`GRANT UPDATE (name, email) ON users TO ${runtime}`);
   await db.query(`GRANT INSERT, DELETE ON sessions, login_attempts TO ${runtime}`);
   await db.query(`GRANT INSERT ON position_focuses TO ${runtime}`);
   await db.query(`GRANT SELECT, INSERT ON department_direction TO ${runtime}, ${admin}`);
   await db.query(`GRANT UPDATE (mission, initiatives, version) ON department_direction TO ${runtime}`);
   await db.query(`GRANT UPDATE, DELETE ON department_direction TO ${admin}`);
   await db.query(`GRANT UPDATE (title, period_start, period_end, sections, version, updated_at, status, confirmed_at, confirmed_by) ON position_focuses TO ${runtime}`);
-  await db.query(`GRANT EXECUTE ON FUNCTION enroll_member(uuid,text,boolean) TO ${runtime}, ${admin}`);
-  await db.query(`GRANT INSERT, UPDATE, DELETE ON allowed_domains, approved_emails, users, departments, memberships, position_focuses, sessions, login_attempts TO ${admin}`);
+  await db.query(`GRANT EXECUTE ON FUNCTION enroll_member(uuid,text) TO ${runtime}, ${admin}`);
+  await db.query(`GRANT INSERT, UPDATE, DELETE ON approved_emails, users, departments, memberships, position_focuses, sessions, login_attempts TO ${admin}`);
 }
 
 export async function assertDatabaseTarget(db: Database, expected: { database: string; schema: string; role: string }) {
@@ -109,7 +109,7 @@ export async function assertRuntimePrivileges(db: Database) {
     OR has_database_privilege(current_database(), 'TEMPORARY')
     OR EXISTS(SELECT 1 FROM pg_namespace WHERE has_schema_privilege(oid, 'CREATE'))
     OR EXISTS(SELECT 1 FROM pg_class WHERE relowner=r.oid AND relnamespace=(SELECT oid FROM pg_namespace WHERE nspname=current_schema()))
-    OR EXISTS(SELECT 1 FROM unnest(ARRAY['schema_migrations','allowed_domains','approved_emails','departments','memberships']) AS t(name)
+    OR EXISTS(SELECT 1 FROM unnest(ARRAY['schema_migrations','approved_emails','departments','memberships']) AS t(name)
       WHERE has_any_column_privilege(name, 'INSERT') OR has_any_column_privilege(name, 'UPDATE')
         OR has_table_privilege(name, 'DELETE') OR has_table_privilege(name, 'TRUNCATE') OR has_table_privilege(name, 'TRIGGER'))
     OR has_column_privilege('users','google_sub','UPDATE') OR has_column_privilege('users','id','UPDATE')

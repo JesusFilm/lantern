@@ -18,10 +18,9 @@ test('lead confirms in the browser; stale member edits retain input and the save
   try {
     await migrate(f.migration,f.roles);
     const lead=randomUUID(),member=randomUUID(),team=randomUUID();
-    await f.admin.query("INSERT INTO allowed_domains VALUES('example.test')");
     await f.admin.query("INSERT INTO departments(id,name) VALUES($1,'Team')",[team]);
     for(const [id,name,role] of [[lead,'Lead','career-lead'],[member,'Member','member']]) {
-      await f.admin.query("INSERT INTO users VALUES($1::uuid,$1::text,$2,$3,'example.test')",[id,`${id}@example.test`,name]);
+      await f.admin.query("INSERT INTO users(id,google_sub,email,name) VALUES($1::uuid,$1::text,$2,$3)",[id,`${id}@example.test`,name]);
       await f.admin.query('INSERT INTO approved_emails VALUES($1)',[`${id}@example.test`]);
       await f.admin.query('INSERT INTO memberships VALUES($1,$2,$3,NULL)',[id,team,role]);
       await f.admin.query("INSERT INTO sessions VALUES($1,$2,now()+interval '1 day')",[hash(id!),id]);

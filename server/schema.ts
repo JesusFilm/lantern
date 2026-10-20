@@ -1,6 +1,6 @@
 import type { Pool, PoolClient } from 'pg';
 import { grantApplicationPrivileges, type DatabaseRoles } from './database-privileges.js';
-import { migrateEnrollment } from './enrollment-migration.js';
+import { migrateEnrollment, migrateEmailEnrollment } from './enrollment-migration.js';
 
 export async function migrate(database: Pool, roles?: DatabaseRoles) {
   const client = await database.connect();
@@ -70,7 +70,21 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
         )`);
       await client.query('INSERT INTO schema_migrations(version) VALUES (4)');
     }
-    const direction = await client.query('SELECT version FROM schema_migrations WHERE version = 5');
+    const emailOnly = await client.query('SELECT version FROM schema_migrations WHERE version = 5');
+    if (!emailOnly.rowCount) {
+      await migrateEmailEnrollment(client);
+      await client.query('INSERT INTO schema_migrations(version) VALUES (5)');
+    }
+    const domainRemoval = await client.query('SELECT version FROM schema_migrations WHERE version = 6');
+    if (!domainRemoval.rowCount) {
+      // Deploy the schema-5 compatibility app before this destructive migration.
+      // No CASCADE: an unexpected dependency must abort the whole transaction.
+      await client.query(`DROP FUNCTION enroll_member(uuid,text,boolean);
+        ALTER TABLE users DROP COLUMN hosted_domain;
+        DROP TABLE allowed_domains`);
+      await client.query('INSERT INTO schema_migrations(version) VALUES (6)');
+    }
+    const direction = await client.query('SELECT version FROM schema_migrations WHERE version = 7');
     if (!direction.rowCount) {
       await client.query(`CREATE TABLE department_direction (
         department_id uuid PRIMARY KEY REFERENCES departments(id),
@@ -78,7 +92,7 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
         initiatives jsonb NOT NULL DEFAULT '[]' CHECK (jsonb_typeof(initiatives)='array'),
         version integer NOT NULL DEFAULT 1 CHECK (version > 0)
       )`);
-      await client.query('INSERT INTO schema_migrations(version) VALUES (5)');
+      await client.query('INSERT INTO schema_migrations(version) VALUES (7)');
     }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
@@ -89,9 +103,14 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5)');
-  if (result.rowCount !== 5) throw new Error('Required migration is missing.');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7)');
+  if (result.rowCount !== 7) throw new Error('Required migration is missing.');
   await database.query('SELECT department_id,mission,initiatives,version FROM department_direction LIMIT 0');
-  await database.query(`SELECT u.id, d.id, m.user_id, f.id, f.status, f.confirmed_at, f.confirmed_by, s.token_hash, l.state_hash, a.domain, e.email
-    FROM users u, departments d, memberships m, position_focuses f, sessions s, login_attempts l, allowed_domains a, approved_emails e LIMIT 0`);
+  const legacy = await database.query(`SELECT to_regclass('allowed_domains') IS NOT NULL
+    OR to_regprocedure('enroll_member(uuid,text,boolean)') IS NOT NULL
+    OR EXISTS (SELECT 1 FROM information_schema.columns
+      WHERE table_schema=current_schema() AND table_name='users' AND column_name='hosted_domain') AS present`);
+  if (legacy.rows[0].present) throw new Error('Legacy domain storage must be removed.');
+  await database.query(`SELECT u.id, d.id, m.user_id, f.id, f.status, f.confirmed_at, f.confirmed_by, s.token_hash, l.state_hash, e.email
+    FROM users u, departments d, memberships m, position_focuses f, sessions s, login_attempts l, approved_emails e LIMIT 0`);
 }

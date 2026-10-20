@@ -18,10 +18,9 @@ test("local account and persisted position focuses", async (t) => {
     const user = randomUUID(),
       other = randomUUID(),
       dept = randomUUID();
-    await admin.query("INSERT INTO allowed_domains VALUES('example.test')");
     for (const id of [user, other])
       await admin.query(
-        "INSERT INTO users VALUES($1::uuid,$1::text,'person@example.test','Original name','example.test')",
+        "INSERT INTO users(id,google_sub,email,name) VALUES($1::uuid,$1::text,'person@example.test','Original name')",
         [id],
       );
     await admin.query(

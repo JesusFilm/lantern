@@ -15,7 +15,7 @@ Lantern helps team members prepare a position focus and agree it with their care
 
 ## Access and data
 
-Hosted access uses Google sign-in and server-issued sessions. Admission requires an approved email; production additionally requires the configured work domain. Active department membership and server-assigned roles determine access. Members cannot read another member's focuses; career leads can read and confirm focuses within their department, but cannot edit another member's draft.
+Hosted access uses Google sign-in and server-issued sessions. Admission requires an exact approved email, with no domain restriction in any environment. Active department membership and server-assigned roles determine access. Members cannot read another member's focuses; career leads can read and confirm focuses within their department, but cannot edit another member's draft.
 
 See [People and access](../GLOSSARY.md#people-and-access) for the account, approval, membership and career-lead relationships. A manager does not automatically gain access through their job title; application permissions come from active membership and role.
 

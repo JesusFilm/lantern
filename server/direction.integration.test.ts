@@ -16,11 +16,10 @@ test("department direction persists through the authenticated HTTP interface", a
     await migrate(f.migration, f.roles);
     const lead = randomUUID(), member = randomUUID(), outsider = randomUUID();
     const team = randomUUID(), otherTeam = randomUUID();
-    await f.admin.query("INSERT INTO allowed_domains VALUES('example.test')");
     for (const id of [team, otherTeam])
       await f.admin.query("INSERT INTO departments(id,name) VALUES($1,'Team')", [id]);
     for (const [id, role, department] of [[lead, "career-lead", team], [member, "member", team], [outsider, "career-lead", otherTeam]]) {
-      await f.admin.query("INSERT INTO users VALUES($1::uuid,$1::text,$2,'Person','example.test')", [id, `${id}@example.test`]);
+      await f.admin.query("INSERT INTO users VALUES($1::uuid,$1::text,$2,'Person')", [id, `${id}@example.test`]);
       await f.admin.query("INSERT INTO approved_emails VALUES($1)", [`${id}@example.test`]);
       await f.admin.query("INSERT INTO memberships VALUES($1,$2,$3,NULL)", [id, department, role]);
       await f.admin.query("INSERT INTO sessions VALUES($1,$2,now()+interval '1 day')", [hash(id!), id]);
@@ -153,15 +152,15 @@ test("department direction persists through the authenticated HTTP interface", a
   }
 });
 
-test("schema 4 upgrades add empty direction without rewriting existing focus documents", async () => {
+test("schema 6 upgrades add empty direction without rewriting existing focus documents", async () => {
   const f = await privilegeFixture();
   const server = createServer();
   try {
     await migrate(f.migration, f.roles);
     await f.migration.query("DROP TABLE department_direction");
-    await f.migration.query("DELETE FROM schema_migrations WHERE version=5");
+    await f.migration.query("DELETE FROM schema_migrations WHERE version=7");
     const user = randomUUID(), department = randomUUID(), id = randomUUID();
-    await f.admin.query("INSERT INTO users VALUES($1::uuid,$1::text,'legacy@example.test','Legacy member','example.test')", [user]);
+    await f.admin.query("INSERT INTO users VALUES($1::uuid,$1::text,'legacy@example.test','Legacy member')", [user]);
     await f.admin.query("INSERT INTO departments(id,name) VALUES($1,'Legacy team')", [department]);
     await f.admin.query("INSERT INTO memberships VALUES($1,$2,'member',NULL)", [user, department]);
     const sections = [{ kind: "normal", objective: "Keep this objective", goals: [] }];
