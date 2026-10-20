@@ -108,7 +108,7 @@ test(
       page.setDefaultTimeout(5000);
       await page.goto(origin);
       await page
-        .getByRole("button", { name: "Department users", exact: true })
+        .getByRole("button", { name: "Department", exact: true })
         .click();
       await page.getByRole("button", { name: "Alice", exact: true }).click();
       await expect(
@@ -160,7 +160,7 @@ test(
         })
         .click();
       await page
-        .getByRole("button", { name: "Department users", exact: true })
+        .getByRole("button", { name: "Department", exact: true })
         .click();
       await page.getByRole("button", { name: "Bob", exact: true }).click();
       await expect(
@@ -168,17 +168,17 @@ test(
       ).toBeVisible();
       await page.goBack();
       await expect(
-        page.getByRole("heading", { name: "Department users" }),
+        page.getByRole("heading", { name: "Department" }),
       ).toBeVisible();
       await page.goForward();
       await expect(
         page.getByRole("heading", { name: "Bob’s position focuses" }),
       ).toBeVisible();
       await page
-        .getByRole("button", { name: "Department users", exact: true })
+        .getByRole("button", { name: "Department", exact: true })
         .click();
       await expect(
-        page.getByRole("heading", { name: "Department users", exact: true }),
+        page.getByRole("heading", { name: "Department", exact: true }),
       ).toBeVisible();
       await t.test(
         "loading, failed reads and retry never retain the previous private document",
@@ -216,7 +216,7 @@ test(
             page.getByText("Publish a guide by June", { exact: true }),
           ).toHaveCount(0);
           await page
-            .getByRole("button", { name: "Department users", exact: true })
+            .getByRole("button", { name: "Department", exact: true })
             .click();
           await expect(
             page.getByRole("button", { name: "Alice", exact: true }),
@@ -238,7 +238,7 @@ test(
           );
           await expect(page.locator(".aside-foot")).toContainText("Bob");
           await expect(
-            page.getByRole("button", { name: "Department users", exact: true }),
+            page.getByRole("button", { name: "Department", exact: true }),
           ).toHaveCount(0);
           await expect(
             page.getByText("Publish a guide by June", { exact: true }),
@@ -310,7 +310,7 @@ test(
             [
               `${origin}/?page=department`,
               "**/api/department",
-              "Department users",
+              "Department",
             ],
             [
               `${origin}/?page=department&member=${alice}`,
@@ -421,7 +421,7 @@ test(
             ).toHaveCount(0);
             await expect(
               page.getByRole("button", {
-                name: "Department users",
+                name: "Department",
                 exact: true,
               }),
             ).toHaveCount(0);
@@ -443,11 +443,11 @@ test(
               .getByRole("button", { name: destination, exact: true })
               .click();
             await page
-              .getByRole("button", { name: "Department users", exact: true })
+              .getByRole("button", { name: "Department", exact: true })
               .click();
             await expect(
               page.getByRole("heading", {
-                name: "Department users",
+                name: "Department",
                 exact: true,
               }),
             ).toBeVisible();
@@ -462,7 +462,7 @@ test(
             await page.goForward();
             await expect(
               page.getByRole("heading", {
-                name: "Department users",
+                name: "Department",
                 exact: true,
               }),
             ).toBeVisible();
@@ -557,7 +557,7 @@ test(
             }),
           ).toBeVisible();
           await expect(
-            page.getByRole("button", { name: "Department users", exact: true }),
+            page.getByRole("button", { name: "Department", exact: true }),
           ).toHaveCount(0);
           await expect(
             page.getByText("Publish a guide by June", { exact: true }),

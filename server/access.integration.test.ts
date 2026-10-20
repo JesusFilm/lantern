@@ -158,8 +158,8 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       nextIdentity = 'lead';
       await leadPage.goto(origin);
       await leadPage.getByRole('link', { name: 'Sign in with Google' }).click();
-      await leadPage.getByRole('button', { name: 'Department users', exact: true }).click();
-      await expect(leadPage.getByRole('heading', { name: 'Department users' })).toBeVisible();
+      await leadPage.getByRole('button', { name: 'Department', exact: true }).click();
+      await expect(leadPage.getByRole('heading', { name: 'Department' })).toBeVisible();
       await leadPage.getByRole('button', { name: 'Add user', exact: true }).click();
       await expect(leadPage.getByText('Rejoining is not yet supported.', { exact: true })).toBeVisible();
       await expect(leadPage.locator('option', { hasText: 'other@example.test' })).toBeDisabled();
@@ -176,10 +176,10 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       await memberPage.getByRole('button', { name: 'Guide', exact: true }).click();
       await memberPage.getByRole('button', { name: 'Example', exact: true }).click();
       await expect(memberPage.getByRole('heading', { name: 'A simple position focus' })).toBeVisible();
-      await expect(memberPage.getByRole('button', { name: 'Department users', exact: true })).toHaveCount(0);
+      await expect(memberPage.getByRole('button', { name: 'Department', exact: true })).toHaveCount(0);
       await expect(memberPage.getByRole('button', { name: 'Add user' })).toHaveCount(0);
       await memberPage.reload();
-      await expect(memberPage.getByRole('button', { name: 'Department users', exact: true })).toHaveCount(0);
+      await expect(memberPage.getByRole('button', { name: 'Department', exact: true })).toHaveCount(0);
       await revokeEmail(admin, 'browser-member@gmail.com');
       assert.equal((await memberContext.request.get(origin + '/api/department')).status(), 401);
       await memberPage.evaluate("window.dispatchEvent(new Event('focus'))");

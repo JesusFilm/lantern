@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { MemberFocusList, MemberFocusDetail } from "../../shared/focus.js";
 import { FocusConfirmation } from "./FocusConfirmation.js";
 import { api } from "./api.js";
+import { AlignmentSummary } from "./InitiativeChoices.js";
 
 const date = (value: string) =>
   new Date(value + "T12:00:00").toLocaleDateString("en-NZ", {
@@ -48,7 +49,7 @@ export function MemberFocuses({
   return (
     <section className={focusId ? "member-focus-detail" : undefined}>
       {!focusId && <button className="link back" onClick={() => navigate()}>
-        ← Department users
+        ← Department
       </button>}
       {error ? (
         <p role="alert">
@@ -88,6 +89,7 @@ export function MemberFocuses({
                     <h2>Objective {i + 1}</h2>
                     <span className="badge">{labels[section.kind]}</span>
                     <p className="read-text">{section.objective}</p>
+                    <AlignmentSummary alignment={section.alignment} />
                   </div>
                   <div className="read-goals">
                     <h3>SMART goals</h3>

@@ -159,7 +159,7 @@ test('migration upgrades existing drafts without data loss and confirmed state s
     try {
       assert.equal((await fetch(health)).status,503);
       await migrate(f.migration,f.roles);
-      const ready=await fetch(health);assert.equal(ready.status,200);assert.equal(ready.headers.get('x-lantern-schema'),'6');
+      const ready=await fetch(health);assert.equal(ready.status,200);assert.equal(ready.headers.get('x-lantern-schema'),'7');
     } finally {healthServer.closeAllConnections();await new Promise<void>(r=>healthServer.close(()=>r()));}
     assert.deepEqual(await (await f.request(f.member,`/api/focuses/${existing.id}`)).json(),existing);
     const confirmed=await (await f.confirm(existing.id,1)).json();

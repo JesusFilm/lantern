@@ -7,6 +7,9 @@ import type {
 import { FocusConfirmation } from "./FocusConfirmation.js";
 import { api } from "./api.js";
 import { Dialog } from "./Dialog.js";
+import type { DepartmentDirection, ObjectiveAlignment } from "../../shared/direction.js";
+import { MissionBanner } from "./MissionBanner.js";
+import { AlignmentSummary, InitiativeChoices } from "./InitiativeChoices.js";
 const date = (value: string) =>
   new Date(value + "T12:00:00").toLocaleDateString("en-NZ", {
     day: "numeric",
@@ -24,11 +27,13 @@ const kindLabels: Record<ObjectiveKind, string> = {
   "personal-development": "Personal Development Objectives",
   leadership: "Leadership Objectives",
 };
-export function FocusWorkspace({ member, canConfirm }: {
+export function FocusWorkspace({ member, canConfirm, departmentId }: {
   member: { id: string; name: string };
   canConfirm: boolean;
+  departmentId: string;
 }) {
   const [edit, setEdit] = useState<Edit>();
+  const [direction, setDirection] = useState<DepartmentDirection>();
 
   const [items, setItems] = useState<PositionFocus[]>([]),
     [focus, setFocus] = useState<PositionFocus>(),
@@ -41,6 +46,7 @@ export function FocusWorkspace({ member, canConfirm }: {
     setError("");
     try {
       setItems(await api("/api/focuses"));
+      setDirection(await api("/api/department/direction"));
       const id = new URLSearchParams(location.search).get("focus");
       setFocus(id ? await api("/api/focuses/" + id) : undefined);
     } catch (e) {
@@ -154,6 +160,7 @@ export function FocusWorkspace({ member, canConfirm }: {
                     </div>}
                   </div>
                   <p className="read-text">{section.objective}</p>
+                  <AlignmentSummary alignment={section.alignment} />
                 </div>
                 <div className="read-goals">
                   <h3>SMART goals</h3>
@@ -244,6 +251,8 @@ export function FocusWorkspace({ member, canConfirm }: {
               New position focus
             </button>
           </header>
+          {direction && <MissionBanner key={`${member.id}:${departmentId}`} mission={direction.mission}
+            storageKey={`lantern:mission:${member.id}:${departmentId}:expanded:v1`} />}
           {items.length ? (
             <table className="focus-list">
               <thead>
@@ -306,13 +315,20 @@ export function FocusWorkspace({ member, canConfirm }: {
               const text = String(data.get("text")).trim();
               if (!text) throw new Error("Enter some text before saving.");
               if (edit.type === "objective") {
+                const value = data.get("alignment");
+                if (typeof value !== "string") throw new Error("Wait for initiatives to load, or retry loading them before saving.");
+                const alignment = JSON.parse(value) as ObjectiveAlignment;
                 if (edit.adding)
                   sections.push({
                     kind: data.get("kind") as ObjectiveKind,
                     objective: text,
                     goals: [],
+                    alignment,
                   });
-                else sections[edit.section]!.objective = text;
+                else {
+                  sections[edit.section]!.objective = text;
+                  sections[edit.section]!.alignment = alignment;
+                }
               } else if (edit.adding) sections[edit.section]!.goals.push(text);
               else sections[edit.section]!.goals[edit.goal!] = text;
             }
@@ -334,7 +350,6 @@ export function FocusWorkspace({ member, canConfirm }: {
               {edit.type === "objective" && edit.adding && (
                 <fieldset className="objective-types">
                   <legend>Objective type</legend>
-                  <p>Choose one. Every new objective starts as Normal.</p>
                   {Object.entries(kindLabels).map(([kind, label]) => (
                     <label className="type-choice" key={kind}>
                       <input
@@ -365,6 +380,7 @@ export function FocusWorkspace({ member, canConfirm }: {
                       : focus.sections[edit.section]!.objective
                 }
               />
+              {edit.type === "objective" && <InitiativeChoices initial={edit.adding ? undefined : focus.sections[edit.section]!.alignment} />}
             </>
           )}
         </Dialog>

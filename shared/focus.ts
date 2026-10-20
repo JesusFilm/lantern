@@ -1,8 +1,10 @@
+import type { ObjectiveAlignment } from "./direction.js";
 export type ObjectiveKind = "normal" | "personal-development" | "leadership";
 export interface FocusSection {
   kind: ObjectiveKind;
   objective: string;
   goals: string[];
+  alignment?: ObjectiveAlignment;
 }
 export interface FocusDraft {
   title: string;

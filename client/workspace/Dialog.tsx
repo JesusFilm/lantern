@@ -45,9 +45,11 @@ export function Dialog({
         }}
       >
         <h2 id="dialog-title">{title}</h2>
-        <fieldset disabled={busy} className="dialog-fields">
-          {children}
-        </fieldset>
+        <div className="dialog-content">
+          <fieldset disabled={busy} className="dialog-fields">
+            {children}
+          </fieldset>
+        </div>
         {error && <p role="alert">{error}</p>}
         <div className="dialog-actions">
           <button type="button" disabled={busy} onClick={onClose}>

@@ -1,6 +1,77 @@
 * {
   box-sizing: border-box;
 }
+.department-tabs {
+  background: transparent;
+  border-bottom: 1px solid #d8e1eb;
+}
+.direction-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.mission-editor h2 label {
+  font-size: inherit;
+  color: inherit;
+  margin: 0;
+}
+.mission-editor textarea {
+  line-height: 1.6;
+  font-size: 16px;
+}
+.mission-editor > .link { margin-top: 8px; }
+.initiative-table { width: 100%; border-collapse: collapse; text-align: left; }
+.initiative-table th { color: #536984; font-weight: 500; background: #f5f8fb; }
+.initiative-table td, .initiative-table th { padding: 16px 12px; border-bottom: 1px solid #d8e1eb; }
+.initiative-table td:first-child { overflow-wrap: anywhere; }
+.initiative-table th:first-child { width: 60%; }
+.initiative-actions { display: flex; gap: 16px; }
+.initiative-table .archived { background: #edf1f5; color: #536984; }
+.initiative-help { margin-top: 20px; font-size: 14px; }
+.initiative-choices { border: 0; padding: 0; margin: 24px 0 0; min-width: 0; }
+.initiative-choices legend { font-weight: 650; padding: 0; }
+.initiative-choices > p { font-size: 13px; margin: 4px 0 10px; }
+.initiative-options { border: 1px solid #c5d5e0; border-radius: 3px; padding: 12px 16px; max-height: 280px; overflow-y: auto; }
+.initiative-option { display: flex; gap: 12px; align-items: flex-start; color: #17324e; margin: 0; padding: 9px 0; font-size: 14px; }
+.initiative-option input { width: 18px; height: 18px; flex-shrink: 0; margin: 2px 0 0; accent-color: #007e95; }
+.initiative-option span { overflow-wrap: anywhere; }
+.initiative-option small { display: block; }
+.initiative-other { border-top: 1px solid #d8e1eb; margin-top: 8px; padding-top: 16px; }
+.alignment-summary { margin-top: 20px; }
+.alignment-summary h3 { font-size: 12px; color: #536984; margin-bottom: 8px; }
+.alignment-summary ul { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.alignment-summary li { margin: 0; padding: 0; border: 0; }
+.direction-save { display: flex; align-items: center; gap: 12px; padding: 16px 0; }
+.direction-save > span { margin-right: auto; }
+.mission-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
+  border: 1px solid #d8e1eb;
+  border-radius: 3px;
+  background: white;
+  padding: 26px;
+  margin: 24px 0;
+}
+.mission-banner .mission-quote { color: #bce0e6; font: 100px/1 Georgia, serif; height: 64px; }
+.mission-banner .mission-body { flex: 1; min-width: 0; }
+.mission-banner h2 { color: #007e95; text-transform: uppercase; letter-spacing: .12em; font-size: 12px; margin: 6px 0; }
+.mission-banner p { font-size: 24px; font-weight: 650; line-height: 1.5; margin: 14px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.mission-banner button { white-space: nowrap; flex-shrink: 0; }
+.mission-banner button span { margin-left: 10px; }
+.mission-banner.collapsed { align-items: center; padding: 12px 24px; }
+.mission-banner.collapsed .mission-quote { font-size: 48px; height: 32px; }
+@media (max-width: 700px) {
+  .mission-banner { gap: 12px; padding: 20px; flex-wrap: wrap; }
+  .mission-banner .mission-quote { font-size: 64px; width: 26px; }
+  .mission-banner p { font-size: 20px; }
+  .mission-banner button { margin-left: auto; }
+  .mission-banner.collapsed { gap: 10px; padding: 12px; }
+  .initiative-table td, .initiative-table th { padding: 12px 6px; }
+  .initiative-actions { flex-direction: column; gap: 4px; align-items: flex-start; }
+  .direction-save { flex-wrap: wrap; }
+}
 body {
   margin: 0;
   font:
@@ -1432,6 +1503,46 @@ h2[tabindex="-1"]:focus {
 .button-with-icon { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
 .lock-icon { width: 22px; height: 22px; flex-shrink: 0; }
 dialog:has(.confirmation-summary) { max-width: 760px; }
+
+/* Keep objective writing and initiative choices together within the dialog. */
+dialog:has(.initiative-choices) { max-height: 90dvh; }
+dialog:has(.initiative-choices) > form {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(90dvh - 66px);
+}
+dialog:has(.initiative-choices) .dialog-content {
+  overflow-y: auto;
+  min-height: 0;
+}
+dialog:has(.initiative-choices) .dialog-fields { padding: 4px; }
+dialog:has(.initiative-choices) h2,
+dialog:has(.initiative-choices) .dialog-actions,
+dialog:has(.initiative-choices) [role="alert"] { flex-shrink: 0; }
+dialog:has(.initiative-choices) .dialog-actions { margin-top: 16px; padding-top: 12px; }
+dialog:has(.initiative-choices) textarea { min-height: 96px; }
+dialog:has(.initiative-choices) .initiative-choices { margin-top: 16px; }
+dialog:has(.initiative-choices) .objective-types {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin: 4px 0 8px;
+}
+dialog:has(.initiative-choices) .objective-types legend { padding: 0; font-size: 14px; }
+dialog:has(.initiative-choices) .type-choice {
+  display: inline-flex;
+  border: 0;
+  padding: 4px 0;
+  margin: 0 18px 0 0;
+  gap: 7px;
+  background: transparent;
+}
+dialog:has(.initiative-choices) .type-choice strong { font-size: 13px; font-weight: 500; }
+dialog .initiative-choices .initiative-option { font-size: 14px; color: #17324e; }
+@media (max-width: 700px) {
+  .mission-banner.expanded { display: grid; grid-template-columns: 26px minmax(0, 1fr); }
+  .mission-banner.expanded button { grid-column: 2; justify-self: end; }
+}
 .confirmation-summary { padding: 20px 24px; background: #f1f5f9; border-radius: 8px; margin: 24px 0; }
 .confirmation-summary h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: #61768e; margin: 0 0 12px; }
 .confirmation-summary dl { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px 20px; margin: 0; }
