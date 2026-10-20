@@ -31,6 +31,11 @@ For Google sign-in, configure a Web OAuth client with the callback `APP_ORIGIN/a
 
 ## Delivery
 
+The [system test workspace proposal](docs/operations/system-test-team-plan.md)
+reconsiders authentication and cleanup for staging and production. It is a draft,
+not implemented by the release tooling below. Keep acceptance and automatic
+production activation pending that design decision.
+
 GitHub Actions checks types, runs PostgreSQL/browser tests, and builds the application. [Staging delivery](.github/workflows/ci.yml) runs for successful main commits when repository variable `STAGE_DELIVERY_ENABLED=true`, using the GitHub `stage` environment. It applies migrations directly from the runner, then uploads the matching webapp revision.
 
 **Main represents the staging delivery path. Production is deployed separately from a verified main SHA and may lag behind main.** [ADR 0001](docs/adrs/0001-release-migrations.md) records the migration architecture; [ADR 0006](docs/adrs/0006-authenticated-release-acceptance.md) adds opt-in authenticated acceptance and automatic promotion. Staging and production keep separate data.

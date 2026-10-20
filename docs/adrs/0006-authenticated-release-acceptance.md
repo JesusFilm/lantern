@@ -3,6 +3,11 @@
 Date: 2026-10-21
 Status: Accepted by the repository owner; hosted activation remains separate
 
+The owner is considering permanent password-authenticated test accounts in both
+environments. [ADR 0007](0007-isolated-system-test-accounts.md) is a proposed
+replacement for the authentication and fixture lifecycle below, not an implemented
+or accepted production change. Keep activation pending that decision.
+
 ## Decision
 
 Keep the existing PostgreSQL, HTTP, browser, migration and packaging tests.

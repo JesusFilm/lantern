@@ -30,6 +30,17 @@ Staging receives application and schema changes automatically after a PR merges 
 
 Current work prioritizes reliable delivery and a usable hosted product. New product scope is chosen directly by the owner. Later review cycles, unlocking or copying confirmed focuses, notifications, dashboards, and broader administration need a separate product decision before implementation.
 
+## Proposed system test workspace
+
+The owner is considering one permanent career-lead login and two member logins
+for an isolated system-test department in each environment, including production.
+These accounts would use dedicated password authentication and create disposable
+content through normal product workflows. Real users must not discover or join
+the test workspace, and test accounts must not discover or join real teams.
+A restricted reset operation would remove test content without changing ordinary
+history-retention rules. This is not implemented; the [draft plan](operations/system-test-team-plan.md)
+records cleanup gaps, isolation requirements and decisions needed before implementation.
+
 ## Proposed weekly reporting
 
 The intended addition lets people state plans for a week and report whether they achieved them, alongside their position focuses in Lantern's UI using its existing authentication and database. This is not implemented. Before implementation, agree who can see/edit reports, how weeks and outcomes are defined, and whether reports link to particular focuses or goals. Confirmation of a focus records agreement, not achievement. Record consequential architecture choices through the [ADR process](adrs/AGENTS.md); sharing infrastructure does not grant access to another person's records.
