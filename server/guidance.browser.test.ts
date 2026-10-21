@@ -144,7 +144,7 @@ test("first-focus guidance through the member workspace", { timeout: 90000 }, as
 
     await t.test("guide navigation and writing actions fit portrait, landscape, tablet and desktop layouts", async () => {
       const focuses = await (await page.request.get(origin + "/api/focuses")).json();
-      for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }, { width: 844, height: 390 }, { width: 768, height: 1024 }, { width: 1440, height: 1000 }]) {
+      for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }, { width: 667, height: 375 }, { width: 812, height: 375 }, { width: 844, height: 390 }, { width: 768, height: 1024 }, { width: 1440, height: 1000 }]) {
         const review = await browser!.newPage({ viewport, hasTouch: true });
         review.setDefaultTimeout(5000);
         review.on("pageerror", error => errors.push(error.message));
@@ -170,6 +170,13 @@ test("first-focus guidance through the member workspace", { timeout: 90000 }, as
           await review.getByRole("button", { name: "Example", exact: true }).click();
           await review.getByRole("button", { name: "Engineering Example", exact: true }).click();
           await expect(review.getByRole("heading", { name: "Objective 1", exact: true })).toBeVisible();
+          if (viewport.width <= 620 || viewport.height <= 500) {
+            await expect(review.getByRole("heading", { name: "Objective 1", exact: true })).toBeInViewport();
+          }
+          const exampleNavigation = await review.getByLabel("Steps within Example").boundingBox();
+          const readingPanel = await review.locator(".lesson-body").boundingBox();
+          if (viewport.width <= 900) assert.ok(exampleNavigation && readingPanel && exampleNavigation.y + exampleNavigation.height <= readingPanel.y,
+            `Example navigation must not overlap its content at ${viewport.width}×${viewport.height}`);
           assert.equal(await review.evaluate("document.documentElement.scrollWidth <= innerWidth"), true, `Guide at ${viewport.width}×${viewport.height}`);
           await review.goto(origin + "/?focus=" + focuses[0].id);
           await review.getByRole("button", { name: "Edit objective", exact: true }).click();
