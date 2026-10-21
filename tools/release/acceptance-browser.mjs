@@ -208,7 +208,7 @@ export async function runAcceptanceBrowser({ origin, sessions, runId }, { chromi
     await memberPage.reload();
     await expect(memberPage.getByText(name, { exact: true })).toBeVisible();
     await memberPage.getByRole('button', { name: 'Guide', exact: true }).click();
-    await expect(memberPage.getByRole('heading', { name: 'What makes a useful objective?', exact: true })).toBeVisible();
+    await expect(memberPage.getByRole('heading', { name: 'A draft, a conversation, an agreed focus.', exact: true })).toBeVisible();
     await memberPage.getByRole('button', { name: 'Example', exact: true }).click();
     await expect(memberPage.getByRole('heading', { name: 'A simple position focus', exact: true })).toBeVisible();
     checks.push(checkpoint);

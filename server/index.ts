@@ -1,4 +1,5 @@
 import { localAccount } from './local-access.js';
+import { seedLocalInitiatives } from './local-initiatives.js';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
@@ -20,7 +21,10 @@ try {
   throw new Error('Database schema or runtime privileges are not ready. Check the scoped database setup before startup.');
 }
 let localUserId: string | undefined;
-try { localUserId = localAccess ? await localAccount(database) : undefined; }
+try {
+  localUserId = localAccess ? await localAccount(database) : undefined;
+  if (environment === 'local' && localUserId) await seedLocalInitiatives(database, localUserId);
+}
 catch (error) { await database.end(); throw error; }
 let revision: string | undefined;
 try { revision = JSON.parse(readFileSync('release.json', 'utf8')).sha; } catch { /* Local builds need no release stamp. */ }
