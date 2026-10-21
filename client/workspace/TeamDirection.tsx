@@ -1,3 +1,4 @@
+import { CircleEllipsis } from "lucide-react";
 import { MissionImageDialog } from "./MissionImageDialog.js";
 import { useEffect, useState } from "react";
 import type { DepartmentDirection, DirectionDraft } from "../../shared/direction.js";
@@ -59,8 +60,7 @@ export function TeamDirection() {
                 <button type="button" className="primary" disabled={draft.initiatives.length >= 100}
                   onClick={() => setEditing(draft.initiatives.length)}>Add initiative</button>
               </div>
-              <p className="muted">Members can select more than one for each objective.</p>
-              {draft.initiatives.length ? <div className="initiative-table-scroll"><table className="initiative-table">
+              <div className="initiative-table-scroll"><table className="initiative-table">
                 <thead><tr><th>Initiative</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>{draft.initiatives.map((item, index) => <tr key={item.id ?? `new-${index}`}>
                   <td><InitiativeIdentity name={item.name} appearance={item.appearance} /></td>
@@ -71,9 +71,12 @@ export function TeamDirection() {
                       change({ ...draft, initiatives: draft.initiatives.map((entry, i) => i === index ? { ...entry, archived: !entry.archived } : entry) })
                     }>{item.archived ? "Restore" : "Archive"}</button>
                   </div></td>
-                </tr>)}</tbody>
-              </table></div> : <p className="empty-base">No initiatives yet. Add one when your team has agreed its priorities.</p>}
-              <p className="muted initiative-help">“Other — none of these apply” is always included. Archiving removes an initiative from new selections and preserves existing objectives.</p>
+                </tr>)}
+                <tr>
+                  <td><span className="initiative-identity initiative-other-identity"><span className="initiative-mark" aria-hidden="true"><CircleEllipsis size={20} /></span><span>Other</span></span></td>
+                  <td></td><td></td>
+                </tr></tbody>
+              </table></div>
             </section>
             <div className="direction-save">
               <span className="muted">{dirty ? "Unsaved changes" : "Changes saved"}</span>

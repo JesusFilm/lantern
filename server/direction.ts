@@ -1,6 +1,7 @@
 import { normalizeMissionImage } from "./mission-image.js";
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
+import { maxInitiativeDescriptionLength } from "../shared/direction.js";
 import type { DepartmentDirection, DirectionDraft } from "../shared/direction.js";
 import { AccessError, membership, membershipWrite } from "./membership.js";
 import { isPresetAppearance, validateInitiativeAppearance } from "../shared/initiative-appearance.js";
@@ -28,10 +29,12 @@ export function validateDirection(value: unknown): DirectionDraft {
   const ids = new Set<string>(), names = new Set<string>();
   for (const item of data.initiatives) {
     if (!item || typeof item !== "object" || Array.isArray(item) ||
-        Object.keys(item).some(k => !["id", "name", "archived", "appearance"].includes(k)) ||
+        Object.keys(item).some(k => !["id", "name", "description", "archived", "appearance"].includes(k)) ||
         typeof item.name !== "string" || !item.name.trim() || item.name.length > 120 ||
         typeof item.archived !== "boolean" ||
         (item.id !== undefined && (typeof item.id !== "string" || !/^[a-f0-9-]{36}$/.test(item.id) || ids.has(item.id)))) return fail();
+    if (item.description !== undefined && (typeof item.description !== "string" || item.description.length > maxInitiativeDescriptionLength))
+      throw new AccessError(400, `Enter a description of up to ${maxInitiativeDescriptionLength} characters.`);
     if (item.id) ids.add(item.id);
     if (!item.archived) {
       const name = item.name.trim().toLowerCase();
@@ -43,6 +46,7 @@ export function validateDirection(value: unknown): DirectionDraft {
     return { mission: data.mission.trim(), version: data.version,
       ...(data.missionImage !== undefined ? { missionImage: data.missionImage } : {}),
       initiatives: data.initiatives.map(item => ({ ...item, name: item.name.trim(),
+        ...(item.description !== undefined ? { description: item.description.trim() } : {}),
         ...(item.appearance !== undefined ? { appearance: validateInitiativeAppearance(item.appearance) } : {}) })) };
   } catch (error) { throw new AccessError(400, (error as Error).message); }
 }

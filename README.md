@@ -104,9 +104,9 @@ Private local files are ignored by Git. `.env.example` contains only synthetic l
 
 Database target settings are `LANTERN_DB_NAME`, `LANTERN_DB_SCHEMA`, the three role names above, and `LANTERN_DB_EXPECTED_ENDPOINT` for commands that check the connection endpoint. Locally use `LANTERN_ENV=local` and the loopback endpoint; production owner commands use production-specific targets. Setup commands are described under [Development](#development) and [Delivery](#delivery).
 
-### Optional initiative appearance setup
+### Optional initiative seed setup
 
-After deploying the initiative appearance feature, run
+After deploying initiative descriptions with the 500-character limit, run
 [`tools/database/seed-initiative-appearance.sql`](tools/database/seed-initiative-appearance.sql)
 using the intended environment's operator connection. Replace
 `REPLACE_WITH_DEPARTMENT_UUID` with the department ID returned by
@@ -115,13 +115,40 @@ the entire file in one connection. It is plain SQL, suitable for a SQL editor or
 `psql -v ON_ERROR_STOP=1 -f tools/database/seed-initiative-appearance.sql` with your
 connection already configured outside the command.
 
-The script adds missing agreed initiatives and assigns their bundled SVG icons
-and colors. Existing names are matched ignoring case and surrounding whitespace;
+The script adds missing agreed initiatives and assigns their approved descriptions,
+bundled SVG icons and colors. Matching initiatives receive those descriptions and
+preset appearances too. Existing names are matched ignoring case and surrounding whitespace;
 IDs, archive status, mission, unrelated initiatives and focus history are preserved.
 It is safe to rerun and only advances the department configuration version when
 data changes. Open settings pages must reload after a change. Appearance uses the
 existing JSON document fields, so this feature needs no schema migration beyond
 schema 7. The data setup is optional and is not run automatically on deployment.
+
+### Update descriptions only (staging or production)
+
+Use [`tools/database/update-initiative-descriptions.sql`](tools/database/update-initiative-descriptions.sql)
+when the four initiatives already exist and their icons/colors should stay as configured.
+Deploy the description feature with its **500-character limit first**: the approved
+Role Clarity and Growth description is 408 characters, exceeding the previous limit.
+Both scripts contain the owner's exact descriptions approved on 21 October 2026.
+
+1. Open the intended database with its operator connection. Check
+   `SELECT current_database(), current_user;` and find the department with
+   `SELECT id, name FROM lantern.departments WHERE deleted_at IS NULL;`.
+2. In a copy of the SQL file, replace the single `REPLACE_WITH_DEPARTMENT_UUID`
+   placeholder with that department's UUID. Staging and production may have different IDs.
+3. Run the entire file in one SQL-editor connection, or use
+   `psql -v ON_ERROR_STOP=1 -f /path/to/your-edited-script.sql` with the connection
+   configured privately. Repeat separately for the other environment.
+4. Reload Mission & initiatives and Guide to verify the descriptions.
+
+The script matches names ignoring case and surrounding whitespace, including
+archived initiatives. It requires exactly one match for each name; missing or
+ambiguous matches abort the transaction without partial changes. It updates only
+descriptions, preserving names, IDs, icons, colors, archive state, ordering,
+mission, unrelated initiatives and focus history. The configuration version advances
+only if content changes, so an unchanged rerun is a no-op and stale settings saves
+are rejected. This script is manual; it is not run on deployment.
 
 ## Code
 

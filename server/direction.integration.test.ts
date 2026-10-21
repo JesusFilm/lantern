@@ -11,6 +11,25 @@ import { hash } from "./access.js";
 import type { DepartmentDirection } from "../shared/direction.js";
 import type { PositionFocus } from "../shared/focus.js";
 
+const approvedDescriptions = [
+  {
+    "name": "Love What We Build",
+    "description": "Understand who our work serves, why it matters to the mission, and whether it helps. This initiative connects meaningful ownership with access to the people and evidence needed to shape solutions. It includes understanding user needs, clarifying decisions we own, and using feedback after delivery to improve what we build and guide what happens next."
+  },
+  {
+    "name": "Rethink How We Build",
+    "description": "Improve how we move from an identified need to a validated outcome as AI changes the way we work. This includes stronger problem framing, effective use of agents, quality and validation throughout development, and shared tools and practices that help the whole team. Human judgment and responsibility remain central as we experiment, evaluate results and share useful capabilities."
+  },
+  {
+    "name": "Role Clarity and Growth",
+    "description": "Connect the team’s strategy to each person’s contribution, desired results and personal development. This initiative helps people understand their responsibilities, how their strengths complement others, and the capabilities they need to develop. Position Focus makes that connection practical over roughly six months, with support from the Career Leader and relevant managers, adapting as priorities change."
+  },
+  {
+    "name": "Team Connectedness",
+    "description": "Build a team where people know one another, understand what others are working on, and can find help and offer support. This includes sharing work and learning through Show and Tell, making space for relationships beyond delivery, and giving people regular opportunities to raise feedback. Visible responses and follow-through help that feedback improve our experience of working together."
+  }
+];
+
 test("department direction persists through the authenticated HTTP interface", async (t) => {
   const f = await privilegeFixture();
   const server = createServer();
@@ -82,6 +101,44 @@ test("department direction persists through the authenticated HTTP interface", a
       assert.equal(removed.missionImage, null);
       const reset = await (await request(lead, undefined, "PUT", { ...removed, missionImage: "/mission-jesus-geometric.png" })).json() as DepartmentDirection;
       assert.equal(reset.missionImage, "/mission-jesus-geometric.png");
+    });
+
+    await t.test("initiative descriptions persist as optional department guidance with atomic validation", async () => {
+      const before = await (await request(lead)).json() as DepartmentDirection;
+      const payload = { ...before, initiatives: before.initiatives.map((item, i) => ({ ...item,
+        ...(i === 0 ? { description: "  Help people discover media in their heart language.  " } : {}),
+      })) };
+      const response = await request(lead, undefined, "PUT", payload);
+      assert.equal(response.status, 200);
+      const saved = await response.json() as DepartmentDirection;
+      assert.equal(saved.initiatives[0]!.description, "Help people discover media in their heart language.");
+      assert.equal(saved.initiatives[1]!.description, undefined);
+      server.removeAllListeners("request");
+      server.on("request", createApp(f.runtime, { origin }));
+      assert.deepEqual(await (await request(member)).json(), saved);
+      assert.deepEqual(((await (await request(outsider)).json()) as DepartmentDirection).initiatives, []);
+      assert.equal((await request(member, undefined, "PUT", saved)).status, 403);
+      for (const description of ["x".repeat(501), null, 3, {}, []]) {
+        const invalid = await request(lead, undefined, "PUT", { ...saved,
+          initiatives: saved.initiatives.map((item, i) => i === 0 ? { ...item, description } : item),
+        });
+        assert.equal(invalid.status, 400);
+        assert.match(((await invalid.json()) as { error: string }).error, /description/i);
+        assert.deepEqual(await (await request(member)).json(), saved);
+      }
+      const maximum = await request(lead, undefined, "PUT", { ...saved,
+        initiatives: saved.initiatives.map((item, i) => i === 0 ? { ...item, description: "x".repeat(500) } : item),
+      });
+      assert.equal(maximum.status, 200);
+      const current = await maximum.json() as DepartmentDirection;
+      assert.equal(current.initiatives[0]!.description?.length, 500);
+      assert.equal((await request(lead, undefined, "PUT", saved)).status, 409);
+      assert.deepEqual(await (await request(member)).json(), current);
+      const cleared = await request(lead, undefined, "PUT", { ...current,
+        initiatives: current.initiatives.map(item => ({ ...item, description: "   " })),
+      });
+      assert.equal(cleared.status, 200);
+      assert.equal(((await cleared.json()) as DepartmentDirection).initiatives[0]!.description, "");
     });
 
     await t.test("initiative appearance persists for the department and is validated atomically", async () => {
@@ -202,9 +259,11 @@ test("department direction persists through the authenticated HTTP interface", a
       const confirmed = await request(lead, `/api/department/members/${member}/focuses/${focus.id}/confirm`, "POST", { version: focus.version });
       assert.equal(confirmed.status, 200); focus = await confirmed.json() as PositionFocus;
       direction.initiatives[1]!.name = "New partner direction";
+      direction.initiatives[1]!.description = "Updated guidance must not change confirmed history.";
       assert.equal((await request(lead, undefined, "PUT", direction)).status, 200);
       reopened = await (await request(member, path)).json() as PositionFocus;
       assert.equal(reopened.sections[0]!.alignment!.initiatives[1]!.name, "Partner pathways");
+      assert.deepEqual(reopened, focus);
       const leadView = await (await request(lead, `/api/department/members/${member}/focuses/${focus.id}`)).json() as { focus: PositionFocus };
       assert.deepEqual(leadView.focus.sections, reopened.sections);
       assert.equal((await request(member, path, "PUT", { ...draft, version: focus.version })).status, 409);
@@ -408,6 +467,9 @@ test("department direction persists through the authenticated HTTP interface", a
       assert.equal(seeded.initiatives[0]!.archived, true);
       assert.deepEqual(seeded.initiatives[0]!.appearance, { icon: "heart", color: "#c74998" });
       assert.deepEqual(seeded.initiatives[1], before.initiatives[1]);
+      for (const expected of approvedDescriptions) {
+        assert.equal(seeded.initiatives.find(item => item.name.trim().toLowerCase() === expected.name.toLowerCase())?.description, expected.description);
+      }
       assert.deepEqual(seeded.initiatives.slice(2).map(item => [item.name, item.appearance]), [
         ["Rethink How We Build", { icon: "lightbulb", color: "#3276b0" }],
         ["Role Clarity And Growth", { icon: "sprout", color: "#267c65" }],
@@ -416,6 +478,54 @@ test("department direction persists through the authenticated HTTP interface", a
       await run(otherTeam);
       assert.deepEqual(await (await request(outsider)).json(), seeded);
       await assert.rejects(run(randomUUID()), /active department/i);
+      assert.deepEqual(await (await request(lead)).json(), untouched);
+    });
+    await t.test("description-only SQL updates exactly one department, preserves identities and is safe to repeat", async () => {
+      const sql = await readFile(new URL("../tools/database/update-initiative-descriptions.sql", import.meta.url), "utf8");
+      const untouched = await (await request(lead)).json() as DepartmentDirection;
+      const existing = await (await request(outsider)).json() as DepartmentDirection;
+      const changed = await request(outsider, undefined, "PUT", { ...existing,
+        initiatives: existing.initiatives.map(item => ({ ...item, description: "Keep until explicitly replaced.",
+          appearance: { icon: "flag", color: "#3276b0" } })),
+      });
+      assert.equal(changed.status, 200);
+      const before = await changed.json() as DepartmentDirection;
+      const run = async (department: string) => {
+        const client = await f.admin.connect();
+        try { await client.query(sql.replace("REPLACE_WITH_DEPARTMENT_UUID", department)); }
+        catch (error) { await client.query("ROLLBACK"); throw error; }
+        finally { client.release(); }
+      };
+      await run(otherTeam);
+      const updated = await (await request(outsider)).json() as DepartmentDirection;
+      assert.equal(updated.version, before.version + 1);
+      assert.equal(updated.mission, before.mission);
+      assert.deepEqual(updated.initiatives, before.initiatives.map(item => {
+        const match = approvedDescriptions.find(expected => expected.name.toLowerCase() === item.name.trim().toLowerCase());
+        return match ? { ...item, description: match.description } : item;
+      }));
+      await run(otherTeam);
+      assert.deepEqual(await (await request(outsider)).json(), updated);
+      assert.equal((await request(outsider, undefined, "PUT", before)).status, 409);
+      // Seed output and manual updates must both remain editable through the application.
+      const resaved = await request(outsider, undefined, "PUT", updated);
+      assert.equal(resaved.status, 200);
+      const valid = await resaved.json() as DepartmentDirection;
+      await assert.rejects(run(randomUUID()), /active department/i);
+      const missingResponse = await request(outsider, undefined, "PUT", { ...valid,
+        initiatives: valid.initiatives.map((item, i) => i === 0 ? { ...item, name: "Renamed initiative" } : item),
+      });
+      assert.equal(missingResponse.status, 200);
+      const missing = await missingResponse.json() as DepartmentDirection;
+      await assert.rejects(run(otherTeam), /exactly one.*Love What We Build/i);
+      assert.deepEqual(await (await request(outsider)).json(), missing);
+      const duplicatedResponse = await request(outsider, undefined, "PUT", { ...valid, version: missing.version,
+        initiatives: [...valid.initiatives, { name: "LOVE WHAT WE BUILD", archived: true }],
+      });
+      assert.equal(duplicatedResponse.status, 200);
+      const duplicated = await duplicatedResponse.json() as DepartmentDirection;
+      await assert.rejects(run(otherTeam), /exactly one.*Love What We Build/i);
+      assert.deepEqual(await (await request(outsider)).json(), duplicated);
       assert.deepEqual(await (await request(lead)).json(), untouched);
     });
   } finally {

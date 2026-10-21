@@ -1,8 +1,11 @@
 import type { InitiativeAppearance } from "./initiative-appearance.js";
 
+export const maxInitiativeDescriptionLength = 500;
+
 export interface StrategicInitiative {
   id: string;
   name: string;
+  description?: string;
   archived: boolean;
   appearance?: InitiativeAppearance;
 }
