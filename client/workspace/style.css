@@ -1849,3 +1849,24 @@ dialog:has(.focus-writing) [role="alert"] { flex-shrink: 0; }
   .objective-chooser label span { display: block; }
   .objective-chooser select { flex: 1; }
 }
+
+/* Initiative descriptions use the existing editor and nested guide navigation. */
+.initiative-description-field { margin-top: 20px; }
+.initiative-description-help { display: flex; gap: 16px; align-items: baseline; justify-content: space-between; }
+.initiative-description-help p { margin: 6px 0 0; }
+.initiative-description-help > span { white-space: nowrap; }
+dialog .initiative-description-field textarea { min-height: 130px; height: 140px; font-size: 16px; line-height: 1.6; }
+.initiative-other-identity { --initiative-color: #77818c; color: #65717e; }
+.lesson-steps.initiative-guide-steps button { width: 100%; min-height: 52px; justify-content: flex-start; text-align: left; min-width: 0; }
+.lesson-steps.initiative-guide-steps button .initiative-identity { display: inline-flex; gap: 10px; align-items: center; width: 100%; height: auto; flex-shrink: 1; border: 0; background: transparent; color: inherit; border-radius: 0; }
+.lesson-steps.initiative-guide-steps button .initiative-identity > span:last-child { display: inline; min-width: 0; width: auto; height: auto; flex-shrink: 1; background: transparent; border: 0; color: inherit; border-radius: 0; font: inherit; text-align: left; }
+.lesson-steps.initiative-guide-steps button .initiative-mark { flex: 0 0 28px; width: 28px; height: 28px; border-radius: 6px; background: color-mix(in srgb, var(--initiative-color) 13%, white); color: var(--initiative-color); }
+.initiative-guide-reader h2 { border-bottom: 1px solid #e0e8ed; padding-bottom: 20px; }
+.initiative-guide-reader h2 .initiative-mark { width: 44px; height: 44px; flex-basis: 44px; }
+.initiative-guide-reader h2 svg { width: 25px; height: 25px; }
+.initiative-description { white-space: pre-wrap; max-width: 65ch; }
+@media (max-width: 700px) {
+  .guide-navigation:has(.initiative-guide-steps) .topic-group { display: block; overflow: visible; }
+  .guide-navigation:has(.initiative-guide-steps) .topic-entry > button { text-align: left; padding: 12px 14px; }
+  .guide-navigation:has(.initiative-guide-steps) .lesson-steps { margin: 0; padding: 6px 12px; }
+}

@@ -1,10 +1,13 @@
+import type { DepartmentDirection } from "../../shared/direction.js";
+import { api } from "./api.js";
+import { InitiativeIdentity } from "./InitiativeIdentity.js";
 import { useEffect, useRef, useState } from "react";
 import { useSwipeNavigation } from "./useSwipeNavigation.js";
 import { usePhoneLayout } from "./usePhoneLayout.js";
 import { lessons } from "./lessons.js";
 import { FocusExample } from "./FocusExample.js";
 import { FocusProcess } from "./FocusProcess.js";
-const topics = ["Start here", "Objectives", "SMART goals", "Example"] as const;
+const topics = ["Start here", "Objectives", "SMART goals", "Example", "Strategic initiatives"] as const;
 type Topic = typeof topics[number];
 export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
   const compact = usePhoneLayout();
@@ -19,6 +22,19 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
   }
   const [topic, setTopic] = useState<Topic>("Start here"),
     [step, setStep] = useState(0);
+  const [direction, setDirection] = useState<DepartmentDirection>();
+  const [directionError, setDirectionError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    if (topic !== "Strategic initiatives") return;
+    let active = true;
+    setDirection(undefined);
+    setDirectionError("");
+    void api<DepartmentDirection>("/api/department/direction").then(value => {
+      if (active) { setDirection(value); setStep(0); }
+    }).catch((error: Error) => { if (active) setDirectionError(error.message); });
+    return () => { active = false; };
+  }, [topic, attempt]);
   const heading = useRef<HTMLHeadingElement>(null),
     interacted = useRef(false);
   function choose(t: Topic) {
@@ -38,7 +54,9 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
       if (compact) document.querySelector(".guide-layout")?.scrollIntoView({ block: "start" });
       else heading.current?.scrollIntoView({ block: "nearest" });
     }
-  }, [topic, step, engineering]);
+  }, [topic, step, engineering, direction]);
+  const initiatives = direction?.initiatives.filter(item => !item.archived) ?? [];
+  const initiative = initiatives[step];
   const steps = topic === "Objectives" || topic === "SMART goals" ? lessons[topic] : [],
     x = steps[step];
   const weak =
@@ -69,7 +87,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
           "Directly supports the objective",
           "A clear completion date",
         ][step];
-  const swipe = useSwipeNavigation(compact, () => {
+  const swipe = useSwipeNavigation(compact && topic !== "Strategic initiatives", () => {
     if (step > 0) advance(step - 1);
     else if (topic !== "Start here") {
       const previousTopic = topics[topics.indexOf(topic) - 1]!;
@@ -84,7 +102,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
     <>
       <header className="guide-header">
         <h1>
-          {compact ? "Guide" : topic === "Start here" ? "Your first position focus" : topic === "Example"
+          {compact ? "Guide" : topic === "Strategic initiatives" ? "Explore our strategic initiatives" : topic === "Start here" ? "Your first position focus" : topic === "Example"
             ? engineering ? "An engineering position focus" : "A simple position focus"
             : topic === "Objectives"
               ? "What makes a useful objective?"
@@ -99,11 +117,16 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
               <div className="topic-entry" key={t}>
                 <button
                   aria-pressed={topic === t}
+                  aria-expanded={t === "Strategic initiatives" ? topic === t : undefined}
                   className={topic === t ? "selected" : ""}
                   onClick={() => choose(t)}
                 >
                   {t}
                 </button>
+                {topic === t && t === "Strategic initiatives" && <div className="lesson-steps initiative-guide-steps" aria-label="Strategic initiatives">
+                  {initiatives.map((item, i) => <button key={item.id} aria-current={step === i ? "step" : undefined}
+                    onClick={() => advance(i)}><InitiativeIdentity name={item.name} appearance={item.appearance} /></button>)}
+                </div>}
                 {topic === t && x && !compact && (
                   <div
                     className="lesson-steps"
@@ -132,7 +155,14 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
           </select>
         </label>}
         <div className="lesson-body" {...swipe}>
-          {topic === "Start here" ? (
+          {topic === "Strategic initiatives" ? <section className="lesson-card initiative-guide-reader">
+            {directionError ? <div role="alert"><p>{directionError}</p><button onClick={() => setAttempt(n => n + 1)}>Try again</button></div>
+              : !direction ? <p role="status">Loading initiatives…</p>
+              : initiative ? <>
+                <h2 ref={heading} tabIndex={-1}><InitiativeIdentity name={initiative.name} appearance={initiative.appearance} /></h2>
+                <p className="lesson-intro initiative-description">{initiative.description || "Your career lead hasn’t added a description yet."}</p>
+              </> : <h2 ref={heading} tabIndex={-1}>No active initiatives yet.</h2>}
+          </section> : topic === "Start here" ? (
             <>
               <section className="lesson-card start-guide">
                 <h2 ref={heading} tabIndex={-1}>A draft, a conversation, an agreed focus.</h2>

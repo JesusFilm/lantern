@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { maxInitiativeDescriptionLength } from "../../shared/direction.js";
 import type { DirectionDraft } from "../../shared/direction.js";
 import { initiativeColors, initiativeIcons, isPresetAppearance, validateInitiativeAppearance } from "../../shared/initiative-appearance.js";
 import type { InitiativeAppearance } from "../../shared/initiative-appearance.js";
@@ -9,6 +10,7 @@ type Initiative = DirectionDraft["initiatives"][number];
 export function InitiativeDialog({ initial, onClose, onSave }: {
   initial?: Initiative; onClose: () => void; onSave: (initiative: Initiative) => void;
 }) {
+  const [description, setDescription] = useState(initial?.description ?? "");
   const [name, setName] = useState(initial?.name ?? "");
   const [appearance, setAppearance] = useState<InitiativeAppearance | undefined>(initial?.appearance);
   const color = initiativeColors.find(option => option.value === appearance?.color)?.value ?? "#526578";
@@ -18,12 +20,22 @@ export function InitiativeDialog({ initial, onClose, onSave }: {
     onSave={async () => {
       if (!name.trim()) throw new Error("Enter an initiative name.");
       const { appearance: _previousAppearance, ...existing } = initial ?? { archived: false };
-      onSave({ ...existing, name: name.trim(),
+      onSave({ ...existing, name: name.trim(), description: description.trim(),
         ...(appearance ? { appearance: validateInitiativeAppearance(appearance) } : {}) });
     }}>
     <div className="initiative-editor">
       <label htmlFor="initiative-name">Initiative name</label>
       <input id="initiative-name" name="name" autoFocus required maxLength={120} value={name} onChange={event => setName(event.target.value)} />
+      <div className="initiative-description-field">
+        <label htmlFor="initiative-description">Description <span className="muted">(optional)</span></label>
+        <textarea id="initiative-description" rows={4} maxLength={maxInitiativeDescriptionLength}
+          value={description} onChange={event => setDescription(event.target.value)}
+          aria-describedby="description-help description-count" />
+        <div className="initiative-description-help">
+          <p id="description-help" className="muted">Explain what this initiative means and why it matters. Keep it to 1–3 sentences.</p>
+          <span id="description-count" className="muted">{description.length}/{maxInitiativeDescriptionLength}</span>
+        </div>
+      </div>
       <div className="initiative-palette-layout">
         <div>
           <fieldset className="initiative-palette">

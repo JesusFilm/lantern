@@ -78,7 +78,9 @@ A named team priority configured by the career lead. An objective can support
 several active initiatives. Archiving removes an initiative from new choices
 without deleting existing objective references.
 Its optional **initiative identity** is a color and SVG icon that help people
-recognize it across the list and objective choices. Identity does not replace the
+recognize it across the list, guide and objective choices. Its optional **initiative description**
+is a short explanation of its purpose, shown as current guidance in the Guide.
+Descriptions are not saved into objective history. Identity does not replace the
 name or indicate status. Saved objectives retain the identity recorded when saved.
 
 **Other (initiative alignment)**:

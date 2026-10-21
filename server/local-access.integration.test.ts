@@ -7,6 +7,25 @@ import { migrate } from './schema.js';
 import type { DepartmentDirection } from "../shared/direction.js";
 import { prepareLocalAccount } from './local-access.js';
 
+const approvedDescriptions = [
+  {
+    "name": "Love What We Build",
+    "description": "Understand who our work serves, why it matters to the mission, and whether it helps. This initiative connects meaningful ownership with access to the people and evidence needed to shape solutions. It includes understanding user needs, clarifying decisions we own, and using feedback after delivery to improve what we build and guide what happens next."
+  },
+  {
+    "name": "Rethink How We Build",
+    "description": "Improve how we move from an identified need to a validated outcome as AI changes the way we work. This includes stronger problem framing, effective use of agents, quality and validation throughout development, and shared tools and practices that help the whole team. Human judgment and responsibility remain central as we experiment, evaluate results and share useful capabilities."
+  },
+  {
+    "name": "Role Clarity and Growth",
+    "description": "Connect the team’s strategy to each person’s contribution, desired results and personal development. This initiative helps people understand their responsibilities, how their strengths complement others, and the capabilities they need to develop. Position Focus makes that connection practical over roughly six months, with support from the Career Leader and relevant managers, adapting as priorities change."
+  },
+  {
+    "name": "Team Connectedness",
+    "description": "Build a team where people know one another, understand what others are working on, and can find help and offer support. This includes sharing work and learning through Show and Tell, making space for relationships beyond delivery, and giving people regular opportunities to raise feedback. Visible responses and follow-through help that feedback improve our experience of working together."
+  }
+];
+
 test(
   "local startup seeds staging initiative identities and preserves local edits across restarts",
   { timeout: 30000 },
@@ -70,6 +89,9 @@ test(
       assert.ok(first.department);
       assert.equal(first.localAccess, true);
       const direction = await (await fetch(origin + "/api/department/direction")).json() as DepartmentDirection;
+      for (const expected of approvedDescriptions) {
+        assert.equal(direction.initiatives.find(item => item.name.toLowerCase() === expected.name.toLowerCase())?.description, expected.description);
+      }
       assert.deepEqual(direction.initiatives.map(({ name, appearance, archived }) => ({ name, appearance, archived })), [
         { name: "Love What We Build", appearance: { icon: "heart", color: "#c74998" }, archived: false },
         { name: "Rethink How We Build", appearance: { icon: "lightbulb", color: "#3276b0" }, archived: false },
@@ -104,9 +126,10 @@ test(
       const edited = {
         ...direction, mission: "Keep my local mission", missionImage: null,
         initiatives: [
-          { ...direction.initiatives[0]!, archived: true, appearance: { icon: "flag", color: "#526578" } },
-          { ...direction.initiatives[1]!, name: " rethink how we build ", appearance: undefined },
-          ...direction.initiatives.slice(2),
+          { ...direction.initiatives[0]!, description: "My custom guidance", archived: true, appearance: { icon: "flag", color: "#526578" } },
+          { ...direction.initiatives[1]!, name: " rethink how we build ", description: undefined, appearance: undefined },
+          { ...direction.initiatives[2]!, description: "" },
+          ...direction.initiatives.slice(3),
           { id: undefined, name: "My local experiment", archived: false },
         ],
       };
@@ -128,7 +151,7 @@ test(
       const expected = {
         ...saved, version: saved.version + 1,
         initiatives: saved.initiatives.map(item => item.id === saved.initiatives[1]!.id
-          ? { ...item, appearance: { icon: "lightbulb", color: "#3276b0" } } : item),
+          ? { ...item, description: approvedDescriptions[1]!.description, appearance: { icon: "lightbulb", color: "#3276b0" } } : item),
       };
       assert.deepEqual(filled, expected);
       assert.deepEqual(await (await fetch(origin + "/api/focuses/" + focus.id)).json(), savedFocus);
