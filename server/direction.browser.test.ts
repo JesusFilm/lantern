@@ -385,6 +385,36 @@ test("career lead configures team direction and members always see the mission",
         await readerContext.close();
       }
     });
+    await t.test("phone initiative selection brings the description into view after a long list", async () => {
+      const currentResponse = await leadPage.request.get(origin + "/api/department/direction");
+      const current = await currentResponse.json();
+      const updated = await leadPage.request.put(origin + "/api/department/direction", {
+        headers: { Origin: origin }, data: { ...current, initiatives: [ ...current.initiatives,
+          ...Array.from({ length: 10 }, (_, index) => ({ name: `Priority ${index + 1} — A long initiative name for the department`,
+            description: `Read the selected initiative ${index + 1}.`, archived: false })),
+        ] },
+      });
+      assert.equal(updated.status(), 200);
+      const readerContext = await browser.newContext();
+      await readerContext.addCookies([{ name: "lantern-session", value: member, url: origin }]);
+      const reader = await readerContext.newPage();
+      try {
+        for (const width of [320, 390]) {
+          await reader.setViewportSize({ width, height: 568 });
+          await reader.goto(origin + "/?page=guide");
+          await reader.getByRole("button", { name: "Strategic initiatives", exact: true }).click();
+          const name = "Priority 10 — A long initiative name for the department";
+          await reader.getByRole("button", { name, exact: true }).click();
+          const heading = reader.getByRole("heading", { name, exact: true });
+          await expect.poll(() => heading.evaluate(el => {
+            const bounds = el.getBoundingClientRect();
+            return bounds.top >= 0 && bounds.bottom <= window.innerHeight;
+          })).toBe(true);
+          assert.ok(await reader.evaluate("document.documentElement.scrollWidth <= window.innerWidth"));
+        }
+      } finally { await readerContext.close(); }
+    });
+
   } finally {
     await browser.close(); await vite?.close(); server.closeAllConnections();
     await new Promise<void>(r => server.close(() => r())); await f.close();

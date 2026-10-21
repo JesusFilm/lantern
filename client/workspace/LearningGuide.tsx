@@ -51,7 +51,10 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
   useEffect(() => {
     if (interacted.current) {
       heading.current?.focus({ preventScroll: true });
-      if (compact) document.querySelector(".guide-layout")?.scrollIntoView({ block: "start" });
+      if (compact) {
+        const destination = topic === "Strategic initiatives" ? heading.current : document.querySelector(".guide-layout");
+        destination?.scrollIntoView({ block: "start" });
+      }
       else heading.current?.scrollIntoView({ block: "nearest" });
     }
   }, [topic, step, engineering, direction]);
