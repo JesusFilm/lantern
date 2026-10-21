@@ -31,6 +31,7 @@ test(
           PORT: String(port),
           APP_ORIGIN: origin,
           LOCAL_ACCESS: "1",
+          LANTERN_ENV: "local",
           NODE_ENV: "test",
           GOOGLE_CLIENT_ID: "",
           GOOGLE_CLIENT_SECRET: "",
