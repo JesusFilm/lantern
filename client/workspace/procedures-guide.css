@@ -34,7 +34,9 @@
 .procedure-milestones li {
   position: absolute;
   transform: translate(-50%, -50%);
-  min-width: 108px;
+  width: 28%;
+  max-width: 120px;
+  min-width: 0;
   padding: 8px 12px;
   border: 1px solid #dfe6ed;
   border-radius: 4px;
@@ -63,12 +65,12 @@
 .procedure-flow strong { font-size: 13px; font-weight: 600; }
 .procedure-role { color: #637b91; font-size: 12px; }
 .procedure-flow-arrow { position: absolute; right: -10px; top: 25px; color: #809eae; }
-@media (max-width: 700px) {
+@media (max-width: 700px), (max-width: 900px) and (max-height: 500px) and (pointer: coarse) {
   .guide-navigation:has(.procedure-guide-steps) .topic-group { display: block; overflow: visible; }
   .guide-navigation:has(.procedure-guide-steps) .topic-entry > button { text-align: left; padding: 12px 14px; height: auto; }
   .guide-navigation:has(.procedure-guide-steps) .lesson-steps { margin: 0; padding: 6px 12px; }
   .procedure-header-copy { font-size: 12px; margin: 0 0 18px; }
-  .procedure-milestones li { min-width: 80px; padding: 7px 5px; }
+  .procedure-milestones li { min-width: 0; padding: 7px 5px; }
   .procedure-milestones strong { font-size: 10px; }
   .procedure-milestones li > span { font-size: 9px; }
   .procedure-year-key { font-size: 10px; gap: 12px; }
