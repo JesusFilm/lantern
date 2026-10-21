@@ -61,7 +61,7 @@ test("first-focus guidance through the member workspace", { timeout: 90000 }, as
       await page.setViewportSize({ width: 320, height: 740 });
       await page.getByRole("button", { name: "See an engineering example →", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Objective 1", exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Engineering example", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await expect(page.getByRole("button", { name: "Engineering Example", exact: true })).toHaveAttribute("aria-current", "step");
       await expect(page.locator(".read-goal")).toHaveCount(2);
       await expect(page.getByRole("heading", { name: "Strategic initiatives", exact: true })).toBeVisible();
       await expect(page.locator(".read-objective").getByRole("listitem")).toHaveText(["Love What We Build", "Rethink How We Build"]);
@@ -72,11 +72,19 @@ test("first-focus guidance through the member workspace", { timeout: 90000 }, as
         "By the end of week 6, release an agreed improvement with QA checks and repeat the task with five viewers. Aim for at least four to find the next step without help; record remaining difficulties.",
       ]);
       assert.equal(await page.evaluate("document.documentElement.scrollWidth <= innerWidth"), true);
-      await page.getByRole("button", { name: "Simple example", exact: true }).click();
+      const submenu = page.getByLabel("Steps within Example");
+      await expect(submenu.getByRole("button")).toHaveText(["Single Example", "Engineering Example"]);
+      await expect(page.getByRole("button", { name: "Example", exact: true })).toHaveAttribute("aria-expanded", "true");
+      await expect(page.locator(".lesson-body").getByRole("button", { name: /Example$/ })).toHaveCount(0);
+      await submenu.getByRole("button", { name: "Single Example", exact: true }).click();
+      await expect(submenu.getByRole("button", { name: "Single Example", exact: true })).toHaveAttribute("aria-current", "step");
+      await expect(page.getByRole("heading", { name: "Objective 1", exact: true })).toBeFocused();
       await expect(page.locator(".read-objective")).toContainText("Help new team members");
       await expect(page.locator(".read-objective").getByRole("listitem")).toHaveText(["Role Clarity And Growth"]);
       await expect(page.locator(".read-goal")).toHaveCount(2);
-      await page.getByRole("button", { name: "Engineering example", exact: true }).click();
+      await submenu.getByRole("button", { name: "Engineering Example", exact: true }).focus();
+      await page.keyboard.press("Enter");
+      await expect(submenu.getByRole("button", { name: "Engineering Example", exact: true })).toHaveAttribute("aria-current", "step");
       await page.getByRole("button", { name: "Go to my position focuses", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Your first position focus" })).toBeVisible();
       assert.deepEqual(await (await page.request.get(origin + "/api/focuses")).json(), []);
@@ -160,7 +168,7 @@ test("first-focus guidance through the member workspace", { timeout: 90000 }, as
             await expect(review.getByRole("button", { name: "Start here", exact: true })).toHaveAttribute("aria-pressed", "true");
           }
           await review.getByRole("button", { name: "Example", exact: true }).click();
-          await review.getByRole("button", { name: "Engineering example", exact: true }).click();
+          await review.getByRole("button", { name: "Engineering Example", exact: true }).click();
           await expect(review.getByRole("heading", { name: "Objective 1", exact: true })).toBeVisible();
           assert.equal(await review.evaluate("document.documentElement.scrollWidth <= innerWidth"), true, `Guide at ${viewport.width}×${viewport.height}`);
           await review.goto(origin + "/?focus=" + focuses[0].id);

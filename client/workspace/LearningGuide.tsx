@@ -120,12 +120,17 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
               <div className="topic-entry" key={t}>
                 <button
                   aria-pressed={topic === t}
-                  aria-expanded={t === "Strategic initiatives" ? topic === t : undefined}
+                  aria-expanded={t === "Example" || t === "Strategic initiatives" ? topic === t : undefined}
+                  aria-controls={t === "Example" && topic === t ? "example-guide-steps" : undefined}
                   className={topic === t ? "selected" : ""}
                   onClick={() => choose(t)}
                 >
                   {t}
                 </button>
+                {topic === t && t === "Example" && <div id="example-guide-steps" className="lesson-steps example-guide-steps" aria-label="Steps within Example">
+                  <button aria-current={!engineering ? "step" : undefined} onClick={() => { interacted.current = true; setEngineering(false); }}>Single Example</button>
+                  <button aria-current={engineering ? "step" : undefined} onClick={() => { interacted.current = true; setEngineering(true); }}>Engineering Example</button>
+                </div>}
                 {topic === t && t === "Strategic initiatives" && <div className="lesson-steps initiative-guide-steps" aria-label="Strategic initiatives">
                   {initiatives.map((item, i) => <button key={item.id} aria-current={step === i ? "step" : undefined}
                     onClick={() => advance(i)}><InitiativeIdentity name={item.name} appearance={item.appearance} /></button>)}
@@ -254,7 +259,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
             </>
           ) : (
             <>
-              <FocusExample engineering={engineering} onChoose={value => { interacted.current = true; setEngineering(value); }} heading={heading} />
+              <FocusExample engineering={engineering} heading={heading} />
               <div className="lesson-footer">
                 <button onClick={() => {
                   choose("SMART goals");

@@ -4,6 +4,8 @@ Lantern helps team members prepare a position focus and agree it with their care
 
 ## Product behavior
 
+- Guide → Example expands Single Example and Engineering Example as nested choices on desktop and phones, using the same submenu selection styling as other guide topics. The reading panel has no duplicate example toggle buttons.
+
 - Members create and edit their own titled, dated focuses with objectives and SMART goals. Empty and partial drafts are valid. Objectives can include Personal Development and Leadership types.
 - The optional Guide starts with the draft → conversation → confirmation process, using a responsive refinement-loop diagram instead of a repeated written walkthrough, with brief initiative-selection guidance, saved-draft visibility and confirmation locking. Separate lessons explain objectives and SMART goals. A simple onboarding example and an illustrative engineering example each show one objective and two goals with illustrative initiative badges using the team’s established icons and colours; their targets do not impose a template or cadence. The empty first-focus screen links to this introduction.
 - Focuses open in a compact reading view and are edited through dialogs. Objective and goal dialogs provide contextual, collapsible writing help without navigating away or replacing pending input. The contribution objective remains `normal` in storage; personal-development and leadership objectives are explicitly optional. Phone writing uses a scrolling form with stable Save and Cancel actions.
