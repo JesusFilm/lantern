@@ -406,10 +406,10 @@ test("career lead configures team direction and members always see the mission",
           const name = "Priority 10 — A long initiative name for the department";
           await reader.getByRole("button", { name, exact: true }).click();
           const heading = reader.getByRole("heading", { name, exact: true });
-          await expect.poll(() => heading.evaluate(el => {
+          await expect.poll(() => heading.evaluate((el, height) => {
             const bounds = el.getBoundingClientRect();
-            return bounds.top >= 0 && bounds.bottom <= window.innerHeight;
-          })).toBe(true);
+            return bounds.top >= 0 && bounds.bottom <= height;
+          }, 568)).toBe(true);
           assert.ok(await reader.evaluate("document.documentElement.scrollWidth <= window.innerWidth"));
         }
       } finally { await readerContext.close(); }
