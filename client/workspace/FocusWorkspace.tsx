@@ -5,6 +5,7 @@ import { Dialog } from "./Dialog.js";
 import { MissionBanner } from "./MissionBanner.js";
 import { InitiativeChoices } from "./InitiativeChoices.js";
 import { useDraftFocusWorkflow } from "./useDraftFocusWorkflow.js";
+import { WritingHelp } from "./WritingHelp.js";
 const date = (value: string) =>
   new Date(value + "T12:00:00").toLocaleDateString("en-NZ", {
     day: "numeric",
@@ -12,14 +13,15 @@ const date = (value: string) =>
     year: "numeric",
   });
 const kindLabels: Record<ObjectiveKind, string> = {
-  normal: "Normal Objectives",
-  "personal-development": "Personal Development Objectives",
-  leadership: "Leadership Objectives",
+  normal: "Contribution",
+  "personal-development": "Personal development (optional)",
+  leadership: "Leadership (optional)",
 };
-export function FocusWorkspace({ member, canConfirm }: {
+export function FocusWorkspace({ member, canConfirm, onGuide }: {
   member: { id: string; name: string };
   canConfirm: boolean;
   departmentId: string;
+  onGuide: () => void;
 }) {
   const {
     items, focus, direction, loading, error, edit,
@@ -86,7 +88,10 @@ export function FocusWorkspace({ member, canConfirm }: {
           ) : (
             <div className="empty-base">
               <h2>Your first position focus</h2>
-              <p>Create a document for the period you want to focus on.</p>
+              <p>Start with a small draft, then talk it through with your career lead.</p>
+              <p>The Guide explains the process and shows what a useful objective and SMART goals can look like.</p>
+              <button className="primary" onClick={onGuide}>Start here</button>
+              <p className="muted">An incomplete draft is a useful starting point.</p>
             </div>
           )}
         </div>
@@ -108,11 +113,13 @@ export function FocusWorkspace({ member, canConfirm }: {
           onClose={cancel}
           onSave={save}
         >
-          <p className="muted">Position focus: {edit.source.title}</p>
           {edit.type === "remove-goal" || edit.type === "remove-objective" ? (
-            <p>This removes the content from your saved position focus.</p>
-          ) : (
             <>
+              <p className="muted">Position focus: {edit.source.title}</p>
+              <p>This removes the content from your saved position focus.</p>
+            </>
+          ) : (
+            <WritingHelp kind={edit.type === "goal" ? "goal" : edit.kind} focusTitle={edit.source.title}>
               {edit.type === "objective" && edit.adding && (
                 <fieldset className="objective-types">
                   <legend>Objective type</legend>
@@ -130,12 +137,18 @@ export function FocusWorkspace({ member, canConfirm }: {
                   ))}
                 </fieldset>
               )}
+              {edit.type === "goal" && <p className="muted">For objective: {edit.source.sections[edit.section]?.objective}</p>}
               <label htmlFor="edit-text">
                 {edit.type === "goal" ? "SMART goal" : "Objective"}
               </label>
+              <p className="writing-hint" id="writing-hint">{edit.type === "goal"
+                ? "What will you do, what evidence will show progress, and by when?"
+                : "Who will benefit, what will improve, and why does it matter?"}</p>
               <textarea
                 id="edit-text"
+                aria-describedby="writing-hint"
                 name="text"
+                placeholder={edit.type === "goal" ? "By [date], [action], with [evidence of progress]…" : "Help [people] to [useful change] so that [why it matters]…"}
                 required
                 maxLength={10000}
                 autoFocus
@@ -149,7 +162,8 @@ export function FocusWorkspace({ member, canConfirm }: {
                 onOther={checked => change({ type: "other", checked })}
                 onRetry={retryInitiatives}
               />}
-            </>
+              <p className="muted writing-draft-note">A partial draft is fine. You can refine the wording with your career lead before confirmation.</p>
+            </WritingHelp>
           )}
         </Dialog>
       )}

@@ -20,10 +20,10 @@ DECLARE
   updated_items jsonb;
   preset jsonb;
   presets constant jsonb := '[
-    {"name":"Love What We Build","appearance":{"icon":"heart","color":"#d13d46"}},
-    {"name":"Rethink How We Build","appearance":{"icon":"lightbulb","color":"#8560bb"}},
+    {"name":"Love What We Build","appearance":{"icon":"heart","color":"#c74998"}},
+    {"name":"Rethink How We Build","appearance":{"icon":"lightbulb","color":"#3276b0"}},
     {"name":"Role Clarity And Growth","appearance":{"icon":"sprout","color":"#267c65"}},
-    {"name":"Team Connectedness","appearance":{"icon":"users","color":"#df741b"}}
+    {"name":"Team Connectedness","appearance":{"icon":"users","color":"#e4bf24"}}
   ]';
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM departments WHERE id=target_department AND deleted_at IS NULL) THEN

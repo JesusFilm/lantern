@@ -89,10 +89,10 @@ test(
             .getByRole("button", { name: "Add objective", exact: true })
             .click();
           await expect(
-            page.getByRole("radio", { name: "Normal Objectives", exact: true }),
+            page.getByRole("radio", { name: "Contribution", exact: true }),
           ).toBeChecked();
           await page
-            .getByRole("radio", { name: "Leadership Objectives", exact: true })
+            .getByRole("radio", { name: "Leadership (optional)", exact: true })
             .check();
           await page
             .getByLabel("Objective", { exact: true })
@@ -105,11 +105,11 @@ test(
             .getByRole("button", { name: "+ Add objective", exact: true })
             .click();
           await expect(
-            page.getByRole("radio", { name: "Normal Objectives", exact: true }),
+            page.getByRole("radio", { name: "Contribution", exact: true }),
           ).toBeChecked();
           await page
             .getByRole("radio", {
-              name: "Personal Development Objectives",
+              name: "Personal development (optional)",
               exact: true,
             })
             .check();
@@ -224,6 +224,7 @@ test(
           await page
             .getByRole("button", { name: "Guide", exact: true })
             .click();
+          await page.getByRole("button", { name: "Objectives", exact: true }).click();
           await expect(
             page.getByRole("heading", {
               name: "What makes a useful objective?",

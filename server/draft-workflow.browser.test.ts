@@ -301,10 +301,10 @@ test("draft workflow keeps edits and asynchronous reads with their source", { ti
         await page.keyboard.press("Escape");
         await expect(page.getByLabel("SMART goal", { exact: true })).toHaveValue("Saved while navigating");
         await page.goBack();
-        await expect(page.getByRole("heading", { name: "What makes a useful objective?", exact: true })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "A draft, a conversation, an agreed focus.", exact: true })).toBeVisible();
         await pending.release();
         assert.equal(new URL(page.url()).searchParams.get("page"), "guide");
-        await expect(page.getByRole("heading", { name: "What makes a useful objective?", exact: true })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "A draft, a conversation, an agreed focus.", exact: true })).toBeVisible();
         const saved = await (await context.request.get(origin + "/api/focuses/" + source.id)).json();
         assert.deepEqual(saved.sections[0].goals, ["Saved while navigating"]);
       } finally {

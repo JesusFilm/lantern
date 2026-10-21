@@ -406,12 +406,12 @@ test("department direction persists through the authenticated HTTP interface", a
       assert.equal(seeded.initiatives.length, 5);
       assert.equal(seeded.initiatives[0]!.id, before.initiatives[0]!.id);
       assert.equal(seeded.initiatives[0]!.archived, true);
-      assert.deepEqual(seeded.initiatives[0]!.appearance, { icon: "heart", color: "#d13d46" });
+      assert.deepEqual(seeded.initiatives[0]!.appearance, { icon: "heart", color: "#c74998" });
       assert.deepEqual(seeded.initiatives[1], before.initiatives[1]);
       assert.deepEqual(seeded.initiatives.slice(2).map(item => [item.name, item.appearance]), [
-        ["Rethink How We Build", { icon: "lightbulb", color: "#8560bb" }],
+        ["Rethink How We Build", { icon: "lightbulb", color: "#3276b0" }],
         ["Role Clarity And Growth", { icon: "sprout", color: "#267c65" }],
-        ["Team Connectedness", { icon: "users", color: "#df741b" }],
+        ["Team Connectedness", { icon: "users", color: "#e4bf24" }],
       ]);
       await run(otherTeam);
       assert.deepEqual(await (await request(outsider)).json(), seeded);

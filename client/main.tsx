@@ -163,7 +163,7 @@ function App() {
               ) : page === "focuses" ||
                 (page === "department" &&
                   session.department.role !== "career-lead") ? (
-                <FocusWorkspace member={session.user} departmentId={session.department.id} canConfirm={session.department.role === "career-lead"} />
+                <FocusWorkspace member={session.user} departmentId={session.department.id} canConfirm={session.department.role === "career-lead"} onGuide={() => navigatePage("guide")} />
               ) : page === "department" &&
                 session.department.role === "career-lead" ? (
                 <Department

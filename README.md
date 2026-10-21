@@ -16,6 +16,8 @@ For a fresh local application database:
 4. Put the target settings and admin-role `ADMIN_DATABASE_URL` in `.env.admin`; run `npm run access:ops -- local-account` to prepare the synthetic local account.
 5. Copy `.env.example` to `.env` only if `.env` does not exist. Replace `DATABASE_URL` with the runtime-role connection. Run `npm run dev:local` for the loopback walkthrough or `npm run dev` for Google authentication.
 
+With `LANTERN_ENV=local` and `LOCAL_ACCESS=1`, startup automatically adds the four current Engineering initiatives to the synthetic local account’s active department. A loopback database is required. Their icons and colours match staging: pink heart, blue lightbulb, green sprout and yellow people. Repeat runs keep existing IDs, archive status, appearances, mission, extra initiatives and documents; only missing initiatives or missing appearances are filled. Removed membership stays removed. Ordinary Google-authenticated startup and hosted environments do not run this seed.
+
 For Google sign-in, configure a Web OAuth client with the callback `APP_ORIGIN/auth/google/callback`, then provide its credentials privately. Local access defaults off and is rejected in production. `server/operations.ts` provides approval and department setup commands; use the admin connection separately from application runtime.
 
 ## Delivery

@@ -2,9 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useSwipeNavigation } from "./useSwipeNavigation.js";
 import { usePhoneLayout } from "./usePhoneLayout.js";
 import { lessons } from "./lessons.js";
-type Topic = "Objectives" | "SMART goals" | "Example";
+import { FocusExample } from "./FocusExample.js";
+import { FocusProcess } from "./FocusProcess.js";
+const topics = ["Start here", "Objectives", "SMART goals", "Example"] as const;
+type Topic = typeof topics[number];
 export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
   const compact = usePhoneLayout();
+  const [engineering, setEngineering] = useState(false);
   const [example, setExample] = useState<"weak" | "strong">("strong");
   const weakExample = useRef<HTMLDivElement>(null), strongExample = useRef<HTMLDivElement>(null);
   function compare(next: "weak" | "strong") {
@@ -13,7 +17,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
     requestAnimationFrame(() => (next === "weak" ? weakExample : strongExample)
       .current?.scrollIntoView({ block: "nearest" }));
   }
-  const [topic, setTopic] = useState<Topic>("Objectives"),
+  const [topic, setTopic] = useState<Topic>("Start here"),
     [step, setStep] = useState(0);
   const heading = useRef<HTMLHeadingElement>(null),
     interacted = useRef(false);
@@ -34,8 +38,8 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
       if (compact) document.querySelector(".guide-layout")?.scrollIntoView({ block: "start" });
       else heading.current?.scrollIntoView({ block: "nearest" });
     }
-  }, [topic, step]);
-  const steps = topic === "Example" ? [] : lessons[topic],
+  }, [topic, step, engineering]);
+  const steps = topic === "Objectives" || topic === "SMART goals" ? lessons[topic] : [],
     x = steps[step];
   const weak =
     topic === "Objectives"
@@ -67,21 +71,21 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
         ][step];
   const swipe = useSwipeNavigation(compact, () => {
     if (step > 0) advance(step - 1);
-    else if (topic !== "Objectives") {
-      const previousTopic = topic === "Example" ? "SMART goals" : "Objectives";
+    else if (topic !== "Start here") {
+      const previousTopic = topics[topics.indexOf(topic) - 1]!;
       choose(previousTopic);
-      setStep(lessons[previousTopic].length - 1);
+      if (previousTopic === "Objectives" || previousTopic === "SMART goals") setStep(lessons[previousTopic].length - 1);
     }
   }, () => {
     if (step < steps.length - 1) advance(step + 1);
-    else if (topic !== "Example") choose(topic === "Objectives" ? "SMART goals" : "Example");
+    else if (topic !== "Example") choose(topics[topics.indexOf(topic) + 1]!);
   });
   return (
     <>
       <header className="guide-header">
         <h1>
-          {compact ? "Guide" : topic === "Example"
-            ? "A simple position focus"
+          {compact ? "Guide" : topic === "Start here" ? "Your first position focus" : topic === "Example"
+            ? engineering ? "An engineering position focus" : "A simple position focus"
             : topic === "Objectives"
               ? "What makes a useful objective?"
               : "Build a SMART goal"}
@@ -91,7 +95,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
         <div className="guide-navigation">
           <div className="area-heading">Guide topics</div>
           <div className="topic-group">
-            {(["Objectives", "SMART goals", "Example"] as Topic[]).map((t) => (
+            {topics.map((t) => (
               <div className="topic-entry" key={t}>
                 <button
                   aria-pressed={topic === t}
@@ -128,7 +132,28 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
           </select>
         </label>}
         <div className="lesson-body" {...swipe}>
-          {x ? (
+          {topic === "Start here" ? (
+            <>
+              <section className="lesson-card start-guide">
+                <h2 ref={heading} tabIndex={-1}>A draft, a conversation, an agreed focus.</h2>
+                <p className="lesson-intro">Start with one objective and one or two goals. Personal and leadership development are optional.</p>
+                <FocusProcess />
+                <section className="start-guide-alignment">
+                  <h3>Choose initiatives</h3>
+                  <p>When editing an objective, choose all the initiatives it supports, or Other if none fit.</p>
+                </section>
+                <section className="explanation">
+                  <h3>Good to know</h3>
+                  <p>Saved drafts are visible to you and your career lead. Once your lead confirms, the focus can’t be edited or unlocked.</p>
+                </section>
+                <button className="guide-example-link" onClick={() => { setEngineering(true); choose("Example"); }}>See an engineering example →</button>
+              </section>
+              <div className="lesson-footer">
+                <button onClick={onFocuses}>Start my draft</button>
+                <button className="primary" onClick={() => choose("Objectives")}>Explore objectives →</button>
+              </div>
+            </>
+          ) : x ? (
             <>
               <section className="lesson-card">
                 <h2 ref={heading} tabIndex={-1}>
@@ -171,9 +196,9 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
                 {step > 0 ? (
                   <button onClick={() => advance(step - 1)}>← Previous</button>
                 ) : compact ? (
-                  <button disabled={topic === "Objectives"} onClick={() => {
-                    choose("Objectives");
-                    setStep(lessons.Objectives.length - 1);
+                  <button onClick={() => {
+                    choose(topic === "Objectives" ? "Start here" : "Objectives");
+                    if (topic !== "Objectives") setStep(lessons.Objectives.length - 1);
                   }}>← Previous</button>
                 ) : <span /> }
                 {step < steps.length - 1 ? (
@@ -196,29 +221,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
             </>
           ) : (
             <>
-              <section className="read-section">
-                <div className="read-objective">
-                  <h2 ref={heading} tabIndex={-1}>
-                    Objective 1
-                  </h2>
-                  <p className="read-text">
-                    Help new team members find essential information so they can
-                    begin their work with confidence.
-                  </p>
-                </div>
-                <div className="read-goals">
-                  <h3>SMART goals</h3>
-                  {[
-                    "By 31 May, publish a one-page checklist covering the five essential onboarding tasks, checked by the onboarding lead.",
-                    "By 30 June, test the checklist with five new team members; at least four can find all five tasks without help.",
-                  ].map((goal, i) => (
-                    <div className="read-goal" key={goal}>
-                      <span className="goal-number">{i + 1}</span>
-                      <p className="read-text">{goal}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
+              <FocusExample engineering={engineering} onChoose={value => { interacted.current = true; setEngineering(value); }} heading={heading} />
               <div className="lesson-footer">
                 <button onClick={() => {
                   choose("SMART goals");
