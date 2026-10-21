@@ -1,3 +1,4 @@
+import { ProceduresGuide, procedureSections } from "./ProceduresGuide.js";
 import type { DepartmentDirection } from "../../shared/direction.js";
 import { api } from "./api.js";
 import { InitiativeIdentity } from "./InitiativeIdentity.js";
@@ -7,7 +8,7 @@ import { usePhoneLayout } from "./usePhoneLayout.js";
 import { lessons } from "./lessons.js";
 import { FocusExample } from "./FocusExample.js";
 import { FocusProcess } from "./FocusProcess.js";
-const topics = ["Start here", "Objectives", "SMART goals", "Example", "Strategic initiatives"] as const;
+const topics = ["Start here", "Objectives", "SMART goals", "Example", "Strategic initiatives", "Procedures"] as const;
 type Topic = typeof topics[number];
 export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
   const compact = usePhoneLayout();
@@ -90,7 +91,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
           "Directly supports the objective",
           "A clear completion date",
         ][step];
-  const swipe = useSwipeNavigation(compact && topic !== "Strategic initiatives", () => {
+  const swipe = useSwipeNavigation(compact && topic !== "Strategic initiatives" && topic !== "Procedures", () => {
     if (step > 0) advance(step - 1);
     else if (topic !== "Start here") {
       const previousTopic = topics[topics.indexOf(topic) - 1]!;
@@ -105,13 +106,14 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
     <>
       <header className="guide-header">
         <h1>
-          {compact ? "Guide" : topic === "Strategic initiatives" ? "Explore our strategic initiatives" : topic === "Start here" ? "Your first position focus" : topic === "Example"
+          {compact ? "Guide" : topic === "Procedures" ? "A rhythm to return to" : topic === "Strategic initiatives" ? "Explore our strategic initiatives" : topic === "Start here" ? "Your first position focus" : topic === "Example"
             ? engineering ? "An engineering position focus" : "A simple position focus"
             : topic === "Objectives"
               ? "What makes a useful objective?"
               : "Build a SMART goal"}
         </h1>
       </header>
+      {topic === "Procedures" && <div className="procedure-header-copy"><p>Six months of focus. A conversation each quarter.</p><span className="procedure-proposed">Proposed</span></div>}
       <div className="guide-layout">
         <div className="guide-navigation">
           <div className="area-heading">Guide topics</div>
@@ -120,12 +122,16 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
               <div className="topic-entry" key={t}>
                 <button
                   aria-pressed={topic === t}
-                  aria-expanded={t === "Strategic initiatives" ? topic === t : undefined}
+                  aria-expanded={t === "Strategic initiatives" || t === "Procedures" ? topic === t : undefined}
+                  aria-controls={t === "Procedures" && topic === t ? "procedure-guide-steps" : undefined}
                   className={topic === t ? "selected" : ""}
                   onClick={() => choose(t)}
                 >
                   {t}
                 </button>
+                {topic === t && t === "Procedures" && <div id="procedure-guide-steps" className="lesson-steps procedure-guide-steps" aria-label="Steps within Procedures">
+                  {procedureSections.map((label, i) => <button key={label} aria-current={step === i ? "step" : undefined} onClick={() => advance(i)}>{label}</button>)}
+                </div>}
                 {topic === t && t === "Strategic initiatives" && <div className="lesson-steps initiative-guide-steps" aria-label="Strategic initiatives">
                   {initiatives.map((item, i) => <button key={item.id} aria-current={step === i ? "step" : undefined}
                     onClick={() => advance(i)}><InitiativeIdentity name={item.name} appearance={item.appearance} /></button>)}
@@ -158,7 +164,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
           </select>
         </label>}
         <div className="lesson-body" {...swipe}>
-          {topic === "Strategic initiatives" ? <section className="lesson-card initiative-guide-reader">
+          {topic === "Procedures" ? <ProceduresGuide section={procedureSections[step] ?? "The year"} headingRef={heading} /> : topic === "Strategic initiatives" ? <section className="lesson-card initiative-guide-reader">
             {directionError ? <div role="alert"><p>{directionError}</p><button onClick={() => setAttempt(n => n + 1)}>Try again</button></div>
               : !direction ? <p role="status">Loading initiatives…</p>
               : initiative ? <>
