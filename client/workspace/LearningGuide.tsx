@@ -55,7 +55,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
       if (compact) {
         const destination = topic === "Procedures"
           ? heading.current?.closest("section")
-          : topic === "Strategic initiatives" ? heading.current : document.querySelector(".guide-layout");
+          : topic === "Strategic initiatives" || topic === "Example" ? heading.current : document.querySelector(".guide-layout");
         destination?.scrollIntoView({ block: "start" });
       }
       else heading.current?.scrollIntoView({ block: "nearest" });
@@ -124,13 +124,17 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
               <div className="topic-entry" key={t}>
                 <button
                   aria-pressed={topic === t}
-                  aria-expanded={t === "Strategic initiatives" || t === "Procedures" ? topic === t : undefined}
-                  aria-controls={t === "Procedures" && topic === t ? "procedure-guide-steps" : undefined}
+                  aria-expanded={t === "Example" || t === "Strategic initiatives" || t === "Procedures" ? topic === t : undefined}
+                  aria-controls={topic === t ? t === "Example" ? "example-guide-steps" : t === "Procedures" ? "procedure-guide-steps" : undefined : undefined}
                   className={topic === t ? "selected" : ""}
                   onClick={() => choose(t)}
                 >
                   {t}
                 </button>
+                {topic === t && t === "Example" && <div id="example-guide-steps" className="lesson-steps example-guide-steps" aria-label="Steps within Example">
+                  <button aria-current={!engineering ? "step" : undefined} onClick={() => { interacted.current = true; setEngineering(false); }}>Single Example</button>
+                  <button aria-current={engineering ? "step" : undefined} onClick={() => { interacted.current = true; setEngineering(true); }}>Engineering Example</button>
+                </div>}
                 {topic === t && t === "Procedures" && <div id="procedure-guide-steps" className="lesson-steps procedure-guide-steps" aria-label="Steps within Procedures">
                   {procedureSections.map((label, i) => <button key={label} aria-current={step === i ? "step" : undefined} onClick={() => advance(i)}>{label}</button>)}
                 </div>}
@@ -262,7 +266,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
             </>
           ) : (
             <>
-              <FocusExample engineering={engineering} onChoose={value => { interacted.current = true; setEngineering(value); }} heading={heading} />
+              <FocusExample engineering={engineering} heading={heading} />
               <div className="lesson-footer">
                 <button onClick={() => {
                   choose("SMART goals");

@@ -13,9 +13,8 @@ const exampleAlignment: Record<"simple" | "engineering", ObjectiveAlignment> = {
   ] },
 };
 
-export function FocusExample({ engineering, onChoose, heading }: {
+export function FocusExample({ engineering, heading }: {
   engineering: boolean;
-  onChoose: (engineering: boolean) => void;
   heading: Ref<HTMLHeadingElement>;
 }) {
   const goals = engineering ? [
@@ -26,10 +25,6 @@ export function FocusExample({ engineering, onChoose, heading }: {
     "By 30 June, test the checklist with five new team members; at least four can find all five tasks without help.",
   ];
   return <>
-    <div className="focus-example-switch" aria-label="Choose a worked example">
-      <button aria-pressed={!engineering} onClick={() => onChoose(false)}>Simple example</button>
-      <button aria-pressed={engineering} onClick={() => onChoose(true)}>Engineering example</button>
-    </div>
     <section className="read-section">
       <div className="read-objective">
         <h2 ref={heading} tabIndex={-1}>Objective 1</h2>

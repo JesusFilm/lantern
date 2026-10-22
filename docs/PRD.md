@@ -4,6 +4,7 @@ Lantern helps team members prepare a position focus and agree it with their care
 
 ## Product behavior
 
+- Guide → Example expands Single Example and Engineering Example as nested choices on desktop and phones, using the same submenu selection styling as other guide topics. The reading panel has no duplicate example toggle buttons.
 - Guide includes a Procedures topic using the existing nested topic navigation: The year, Agree a focus, and Make a change. The year is a minimal circular January–December diagram with two six-month focuses, quarterly check-ins and half-year reviews. Agreement and amendment guidance use ordered icon flows with member/career-lead responsibilities. These screens retain a Proposed label: this UI addition does not schedule reviews, unlock confirmed focuses, or implement revision history. The existing writing topics remain available.
 
 - Members create and edit their own titled, dated focuses with objectives and SMART goals. Empty and partial drafts are valid. Objectives can include Personal Development and Leadership types.

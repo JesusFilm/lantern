@@ -61,7 +61,7 @@ test("first-focus guidance through the member workspace", { timeout: 90000 }, as
       await page.setViewportSize({ width: 320, height: 740 });
       await page.getByRole("button", { name: "See an engineering example →", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Objective 1", exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Engineering example", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await expect(page.getByRole("button", { name: "Engineering Example", exact: true })).toHaveAttribute("aria-current", "step");
       await expect(page.locator(".read-goal")).toHaveCount(2);
       await expect(page.getByRole("heading", { name: "Strategic initiatives", exact: true })).toBeVisible();
       await expect(page.locator(".read-objective").getByRole("listitem")).toHaveText(["Love What We Build", "Rethink How We Build"]);
@@ -72,11 +72,19 @@ test("first-focus guidance through the member workspace", { timeout: 90000 }, as
         "By the end of week 6, release an agreed improvement with QA checks and repeat the task with five viewers. Aim for at least four to find the next step without help; record remaining difficulties.",
       ]);
       assert.equal(await page.evaluate("document.documentElement.scrollWidth <= innerWidth"), true);
-      await page.getByRole("button", { name: "Simple example", exact: true }).click();
+      const submenu = page.getByLabel("Steps within Example");
+      await expect(submenu.getByRole("button")).toHaveText(["Single Example", "Engineering Example"]);
+      await expect(page.getByRole("button", { name: "Example", exact: true })).toHaveAttribute("aria-expanded", "true");
+      await expect(page.locator(".lesson-body").getByRole("button", { name: /Example$/ })).toHaveCount(0);
+      await submenu.getByRole("button", { name: "Single Example", exact: true }).click();
+      await expect(submenu.getByRole("button", { name: "Single Example", exact: true })).toHaveAttribute("aria-current", "step");
+      await expect(page.getByRole("heading", { name: "Objective 1", exact: true })).toBeFocused();
       await expect(page.locator(".read-objective")).toContainText("Help new team members");
       await expect(page.locator(".read-objective").getByRole("listitem")).toHaveText(["Role Clarity And Growth"]);
       await expect(page.locator(".read-goal")).toHaveCount(2);
-      await page.getByRole("button", { name: "Engineering example", exact: true }).click();
+      await submenu.getByRole("button", { name: "Engineering Example", exact: true }).focus();
+      await page.keyboard.press("Enter");
+      await expect(submenu.getByRole("button", { name: "Engineering Example", exact: true })).toHaveAttribute("aria-current", "step");
       await page.getByRole("button", { name: "Go to my position focuses", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Your first position focus" })).toBeVisible();
       assert.deepEqual(await (await page.request.get(origin + "/api/focuses")).json(), []);
@@ -136,7 +144,7 @@ test("first-focus guidance through the member workspace", { timeout: 90000 }, as
 
     await t.test("guide navigation and writing actions fit portrait, landscape, tablet and desktop layouts", async () => {
       const focuses = await (await page.request.get(origin + "/api/focuses")).json();
-      for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }, { width: 844, height: 390 }, { width: 768, height: 1024 }, { width: 1440, height: 1000 }]) {
+      for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }, { width: 667, height: 375 }, { width: 812, height: 375 }, { width: 844, height: 390 }, { width: 768, height: 1024 }, { width: 1440, height: 1000 }]) {
         const review = await browser!.newPage({ viewport, hasTouch: true });
         review.setDefaultTimeout(5000);
         review.on("pageerror", error => errors.push(error.message));
@@ -160,8 +168,15 @@ test("first-focus guidance through the member workspace", { timeout: 90000 }, as
             await expect(review.getByRole("button", { name: "Start here", exact: true })).toHaveAttribute("aria-pressed", "true");
           }
           await review.getByRole("button", { name: "Example", exact: true }).click();
-          await review.getByRole("button", { name: "Engineering example", exact: true }).click();
+          await review.getByRole("button", { name: "Engineering Example", exact: true }).click();
           await expect(review.getByRole("heading", { name: "Objective 1", exact: true })).toBeVisible();
+          if (viewport.width <= 620 || viewport.height <= 500) {
+            await expect(review.getByRole("heading", { name: "Objective 1", exact: true })).toBeInViewport();
+          }
+          const exampleNavigation = await review.getByLabel("Steps within Example").boundingBox();
+          const readingPanel = await review.locator(".lesson-body").boundingBox();
+          if (viewport.width <= 900) assert.ok(exampleNavigation && readingPanel && exampleNavigation.y + exampleNavigation.height <= readingPanel.y,
+            `Example navigation must not overlap its content at ${viewport.width}×${viewport.height}`);
           assert.equal(await review.evaluate("document.documentElement.scrollWidth <= innerWidth"), true, `Guide at ${viewport.width}×${viewport.height}`);
           await review.goto(origin + "/?focus=" + focuses[0].id);
           await review.getByRole("button", { name: "Edit objective", exact: true }).click();
