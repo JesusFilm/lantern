@@ -59,7 +59,7 @@ Work towards useful outcomes, including product work, shared capabilities and ac
 ## Guidance and context
 
 **Guide**:
-Optional instruction supporting objective and SMART-goal writing, separate from focus authoring.
+Optional instruction supporting objective and SMART-goal writing and the Position Focus procedure, separate from focus authoring. The Procedures topic contains The year, Agree a focus, and Make a change; proposed guidance does not itself enable scheduling or amendment operations.
 
 **Example position focus**:
 A concise generic illustration of one objective and two goals. Its targets do not impose requirements on a member's own focus.
