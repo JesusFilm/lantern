@@ -1,7 +1,3 @@
-# Domain Docs
+# Domain guidance
 
-This is a single-context repository. Use root `GLOSSARY.md` and `docs/adr/`.
-
-Before exploring domain behavior, read the glossary if present and ADRs relevant to the area being changed. If they are absent, proceed silently; domain-modeling creates them as vocabulary or decisions are settled.
-
-Use the glossary's terms in specs, tickets, and code. If a proposal conflicts with an ADR, identify the conflict explicitly before changing the decision.
+Before changing domain behavior, read the root `GLOSSARY.md` if present and relevant records in `docs/adrs/`. Use established domain terms in requirements and code. Follow `docs/adrs/AGENTS.md` when a change requires an architectural decision.

@@ -1,0 +1,154 @@
+name: Lantern CI
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24.22.1', cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+  tests:
+    name: PostgreSQL HTTP and browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: isolated_ci
+          POSTGRES_DB: lantern_test
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:isolated_ci@127.0.0.1:5432/lantern_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24.22.1', cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm test
+  build:
+    name: production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '24.22.1', cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - run: node tools/release/stamp.mjs
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+      - run: docker build -t lantern-ci .
+  stage:
+    name: stage delivery and smoke
+    needs: [typecheck, tests, build]
+    # Enabled only after staging credentials and migration connectivity are verified.
+    # This must be a repository variable: environment variables are unavailable here.
+    if: vars.STAGE_DELIVERY_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: stage
+    concurrency:
+      group: lantern-stage
+      cancel-in-progress: false
+    env:
+      RELEASE_SHA: ${{ github.sha }}
+      APP_ORIGIN: ${{ vars.APP_ORIGIN }}
+      RELEASE_TARGET: stage
+      EXPECTED_SCHEMA_VERSION: '8'
+      RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT }}
+      RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
+      RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
+      LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with: { node-version: '24.22.1', cache: npm }
+      - name: Enforce exact revision and successful checks
+        env:
+          CHECK_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          node --input-type=module <<'JS'
+          import { stageGate } from './tools/release/gates.mjs';
+          import { execFileSync } from 'node:child_process';
+          stageGate({event:process.env.GITHUB_EVENT_NAME,ref:process.env.GITHUB_REF,sha:process.env.RELEASE_SHA,checkedSha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),checks:Object.values(JSON.parse(process.env.CHECK_RESULTS)).map(x=>x.result)});
+          JS
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm install --global @railway/cli@5.70.0
+      - run: npm run build
+      - run: node tools/release/stamp.mjs
+      - name: Verify staging configuration before migrations
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: node tools/release/configuration.mjs
+      - name: Apply exact-revision schema migrations
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          MIGRATION_DATABASE_CA: ${{ secrets.MIGRATION_DATABASE_CA }}
+          LANTERN_DB_EXPECTED_ENDPOINT: ${{ vars.LANTERN_DB_EXPECTED_ENDPOINT }}
+          LANTERN_DB_NAME: ${{ vars.LANTERN_DB_NAME }}
+          LANTERN_DB_SCHEMA: lantern
+          LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
+          LANTERN_DB_MIGRATION_ROLE: ${{ vars.LANTERN_DB_MIGRATION_ROLE }}
+          LANTERN_DB_ADMIN_ROLE: ${{ vars.LANTERN_DB_ADMIN_ROLE }}
+        run: node tools/release/migrate.mjs
+      - name: Upload the checked source revision
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT }}
+          LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
+          RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
+          RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
+        run: node tools/release/deploy.mjs
+      - name: Verify deployed revision, schema, login and anonymous denial
+        env:
+          RELEASE_SMOKE_MODE: readiness
+        run: node tools/release/smoke.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stage-readiness-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-evidence.json
+          if-no-files-found: error
+          retention-days: 90
+      - name: Exercise authenticated staging journeys and clean synthetic fixtures
+        id: stage_acceptance
+        if: vars.STAGE_ACCEPTANCE_ENABLED == 'true'
+        env:
+          MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+          MIGRATION_DATABASE_CA: ${{ secrets.MIGRATION_DATABASE_CA }}
+          LANTERN_DB_EXPECTED_ENDPOINT: ${{ vars.LANTERN_DB_EXPECTED_ENDPOINT }}
+          LANTERN_DB_NAME: ${{ vars.LANTERN_DB_NAME }}
+          LANTERN_DB_SCHEMA: lantern
+          LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
+          LANTERN_DB_MIGRATION_ROLE: ${{ vars.LANTERN_DB_MIGRATION_ROLE }}
+          LANTERN_DB_ADMIN_ROLE: ${{ vars.LANTERN_DB_ADMIN_ROLE }}
+        run: node tools/release/acceptance.mjs
+      - name: Summarize independent staging journey and cleanup outcomes
+        if: always() && vars.STAGE_ACCEPTANCE_ENABLED == 'true'
+        env:
+          ACCEPTANCE_STEP_OUTCOME: ${{ steps.stage_acceptance.outcome }}
+        run: node tools/release/acceptance-diagnostics.mjs
+      - uses: actions/upload-artifact@v4
+        if: vars.STAGE_ACCEPTANCE_ENABLED == 'true'
+        with:
+          name: stage-acceptance-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: stage-acceptance.json
+          if-no-files-found: error
+          retention-days: 90

@@ -1,22 +1,34 @@
+import { localAccount } from './local-access.js';
+import { seedLocalInitiatives } from './local-initiatives.js';
 import { createServer } from 'node:http';
 import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import express from 'express';
 import { createApp } from './app.js';
+import { googleProvider } from './google.js';
 import { createDatabase } from './database.js';
+import { assertRuntimePrivileges } from './database-privileges.js';
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error('DATABASE_URL is required. Copy .env.example to .env before starting.');
-}
-
-const port = Number(process.env.PORT ?? 4391);
-if (!Number.isInteger(port) || port < 1 || port > 65535) {
-  throw new Error('PORT must be an integer between 1 and 65535.');
-}
-
-const host = process.env.HOST ?? '127.0.0.1';
+import { resolveRuntime } from './runtime.js';
+import { assertSchemaReady } from './schema.js';
+const { environment, connectionString, port, host, localAccess, origin, clientId, clientSecret, hosted, hostingOnly } = resolveRuntime();
 const database = createDatabase(connectionString);
-const app = createApp(database);
+try {
+  await assertSchemaReady(database);
+  await assertRuntimePrivileges(database);
+} catch {
+  await database.end();
+  throw new Error('Database schema or runtime privileges are not ready. Check the scoped database setup before startup.');
+}
+let localUserId: string | undefined;
+try {
+  localUserId = localAccess ? await localAccount(database) : undefined;
+  if (environment === 'local' && localUserId) await seedLocalInitiatives(database, localUserId);
+}
+catch (error) { await database.end(); throw error; }
+let revision: string | undefined;
+try { revision = JSON.parse(readFileSync('release.json', 'utf8')).sha; } catch { /* Local builds need no release stamp. */ }
+const app = createApp(database, { origin, hostingOnly, localUserId, provider: clientId && clientSecret ? googleProvider(clientId, clientSecret, origin) : undefined }, hosted ? { revision, deployment: process.env.RAILWAY_DEPLOYMENT_ID } : undefined);
 const server = createServer(app);
 const production = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 let closeFrontend: (() => Promise<void>) | undefined;
@@ -26,7 +38,7 @@ if (production) {
 } else {
   const { createServer: createViteServer } = await import('vite');
   const vite = await createViteServer({
-    server: { middlewareMode: { server } },
+    server: { middlewareMode: { server }, hmr: { server } },
     appType: 'spa',
   });
   app.use(vite.middlewares);

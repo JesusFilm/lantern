@@ -1,0 +1,422 @@
+import sharp from "sharp";
+import { chromium, expect } from "@playwright/test";
+import { createServer as createViteServer } from "vite";
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { createServer } from "node:http";
+import { test } from "node:test";
+import { privilegeFixture } from "./privilege-test-support.js";
+import { migrate } from "./schema.js";
+import { createApp } from "./app.js";
+import { hash } from "./access.js";
+
+test("career lead configures team direction and members always see the mission", { timeout: 90000 }, async (t) => {
+  const f = await privilegeFixture(), server = createServer(), browser = await chromium.launch();
+  let vite: Awaited<ReturnType<typeof createViteServer>> | undefined;
+  try {
+    await migrate(f.migration, f.roles);
+    const lead = randomUUID(), member = randomUUID(), team = randomUUID();
+    await f.admin.query("INSERT INTO departments(id,name) VALUES($1,'Media team')", [team]);
+    for (const [id, name, role] of [[lead, "Career Lead", "career-lead"], [member, "Member", "member"]]) {
+      await f.admin.query("INSERT INTO users VALUES($1::uuid,$1::text,$2,$3)", [id, `${id}@example.test`, name]);
+      await f.admin.query("INSERT INTO approved_emails VALUES($1)", [`${id}@example.test`]);
+      await f.admin.query("INSERT INTO memberships VALUES($1,$2,$3,NULL)", [id, team, role]);
+      await f.admin.query("INSERT INTO sessions VALUES($1,$2,now()+interval '1 day')", [hash(id!), id]);
+    }
+    await new Promise<void>(r => server.listen(0, "127.0.0.1", r));
+    const address = server.address(); assert.ok(address && typeof address !== "string");
+    const origin = `http://127.0.0.1:${address.port}`;
+    const app = createApp(f.runtime, { origin });
+    vite = await createViteServer({ server: { middlewareMode: { server }, hmr: { server } }, appType: "spa" });
+    app.use(vite.middlewares); server.on("request", app);
+    const leadContext = await browser.newContext(), memberContext = await browser.newContext();
+    await leadContext.addCookies([{ name: "lantern-session", value: lead, url: origin }]);
+    await memberContext.addCookies([{ name: "lantern-session", value: member, url: origin }]);
+    const leadPage = await leadContext.newPage(), memberPage = await memberContext.newPage();
+    leadPage.setDefaultTimeout(5000); memberPage.setDefaultTimeout(5000);
+    const mission = "We partner with the Body of Christ through heart language media, so everyone, everywhere can encounter Jesus.";
+
+    await t.test("save department configuration and show a live preview above the mission editor", async () => {
+      await memberPage.goto(origin);
+      await expect(memberPage.getByRole("heading", { name: "Position focuses", exact: true })).toBeVisible();
+      await expect(memberPage.getByText("Your documents, organised by period.", { exact: true })).toHaveCount(0);
+      await expect(memberPage.getByRole("region", { name: "Our mission" })).toHaveCount(0);
+      await leadPage.goto(origin + "/?page=department");
+      await leadPage.getByRole("button", { name: "Mission & initiatives", exact: true }).click();
+      await leadPage.getByLabel("Organizational mission", { exact: true }).fill(mission);
+      for (const name of ["Language access", "Partner pathways"]) {
+        await leadPage.getByRole("button", { name: "Add initiative", exact: true }).click();
+        await leadPage.getByLabel("Initiative name").fill(name);
+        await leadPage.getByRole("dialog").getByRole("button", { name: "Add initiative", exact: true }).click();
+      }
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(leadPage.getByLabel("Organizational mission", { exact: true })).toHaveValue(mission);
+      await expect(leadPage.getByRole("cell", { name: "Language access", exact: true })).toBeVisible();
+      await memberPage.goto(origin);
+      await expect(memberPage.getByRole("region", { name: "Our mission" })).toContainText(mission);
+      const memberArtwork = memberPage.getByRole("region", { name: "Our mission" }).locator("img");
+      await expect(memberArtwork).toBeVisible();
+      await expect.poll(() => memberArtwork.evaluate((image) => { const loaded = image as unknown as { complete: boolean; naturalWidth: number }; return loaded.complete && loaded.naturalWidth > 0; })).toBe(true);
+      await expect(memberPage.getByRole("button", { name: /^(Hide|Show) mission$/ })).toHaveCount(0);
+      await memberPage.evaluate(key => localStorage.setItem(key, "false"), `lantern:mission:${member}:${team}:expanded:v1`);
+      await memberPage.reload();
+      await expect(memberPage.getByText(mission, { exact: true })).toBeVisible();
+      await expect(leadPage.getByRole("region", { name: "Our mission" })).toContainText(mission);
+      const previewArtwork = leadPage.getByRole("region", { name: "Our mission" }).locator("img");
+      await expect(previewArtwork).toBeVisible();
+      await expect.poll(() => previewArtwork.evaluate((image) => { const loaded = image as unknown as { complete: boolean; naturalWidth: number }; return loaded.complete && loaded.naturalWidth > 0; })).toBe(true);
+      await expect(leadPage.getByRole("button", { name: /^(Hide|Show) mission$/ })).toHaveCount(0);
+      await expect(leadPage.getByRole("region", { name: "Our mission" }).getByText(mission, { exact: true })).toBeVisible();
+      await expect(memberPage.getByRole("button", { name: "Department", exact: true })).toHaveCount(0);
+    });
+
+    await t.test("preview-first image chooser saves, cancels, removes and restores artwork", async () => {
+      const preview = leadPage.getByRole("region", { name: "Our mission" });
+      await preview.getByRole("button", { name: "Change image", exact: true }).click();
+      const chooser = leadPage.getByRole("dialog", { name: "Banner image", exact: true });
+      await expect(chooser).toBeVisible();
+      const image = await sharp({ create: { width: 700, height: 200, channels: 4, background: "#007e95" } }).png().toBuffer();
+      await chooser.getByLabel("Choose image").setInputFiles({ name: "seasonal.png", mimeType: "image/png", buffer: image });
+      await expect(chooser.getByRole("button", { name: "Use image", exact: true })).toBeEnabled();
+      await chooser.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(preview.locator("img")).toHaveAttribute("src", "/mission-jesus-geometric.png");
+      await preview.getByRole("button", { name: "Change image", exact: true }).click();
+      await chooser.getByLabel("Choose image").setInputFiles({ name: "seasonal.png", mimeType: "image/png", buffer: image });
+      await chooser.getByRole("button", { name: "Use image", exact: true }).click();
+      await expect(preview.locator("img")).toHaveAttribute("src", /^data:image\/webp;base64,/);
+      await leadPage.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(preview.locator("img")).toHaveAttribute("src", "/mission-jesus-geometric.png");
+      await preview.getByRole("button", { name: "Change image", exact: true }).click();
+      await chooser.getByLabel("Choose image").setInputFiles({ name: "seasonal.png", mimeType: "image/png", buffer: image });
+      await chooser.getByRole("button", { name: "Use image", exact: true }).click();
+      await f.migration.query("ALTER TABLE department_direction ADD CONSTRAINT synthetic_image_failure CHECK (mission_image IS NULL OR mission_image NOT LIKE 'data:%')");
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("alert")).toContainText("temporarily unavailable");
+      await expect(preview.locator("img")).toHaveAttribute("src", /^data:image\/webp;base64,/);
+      await memberPage.reload();
+      await expect(memberPage.getByRole("region", { name: "Our mission" }).locator("img")).toHaveAttribute("src", "/mission-jesus-geometric.png");
+      await f.migration.query("ALTER TABLE department_direction DROP CONSTRAINT synthetic_image_failure");
+      const stale = await leadContext.newPage();
+      await stale.goto(origin + "/?page=department&departmentTab=direction");
+      await expect(stale.getByRole("region", { name: "Our mission" }).locator("img")).toHaveAttribute("src", "/mission-jesus-geometric.png");
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(preview.locator("img")).toHaveAttribute("src", /^data:image\/webp;base64,/);
+      await memberPage.reload();
+      await expect(memberPage.getByRole("region", { name: "Our mission" }).locator("img")).toHaveAttribute("src", /^data:image\/webp;base64,/);
+      await expect(preview.locator("img")).toHaveCSS("object-fit", "contain");
+      await expect(preview.locator("img")).toHaveCSS("transform", "none");
+      await stale.getByRole("button", { name: "Change image", exact: true }).click();
+      await stale.getByRole("dialog").getByRole("button", { name: "Remove image", exact: true }).click();
+      await stale.getByRole("dialog").getByRole("button", { name: "Use image", exact: true }).click();
+      await stale.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(stale.getByRole("alert")).toContainText("changed in another window");
+      await expect(stale.getByRole("region", { name: "Our mission" }).locator("img")).toHaveCount(0);
+      await stale.getByRole("button", { name: "Reload saved settings", exact: true }).click();
+      await expect(stale.getByRole("region", { name: "Our mission" }).locator("img")).toHaveAttribute("src", /^data:image\/webp;base64,/);
+      await stale.close();
+      await preview.getByRole("button", { name: "Change image", exact: true }).click();
+      await chooser.getByRole("button", { name: "Remove image", exact: true }).click();
+      await chooser.getByRole("button", { name: "Use image", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(preview.locator("img")).toHaveCount(0);
+      await leadPage.getByLabel("Organizational mission", { exact: true }).fill("");
+      await expect(preview).toHaveCount(0);
+      await leadPage.getByRole("button", { name: "Choose banner image", exact: true }).click();
+      await chooser.getByRole("button", { name: "Use default", exact: true }).click();
+      await chooser.getByRole("button", { name: "Use image", exact: true }).click();
+      await leadPage.getByLabel("Organizational mission", { exact: true }).fill(mission);
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(preview.locator("img")).toHaveAttribute("src", "/mission-jesus-geometric.png");
+    });
+
+    await t.test("quick palette offers only presets and persists the additional choices after save", async () => {
+      await leadPage.getByRole("button", { name: "Edit Language access", exact: true }).click();
+      const dialog = leadPage.getByRole("dialog", { name: "Edit initiative", exact: true });
+      assert.equal(await dialog.evaluate(el => el.matches(":modal")), true);
+      await dialog.getByRole("button", { name: "Heart", exact: true }).click();
+      await dialog.getByRole("button", { name: "Red", exact: true }).click();
+      await expect(dialog.getByLabel("Appearance preview")).toContainText("Language access");
+      await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+      await expect(leadPage.getByRole("cell", { name: "Language access", exact: true }).locator("svg")).toHaveCount(0);
+      await leadPage.getByRole("button", { name: "Edit Language access", exact: true }).click();
+      await dialog.getByRole("button", { name: "Heart", exact: true }).click();
+      await dialog.getByRole("button", { name: "Red", exact: true }).click();
+      await dialog.getByRole("button", { name: "Update initiative", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Edit Partner pathways", exact: true }).click();
+      await expect(dialog.locator('input[type="file"], input[type="color"]')).toHaveCount(0);
+      for (const name of ["Red", "Orange", "Yellow", "Green", "Blue", "Purple", "Pink", "Slate"])
+        await expect(dialog.getByRole("button", { name, exact: true })).toBeVisible();
+      await expect(dialog.locator(".initiative-icon-grid button")).toHaveCount(12);
+      await expect(dialog.getByRole("button", { name: "Book", exact: true })).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Globe", exact: true })).toBeVisible();
+      await dialog.getByRole("button", { name: "Handshake", exact: true }).click();
+      await dialog.getByRole("button", { name: "Yellow", exact: true }).click();
+      await expect(dialog.getByLabel("Appearance preview").locator("svg")).toBeVisible();
+      await leadPage.setViewportSize({ width: 390, height: 844 });
+      assert.ok(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth));
+      await dialog.getByRole("button", { name: "Update initiative", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(leadPage.getByRole("cell", { name: "Language access", exact: true }).locator("svg")).toBeVisible();
+      await expect(leadPage.getByRole("cell", { name: "Partner pathways", exact: true }).locator("svg")).toBeVisible();
+      await leadPage.getByRole("button", { name: "Edit Partner pathways", exact: true }).click();
+      await expect(dialog.getByRole("button", { name: "Yellow", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await expect(dialog.getByRole("button", { name: "Handshake", exact: true })).toHaveAttribute("aria-pressed", "true");
+      await expect(dialog.getByLabel("Appearance preview").locator("svg")).toBeVisible();
+      await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+      await leadPage.setViewportSize({ width: 1280, height: 900 });
+    });
+
+    await t.test("lead adds descriptions beneath names and members read them through nested guide navigation", async () => {
+      const other = leadPage.getByRole("row").filter({ has: leadPage.getByRole("cell", { name: "Other", exact: true }) });
+      await expect(other).toBeVisible();
+      await expect(other.getByRole("button")).toHaveCount(0);
+      await expect(other.getByRole("cell").nth(1)).toBeEmpty();
+      await expect(other.getByRole("cell").nth(2)).toBeEmpty();
+      await expect(other.locator("svg")).toBeVisible();
+      await expect(leadPage.getByText("Members can select more than one for each objective.", { exact: true })).toHaveCount(0);
+      await expect(leadPage.getByText(/“Other — none of these apply” is always included/)).toHaveCount(0);
+      await leadPage.getByRole("button", { name: "Edit Language access", exact: true }).click();
+      const dialog = leadPage.getByRole("dialog");
+      const description = dialog.getByLabel("Description (optional)");
+      await expect(description).toHaveAttribute("maxlength", "500");
+      await description.fill("Cancelled description");
+      await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Edit Language access", exact: true }).click();
+      await expect(description).toHaveValue("");
+      await description.fill("Help people find useful media in their heart language.");
+      await dialog.getByRole("button", { name: "Update initiative", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await leadPage.getByRole("button", { name: "Edit Language access", exact: true }).click();
+      await expect(description).toHaveValue("Help people find useful media in their heart language.");
+      await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+      await memberPage.getByRole("button", { name: "Guide", exact: true }).click();
+      await memberPage.getByRole("button", { name: "Strategic initiatives", exact: true }).click();
+      const navigation = memberPage.getByLabel("Strategic initiatives", { exact: true });
+      await expect(navigation.getByRole("button", { name: "Language access", exact: true })).toHaveAttribute("aria-current", "step");
+      await expect(memberPage.getByRole("heading", { name: "Language access", exact: true })).toBeVisible();
+      await expect(memberPage.getByText("Help people find useful media in their heart language.", { exact: true })).toBeVisible();
+      await expect(navigation.getByRole("button", { name: "Language access", exact: true }).locator("svg")).toBeVisible();
+      await navigation.getByRole("button", { name: "Partner pathways", exact: true }).click();
+      await expect(memberPage.getByRole("heading", { name: "Partner pathways", exact: true })).toBeFocused();
+      await expect(memberPage.getByText("Your career lead hasn’t added a description yet.", { exact: true })).toBeVisible();
+      await memberPage.getByRole("button", { name: "SMART goals", exact: true }).click();
+      await expect(memberPage.getByLabel("Steps within SMART goals")).toBeVisible();
+      await memberPage.setViewportSize({ width: 390, height: 844 });
+      await memberPage.getByRole("button", { name: "Strategic initiatives", exact: true }).click();
+      await navigation.getByRole("button", { name: "Language access", exact: true }).click();
+      await expect(memberPage.getByText("Help people find useful media in their heart language.", { exact: true })).toBeVisible();
+      assert.ok(await memberPage.evaluate("document.documentElement.scrollWidth <= window.innerWidth"));
+      await memberPage.setViewportSize({ width: 1280, height: 900 });
+      await memberPage.getByRole("button", { name: "Position focuses", exact: true }).click();
+    });
+
+    await t.test("adding an initiative can use color without an icon and clearing appearance survives reload", async () => {
+      await leadPage.getByRole("button", { name: "Add initiative", exact: true }).click();
+      const dialog = leadPage.getByRole("dialog");
+      await dialog.getByLabel("Initiative name").fill("Color only");
+      await dialog.getByLabel("Description (optional)").fill("A new initiative description.");
+      await dialog.getByRole("button", { name: "Green", exact: true }).click();
+      await expect(dialog.getByLabel("Appearance preview").locator(".initiative-mark")).toBeVisible();
+      await dialog.getByRole("button", { name: "Add initiative", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(leadPage.getByRole("cell", { name: "Color only", exact: true }).locator(".initiative-mark")).toBeVisible();
+      await leadPage.getByRole("button", { name: "Edit Color only", exact: true }).click();
+      await expect(dialog.getByLabel("Description (optional)")).toHaveValue("A new initiative description.");
+      await dialog.getByLabel("Description (optional)").fill("");
+      await dialog.getByRole("button", { name: "Clear appearance", exact: true }).click();
+      await dialog.getByRole("button", { name: "Update initiative", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.reload();
+      await expect(leadPage.getByRole("cell", { name: "Color only", exact: true }).locator(".initiative-mark")).toHaveCount(0);
+    });
+
+    await t.test("member selects multiple initiatives without search, edits to Other and reopens saved choices", async () => {
+      await memberPage.getByRole("button", { name: "New position focus", exact: true }).click();
+      await memberPage.getByLabel("Document title").fill("My contribution");
+      await memberPage.getByLabel("Period starts").fill("2026-01-01");
+      await memberPage.getByLabel("Period ends").fill("2026-12-31");
+      await memberPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await memberPage.getByRole("button", { name: "Add objective", exact: true }).click();
+      let dialog = memberPage.getByRole("dialog");
+      await dialog.getByLabel("Objective", { exact: true }).fill("Help more people discover media.");
+      await expect(dialog.getByRole("searchbox")).toHaveCount(0);
+      await expect(dialog.getByPlaceholder("Find an initiative")).toHaveCount(0);
+      await expect(dialog.getByText("Our mission", { exact: true })).toHaveCount(0);
+      await dialog.getByRole("checkbox", { name: "Language access", exact: true }).check();
+      await expect(dialog.locator(".initiative-option").filter({ hasText: "Language access" }).locator("svg")).toBeVisible();
+      await dialog.getByRole("checkbox", { name: "Partner pathways", exact: true }).check();
+      await memberPage.screenshot({ path: "/tmp/lantern-alignment-dialog.png", fullPage: true });
+      const savedRequest = memberPage.waitForRequest(request => request.method() === "PUT" && new URL(request.url()).pathname.startsWith("/api/focuses/"));
+      await dialog.getByRole("button", { name: "Save changes", exact: true }).click();
+      const submitted = (await savedRequest).postDataJSON();
+      assert.deepEqual(submitted.sections[0].alignment.initiatives.map((item: object) => Object.keys(item)), [["id"], ["id"]]);
+      await memberPage.reload();
+      await expect(memberPage.locator(".read-section")).toContainText("Language access");
+      await expect(memberPage.locator(".read-section")).toContainText("Partner pathways");
+      await expect(memberPage.locator(".alignment-summary svg")).toHaveCount(2);
+      await memberPage.getByRole("button", { name: "Edit objective", exact: true }).click();
+      dialog = memberPage.getByRole("dialog");
+      await expect(dialog.getByRole("checkbox", { name: "Language access", exact: true })).toBeChecked();
+      await dialog.getByRole("checkbox", { name: "Other — none of these apply", exact: true }).check();
+      await expect(dialog.getByRole("checkbox", { name: "Language access", exact: true })).not.toBeChecked();
+      await expect(dialog.getByRole("checkbox", { name: "Partner pathways", exact: true })).not.toBeChecked();
+      await dialog.getByRole("button", { name: "Save changes", exact: true }).click();
+      await memberPage.reload();
+      await expect(memberPage.locator(".read-section")).toContainText("Other — none of these apply");
+      await memberPage.getByRole("button", { name: "Edit objective", exact: true }).click();
+      await dialog.getByRole("checkbox", { name: "Partner pathways", exact: true }).check();
+      await expect(dialog.getByRole("checkbox", { name: "Other — none of these apply", exact: true })).not.toBeChecked();
+      await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+      await memberPage.reload();
+      await expect(memberPage.locator(".read-section")).toContainText("Other — none of these apply");
+      const focusId = new URL(memberPage.url()).searchParams.get("focus");
+      await leadPage.goto(`${origin}/?page=department&member=${member}&memberFocus=${focusId}`);
+      await expect(leadPage.locator(".read-section")).toContainText("Other — none of these apply");
+      await memberPage.getByRole("button", { name: "Edit objective", exact: true }).click();
+      await memberPage.setViewportSize({ width: 390, height: 844 });
+      await memberPage.screenshot({ path: "/tmp/lantern-alignment-dialog-mobile.png", fullPage: true });
+      assert.ok(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth));
+      await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+    });
+
+    await t.test("failed settings saves retain input; stale saves require explicit reload; archive survives reload", async () => {
+      await leadPage.goto(origin + "/?page=department&departmentTab=direction");
+      await f.migration.query("ALTER TABLE department_direction ADD CONSTRAINT synthetic_direction_failure CHECK (mission <> 'Unsaved mission to keep')");
+      await leadPage.getByRole("button", { name: "Edit Language access", exact: true }).click();
+      await leadPage.getByLabel("Description (optional)").fill("Description retained after a failed save.");
+      await leadPage.getByRole("button", { name: "Update initiative", exact: true }).click();
+      await leadPage.getByLabel("Organizational mission", { exact: true }).fill("Unsaved mission to keep");
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("alert")).toContainText("temporarily unavailable");
+      await expect(leadPage.getByLabel("Organizational mission", { exact: true })).toHaveValue("Unsaved mission to keep");
+      await leadPage.getByRole("button", { name: "Edit Language access", exact: true }).click();
+      await expect(leadPage.getByLabel("Description (optional)")).toHaveValue("Description retained after a failed save.");
+      await leadPage.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+      await f.migration.query("ALTER TABLE department_direction DROP CONSTRAINT synthetic_direction_failure");
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      const stale = await leadContext.newPage();
+      await stale.goto(origin + "/?page=department&departmentTab=direction");
+      await expect(stale.getByLabel("Organizational mission", { exact: true })).toHaveValue("Unsaved mission to keep");
+      await leadPage.getByRole("button", { name: "Archive Language access", exact: true }).click();
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await stale.getByLabel("Organizational mission", { exact: true }).fill("Stale input retained");
+      await stale.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(stale.getByRole("alert")).toContainText("changed in another window");
+      await expect(stale.getByLabel("Organizational mission", { exact: true })).toHaveValue("Stale input retained");
+      await stale.getByRole("button", { name: "Reload saved settings", exact: true }).click();
+      await expect(stale.getByLabel("Organizational mission", { exact: true })).toHaveValue("Unsaved mission to keep");
+      await stale.close();
+      await leadPage.reload();
+      await expect(leadPage.getByRole("row").filter({ hasText: "Language access" })).toContainText("Archived");
+      await leadPage.getByLabel("Organizational mission", { exact: true }).fill(mission);
+      await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+      await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+      await leadPage.evaluate("window.scrollTo(0, 0)");
+      await leadPage.screenshot({ path: "/tmp/lantern-direction-panel.png", fullPage: true });
+      await memberPage.goto(origin);
+      await memberPage.setViewportSize({ width: 1440, height: 1000 });
+      await expect(memberPage.getByRole("region", { name: "Our mission" })).toContainText(mission);
+      await memberPage.screenshot({ path: "/tmp/lantern-mission-expanded.png", fullPage: true });
+      await memberPage.getByRole("button", { name: "My contribution", exact: true }).click();
+      await memberPage.getByRole("button", { name: "+ Add objective", exact: true }).click();
+      await expect(memberPage.getByRole("checkbox", { name: "Partner pathways", exact: true })).toBeVisible();
+      await expect(memberPage.getByRole("checkbox", { name: /Language access/ })).toHaveCount(0);
+      await memberPage.getByRole("dialog").getByRole("button", { name: "Cancel", exact: true }).click();
+      // Browser storage failure must not stop the mission or the workspace.
+      const blockedContext = await browser.newContext();
+      await blockedContext.addInitScript("Object.defineProperty(window, 'localStorage', { get() { throw new Error('Storage disabled'); } })");
+      await blockedContext.addCookies([{ name: "lantern-session", value: member, url: origin }]);
+      const blocked = await blockedContext.newPage();
+      await blocked.goto(origin);
+      await expect(blocked.getByText(mission, { exact: true })).toBeVisible();
+      await blockedContext.close();
+      await memberContext.addCookies([{ name: "lantern-session", value: lead, url: origin }]);
+      await memberPage.goto(origin);
+      await expect(memberPage.getByText(mission, { exact: true })).toBeVisible();
+      await memberPage.setViewportSize({ width: 390, height: 844 });
+      await memberPage.screenshot({ path: "/tmp/lantern-mission-mobile.png", fullPage: true });
+      assert.ok(await memberPage.evaluate("document.documentElement.scrollWidth <= window.innerWidth"));
+      await leadPage.setViewportSize({ width: 390, height: 844 });
+      await leadPage.screenshot({ path: "/tmp/lantern-direction-panel-mobile.png", fullPage: true });
+      assert.ok(await leadPage.evaluate("document.documentElement.scrollWidth <= window.innerWidth"));
+    });
+    await t.test("guide excludes archived initiatives, retries failed reads, and handles an empty active list", async () => {
+      const readerContext = await browser.newContext();
+      await readerContext.addCookies([{ name: "lantern-session", value: member, url: origin }]);
+      const reader = await readerContext.newPage();
+      try {
+        await reader.goto(origin + "/?page=guide");
+        await f.migration.query(`REVOKE SELECT ON department_direction FROM ${f.roles.runtime}`);
+        await reader.getByRole("button", { name: "Strategic initiatives", exact: true }).click();
+        await expect(reader.getByRole("alert")).toContainText("temporarily unavailable");
+        await f.migration.query(`GRANT SELECT ON department_direction TO ${f.roles.runtime}`);
+        await reader.getByRole("button", { name: "Try again", exact: true }).click();
+        await expect(reader.getByRole("heading", { name: "Partner pathways", exact: true })).toBeVisible();
+        await expect(reader.getByRole("button", { name: "Language access", exact: true })).toHaveCount(0);
+        await reader.getByRole("button", { name: "Color only", exact: true }).click();
+        await expect(reader.getByText("Your career lead hasn’t added a description yet.", { exact: true })).toBeVisible();
+        await leadPage.getByRole("button", { name: "Archive Partner pathways", exact: true }).click();
+        await leadPage.getByRole("button", { name: "Archive Color only", exact: true }).click();
+        await leadPage.getByRole("button", { name: "Save changes", exact: true }).click();
+        await expect(leadPage.getByRole("status")).toContainText("Team direction saved");
+        await reader.getByRole("button", { name: "Objectives", exact: true }).click();
+        await reader.getByRole("button", { name: "Strategic initiatives", exact: true }).click();
+        await expect(reader.getByRole("heading", { name: "No active initiatives yet.", exact: true })).toBeVisible();
+        await expect(reader.getByLabel("Strategic initiatives", { exact: true }).getByRole("button")).toHaveCount(0);
+      } finally {
+        await f.migration.query(`GRANT SELECT ON department_direction TO ${f.roles.runtime}`);
+        await readerContext.close();
+      }
+    });
+    await t.test("phone initiative selection brings the description into view after a long list", async () => {
+      const currentResponse = await leadPage.request.get(origin + "/api/department/direction");
+      const current = await currentResponse.json();
+      const updated = await leadPage.request.put(origin + "/api/department/direction", {
+        headers: { Origin: origin }, data: { ...current, initiatives: [ ...current.initiatives,
+          ...Array.from({ length: 10 }, (_, index) => ({ name: `Priority ${index + 1} — A long initiative name for the department`,
+            description: `Read the selected initiative ${index + 1}.`, archived: false })),
+        ] },
+      });
+      assert.equal(updated.status(), 200);
+      const readerContext = await browser.newContext();
+      await readerContext.addCookies([{ name: "lantern-session", value: member, url: origin }]);
+      const reader = await readerContext.newPage();
+      try {
+        for (const width of [320, 390]) {
+          await reader.setViewportSize({ width, height: 568 });
+          await reader.goto(origin + "/?page=guide");
+          await reader.getByRole("button", { name: "Strategic initiatives", exact: true }).click();
+          const name = "Priority 10 — A long initiative name for the department";
+          await reader.getByRole("button", { name, exact: true }).click();
+          const heading = reader.getByRole("heading", { name, exact: true });
+          await expect.poll(() => heading.evaluate((el, height) => {
+            const bounds = el.getBoundingClientRect();
+            return bounds.top >= 0 && bounds.bottom <= height;
+          }, 568)).toBe(true);
+          assert.ok(await reader.evaluate("document.documentElement.scrollWidth <= window.innerWidth"));
+        }
+      } finally { await readerContext.close(); }
+    });
+
+  } finally {
+    await browser.close(); await vite?.close(); server.closeAllConnections();
+    await new Promise<void>(r => server.close(() => r())); await f.close();
+  }
+});

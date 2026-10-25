@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.env
+.env.*
+captures
+.scratch
+
+
+output
+stage-isolation-evidence.json
