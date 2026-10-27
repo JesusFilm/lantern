@@ -35,6 +35,15 @@ _Avoid_: Submitted, approved by management, or complete when those imply additio
 **Locked-in position focus**:
 The historical term for a confirmed position focus. Later review work preserves this baseline rather than silently rewriting it.
 
+**Review request**:
+A member's explicit invitation to discuss one immutable saved version of their focus. A later save does not silently replace that version; the member sends changes for review separately.
+
+**Coaching checkpoint**:
+Private member answers and the current coaching step saved with the focus. Career leads can read the saved focus, but not another member's checkpoint. A normal editor save invalidates it; confirmation removes it.
+
+**Review note**:
+An authored message attached to a requested version. Notes can be added or soft-deleted by their author, never edited. A note is not confirmation.
+
 **Review phase**:
 An occasion to discuss a focus: initial draft/confirmation, midyear adjustment/review, or year-end review/retrospective. Later phase mechanics and dates remain deferred.
 

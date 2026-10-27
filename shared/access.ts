@@ -4,6 +4,7 @@ export interface SessionView {
   department?: Department;
   signInAvailable: boolean;
   localAccess?: boolean;
+  coachAvailable?: boolean;
 }
 export interface RegisteredUser {
   id: string; name: string; email: string;

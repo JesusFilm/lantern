@@ -1,12 +1,32 @@
+import type { CoachCheckpoint } from "../shared/coach.js";
 import { randomUUID } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { AccessError, membership, membershipWrite } from "./membership.js";
-import type { FocusDraft, FocusDraftSection, FocusSection, PositionFocus } from "../shared/focus.js";
+import type {
+  FocusDraft,
+  FocusDraftSection,
+  FocusSection,
+  PositionFocus,
+} from "../shared/focus.js";
 import { readDirection } from "./direction.js";
 import { validateInitiativeAppearance } from "../shared/initiative-appearance.js";
 
 const columns = `id,title,to_char(period_start,'YYYY-MM-DD') AS start,to_char(period_end,'YYYY-MM-DD') AS end,sections,version,updated_at AS "updatedAt",status,confirmed_at AS "confirmedAt",
   (SELECT jsonb_build_object('id',u.id,'name',u.name) FROM users u WHERE u.id=confirmed_by) AS "confirmedBy"`;
+export async function readOwnedFocus(
+  db: Pool | PoolClient,
+  userId: string,
+  departmentId: string,
+  id: string,
+): Promise<PositionFocus> {
+  const result = await db.query(
+    `SELECT ${columns} FROM position_focuses WHERE user_id=$1 AND department_id=$2 AND id::text=$3`,
+    [userId, departmentId, id],
+  );
+  if (!result.rowCount) throw new AccessError(404, "Position focus not found.");
+  return result.rows[0];
+}
+
 // A focus is saved atomically as one versioned document. Ownership never comes from its payload.
 export function focusStore(db: Pool) {
   return {
@@ -23,24 +43,22 @@ export function focusStore(db: Pool) {
       departmentId: string,
       id: string,
     ): Promise<PositionFocus> {
-      const result = await db.query(
-        `SELECT ${columns} FROM position_focuses WHERE user_id=$1 AND department_id=$2 AND id::text=$3`,
-        [userId, departmentId, id],
-      );
-      if (!result.rowCount)
-        throw new AccessError(404, "Position focus not found.");
-      return result.rows[0];
+      return readOwnedFocus(db, userId, departmentId, id);
     },
     async create(
       userId: string,
       departmentId: string,
       draft: FocusDraft,
+      checkpoint?: CoachCheckpoint,
     ): Promise<PositionFocus> {
       return membershipWrite(db, async (client) => {
         if ((await membership(client, userId))?.id !== departmentId)
-          throw new AccessError(403, "Active department membership is required.");
+          throw new AccessError(
+            403,
+            "Active department membership is required.",
+          );
         const sections = await resolveAlignment(client, userId, draft.sections);
-        return (
+        const saved = (
           await client.query(
             `INSERT INTO position_focuses(id,user_id,department_id,title,period_start,period_end,sections) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING ${columns}`,
             [
@@ -54,6 +72,8 @@ export function focusStore(db: Pool) {
             ],
           )
         ).rows[0];
+        await saveCheckpoint(client, saved, checkpoint);
+        return saved;
       });
     },
     async confirm(
@@ -65,7 +85,10 @@ export function focusStore(db: Pool) {
       return membershipWrite(db, async (client) => {
         const department = await membership(client, actorId);
         if (department?.role !== "career-lead")
-          throw new AccessError(403, "Only the career lead can confirm a focus.");
+          throw new AccessError(
+            403,
+            "Only the career lead can confirm a focus.",
+          );
         const target = await client.query(
           `SELECT ${columns} FROM position_focuses
            WHERE id::text=$1 AND user_id::text=$2 AND department_id=$3
@@ -83,20 +106,40 @@ export function focusStore(db: Pool) {
             "This focus changed. Close this dialog and reopen the focus before confirming.",
           );
         if (focus.status === "confirmed") return focus;
+        const latestRequest = (
+          await client.query(
+            "SELECT version FROM focus_review_requests WHERE focus_id::text=$1 ORDER BY version DESC LIMIT 1",
+            [id],
+          )
+        ).rows[0];
+        if (latestRequest && latestRequest.version !== focus.version)
+          throw new AccessError(
+            409,
+            "Ask the member to send their latest saved changes before confirming.",
+          );
         validateFocus({
           title: focus.title,
           start: focus.start,
           end: focus.end,
           sections: focus.sections,
         });
-        if (!focus.sections.some(
-          section => section.kind === "normal" && section.goals.length > 0,
-        ))
-          throw new AccessError(400, "Add a Normal objective with at least one SMART goal before confirming.");
+        if (
+          !focus.sections.some(
+            (section) => section.kind === "normal" && section.goals.length > 0,
+          )
+        )
+          throw new AccessError(
+            400,
+            "Add a Normal objective with at least one SMART goal before confirming.",
+          );
         const result = await client.query(
           `UPDATE position_focuses SET status='confirmed',confirmed_at=now(),confirmed_by=$2,
            version=version+1,updated_at=now() WHERE id::text=$1 RETURNING ${columns}`,
           [id, actorId],
+        );
+        await client.query(
+          "DELETE FROM coach_checkpoints WHERE focus_id::text=$1",
+          [id],
         );
         return result.rows[0];
       });
@@ -107,21 +150,37 @@ export function focusStore(db: Pool) {
       id: string,
       draft: FocusDraft,
       version: number,
+      checkpoint?: CoachCheckpoint,
     ): Promise<PositionFocus> {
       return membershipWrite(db, async (client) => {
         if ((await membership(client, userId))?.id !== departmentId)
-          throw new AccessError(403, "Active department membership is required.");
+          throw new AccessError(
+            403,
+            "Active department membership is required.",
+          );
         const currentResult = await client.query(
           `SELECT ${columns} FROM position_focuses WHERE user_id=$1 AND department_id=$2 AND id::text=$3 FOR UPDATE`,
           [userId, departmentId, id],
         );
-        if (!currentResult.rowCount) throw new AccessError(404, "Position focus not found.");
+        if (!currentResult.rowCount)
+          throw new AccessError(404, "Position focus not found.");
         const current = currentResult.rows[0] as PositionFocus;
         if (current.status === "confirmed")
-          throw new AccessError(409, "This focus is confirmed and read-only. Your unsaved text is still here; copy it before closing this dialog.");
+          throw new AccessError(
+            409,
+            "This focus is confirmed and read-only. Your unsaved text is still here; copy it before closing this dialog.",
+          );
         if (current.version !== version)
-          throw new AccessError(409, "This focus changed in another window. Close this dialog and reopen the focus before editing.");
-        const sections = await resolveAlignment(client, userId, draft.sections, current.sections);
+          throw new AccessError(
+            409,
+            "This focus changed in another window. Close this dialog and reopen the focus before editing.",
+          );
+        const sections = await resolveAlignment(
+          client,
+          userId,
+          draft.sections,
+          current.sections,
+        );
         const result = await client.query(
           `UPDATE position_focuses SET title=$4,period_start=$5,period_end=$6,sections=$7,version=version+1,updated_at=now() WHERE user_id=$1 AND department_id=$2 AND id::text=$3 AND version=$8 AND status='draft' RETURNING ${columns}`,
           [
@@ -135,6 +194,7 @@ export function focusStore(db: Pool) {
             version,
           ],
         );
+        await saveCheckpoint(client, result.rows[0], checkpoint);
         return result.rows[0];
       });
     },
@@ -203,20 +263,41 @@ export function validateFocus(
       return fail();
     if (section.alignment !== undefined) {
       const alignment = section.alignment;
-      if (!alignment || typeof alignment !== "object" || Array.isArray(alignment) ||
-          Object.keys(alignment).some(k => !["initiatives", "other"].includes(k)) ||
-          typeof alignment.other !== "boolean" || !Array.isArray(alignment.initiatives) ||
-          alignment.initiatives.length > 100 || (alignment.other && alignment.initiatives.length))
+      if (
+        !alignment ||
+        typeof alignment !== "object" ||
+        Array.isArray(alignment) ||
+        Object.keys(alignment).some(
+          (k) => !["initiatives", "other"].includes(k),
+        ) ||
+        typeof alignment.other !== "boolean" ||
+        !Array.isArray(alignment.initiatives) ||
+        alignment.initiatives.length > 100 ||
+        (alignment.other && alignment.initiatives.length)
+      )
         return fail();
       const ids = new Set<string>();
       for (const item of alignment.initiatives) {
-        if (!item || typeof item !== "object" || Array.isArray(item) ||
-            Object.keys(item).some(k => !["id", "name", "appearance"].includes(k)) ||
-            typeof item.id !== "string" || !/^[a-f0-9-]{36}$/.test(item.id) ||
-            (item.name !== undefined && !text(item.name, 120)) || ids.has(item.id)) return fail();
+        if (
+          !item ||
+          typeof item !== "object" ||
+          Array.isArray(item) ||
+          Object.keys(item).some(
+            (k) => !["id", "name", "appearance"].includes(k),
+          ) ||
+          typeof item.id !== "string" ||
+          !/^[a-f0-9-]{36}$/.test(item.id) ||
+          (item.name !== undefined && !text(item.name, 120)) ||
+          ids.has(item.id)
+        )
+          return fail();
         ids.add(item.id);
         if (item.appearance !== undefined) {
-          try { validateInitiativeAppearance(item.appearance); } catch { return fail(); }
+          try {
+            validateInitiativeAppearance(item.appearance);
+          } catch {
+            return fail();
+          }
         }
       }
     }
@@ -229,39 +310,94 @@ export function validateFocus(
   // Legacy clients may send snapshots; only validated member intent crosses
   // the write interface. Supplied identity is never a source of saved history.
   const draft = data as unknown as FocusDraft & { version?: number };
-  return { ...draft, title: draft.title.trim(), sections: draft.sections.map(section => ({
-    ...section,
-    ...(section.alignment ? { alignment: {
-      other: section.alignment.other,
-      initiatives: section.alignment.initiatives.map(({ id }) => ({ id })),
-    } } : {}),
-  })) };
+  return {
+    ...draft,
+    title: draft.title.trim(),
+    sections: draft.sections.map((section) => ({
+      ...section,
+      ...(section.alignment
+        ? {
+            alignment: {
+              other: section.alignment.other,
+              initiatives: section.alignment.initiatives.map(({ id }) => ({
+                id,
+              })),
+            },
+          }
+        : {}),
+    })),
+  };
 }
 
 // Private to focus writes: configuration and previous history are read under the
 // same membership-write lock as persistence. Confirmation never refreshes snapshots.
-async function resolveAlignment(client: PoolClient, actorId: string, sections: FocusDraftSection[], previous: FocusSection[] = []): Promise<FocusSection[]> {
+async function resolveAlignment(
+  client: PoolClient,
+  actorId: string,
+  sections: FocusDraftSection[],
+  previous: FocusSection[] = [],
+): Promise<FocusSection[]> {
   const direction = await readDirection(client, actorId);
-  const retained = new Map<string, NonNullable<FocusSection["alignment"]>["initiatives"]>();
+  const retained = new Map<
+    string,
+    NonNullable<FocusSection["alignment"]>["initiatives"]
+  >();
   // Preserve whole-focus use counts and traversal order, not objective identity.
-  for (const section of previous) for (const item of section.alignment?.initiatives ?? []) {
-    const snapshots = retained.get(item.id) ?? [];
-    snapshots.push(item);
-    retained.set(item.id, snapshots);
-  }
-  return sections.map(section => {
+  for (const section of previous)
+    for (const item of section.alignment?.initiatives ?? []) {
+      const snapshots = retained.get(item.id) ?? [];
+      snapshots.push(item);
+      retained.set(item.id, snapshots);
+    }
+  return sections.map((section) => {
     if (!section.alignment) return { ...section, alignment: undefined };
-    return { ...section, alignment: {
-      other: section.alignment.other,
-      initiatives: section.alignment.initiatives.map(choice => {
-        const initiative = direction.initiatives.find(item => item.id === choice.id);
-        const retainedSnapshots = retained.get(choice.id);
-        if (!initiative || (initiative.archived && !retainedSnapshots?.length))
-          throw new AccessError(400, "An initiative is no longer available. Reopen the objective and choose an active initiative or Other.");
-        if (initiative.archived) return retainedSnapshots!.shift()!;
-        return { id: initiative.id, name: initiative.name,
-          ...(initiative.appearance ? { appearance: initiative.appearance } : {}) };
-      }),
-    } };
+    return {
+      ...section,
+      alignment: {
+        other: section.alignment.other,
+        initiatives: section.alignment.initiatives.map((choice) => {
+          const initiative = direction.initiatives.find(
+            (item) => item.id === choice.id,
+          );
+          const retainedSnapshots = retained.get(choice.id);
+          if (
+            !initiative ||
+            (initiative.archived && !retainedSnapshots?.length)
+          )
+            throw new AccessError(
+              400,
+              "An initiative is no longer available. Reopen the objective and choose an active initiative or Other.",
+            );
+          if (initiative.archived) return retainedSnapshots!.shift()!;
+          return {
+            id: initiative.id,
+            name: initiative.name,
+            ...(initiative.appearance
+              ? { appearance: initiative.appearance }
+              : {}),
+          };
+        }),
+      },
+    };
   });
+}
+
+async function saveCheckpoint(
+  client: PoolClient,
+  focus: PositionFocus,
+  checkpoint?: CoachCheckpoint,
+) {
+  if (checkpoint)
+    await client.query(
+      `INSERT INTO coach_checkpoints(focus_id,document) VALUES($1,$2)
+    ON CONFLICT(focus_id) DO UPDATE SET document=excluded.document`,
+      [
+        focus.id,
+        JSON.stringify({ ...checkpoint, sourceVersion: focus.version }),
+      ],
+    );
+  else
+    await client.query("DELETE FROM coach_checkpoints WHERE focus_id=$1", [
+      focus.id,
+    ]);
 }

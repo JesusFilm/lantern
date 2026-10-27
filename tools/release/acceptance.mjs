@@ -63,7 +63,7 @@ export async function acceptanceEvidence(env, readiness, execute, { fetch = glob
       sha: env.RELEASE_SHA, target: 'stage', deployment: env.EXPECTED_DEPLOYMENT_ID,
       schemaVersion: Number(env.EXPECTED_SCHEMA_VERSION), runId: env.GITHUB_RUN_ID,
       runAttempt: Number(env.GITHUB_RUN_ATTEMPT), readiness: 'passed',
-      acceptance: 'passed', cleanup: 'passed', acceptanceSuiteVersion: 1, checks,
+      acceptance: 'passed', cleanup: 'passed', acceptanceSuiteVersion: 2, checks,
     };
   } catch (error) {
     if (checkpoint === 'journey-and-cleanup' && error instanceof Error) {

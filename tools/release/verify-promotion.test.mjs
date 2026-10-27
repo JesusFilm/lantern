@@ -31,7 +31,7 @@ test('promotion command binds acceptance to its triggering attempt, current main
   git(['push','--set-upstream','origin','main']);
   const sha=git(['rev-parse','HEAD']);
   const run={id:123,run_attempt:2,head_sha:sha,event:'push',head_branch:'main',path:'.github/workflows/ci.yml',status:'completed',conclusion:'success',repository:{full_name:'JesusFilm/lantern'}};
-  const evidence={sha,readiness:'passed',target:'stage',deployment:'stage-deployment',runId:'123',runAttempt:2,schemaVersion:8,acceptance:'passed',cleanup:'passed',acceptanceSuiteVersion:1};
+  const evidence={sha,readiness:'passed',target:'stage',deployment:'stage-deployment',runId:'123',runAttempt:2,schemaVersion:8,acceptance:'passed',cleanup:'passed',acceptanceSuiteVersion:2};
   const baseJob={run_id:123,run_attempt:2,head_sha:sha,status:'completed',conclusion:'success',started_at:'2026-10-20T10:00:00Z',completed_at:'2026-10-20T10:10:00Z'};
   const steps=['Enforce exact revision and successful checks','Run npm run build','Verify staging configuration before migrations','Apply exact-revision schema migrations','Upload the checked source revision','Verify deployed revision, schema, login and anonymous denial'].map((name,i)=>({name,number:i+1,status:'completed',conclusion:'success',completed_at:'2026-10-20T10:05:00Z'}));
   const jobs=['typecheck','PostgreSQL HTTP and browser tests','production build'].map(name=>({...baseJob,name}));

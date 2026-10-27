@@ -8,6 +8,7 @@ export const ACCEPTANCE_CHECKS = Object.freeze([
   'focus-authoring-persistence',
   'authorization-isolation',
   'stale-and-forged-writes',
+  'review-requests-and-notes',
   'lead-confirmation-lock',
   'account-and-guide',
   'browser-errors',
@@ -177,6 +178,32 @@ export async function runAcceptanceBrowser({ origin, sessions, runId }, { chromi
     assert.equal((await write(member, 'put', path, { ...draft(saved), userId: identities.peer.user.id })).status(), 400);
     assert.equal((await write(member, 'put', path, draft(saved), { Origin: 'https://invalid.example.test' })).status(), 403);
     assert.deepEqual(await json(await read(member, path)), saved);
+    checks.push(checkpoint);
+
+    checkpoint = 'review-requests-and-notes';
+    await memberPage.goto(origin+'/?page=coach');
+    await memberPage.getByRole('button',{name:'Continue draft',exact:true}).click();
+    await memberPage.getByRole('button',{name:'Ask career lead to review',exact:true}).click();
+    await memberPage.getByLabel('Note to career lead · optional').fill('Synthetic request note');
+    await memberPage.getByRole('button',{name:'Send request',exact:true}).click();
+    await expect(memberPage.getByText('Synthetic request note',{exact:true})).toBeVisible();
+    await leadPage.goto(origin+'/?page=reviews');
+    await leadPage.getByRole('button',{name:'Review focus',exact:true}).click();
+    await leadPage.getByRole('button',{name:'+ Add note',exact:true}).click();
+    await leadPage.getByLabel('Add a note',{exact:true}).fill('Synthetic lead reply');
+    await leadPage.getByRole('button',{name:'Add note',exact:true}).click();
+    await expect(leadPage.getByText('Synthetic lead reply',{exact:true})).toBeVisible();
+    const reviewPath='/api/coach/focuses/'+focusId;
+    const review=await json(await read(member,reviewPath));
+    assert.equal(review.requests[0].document.version,saved.version);
+    assert.equal(review.notes.length,2);
+    assert.equal((await read(contexts.get('peer'),reviewPath)).status(),404);
+    assert.equal((await read(contexts.get('outsider'),reviewPath)).status(),404);
+    await memberPage.goto(origin+'/?page=coach');
+    await memberPage.getByRole('button',{name:'Read reply',exact:true}).click();
+    await expect(memberPage.getByText('Synthetic lead reply',{exact:true})).toBeVisible();
+    await expect.poll(async()=> (await json(await read(member,reviewPath))).readIds.length).toBe(2);
+    await memberPage.goto(origin+'/?focus='+focusId);
     checks.push(checkpoint);
 
     checkpoint = 'lead-confirmation-lock';

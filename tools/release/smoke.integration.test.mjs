@@ -46,16 +46,16 @@ test('stage smoke exercises real HTTPS/browser/PostgreSQL and refuses expired QA
    chromium: {launch:async()=>{const b=await chromium.launch();return {newPage:()=>b.newPage({ignoreHTTPSErrors:true}),newContext:()=>b.newContext({ignoreHTTPSErrors:true}),close:()=>b.close()};}}
   };
   const env={EXPECTED_DEPLOYMENT_ID:'isolated-test-deployment',APP_ORIGIN:origin,RELEASE_SHA:sha,RELEASE_TARGET:'stage',GITHUB_RUN_ID:'123',QA_MEMBER_A_SESSION:tokens[0],QA_MEMBER_B_SESSION:tokens[1]};
-  const basic = await smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'8',QA_MEMBER_A_SESSION:undefined,QA_MEMBER_B_SESSION:undefined},transport);
+  const basic = await smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'9',QA_MEMBER_A_SESSION:undefined,QA_MEMBER_B_SESSION:undefined},transport);
   assert.equal(basic.readiness,'passed');
-  const production = await smoke({...env,RELEASE_TARGET:'production',RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'8',QA_MEMBER_A_SESSION:undefined,QA_MEMBER_B_SESSION:undefined},transport);
+  const production = await smoke({...env,RELEASE_TARGET:'production',RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'9',QA_MEMBER_A_SESSION:undefined,QA_MEMBER_B_SESSION:undefined},transport);
   assert.equal(production.readiness,'passed');
   assert.equal(production.target,'production');
   assert.equal(production.stage,undefined);
-  assert.deepEqual(await smoke(env,transport),{sha,stage:'passed',target:'stage',deployment:'isolated-test-deployment',schemaVersion:8,runId:'123'});
+  assert.deepEqual(await smoke(env,transport),{sha,stage:'passed',target:'stage',deployment:'isolated-test-deployment',schemaVersion:9,runId:'123'});
   await db.query('DELETE FROM sessions');
   await assert.rejects(smoke(env,transport));
-  const readiness = await smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'8'},transport);
+  const readiness = await smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'9'},transport);
   assert.equal(readiness.readiness,'passed');
   assert.equal(readiness.stage,undefined,'readiness must not create full acceptance evidence');
   await assert.rejects(smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'3'},transport));

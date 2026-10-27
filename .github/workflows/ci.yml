@@ -69,7 +69,7 @@ jobs:
       RELEASE_SHA: ${{ github.sha }}
       APP_ORIGIN: ${{ vars.APP_ORIGIN }}
       RELEASE_TARGET: stage
-      EXPECTED_SCHEMA_VERSION: '8'
+      EXPECTED_SCHEMA_VERSION: '9'
       RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT }}
       RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
       RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}

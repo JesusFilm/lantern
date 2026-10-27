@@ -12,7 +12,7 @@ const env = {
 const readiness = { target: 'stage', sha, deployment: 'deployment-a', schemaVersion: 8, runId: '123', readiness: 'passed' };
 const checks = ['authenticated-identities', 'department-direction', 'mission-image',
   'focus-authoring-persistence', 'authorization-isolation', 'stale-and-forged-writes',
-  'lead-confirmation-lock', 'account-and-guide', 'browser-errors', 'session-revocation'];
+  'review-requests-and-notes','lead-confirmation-lock', 'account-and-guide', 'browser-errors', 'session-revocation'];
 const health = (patch = {}) => new Response('{"status":"ok","database":"ok"}', {
   status: 200, headers: {
     'x-lantern-revision': sha, 'x-lantern-deployment': 'deployment-a', 'x-lantern-schema': '8', ...patch,
@@ -29,7 +29,7 @@ test('acceptance records only bounded evidence after the deployed journey and cl
   assert.deepEqual(evidence, {
     sha, target: 'stage', deployment: 'deployment-a', schemaVersion: 8,
     runId: '123', runAttempt: 2, readiness: 'passed',
-    acceptance: 'passed', cleanup: 'passed', acceptanceSuiteVersion: 1,
+    acceptance: 'passed', cleanup: 'passed', acceptanceSuiteVersion: 2,
     checks,
   });
 });

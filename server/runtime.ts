@@ -1,3 +1,4 @@
+import {resolveCoachConfig} from './coach-provider.js';
 export type LanternEnvironment = 'local' | 'stage' | 'production';
 export function lanternEnvironment(environment: string | undefined): LanternEnvironment {
   if (environment === undefined) return 'production';
@@ -26,5 +27,5 @@ export function resolveRuntime(env: NodeJS.ProcessEnv = process.env) {
   const hostingOnly = env.LANTERN_HOSTING_ONLY === '1';
   if (hostingOnly && (environment !== 'stage' || clientId || clientSecret)) throw new Error('Hosting-only mode requires stage without identity provider credentials.');
   if ((hosted && !hostingOnly && (!clientId || !clientSecret)) || !!clientId !== !!clientSecret) throw new Error('Set both Google client credentials.');
-  return { environment, hosted, connectionString, port, host, localAccess, origin, clientId, clientSecret, hostingOnly };
+  return { coach:resolveCoachConfig(env), environment, hosted, connectionString, port, host, localAccess, origin, clientId, clientSecret, hostingOnly };
 }

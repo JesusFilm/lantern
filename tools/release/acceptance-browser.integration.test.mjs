@@ -54,7 +54,7 @@ test('deployed acceptance exercises built browser assets, persisted workflows an
       'focus-authoring-persistence',
       'authorization-isolation',
       'stale-and-forged-writes',
-      'lead-confirmation-lock',
+      'review-requests-and-notes', 'lead-confirmation-lock',
       'account-and-guide',
       'browser-errors',
       'session-revocation',

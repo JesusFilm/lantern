@@ -2,9 +2,11 @@ export async function api<T>(
   path: string,
   method = "GET",
   body?: unknown,
+  signal?: AbortSignal,
 ): Promise<T> {
   const response = await fetch(path, {
     method,
+    signal,
     cache: "no-store",
     headers:
       body === undefined ? undefined : { "Content-Type": "application/json" },

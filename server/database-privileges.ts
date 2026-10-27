@@ -74,6 +74,10 @@ export async function grantApplicationPrivileges(db: Database, roles: DatabaseRo
   await db.query(`GRANT UPDATE (mission, mission_image, initiatives, version) ON department_direction TO ${runtime}`);
   await db.query(`GRANT UPDATE, DELETE ON department_direction TO ${admin}`);
   await db.query(`GRANT UPDATE (title, period_start, period_end, sections, version, updated_at, status, confirmed_at, confirmed_by) ON position_focuses TO ${runtime}`);
+  await db.query(`GRANT SELECT, INSERT ON coach_checkpoints, focus_review_requests, focus_review_notes, focus_note_reads TO ${runtime}`);
+  await db.query(`GRANT UPDATE, DELETE ON coach_checkpoints TO ${runtime}`);
+  await db.query(`GRANT UPDATE (deleted_at) ON focus_review_notes TO ${runtime}`);
+  await db.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON coach_checkpoints, focus_review_requests, focus_review_notes, focus_note_reads TO ${admin}`);
   await db.query(`GRANT EXECUTE ON FUNCTION enroll_member(uuid,text) TO ${runtime}, ${admin}`);
   await db.query(`GRANT INSERT, UPDATE, DELETE ON approved_emails, users, departments, memberships, position_focuses, sessions, login_attempts TO ${admin}`);
 }

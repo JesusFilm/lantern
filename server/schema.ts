@@ -100,6 +100,43 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
         CHECK (mission_image IS NULL OR octet_length(mission_image) <= 699092)`);
       await client.query('INSERT INTO schema_migrations(version) VALUES (8)');
     }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=9')).rowCount) {
+      await client.query(`
+        CREATE TABLE coach_checkpoints (
+          focus_id uuid PRIMARY KEY REFERENCES position_focuses(id) ON DELETE CASCADE,
+          document jsonb NOT NULL CHECK (jsonb_typeof(document)='object')
+        );
+        CREATE TABLE focus_review_requests (
+          id uuid PRIMARY KEY, focus_id uuid NOT NULL REFERENCES position_focuses(id) ON DELETE CASCADE,
+          version integer NOT NULL CHECK(version>0), document jsonb NOT NULL,
+          created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(focus_id,version)
+        );
+        CREATE TABLE focus_review_notes (
+          id uuid PRIMARY KEY, request_id uuid NOT NULL REFERENCES focus_review_requests(id) ON DELETE CASCADE,
+          author_id uuid NOT NULL REFERENCES users(id), body text NOT NULL CHECK(length(body) BETWEEN 1 AND 4000),
+          created_at timestamptz NOT NULL DEFAULT now(), deleted_at timestamptz
+        );
+        CREATE TABLE focus_note_reads (
+          note_id uuid NOT NULL REFERENCES focus_review_notes(id) ON DELETE CASCADE,
+          user_id uuid NOT NULL REFERENCES users(id), PRIMARY KEY(note_id,user_id)
+        );
+        CREATE INDEX review_notes_request ON focus_review_notes(request_id,created_at);
+        CREATE FUNCTION guard_focus_review() RETURNS trigger LANGUAGE plpgsql SET search_path FROM CURRENT AS $guard$
+        DECLARE requested integer;
+        BEGIN
+          IF NEW.status='confirmed' AND OLD.status='draft' THEN
+            SELECT version INTO requested FROM focus_review_requests WHERE focus_id=OLD.id ORDER BY version DESC LIMIT 1;
+            IF requested IS NOT NULL AND requested<>OLD.version THEN
+              RAISE EXCEPTION 'Latest saved draft must be sent for review before confirmation.' USING ERRCODE='P0409';
+            END IF;
+            DELETE FROM coach_checkpoints WHERE focus_id=OLD.id;
+          END IF;
+          RETURN NEW;
+        END $guard$;
+        CREATE TRIGGER guard_focus_review BEFORE UPDATE ON position_focuses FOR EACH ROW EXECUTE FUNCTION guard_focus_review();
+        INSERT INTO schema_migrations(version) VALUES(9);
+      `);
+    }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
@@ -109,9 +146,10 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8)');
-  if (result.rowCount !== 8) throw new Error('Required migration is missing.');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9)');
+  if (result.rowCount !== 9) throw new Error('Required migration is missing.');
   await database.query('SELECT department_id,mission,mission_image,initiatives,version FROM department_direction LIMIT 0');
+  await database.query('SELECT c.document,r.version,n.body,x.user_id FROM coach_checkpoints c,focus_review_requests r,focus_review_notes n,focus_note_reads x LIMIT 0');
   const legacy = await database.query(`SELECT to_regclass('allowed_domains') IS NOT NULL
     OR to_regprocedure('enroll_member(uuid,text,boolean)') IS NOT NULL
     OR EXISTS (SELECT 1 FROM information_schema.columns

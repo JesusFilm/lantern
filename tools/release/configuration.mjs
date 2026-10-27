@@ -42,6 +42,12 @@ export function verifyConfiguration(env){
  for(const [key,value] of Object.entries({LANTERN_ENV:target,NODE_ENV:'production',LOCAL_ACCESS:'0',LANTERN_HOSTING_ONLY:'0',APP_ORIGIN:origin,HOST:'0.0.0.0'}))requireSetting(v[key]===value,key);
  for(const key of ['BOOTSTRAP_DATABASE_URL','MIGRATION_DATABASE_URL','ADMIN_DATABASE_URL'])requireSetting(!(key in v),'privileged database credential present');
  for(const key of ['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET'])requireSetting(typeof v[key]==='string' && v[key].length>0,key);
+ requireSetting(v.COACH_ENABLED===undefined || ['0','1'].includes(v.COACH_ENABLED),'COACH_ENABLED');
+ if(v.COACH_ENABLED==='1') {
+  for(const key of ['AI_GATEWAY_CHAT_API_KEY','OPENROUTER_API_KEY'])requireSetting(typeof v[key]==='string' && v[key].trim().length>0 && !/[\r\n]/.test(v[key]),key);
+  if(v.AI_GATEWAY_CHAT_BASE_URL){let endpoint;try{endpoint=new URL(v.AI_GATEWAY_CHAT_BASE_URL);}catch{throw new Error('Deployment preflight failed: coaching gateway URL.');}
+   requireSetting(endpoint.protocol==='https:'&&!endpoint.username&&!endpoint.password&&!endpoint.search&&!endpoint.hash,'coaching gateway URL');}
+ }
  let database;try{database=new URL(v.DATABASE_URL);}catch{throw new Error('Deployment preflight failed: runtime database URL.');}
  requireSetting(['postgres:','postgresql:'].includes(database.protocol) && decodeURIComponent(database.username)===runtimeRole && database.hostname.endsWith('.railway.internal'),'runtime database identity');
  return {project,environment,service,target};
