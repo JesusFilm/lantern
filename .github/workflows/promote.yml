@@ -123,7 +123,7 @@ jobs:
           const evidence=JSON.parse(readFileSync('candidate/release-evidence.json'));
           writeFileSync('production-evidence.json',JSON.stringify({...evidence,stageRunId:process.env.STAGE_RUN_ID,stageRunAttempt:process.env.STAGE_RUN_ATTEMPT || undefined,releaseMode:process.env.RELEASE_MODE,operator:process.env.GITHUB_ACTOR},null,2));
           JS
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: production-evidence-${{ env.RELEASE_SHA }}
           path: production-evidence.json
