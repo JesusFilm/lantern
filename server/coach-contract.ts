@@ -131,6 +131,10 @@ export function validateSuggestion(
       !texts(value[k], k === "initiativeIds" ? 100 : 3)
     )
       return fail();
+  for (const key of ["options", "actions"] as const) {
+    const choices = value[key] as string[] | undefined;
+    if (choices && choices.some((choice) => !choice.trim())) return fail();
+  }
   if (value.suggestedDate !== undefined && !date(value.suggestedDate))
     return fail();
   if (

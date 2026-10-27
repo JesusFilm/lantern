@@ -324,3 +324,75 @@ test("a checkpoint cannot point outside the focus being saved", async () => {
     await f.close();
   }
 });
+
+test("empty suggested actions are unusable and trigger OpenRouter fallback", async () => {
+  const { createCoachProvider } = await import("./coach-provider.js");
+  let fallbackCalls = 0;
+  const upstream = createServer((req, res) => {
+    if (req.url === "/v1/messages")
+      res.end(
+        JSON.stringify({
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                actions: ["", " "],
+                suggestedDate: "2026-11-30",
+              }),
+            },
+          ],
+        }),
+      );
+    else {
+      fallbackCalls++;
+      res.end(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  actions: [
+                    "Review logs with engineers",
+                    "Try clearer error messages",
+                  ],
+                  suggestedDate: "2026-11-30",
+                }),
+              },
+            },
+          ],
+        }),
+      );
+    }
+  });
+  await new Promise<void>((r) => upstream.listen(0, "127.0.0.1", r));
+  const a = upstream.address();
+  assert.ok(a && typeof a !== "string");
+  const url = `http://127.0.0.1:${a.port}`;
+  const f = await coachingFixture(
+    createCoachProvider(
+      {
+        primary: { url, key: "x", model: "coding" },
+        fallback: { url, key: "y", model: "gemini" },
+        timeoutMs: 1000,
+        cooldownMs: 1000,
+      },
+      () => {},
+    ),
+  );
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", {
+      stage: "actions",
+      context: checkpoint,
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).actions, [
+      "Review logs with engineers",
+      "Try clearer error messages",
+    ]);
+    assert.equal(fallbackCalls, 1);
+  } finally {
+    await f.close();
+    upstream.closeAllConnections();
+    await new Promise<void>((r) => upstream.close(() => r()));
+  }
+});
