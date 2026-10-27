@@ -121,7 +121,7 @@ jobs:
         env:
           RELEASE_SMOKE_MODE: readiness
         run: node tools/release/smoke.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: stage-readiness-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: release-evidence.json
@@ -145,7 +145,7 @@ jobs:
         env:
           ACCEPTANCE_STEP_OUTCOME: ${{ steps.stage_acceptance.outcome }}
         run: node tools/release/acceptance-diagnostics.mjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: vars.STAGE_ACCEPTANCE_ENABLED == 'true'
         with:
           name: stage-acceptance-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
