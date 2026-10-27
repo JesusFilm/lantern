@@ -38,7 +38,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: '24.22.1' }
       - name: Admit only verified main release evidence
         run: node tools/release/verify-promotion.mjs --admission
@@ -60,7 +60,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: '24.22.1', cache: npm }
       - run: npm ci
       - name: Verify release evidence and automatic freshness under the production lock
