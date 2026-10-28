@@ -155,7 +155,7 @@ test("guided editing changes one existing goal without rewriting its parent or s
       ...saved.sections.slice(1),
     ]);
     await page
-      .getByRole("button", { name: "Review position focus", exact: true })
+      .getByRole("button", { name: "Review & discussion", exact: true })
       .click();
     for (const label of ["Contribution", "Personal development", "Leadership"])
       await expect(
@@ -228,6 +228,7 @@ test("member confirms the objective type; a failed save retains the complete gui
     await page
       .getByRole("radio", { name: "Personal development", exact: true })
       .check();
+    await page.getByRole("checkbox", { name: "Other — none of these apply" }).check();
     const fail = async (route: import("@playwright/test").Route) =>
       route.request().method() === "PUT"
         ? route.fulfill({

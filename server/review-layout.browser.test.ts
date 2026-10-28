@@ -126,7 +126,7 @@ test("member and lead read the same objective hierarchy while requested versions
     await member.goto(f.origin + "/?focus=" + source.id);
     await assertDocument(member, true);
     await member
-      .getByRole("button", { name: "Review position focus", exact: true })
+      .getByRole("button", { name: "Review & discussion", exact: true })
       .click();
     await assertDocument(member, true);
     await member
@@ -135,7 +135,7 @@ test("member and lead read the same objective hierarchy while requested versions
     await expect(
       member.getByText("Review requested · Draft 1", { exact: true }),
     ).toBeVisible();
-    await assertDocument(member, false);
+    await assertDocument(member, true);
 
     const leadContext = await browser.newContext();
     await leadContext.addCookies([
@@ -250,11 +250,11 @@ test("review shows the document title and only compares versions with content ch
     member.setDefaultTimeout(5000);
     await member.goto(f.origin + "/?focus=" + source.id);
     await member
-      .getByRole("button", { name: "Review position focus", exact: true })
+      .getByRole("button", { name: "Review & discussion", exact: true })
       .click();
     await expect(
       member.getByRole("heading", {
-        name: "Review position focus",
+        name: "Request review",
         exact: true,
       }),
     ).toBeVisible();
@@ -308,6 +308,8 @@ test("review shows the document title and only compares versions with content ch
         exact: true,
       }),
     ).toBeVisible();
+    await expect(member.getByRole("alert")).toContainText("This focus has changed");
+    await expect(member.getByRole("button", { name: "Send changes for review" })).toBeDisabled();
     await member
       .getByRole("button", { name: "Review discussion", exact: true })
       .click();

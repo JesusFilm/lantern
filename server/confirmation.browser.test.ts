@@ -112,6 +112,7 @@ test(
       await memberPage
         .getByLabel("Objective", { exact: true })
         .fill("Unsaved thought to keep");
+      await memberPage.getByRole("checkbox", { name: "Other — none of these apply" }).check();
       await leadPage.goto(
         origin +
           "/?page=department&member=" +

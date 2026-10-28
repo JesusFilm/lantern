@@ -75,6 +75,7 @@ export async function runCoachingJourney({ context, origin, runId, enabled }) {
       exact: true,
     }),
   ).toBeVisible();
+  await page.getByRole("checkbox", { name: "Other — none of these apply", exact: true }).check();
   const objective = await page
     .getByLabel("Objective", { exact: true })
     .inputValue();
@@ -126,10 +127,10 @@ export async function runCoachingJourney({ context, origin, runId, enabled }) {
   await expect(page.getByText(objective, { exact: true })).toBeVisible();
   await expect(page.getByText(goal, { exact: true })).toBeVisible();
   await page
-    .getByRole("button", { name: "Review position focus", exact: true })
+    .getByRole("button", { name: "Review & discussion", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Review position focus", exact: true }),
+    page.getByRole("heading", { name: "Request review", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Send request", exact: true }).click();
   await expect

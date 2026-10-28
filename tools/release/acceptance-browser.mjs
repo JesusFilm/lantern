@@ -399,7 +399,7 @@ export async function runAcceptanceBrowser(
     checkpoint = "review-requests-and-notes";
     await memberPage.goto(origin + "/?focus=" + focusId);
     await memberPage
-      .getByRole("button", { name: "Review position focus", exact: true })
+      .getByRole("button", { name: "Review & discussion", exact: true })
       .click();
     await memberPage
       .getByLabel("Note to career lead · optional")
@@ -437,7 +437,7 @@ export async function runAcceptanceBrowser(
     );
     await memberPage.goto(origin + "/?focus=" + focusId);
     await memberPage
-      .getByRole("button", { name: "Review position focus", exact: true })
+      .getByRole("button", { name: "Review & discussion", exact: true })
       .click();
     await memberPage
       .getByRole("button", { name: "Review discussion", exact: true })

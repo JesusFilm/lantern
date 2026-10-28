@@ -28,6 +28,90 @@ async function browserFixture(coach?: Parameters<typeof coachingFixture>[0]) {
     },
   };
 }
+test("manual editing requires an initiative or Other only for the edited objective", async () => {
+  const f = await browserFixture();
+  try {
+    const saved = await (await f.request("member", "/api/focuses", "POST", {
+      ...draft,
+      sections: [draft.sections[0], { ...draft.sections[0], objective: "Another legacy objective" }],
+    })).json();
+    await f.page.goto(f.origin + "/?focus=" + saved.id);
+    await f.page.getByRole("button", { name: "Edit objective", exact: true }).first().click();
+    await expect(f.page.getByRole("checkbox", { name: "Other — none of these apply" })).toBeVisible();
+    await f.page.getByRole("button", { name: "Save objective", exact: true }).click();
+    await expect(f.page.getByRole("alert")).toContainText("Select an initiative or Other");
+    assert.deepEqual(await (await f.request("member", "/api/focuses/" + saved.id)).json(), saved);
+    await f.page.getByRole("checkbox", { name: "Other — none of these apply" }).check();
+    await f.page.getByRole("button", { name: "Save objective", exact: true }).click();
+    await expect(f.page.getByRole("heading", { name: draft.title, exact: true })).toBeVisible();
+    const actual = await (await f.request("member", "/api/focuses/" + saved.id)).json();
+    assert.equal(actual.sections[0].alignment.other, true);
+    assert.deepEqual(actual.sections[1], saved.sections[1]);
+  } finally { await f.close(); }
+});
+test("guided refinement displays initiative recommendations without replacing the member's choice", async () => {
+  let recommendedId = "";
+  const f = await browserFixture({
+    async suggest(_system, _input, validate) {
+      return validate({ objective: "Help engineers diagnose failures", initiativeIds: [recommendedId] });
+    },
+  });
+  try {
+    const direction = await (await f.request("lead", "/api/department/direction", "PUT", {
+      mission: "", version: 0, initiatives: [{ name: "Build confidence", archived: false }],
+    })).json();
+    recommendedId = direction.initiatives[0].id;
+    const saved = await (await f.request("member", "/api/focuses", "POST", {
+      ...draft, sections: [{ ...draft.sections[0], alignment: { other: true, initiatives: [] } }, draft.sections[0]],
+    })).json();
+    await f.page.goto(f.origin + "/?focus=" + saved.id);
+    await f.page.getByRole("button", { name: "Guide with AI", exact: true }).first().click();
+    await f.page.getByLabel("What would you like to improve about this objective?").fill("Clarify the benefit");
+    await f.page.getByRole("button", { name: "Next", exact: true }).click();
+    const option = f.page.locator(".initiative-option").filter({ hasText: "Build confidence" });
+    await expect(option).toContainText("AI recommended");
+    await expect(option.getByRole("checkbox")).not.toBeChecked();
+    await expect(f.page.getByRole("checkbox", { name: "Other — none of these apply" })).toBeChecked();
+    await option.getByRole("checkbox").check();
+    await f.page.getByRole("button", { name: "Save objective", exact: true }).click();
+    await expect(f.page.getByRole("heading", { name: draft.title, exact: true })).toBeVisible();
+    const actual = await (await f.request("member", "/api/focuses/" + saved.id)).json();
+    assert.equal(actual.sections[0].alignment.initiatives[0].id, recommendedId);
+    assert.equal(actual.sections[0].alignment.other, false);
+    assert.deepEqual(actual.sections[1], saved.sections[1]);
+  } finally { await f.close(); }
+});
+test("new guided recommendations leave a previously chosen Other unchanged", async () => {
+  let recommendedId = "";
+  const f = await browserFixture({
+    async suggest(_system, _input, validate) {
+      return validate({ ready: true, objective: "Help engineers", initiativeIds: [recommendedId] });
+    },
+  });
+  try {
+    const direction = await (await f.request("lead", "/api/department/direction", "PUT", {
+      mission: "", version: 0, initiatives: [{ name: "Build confidence", archived: false }],
+    })).json();
+    recommendedId = direction.initiatives[0].id;
+    const saved = await (await f.request("member", "/api/focuses", "POST", draft)).json();
+    await f.page.goto(f.origin + "/?focus=" + saved.id);
+    await f.page.getByRole("button", { name: "+ Add objective", exact: true }).click();
+    await f.page.getByRole("button", { name: "Write myself", exact: true }).click();
+    await f.page.getByRole("checkbox", { name: "Other — none of these apply" }).check();
+    await f.page.getByRole("button", { name: "Guide with AI", exact: true }).click();
+    await f.page.getByLabel("Your work").fill("Help engineers with builds");
+    await f.page.getByRole("button", { name: "Next", exact: true }).click();
+    const option = f.page.locator(".initiative-option").filter({ hasText: "Build confidence" });
+    await expect(option).toContainText("AI recommended");
+    await expect(option.getByRole("checkbox")).not.toBeChecked();
+    await expect(f.page.getByRole("checkbox", { name: "Other — none of these apply" })).toBeChecked();
+    await f.page.getByRole("button", { name: "Save objective", exact: true }).click();
+    await expect(f.page.getByRole("heading", { name: draft.title, exact: true })).toBeVisible();
+    const actual = await (await f.request("member", "/api/focuses/" + saved.id)).json();
+    assert.equal(actual.sections[1].alignment.other, true);
+    assert.deepEqual(actual.sections[1].alignment.initiatives, []);
+  } finally { await f.close(); }
+});
 test("manual goal editing is a compact form without competing writing or coaching controls", async () => {
   const f = await browserFixture();
   try {
@@ -104,6 +188,7 @@ test("manual objective authoring saves its goals once and preserves the rest of 
     await f.page
       .getByLabel("SMART goal 2", { exact: true })
       .fill("Review feedback after each interview.");
+    await f.page.getByRole("checkbox", { name: "Other — none of these apply" }).check();
     await f.page
       .getByRole("button", { name: "Save objective", exact: true })
       .click();
@@ -174,6 +259,9 @@ test("AI guides one objective with several goals and saves it once without sugge
     await expect(
       f.page.getByText("(recommended)", { exact: true }),
     ).toBeVisible();
+    await f.page.getByRole("button", { name: "Save objective", exact: true }).click();
+    await expect(f.page.getByRole("alert")).toContainText("Select an initiative or Other");
+    await f.page.getByRole("checkbox", { name: "Other — none of these apply" }).check();
     await expect(
       f.page.getByRole("button", {
         name: /Suggest wording|Use suggestion|Save progress|Resume coaching|Discard saved coaching/,
@@ -583,6 +671,7 @@ test("switching after changing a plan explicitly preserves or replaces member-ed
     await f.page
       .getByLabel("SMART goal 2", { exact: true })
       .fill(written.replace("30 November", "15 December"));
+    await f.page.getByRole("checkbox", { name: "Other — none of these apply" }).check();
     await f.page
       .getByRole("button", { name: "Save objective", exact: true })
       .click();

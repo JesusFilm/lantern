@@ -70,6 +70,7 @@ export function ObjectiveEditor({
   const [options, setOptions] = useState<string[]>([]);
   const [recommended, setRecommended] =
     useState<CoachSuggestion["recommendedKind"]>();
+  const [recommendedInitiatives, setRecommendedInitiatives] = useState<string[]>([]);
   const [plan, setPlan] = useState<GoalPlan>({
     actions: [],
     action: "",
@@ -186,6 +187,11 @@ export function ObjectiveEditor({
   }
   async function save() {
     setError("");
+    if (edit.initiatives.status === "ready" && !edit.alignment.other && !edit.alignment.initiatives.length) {
+      setError("Select an initiative or Other before saving this objective.");
+      if (method === "guided") setStage("objective");
+      return;
+    }
     setSaving(true);
     try {
       await onSave();
@@ -254,6 +260,7 @@ export function ObjectiveEditor({
           values: { text: result.objective },
         });
         setRecommended(result.recommendedKind);
+        setRecommendedInitiatives(result.initiativeIds ?? []);
         setStage("objective");
       }
       return;
@@ -280,14 +287,11 @@ export function ObjectiveEditor({
             type: "objective-values",
             values: {
               text: result.objective,
-              alignment: {
-                other: false,
-                initiatives: (result.initiativeIds ?? []).map((id) => ({ id })),
-              },
             },
           });
         objectiveBasis.current = cacheKey;
         setRecommended(result.recommendedKind);
+        setRecommendedInitiatives(result.initiativeIds ?? []);
         setStage("objective");
       } else {
         setQuestion(result.question ?? "Who benefits from this work?");
@@ -407,6 +411,7 @@ export function ObjectiveEditor({
       <InitiativeChoices
         selection={edit.alignment}
         readiness={edit.initiatives}
+        recommended={method === "guided" ? recommendedInitiatives : []}
         onInitiative={(id, checked) =>
           onChange({ type: "initiative", id, checked })
         }

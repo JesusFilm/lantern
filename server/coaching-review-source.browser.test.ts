@@ -2,8 +2,79 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { chromium, expect } from "@playwright/test";
 import { createServer } from "vite";
-import type { FocusDraft, PositionFocus } from "../shared/focus.js";
+import type { PositionFocus } from "../shared/focus.js";
 import { coachingFixture, checkpoint } from "./coach-test-support.js";
+
+test("member review status distinguishes unsent changes from confirmation", async () => {
+  const f = await coachingFixture();
+  const vite = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: "spa" });
+  f.app.use(vite.middlewares);
+  const browser = await chromium.launch();
+  try {
+    const draft = {
+      title: "Review status", start: "2026-10-01", end: "2027-03-31",
+      sections: [{ kind: "normal", objective: "Support engineers", goals: ["Review failures"], alignment: { initiatives: [], other: true } }],
+    };
+    const created = await f.request("member", "/api/focuses", "POST", draft);
+    assert.equal(created.status, 201);
+    const focus = await created.json();
+    const path = "/api/coach/focuses/" + focus.id;
+    assert.equal((await f.request("member", path + "/request", "POST", { version: focus.version })).status, 200);
+    const context = await browser.newContext();
+    await context.addCookies([{ name: "lantern-session", value: "member", url: f.origin }]);
+    const page = await context.newPage();
+    const status = page.locator(".focus-review-actions");
+    await page.goto(f.origin + "/?focus=" + focus.id);
+    await expect(status).toContainText("Review requested");
+    const updated = await f.request("member", "/api/focuses/" + focus.id, "PUT", { ...draft, title: "Updated review status", version: focus.version });
+    assert.equal(updated.status, 200);
+    const next = await updated.json();
+    await page.reload();
+    await expect(status).toContainText("Changes not sent");
+    assert.equal((await f.request("member", path + "/request", "POST", { version: next.version })).status, 200);
+    assert.equal((await f.request("lead", path + "/confirm", "POST", { version: next.version })).status, 200);
+    const record = await (await f.request("member", path)).json();
+    assert.equal(record.focus.version, next.version + 1);
+    await page.reload();
+    await expect(status).toContainText("Confirmed");
+    await expect(status).not.toContainText("Changes not sent");
+  } finally {
+    await browser.close();
+    await vite.close();
+    await f.close();
+  }
+});
+
+test("member requests review alongside the saved focus", async () => {
+  const f = await coachingFixture();
+  const vite = await createServer({ server: { middlewareMode: true, hmr: false }, appType: "spa" });
+  f.app.use(vite.middlewares);
+  const browser = await chromium.launch();
+  try {
+    const source = await (await f.request("member", "/api/focuses", "POST", {
+      title: "Integrated review", start: "2026-10-01", end: "2027-03-31",
+      sections: [{ kind: "normal", objective: "Support engineers", goals: ["Review failures"], alignment: { initiatives: [], other: true } }],
+    })).json();
+    const context = await browser.newContext();
+    await context.addCookies([{ name: "lantern-session", value: "member", url: f.origin }]);
+    const page = await context.newPage();
+    await page.goto(f.origin + "/?focus=" + source.id);
+    const add = page.getByRole("button", { name: "+ Add objective", exact: true });
+    await expect(add).toBeVisible();
+    const addBox = await add.boundingBox();
+    const objectiveBox = await page.getByRole("region", { name: "Objective 1" }).boundingBox();
+    assert.ok(addBox && objectiveBox && addBox.y < objectiveBox.y);
+    await page.getByRole("button", { name: "Review & discussion" }).click();
+    await expect(page.getByRole("heading", { name: "Integrated review" })).toBeVisible();
+    await expect(page.getByText("Support engineers", { exact: true })).toHaveCount(1);
+    await page.getByLabel("Note to career lead · optional").fill("Please review this");
+    await page.getByRole("button", { name: "Send request" }).click();
+    await expect(page.getByText("Please review this", { exact: true })).toBeVisible();
+    const record = await (await f.request("member", "/api/coach/focuses/" + source.id)).json();
+    assert.equal(record.requests[0].document.version, source.version);
+    assert.equal(record.notes[0].body, "Please review this");
+  } finally { await browser.close(); await vite.close(); await f.close(); }
+});
 
 test("review navigation preserves dirty notes when discard is declined", async () => {
   const f = await coachingFixture({
@@ -49,7 +120,7 @@ test("review navigation preserves dirty notes when discard is declined", async (
     const page = await context.newPage();
     page.setDefaultTimeout(5000);
     await page.goto(f.origin + "/?focus=" + source.id);
-    await page.getByRole("button", { name: "Review position focus" }).click();
+    await page.getByRole("button", { name: "Review & discussion" }).click();
     const note = page.getByLabel("Note to career lead · optional");
     await note.fill("Keep my unfinished review note");
     let prompts = 0;
@@ -59,41 +130,28 @@ test("review navigation preserves dirty notes when discard is declined", async (
     });
     const exits = [
       page.getByRole("button", { name: "Edit objective", exact: true }),
-      page.getByRole("button", { name: "Edit", exact: true }),
-      page.getByRole("button", { name: "Guide with AI", exact: true }),
-      page.getByRole("button", { name: "Back to draft", exact: true }),
-      page.getByRole("button", { name: "Back to authoring", exact: true }),
+      page.getByRole("button", { name: "Edit title & dates", exact: true }),
+      page.getByRole("button", { name: "Close review", exact: true }),
       page.getByRole("button", { name: "Review discussion", exact: true }),
     ];
     for (const exit of exits) {
       const before = prompts;
       await exit.click();
       await expect(note).toHaveValue("Keep my unfinished review note");
-      assert.equal(
-        prompts,
-        before + 1,
-        "Leaving a dirty note must ask before discarding it",
-      );
+      assert.equal(prompts, before + 1);
     }
-    // Accepting discard still navigates; discussion's own dirty note is guarded too.
     page.removeAllListeners("dialog");
     page.once("dialog", (dialog) => dialog.accept());
-    await page
-      .getByRole("button", { name: "Review discussion", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Review discussion", exact: true }).click();
     await page.getByRole("button", { name: "+ Add note", exact: true }).click();
     const discussionNote = page.getByLabel("Add a note", { exact: true });
     await discussionNote.fill("Keep my unfinished discussion note");
     page.once("dialog", (dialog) => dialog.dismiss());
-    await page.getByRole("button", { name: "Edit draft", exact: true }).click();
-    await expect(discussionNote).toHaveValue(
-      "Keep my unfinished discussion note",
-    );
+    await page.getByRole("button", { name: "Close review", exact: true }).click();
+    await expect(discussionNote).toHaveValue("Keep my unfinished discussion note");
     page.once("dialog", (dialog) => dialog.accept());
-    await page.getByRole("button", { name: "Edit draft", exact: true }).click();
-    await expect(
-      page.getByRole("button", { name: "Review position focus" }),
-    ).toBeVisible();
+    await page.getByRole("button", { name: "Close review", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Review & discussion" })).toBeVisible();
     const record = await (
       await f.request("member", "/api/coach/focuses/" + source.id)
     ).json();
@@ -105,105 +163,7 @@ test("review navigation preserves dirty notes when discard is declined", async (
   }
 });
 
-test("editing an independently refreshed review uses the displayed source and preserves its siblings", async () => {
-  const f = await coachingFixture();
-  const vite = await createServer({
-    server: { middlewareMode: true, hmr: false },
-    appType: "spa",
-  });
-  f.app.use(vite.middlewares);
-  const browser = await chromium.launch();
-  try {
-    const draft: FocusDraft = {
-      title: "Review source",
-      start: "2026-10-01",
-      end: "2027-03-31",
-      sections: [
-        {
-          kind: "normal",
-          objective: "Original objective",
-          goals: ["Original goal"],
-          alignment: { initiatives: [], other: true },
-        },
-      ],
-    };
-    const created = await f.request("member", "/api/focuses", "POST", draft);
-    assert.equal(created.status, 201);
-    const source = (await created.json()) as PositionFocus;
-    const context = await browser.newContext();
-    await context.addCookies([
-      { name: "lantern-session", value: "member", url: f.origin },
-    ]);
-    const page = await context.newPage();
-    page.setDefaultTimeout(5000);
-    await page.goto(f.origin + "/?focus=" + source.id);
-    await page.getByRole("button", { name: "Review position focus" }).click();
-    await expect(
-      page.getByRole("heading", { name: "Review position focus" }),
-    ).toBeVisible();
-    await expect(page.locator(".cp-document")).toContainText(
-      "Original objective",
-    );
-
-    // Another client inserts an objective while the authoring view retains v1.
-    const changed = await f.request(
-      "member",
-      "/api/focuses/" + source.id,
-      "PUT",
-      {
-        ...draft,
-        version: source.version,
-        sections: [
-          {
-            kind: "leadership",
-            objective: "New leading objective",
-            goals: ["Keep the new sibling goal"],
-          },
-          ...draft.sections,
-        ],
-      },
-    );
-    assert.equal(changed.status, 200);
-    const refreshed = (await changed.json()) as PositionFocus;
-    // Exercise the review's ordinary focus-event refresh against real HTTP/PG.
-    await page.evaluate("window.dispatchEvent(new Event('focus'))");
-    await expect(page.locator(".cp-document")).toContainText(
-      "New leading objective",
-    );
-    await page
-      .getByRole("button", { name: "Edit objective", exact: true })
-      .nth(1)
-      .click();
-    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue(
-      "Original objective",
-    );
-    await page
-      .getByLabel("Objective", { exact: true })
-      .fill("Edited from refreshed review");
-    await page
-      .getByRole("button", { name: "Save objective", exact: true })
-      .click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    const saved = (await (
-      await f.request("member", "/api/focuses/" + source.id)
-    ).json()) as PositionFocus;
-    assert.equal(saved.version, refreshed.version + 1);
-    assert.deepEqual(saved.sections, [
-      refreshed.sections[0],
-      { ...refreshed.sections[1], objective: "Edited from refreshed review" },
-    ]);
-    await page.reload();
-    await expect(page.locator("main")).toContainText(
-      "Edited from refreshed review",
-    );
-  } finally {
-    await browser.close();
-    await vite.close();
-    await f.close();
-  }
-});
-
-test("cancelling a copy of earlier notes keeps the notes through a later metadata save", async () => {
+test("hidden earlier notes persist through a metadata save", async () => {
   const f = await coachingFixture();
   const vite = await createServer({
     server: { middlewareMode: true, hmr: false },
@@ -253,15 +213,7 @@ test("cancelling a copy of earlier notes keeps the notes through a later metadat
     const page = await context.newPage();
     page.setDefaultTimeout(5000);
     await page.goto(f.origin + "/?focus=" + source.id);
-    await page.getByText("Earlier working notes", { exact: true }).click();
-    await page
-      .getByRole("button", { name: "Copy to a new objective", exact: true })
-      .click();
-    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue(
-      "Suggestion that will be cancelled",
-    );
-    page.once("dialog", (dialog) => dialog.accept());
-    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(page.getByText("Earlier working notes", { exact: true })).toHaveCount(0);
     await page
       .getByRole("button", { name: "Edit title & dates", exact: true })
       .click();
@@ -287,7 +239,7 @@ test("cancelling a copy of earlier notes keeps the notes through a later metadat
     assert.deepEqual(record.checkpoint, savedProgress);
     await expect(
       page.getByText("Earlier working notes", { exact: true }),
-    ).toBeVisible();
+    ).toHaveCount(0);
   } finally {
     await browser.close();
     await vite.close();

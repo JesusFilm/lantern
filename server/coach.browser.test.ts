@@ -96,6 +96,7 @@ test("member coaches, edits the date, saves, requests review; lead replies and c
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue(
       "Help engineers diagnose failed builds",
     );
+    await page.getByRole("checkbox", { name: "Other — none of these apply" }).check();
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await page
       .getByRole("button", { name: "Add SMART goal", exact: true })
@@ -144,10 +145,10 @@ test("member coaches, edits the date, saves, requests review; lead replies and c
     assert.equal(complete.sections.length, 1);
     assert.deepEqual(complete.sections[0].goals, [editedGoal]);
     await page
-      .getByRole("button", { name: "Review position focus", exact: true })
+      .getByRole("button", { name: "Review & discussion", exact: true })
       .click();
     await expect(
-      page.getByRole("heading", { name: "Review position focus", exact: true }),
+      page.getByRole("heading", { name: "Request review", exact: true }),
     ).toBeVisible();
     await page
       .getByRole("button", { name: "Send request", exact: true })
@@ -183,7 +184,7 @@ test("member coaches, edits the date, saves, requests review; lead replies and c
       .getByRole("button", { name: "Confirm focus", exact: true })
       .click();
     await leadPage
-      .getByText(/^Confirmed · Draft/)
+      .getByText("Requested version " + complete.version, { exact: true })
       .first()
       .waitFor();
     assert.deepEqual(errors, []);
@@ -255,6 +256,9 @@ test("guiding one objective preserves every other objective and goal after reloa
       page.getByLabel("What would you like to improve about this objective?"),
     ).toHaveValue("");
     await expect(page.getByLabel("Your work", { exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await page.getByRole("checkbox", { name: "Other — none of these apply" }).check();
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await page
       .getByLabel("SMART goal 1", { exact: true })
@@ -521,6 +525,7 @@ test("loading overlay retains input; cancellation and both-provider failure neve
     await page
       .getByLabel("Objective", { exact: true })
       .fill("Investigate build failures manually");
+    await page.getByRole("checkbox", { name: "Other — none of these apply" }).check();
     await page
       .getByRole("button", { name: "Save objective", exact: true })
       .click();
@@ -592,7 +597,7 @@ test("a note being composed stays bound to the request the lead actually read", 
     );
     await page.evaluate("window.dispatchEvent(new Event('focus'))");
     await page
-      .getByText("Review requested · Draft 2", { exact: true })
+      .getByText("Draft 2", { exact: true })
       .waitFor();
     await page.getByRole("button", { name: "Add note", exact: true }).click();
     await expect(

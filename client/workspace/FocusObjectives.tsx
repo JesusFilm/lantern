@@ -19,7 +19,6 @@ export function FocusObjectives({
   const [all, setAll] = useState(false);
   const count = focus.sections.length;
   const active = Math.min(index, Math.max(0, count - 1));
-  const editable = focus.status === "draft";
   const heading = useRef<HTMLHeadingElement>(null);
   const previousCount = useRef(count);
   const interacted = useRef(false);
@@ -94,7 +93,7 @@ export function FocusObjectives({
           <h2 ref={heading} tabIndex={-1}>
             A blank position focus
           </h2>
-          <p>Add your first objective when you’re ready.</p>
+          {focus.status === "draft" && <><p>Add your first objective when you’re ready.</p>
           <button
             className="primary"
             onClick={() =>
@@ -102,22 +101,7 @@ export function FocusObjectives({
             }
           >
             Add objective
-          </button>
-        </div>
-      )}
-      {editable && (
-        <div className="editor-actions">
-          <button
-            onClick={() =>
-              onEdit({
-                type: "objective",
-                section: focus.sections.length,
-                adding: true,
-              })
-            }
-          >
-            + Add objective
-          </button>
+          </button></>}
         </div>
       )}
       {compact && count > 1 && !all && (

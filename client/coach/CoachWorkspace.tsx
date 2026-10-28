@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import type { CoachRecord } from "../../shared/coach.js";
 import type { PositionFocus } from "../../shared/focus.js";
 import type { SessionView } from "../../shared/access.js";
-import type { EditTarget } from "../workspace/useDraftFocusWorkflow.js";
 import { objectiveTypes } from "../workspace/ObjectiveType.js";
 import { FocusDocument } from "../workspace/FocusDocument.js";
 import { formatFocusDate } from "../workspace/focusDate.js";
 import { api } from "../workspace/api.js";
+import { StatusBadge } from "./StatusBadge.js";
 import "./coach.css";
+import "./status-badge.css";
 const base = "/api/coach";
 function Diff({ before, after }: { before: string; after: string }) {
   const a = before.split(/(\s+)/),
@@ -39,15 +40,15 @@ export function CoachWorkspace({
   lead = false,
   focusId,
   onBack,
-  onEdit,
-  onCoach,
+  onChanged,
+  displayedVersion,
 }: {
   session: SessionView;
   lead?: boolean;
   focusId?: string;
   onBack?: () => void;
-  onEdit?: (target: EditTarget, source: PositionFocus) => void;
-  onCoach?: (target: EditTarget, source: PositionFocus) => void;
+  onChanged?: () => void;
+  displayedVersion?: number;
 }) {
   const actor = session.user!.id;
   const [records, setRecords] = useState<CoachRecord[]>([]),
@@ -136,6 +137,7 @@ export function CoachWorkspace({
           { noteIds: r.notes.map((n) => n.id) },
         ),
       );
+      onChanged?.();
     } catch (e) {
       setError((e as Error).message);
     }
@@ -150,6 +152,7 @@ export function CoachWorkspace({
         body,
       );
       put(r);
+      onChanged?.();
       return r;
     } catch (e) {
       if (mounted.current) setError((e as Error).message);
@@ -333,11 +336,7 @@ export function CoachWorkspace({
         >
           Review requests
         </button>
-      ) : (
-        <button className="link" onClick={back}>
-          Back to authoring
-        </button>
-      )}
+      ) : null}
       {error && (
         <p role="alert">
           {error} <button onClick={() => void refresh()}>Try again</button>
@@ -350,21 +349,18 @@ export function CoachWorkspace({
           {records.map((r) => (
             <section className="cp-card" key={r.focus.id}>
               <h2>
-                {r.memberName} · {r.focus.title}
+                {r.memberName} · {r.requests.at(-1)?.document.title ?? r.focus.title}
               </h2>
-              <p>
-                {r.focus.status === "confirmed"
-                  ? "Confirmed"
-                  : "Review requested"}
+              <div className="cp-row">
+                <StatusBadge status={r.focus.status === "confirmed" ? "confirmed" : "review-requested"} />
+                {r.focus.status !== "confirmed" && r.requests.at(-1)?.document.version !== r.focus.version && <StatusBadge status="unsent-changes" />}
                 {r.notes.some(
                   (n) =>
                     n.authorId !== actor &&
                     !n.deletedAt &&
                     !r.readIds.includes(n.id),
-                )
-                  ? " · New notes"
-                  : ""}
-              </p>
+                ) && <StatusBadge status="new-notes" />}
+              </div>
               <button onClick={() => void review(r)}>Review focus</button>
             </section>
           ))}
@@ -373,26 +369,9 @@ export function CoachWorkspace({
       )}
       {view === "request" && record && (
         <>
-          <h1>Review position focus</h1>
-          <p className="review-focus-title">{record.focus.title}</p>
-          <FocusDocument
-            focus={record.focus}
-            onEdit={
-              !lead && !locked && onEdit
-                ? (target, source) => {
-                    if (canLeaveNote()) onEdit(target, source);
-                  }
-                : undefined
-            }
-            onGuide={
-              !lead && !locked && onCoach
-                ? (target, source) => {
-                    if (canLeaveNote()) onCoach(target, source);
-                  }
-                : undefined
-            }
-          />
+          <h2>Request review</h2>
           {request && comparison(request.document, record.focus)}
+          {displayedVersion !== undefined && displayedVersion !== record.focus.version && <p role="alert">This focus has changed. Return to the focus and reload before requesting review.</p>}
           {!record.focus.sections.some(
             (s) => s.kind === "normal" && s.goals.length,
           ) && (
@@ -422,6 +401,7 @@ export function CoachWorkspace({
               disabled={
                 !!busy ||
                 locked ||
+                (displayedVersion !== undefined && displayedVersion !== record.focus.version) ||
                 request?.document.version === record.focus.version ||
                 !record.focus.sections.some(
                   (s) => s.kind === "normal" && s.goals.length,
@@ -449,17 +429,12 @@ export function CoachWorkspace({
       )}
       {view === "review" && record && request && (
         <>
-          <h1>{request.document.title}</h1>
+          {lead ? <h1>{request.document.title}</h1> : <h2>Review discussion</h2>}
           {lead && (
             <p className="muted">{record.memberName}’s position focus</p>
           )}
           <div className="cp-row cp-between">
-            <span className="cp-muted">
-              {record.focus.status === "confirmed"
-                ? "Confirmed"
-                : "Review requested"}{" "}
-              · Draft {request.document.version}
-            </span>
+            {lead ? <div className="cp-row"><StatusBadge status={locked ? "confirmed" : "review-requested"} />{!locked && record.focus.version !== request.document.version && <StatusBadge status="unsent-changes" />}{record.notes.some(n => n.authorId !== actor && !n.deletedAt && !record.readIds.includes(n.id)) && <StatusBadge status="new-notes" />}<span className="cp-muted">{locked ? "Requested version " + request.document.version : "Draft " + request.document.version}</span></div> : <span className="cp-muted">{locked ? "Confirmed · Requested version " + request.document.version : "Review requested · Draft " + request.document.version}</span>}
             {!lead && (
               <button onClick={back}>
                 {locked ? "View focus" : "Edit draft"}
@@ -514,7 +489,6 @@ export function CoachWorkspace({
               )}
             </>
           )}
-          {!lead && <FocusDocument focus={request.document} />}
           {notesPanel}
         </>
       )}

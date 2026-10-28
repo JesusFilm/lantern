@@ -105,36 +105,9 @@ export function FocusWorkspace({
         onRetryInitiatives={retryInitiatives}
       />
     );
-  if (reviewing && focus && !edit)
-    return (
-      <CoachWorkspace
-        session={session}
-        focusId={focus.id}
-        onBack={() => {
-          setReviewing(false);
-          void reload();
-        }}
-        onEdit={(target, source) => {
-          setReviewing(false);
-          start(target, "manual", source);
-        }}
-        onCoach={
-          coachAvailable
-            ? (target, source) => {
-                setReviewing(false);
-                start(
-                  {
-                    type: "objective",
-                    section: "section" in target ? target.section : 0,
-                  },
-                  "guided",
-                  source,
-                );
-              }
-            : undefined
-        }
-      />
-    );
+  function leaveReview() {
+    return window.dispatchEvent(new Event("lantern-coach-leave", { cancelable: true }));
+  }
   return (
     <>
       {error && (
@@ -150,17 +123,20 @@ export function FocusWorkspace({
             key={"heading-" + focus.id}
             focus={focus}
             member={member}
-            onBack={() => select()}
-            onMetadata={() => begin({ type: "metadata" })}
+            onBack={() => { if (leaveReview()) select(); }}
+            onMetadata={() => { if (leaveReview()) begin({ type: "metadata" }); }}
             onConfirmed={canConfirm ? acceptConfirmed : undefined}
           />
           <div className="focus-review-actions">
-            <button onClick={() => setReviewing(true)}>
-              Review position focus
+            <button onClick={() => { if (!reviewing || leaveReview()) setReviewing(!reviewing); }}>
+              {reviewing ? "Close review" : "Review & discussion"}
             </button>
+            {focus.status === "draft" && <button onClick={() => { if (leaveReview()) start({ type: "objective", section: focus.sections.length, adding: true }); }}>+ Add objective</button>}
             {record?.requests.length ? (
               <span className="muted">
-                {record.requests.at(-1)?.document.version === focus.version
+                {focus.status === "confirmed"
+                  ? "Confirmed"
+                  : record.requests.at(-1)?.document.version === focus.version
                   ? "Review requested"
                   : "Changes not sent"}
                 {record.notes.some(
@@ -180,70 +156,15 @@ export function FocusWorkspace({
               <button onClick={() => void refreshRecord()}>Refresh</button>
             </p>
           )}
+          {reviewing && <CoachWorkspace session={session} focusId={focus.id} displayedVersion={focus.version} onBack={() => { setReviewing(false); void reload(); void refreshRecord(); }} onChanged={() => void refreshRecord()} />}
           <FocusObjectives
             key={"reader-" + focus.id}
             focus={focus}
-            onEdit={(target) => start(target)}
+            onEdit={(target) => { if (leaveReview()) start(target); }}
             onCoach={
-              coachAvailable ? (target) => start(target, "guided") : undefined
+              coachAvailable ? (target) => { if (leaveReview()) start(target, "guided"); } : undefined
             }
           />
-          {record?.checkpoint && focus.status === "draft" && (
-            <details className="earlier-notes">
-              <summary>Earlier working notes</summary>
-              <p className="muted">Private notes from your earlier draft.</p>
-              {[
-                record.checkpoint.work,
-                ...record.checkpoint.answers.flatMap((a) => [
-                  a.question,
-                  a.answer,
-                ]),
-                record.checkpoint.question,
-                record.checkpoint.answer,
-                record.checkpoint.objective,
-                record.checkpoint.action,
-                record.checkpoint.date,
-                record.checkpoint.goal,
-              ]
-                .filter(Boolean)
-                .map((text, i) => (
-                  <p key={i}>{text}</p>
-                ))}
-              <button
-                onClick={() => {
-                  const c = record.checkpoint!;
-                  start(
-                    {
-                      type: "objective",
-                      section: focus.sections.length,
-                      adding: true,
-                    },
-                    "manual",
-                  );
-                  change({
-                    type: "objective-values",
-                    values: {
-                      text: c.objective,
-                      kind: c.kind || "normal",
-                      goals: c.goal.trim() ? [c.goal] : [],
-                      alignment: {
-                        other: !!c.other,
-                        initiatives: c.initiatives
-                          .filter((id) =>
-                            direction?.initiatives.some(
-                              (i) => i.id === id && !i.archived,
-                            ),
-                          )
-                          .map((id) => ({ id })),
-                      },
-                    },
-                  });
-                }}
-              >
-                Copy to a new objective
-              </button>
-            </details>
-          )}
         </>
       ) : (
         <div className="focus-overview">
