@@ -88,7 +88,7 @@ test(
         "objective types reset to normal; editing, cancel and goal removal persist",
         async () => {
           await page
-            .getByRole("button", { name: "Add objective", exact: true })
+            .getByRole("button", { name: "+ Add objective", exact: true })
             .click();
           await expect(
             page.getByRole("radio", { name: "Contribution", exact: true }),
@@ -99,6 +99,7 @@ test(
           await page
             .getByLabel("Objective", { exact: true })
             .fill("Support a new facilitator.");
+          await page.getByRole("checkbox", { name: "Other — none of these apply", exact: true }).check();
           await page
             .getByRole("button", { name: /^Save (changes|objective)$/ })
             .click();
@@ -120,6 +121,7 @@ test(
           await page
             .getByLabel("Objective", { exact: true })
             .fill("Improve my communication.");
+          await page.getByRole("checkbox", { name: "Other — none of these apply", exact: true }).check();
           await page
             .getByRole("button", { name: /^Save (changes|objective)$/ })
             .click();
@@ -129,6 +131,7 @@ test(
           await page
             .getByLabel("Objective", { exact: true })
             .fill("Help new team members.");
+          await page.getByRole("checkbox", { name: "Other — none of these apply", exact: true }).check();
           await page
             .getByRole("button", { name: /^Save (changes|objective)$/ })
             .click();

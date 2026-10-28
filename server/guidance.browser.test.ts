@@ -252,7 +252,7 @@ test(
             })
             .click();
           await page
-            .getByRole("button", { name: "Add objective", exact: true })
+            .getByRole("button", { name: "+ Add objective", exact: true })
             .click();
           const objective =
             "Help engineers diagnose failed releases quickly so service can be restored with confidence.";
@@ -269,6 +269,7 @@ test(
           await page
             .getByRole("radio", { name: "Contribution", exact: true })
             .check();
+          await page.getByRole("checkbox", { name: "Other — none of these apply", exact: true }).check();
           await page.setViewportSize({ width: 844, height: 390 });
           await expect(
             page.getByLabel("Objective", { exact: true }),
