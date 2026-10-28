@@ -494,13 +494,14 @@ test("a note being composed stays bound to the request the lead actually read", 
       .getByLabel("Add a note", { exact: true })
       .fill("About the first draft");
     await page.getByLabel("We have discussed and agreed this focus.").check();
-    await f.request("member", "/api/coach/save", "POST", {
+    const updated = await f.request("member", "/api/coach/save", "POST", {
       id: record.focus.id,
       version: 1,
       draft: { ...draft, title: "New version" },
-      checkpoint,
+      checkpoint: record.checkpoint,
     });
-    await f.request("member", path + "/request", "POST", { version: 2 });
+    assert.equal(updated.status, 200);
+    assert.equal((await f.request("member", path + "/request", "POST", { version: 2 })).status, 200);
     await page.evaluate("window.dispatchEvent(new Event('focus'))");
     await page
       .getByText("Review requested · Draft 2", { exact: true })
