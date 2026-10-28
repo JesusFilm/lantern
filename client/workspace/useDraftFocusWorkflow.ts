@@ -1,4 +1,3 @@
-import type { CoachCheckpoint } from "../../shared/coach.js";
 import { useEffect, useRef, useState } from "react";
 import type {
   DepartmentDirection,
@@ -35,6 +34,7 @@ type PendingEdit = { key: number } & (
       adding?: boolean;
       text: string;
       kind: ObjectiveKind;
+      goals: string[];
       alignment: ObjectiveAlignmentChoice;
       initiatives: InitiativeReadiness;
     }
@@ -55,13 +55,15 @@ type PendingEdit = { key: number } & (
     }
 );
 
-export type AuthoringEdit = Extract<
-  PendingEdit,
-  { type: "objective" | "goal" }
->;
+export type ObjectiveEdit = Extract<PendingEdit, { type: "objective" }>;
 
-type EditChange =
-  | { type: "suggestion"; checkpoint: CoachCheckpoint }
+export type EditChange =
+  | {
+      type: "objective-values";
+      values: Partial<
+        Pick<ObjectiveEdit, "text" | "kind" | "goals" | "alignment">
+      >;
+    }
   | { type: "metadata"; values: Partial<Metadata> }
   | { type: "text"; text: string }
   | { type: "kind"; kind: ObjectiveKind }
@@ -268,7 +270,7 @@ export function useDraftFocusWorkflow() {
     // Every operation, including removal and metadata, captures the same immutable
     // source/version. Reading a different focus never rebases this edit.
     const source =
-      target.type === "create" ? undefined : sourceOverride ?? reading.focus;
+      target.type === "create" ? undefined : (sourceOverride ?? reading.focus);
     if (target.type !== "create" && (!source || source.status !== "draft"))
       return;
     const key = ++editRevision.current;
@@ -294,6 +296,7 @@ export function useDraftFocusWorkflow() {
         source: source!,
         text: section?.objective ?? "",
         kind: section?.kind ?? "normal",
+        goals: [...(section?.goals ?? [])],
         alignment: {
           other: section?.alignment?.other ?? false,
           initiatives:
@@ -320,22 +323,8 @@ export function useDraftFocusWorkflow() {
   function change(intent: EditChange) {
     setEdit((current) => {
       if (!current) return current;
-      if (
-        intent.type === "suggestion" &&
-        (current.type === "goal" || current.type === "objective")
-      ) {
-        const c = intent.checkpoint;
-        if (current.type === "goal") return { ...current, text: c.goal };
-        return {
-          ...current,
-          text: c.objective,
-          kind: c.kind || current.kind,
-          alignment: {
-            other: !!c.other,
-            initiatives: c.initiatives.map((id) => ({ id })),
-          },
-        };
-      }
+      if (intent.type === "objective-values" && current.type === "objective")
+        return { ...current, ...intent.values };
       if (intent.type === "metadata" && current.type === "metadata")
         return { ...current, values: { ...current.values, ...intent.values } };
       if (
@@ -393,17 +382,22 @@ export function useDraftFocusWorkflow() {
           throw new Error(
             "Wait for initiatives to load, or retry loading them before saving.",
           );
+        if (pending.goals.some((goal) => !goal.trim()))
+          throw new Error(
+            "Write or remove the empty SMART goal before saving.",
+          );
         if (pending.adding)
           draft.sections.push({
             kind: pending.kind,
             objective: text,
-            goals: [],
+            goals: pending.goals.map((goal) => goal.trim()),
             alignment: pending.alignment,
           });
         else
           Object.assign(draft.sections[pending.section]!, {
             objective: text,
             kind: pending.kind,
+            goals: pending.goals.map((goal) => goal.trim()),
             alignment: pending.alignment,
           });
       } else if (pending.adding)

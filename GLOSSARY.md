@@ -39,7 +39,7 @@ The historical term for a confirmed position focus. Later review work preserves 
 A member's explicit invitation to discuss one immutable saved version of their focus. A later save does not silently replace that version; the member sends changes for review separately.
 
 **Coaching checkpoint**:
-Private member answers, target and current assistance step saved independently of focus content. Career leads can read the saved focus, but not another member's checkpoint. Manual edits retain it at its original source version; reusing stale answers requires explicit target selection. Confirmation removes it.
+Private answers and writing retained from the earlier coaching experience. The current UI exposes these as Earlier working notes and can copy their content into a new unsaved objective. It creates no new checkpoints. Career leads cannot read another member's notes; manual saves retain them, and confirmation removes them.
 
 **Review note**:
 An authored message attached to a requested version. Notes can be added or soft-deleted by their author, never edited. A note is not confirmation.

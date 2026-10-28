@@ -1,7 +1,7 @@
 # Integrated position-focus assistance
 
 Date: 2026-10-29
-Status: Accepted through the owner's authoring walkthrough and implementation request
+Status: Authoring interaction replaced for the next UX walkthrough by [ADR 0011](0011-objective-authoring-methods.md); checkpoint concurrency and data protection remain in force.
 
 ## Decision
 

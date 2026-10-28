@@ -3,10 +3,10 @@ import type { CoachRecord } from "../../shared/coach.js";
 import type { PositionFocus } from "../../shared/focus.js";
 import type { SessionView } from "../../shared/access.js";
 import type { EditTarget } from "../workspace/useDraftFocusWorkflow.js";
-import { ObjectiveType } from "../workspace/ObjectiveType.js";
-import { InitiativeIdentity } from "../workspace/InitiativeIdentity.js";
+import { objectiveTypes } from "../workspace/ObjectiveType.js";
+import { FocusDocument } from "../workspace/FocusDocument.js";
+import { formatFocusDate } from "../workspace/focusDate.js";
 import { api } from "../workspace/api.js";
-import { CoachingStages } from "./FocusAssistance.js";
 import "./coach.css";
 const base = "/api/coach";
 function Diff({ before, after }: { before: string; after: string }) {
@@ -32,80 +32,6 @@ function Diff({ before, after }: { before: string; after: string }) {
       )}
       {last ? b.slice(b.length - last).join("") : ""}
     </p>
-  );
-}
-function FocusText({
-  focus,
-  onEdit,
-  onCoach,
-}: {
-  focus: PositionFocus;
-  onEdit?: (target: EditTarget, source: PositionFocus) => void;
-  onCoach?: (target: EditTarget, source: PositionFocus) => void;
-}) {
-  return (
-    <section className="cp-document">
-      <p className="cp-muted">
-        {focus.start} – {focus.end}
-      </p>
-      {focus.sections.map((s, i) => (
-        <div key={i}>
-          <h2>Objective {i + 1}</h2>
-          <ObjectiveType kind={s.kind} />
-          <p>{s.objective}</p>
-          {onEdit && (
-            <button
-              className="link"
-              onClick={() => onEdit({ type: "objective", section: i }, focus)}
-            >
-              Edit objective
-            </button>
-          )}
-          {onCoach && (
-            <button
-              className="link"
-              onClick={() => onCoach({ type: "objective", section: i }, focus)}
-            >
-              Coach
-            </button>
-          )}
-          {s.alignment?.other && (
-            <p className="cp-muted">Other — none of these apply</p>
-          )}
-          <div className="cp-chips">
-            {s.alignment?.initiatives.map((a) => (
-              <InitiativeIdentity key={a.id} {...a} chip />
-            ))}
-          </div>
-          {s.goals.map((g, j) => (
-            <div key={j}>
-              <h3>SMART goal {j + 1}</h3>
-              <p>{g}</p>
-              {onEdit && (
-                <button
-                  className="link"
-                  onClick={() =>
-                    onEdit({ type: "goal", section: i, goal: j }, focus)
-                  }
-                >
-                  Edit goal
-                </button>
-              )}
-              {onCoach && (
-                <button
-                  className="link"
-                  onClick={() =>
-                    onCoach({ type: "goal", section: i, goal: j }, focus)
-                  }
-                >
-                  Coach
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      ))}
-    </section>
   );
 }
 export function CoachWorkspace({
@@ -255,7 +181,7 @@ export function CoachWorkspace({
               {n.requestVersion !== request?.document.version && (
                 <details>
                   <summary>Earlier draft · {n.requestVersion}</summary>
-                  <FocusText
+                  <FocusDocument
                     focus={
                       record.requests.find(
                         (r) => r.document.version === n.requestVersion,
@@ -322,6 +248,13 @@ export function CoachWorkspace({
   );
   const old = record?.requests.at(-2)?.document;
   function comparison(before: PositionFocus, after: PositionFocus) {
+    if (
+      before.title === after.title &&
+      before.start === after.start &&
+      before.end === after.end &&
+      JSON.stringify(before.sections) === JSON.stringify(after.sections)
+    )
+      return null;
     return (
       <section className="cp-changes">
         <h2>Changes since previous request</h2>
@@ -333,7 +266,8 @@ export function CoachWorkspace({
         )}
         {(before.start !== after.start || before.end !== after.end) && (
           <p>
-            Focus period: {after.start} – {after.end}
+            Focus period: {formatFocusDate(after.start)} –{" "}
+            {formatFocusDate(after.end)}
           </p>
         )}
         {Array.from(
@@ -349,7 +283,9 @@ export function CoachWorkspace({
                   {!a ? " · Added" : !b ? " · Removed" : ""}
                 </h3>
                 <Diff before={a?.objective || ""} after={b?.objective || ""} />
-                {a?.kind !== b?.kind && <p>Type: {b?.kind || "Removed"}</p>}
+                {a?.kind !== b?.kind && (
+                  <p>Type: {b ? objectiveTypes[b.kind].label : "Removed"}</p>
+                )}
                 {JSON.stringify(a?.alignment) !==
                   JSON.stringify(b?.alignment) && (
                   <p>Initiative selection changed.</p>
@@ -378,7 +314,7 @@ export function CoachWorkspace({
         )}
         <details>
           <summary>Previous request · Draft {before.version}</summary>
-          <FocusText focus={before} />
+          <FocusDocument focus={before} />
         </details>
       </section>
     );
@@ -435,11 +371,11 @@ export function CoachWorkspace({
           {!records.length && <p>No requests waiting.</p>}
         </>
       )}
-      {!lead && view === "request" && <CoachingStages active={3} />}
       {view === "request" && record && (
         <>
-          <h1>Review your whole focus</h1>
-          <FocusText
+          <h1>Review position focus</h1>
+          <p className="review-focus-title">{record.focus.title}</p>
+          <FocusDocument
             focus={record.focus}
             onEdit={
               !lead && !locked && onEdit
@@ -448,7 +384,7 @@ export function CoachWorkspace({
                   }
                 : undefined
             }
-            onCoach={
+            onGuide={
               !lead && !locked && onCoach
                 ? (target, source) => {
                     if (canLeaveNote()) onCoach(target, source);
@@ -513,7 +449,10 @@ export function CoachWorkspace({
       )}
       {view === "review" && record && request && (
         <>
-          <h1>{lead ? record.memberName + "’s focus" : record.focus.title}</h1>
+          <h1>{request.document.title}</h1>
+          {lead && (
+            <p className="muted">{record.memberName}’s position focus</p>
+          )}
           <div className="cp-row cp-between">
             <span className="cp-muted">
               {record.focus.status === "confirmed"
@@ -532,11 +471,11 @@ export function CoachWorkspace({
               {record.focus.version !== request.document.version && !locked && (
                 <details className="cp-warning">
                   <summary>Newer saved changes have not been sent</summary>
-                  <FocusText focus={record.focus} />
+                  <FocusDocument focus={record.focus} />
                 </details>
               )}
               {old && comparison(old, request.document)}
-              <FocusText focus={request.document} />
+              <FocusDocument focus={request.document} />
               {!locked && (
                 <div className="cp-confirm">
                   <label>
@@ -575,7 +514,7 @@ export function CoachWorkspace({
               )}
             </>
           )}
-          {!lead && <FocusText focus={request.document} />}
+          {!lead && <FocusDocument focus={request.document} />}
           {notesPanel}
         </>
       )}
