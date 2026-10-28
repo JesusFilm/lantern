@@ -540,6 +540,15 @@ export function CoachWorkspace({
     setBusy("Saving…");
     setError("");
     try {
+      const sections = mergedSections();
+      // A cleared goal has been removed. Keep the empty editor at the append
+      // position so later saves cannot remove or replace the sibling that moved.
+      const checkpoint = {
+        ...c,
+        goalIndex: c.goal.trim()
+          ? c.goalIndex
+          : (sections[c.sectionIndex ?? 0]?.goals.length ?? 0),
+      };
       const r = await api<CoachRecord>(base + "/save", "POST", {
         id: selected || undefined,
         version,
@@ -547,15 +556,16 @@ export function CoachWorkspace({
           title: c.title.trim(),
           start: c.start,
           end: c.end,
-          sections: mergedSections(),
+          sections,
         },
-        checkpoint: c,
+        checkpoint,
       });
       put(r);
       source.current = r.focus;
       setSelected(r.focus.id);
       setVersion(r.focus.version);
-      setSavedPrint(fingerprint(c));
+      setC(checkpoint);
+      setSavedPrint(fingerprint(checkpoint));
     } catch (e) {
       setError((e as Error).message);
     } finally {

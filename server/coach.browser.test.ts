@@ -246,6 +246,63 @@ test("editing one coached goal preserves every other objective and goal after re
   }
 });
 
+test("clearing a coached goal preserves its siblings on later saves and after reopening", async () => {
+  const { expect } = await import("@playwright/test");
+  const f = await coachingFixture(),
+    vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+  f.app.use(vite.middlewares);
+  const browser = await chromium.launch();
+  try {
+    const saved = await (
+      await f.request("member", "/api/focuses", "POST", {
+        title: "Keep sibling goals",
+        start: "2026-10-01",
+        end: "2027-03-31",
+        sections: [{
+          kind: "normal",
+          objective: "Help engineers investigate failures",
+          goals: ["Remove this goal", "Keep the second goal", "Keep the third goal"],
+        }],
+      })
+    ).json();
+    const context = await browser.newContext();
+    await context.addCookies([
+      { name: "lantern-session", value: "member", url: f.origin },
+    ]);
+    const page = await context.newPage();
+    await page.goto(f.origin + "/?page=coach");
+    await page.getByRole("button", { name: "Continue draft", exact: true }).click();
+    await page.getByLabel("Goal", { exact: true }).fill("");
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
+    await page.getByRole("button", { name: "Saved", exact: true }).waitFor();
+    const readGoals = async () =>
+      (await (await f.request("member", "/api/focuses/" + saved.id)).json()).sections[0].goals;
+    assert.deepEqual(await readGoals(), ["Keep the second goal", "Keep the third goal"]);
+
+    await page.getByLabel("Title", { exact: true }).fill("Only change the title");
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
+    await page.getByRole("button", { name: "Saved", exact: true }).waitFor();
+    assert.deepEqual(await readGoals(), ["Keep the second goal", "Keep the third goal"]);
+
+    await page.reload();
+    await page.getByRole("button", { name: "Continue draft", exact: true }).click();
+    await expect(page.getByLabel("Goal", { exact: true })).toHaveValue("");
+    await page.getByLabel("Goal", { exact: true }).fill("A new goal after reopening");
+    await page.getByRole("button", { name: "Save draft", exact: true }).click();
+    await page.getByRole("button", { name: "Saved", exact: true }).waitFor();
+    assert.deepEqual(await readGoals(), [
+      "Keep the second goal", "Keep the third goal", "A new goal after reopening",
+    ]);
+  } finally {
+    await browser.close();
+    await vite.close();
+    await f.close();
+  }
+});
+
 test("loading overlay retains input; cancellation and both-provider failure never discard it", async () => {
   const pending: import("node:http").ServerResponse[] = [];
   let failing = false;
