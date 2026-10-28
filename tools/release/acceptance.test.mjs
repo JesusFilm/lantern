@@ -12,7 +12,7 @@ const env = {
 const readiness = { target: 'stage', sha, deployment: 'deployment-a', schemaVersion: 8, runId: '123', readiness: 'passed' };
 const checks = ['authenticated-identities', 'department-direction', 'mission-image',
   'focus-authoring-persistence', 'authorization-isolation', 'stale-and-forged-writes',
-  'lead-confirmation-lock', 'account-and-guide', 'browser-errors', 'session-revocation'];
+  'review-requests-and-notes','lead-confirmation-lock', 'coaching-disabled-manual', 'account-and-guide', 'browser-errors', 'session-revocation'];
 const health = (patch = {}) => new Response('{"status":"ok","database":"ok"}', {
   status: 200, headers: {
     'x-lantern-revision': sha, 'x-lantern-deployment': 'deployment-a', 'x-lantern-schema': '8', ...patch,
@@ -29,7 +29,7 @@ test('acceptance records only bounded evidence after the deployed journey and cl
   assert.deepEqual(evidence, {
     sha, target: 'stage', deployment: 'deployment-a', schemaVersion: 8,
     runId: '123', runAttempt: 2, readiness: 'passed',
-    acceptance: 'passed', cleanup: 'passed', acceptanceSuiteVersion: 1,
+    acceptance: 'passed', cleanup: 'passed', acceptanceSuiteVersion: 3, coaching: 'disabled',
     checks,
   });
 });
@@ -71,6 +71,8 @@ test('an incomplete journey cannot claim the current acceptance suite passed', a
 test('release diagnostics retain only known safe journey or fixture checkpoints', async () => {
   for (const [failure, expected] of [
     [new Error('Staging acceptance failed [mission-image].'), 'mission-image'],
+    [new Error('Staging acceptance failed [coaching-enabled-journey].'), 'coaching-enabled-journey'],
+    [new Error('Staging acceptance failed [coaching-disabled-manual].'), 'coaching-disabled-manual'],
     [Object.assign(new Error('private database details'), { code: 'ACCEPTANCE_FIXTURE_UNSAFE' }), 'fixture-scope'],
     [new Error('Staging acceptance failed [private-secret].'), 'journey-and-cleanup'],
   ]) {
@@ -117,4 +119,11 @@ test('the executable records safe not-reached diagnostics when configuration fai
     await assert.rejects(readFile(join(directory, 'stage-acceptance.json')), { code: 'ENOENT' });
     assert.doesNotMatch(result.stdout + result.stderr, /private-password/);
   } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test('acceptance evidence distinguishes enabled coaching from the disabled manual path', async () => {
+  const enabled = checks.map(check => check === 'coaching-disabled-manual' ? 'coaching-enabled-journey' : check);
+  const evidence = await acceptanceEvidence(env, readiness, async () => enabled, { fetch: async () => health() });
+  assert.equal(evidence.coaching, 'enabled');
+  assert.deepEqual(evidence.checks, enabled);
 });

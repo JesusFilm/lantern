@@ -64,3 +64,18 @@ test('standalone configuration check never uploads and fails closed on provider 
 });
 
 test('provider null source is accepted as no independent integration',()=>{const config=structuredClone(settings);config.data.serviceInstance.source=null;const result=run(config,variables,{},'configuration.mjs');assert.equal(result.status,0,result.stderr);});
+
+test('enabled coaching cannot deploy without both providers configured',()=>{
+ for(const patch of [
+  {COACH_ENABLED:'1'},
+  {COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary'},
+  {COACH_ENABLED:'1',OPENROUTER_API_KEY:'do-not-print-fallback'},
+  {COACH_ENABLED:'sometimes'},
+  {COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback'},
+  {COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:''},
+  {COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:'http://unsafe.example'},
+ ]) {
+  const result=run(settings,{...variables,...patch});assert.equal(result.status,1);assert.ok(!result.calls.some(c=>c[0]==='up'));assert.doesNotMatch(result.stdout+result.stderr,/do-not-print/);
+ }
+ const result=run(settings,{...variables,COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:'https://gateway.example.com'});assert.equal(result.status,0,result.stderr);
+});

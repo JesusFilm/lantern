@@ -159,3 +159,7 @@ are rejected. This script is manual; it is not run on deployment.
 - `docs/`: product scope, priorities, domain language and architecture decisions.
 
 [AGENTS.md](AGENTS.md) defines engineering principles. The optional [ticket-board tool](tools/ticket-board/README.md) works with an empty board; it does not define project direction.
+
+### Goal coaching
+
+Configure the Qwen primary and OpenRouter fallback using [coaching operations](docs/operations/coaching.md). `COACH_ENABLED=1` requires both dedicated server-side credentials. With inference disabled, manual editing and review requests remain available.

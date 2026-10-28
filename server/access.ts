@@ -1,3 +1,5 @@
+import type {CoachProvider} from './coach-provider.js';
+import {coachRoutes} from './coach-http.js';
 import { registerSession } from './accounts.js';
 import { isAdmitted } from './admission.js';
 import { createHash, randomBytes } from 'node:crypto';
@@ -16,7 +18,7 @@ const random = () => randomBytes(32).toString('base64url');
 function cookie(request: Request, name: string) {
   return request.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1);
 }
-export interface AccessConfig { origin: string; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean }
+export interface AccessConfig { origin: string; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean; coach?: CoachProvider }
 export function accessRoutes(db: Pool, config: AccessConfig) {
   const router = Router();
   const secure = config.origin.startsWith('https:');
@@ -79,8 +81,9 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
   });
   router.get('/api/session', async (req, res) => {
     const user = await currentUser(req);
-    res.json({ user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !config.hostingOnly && !!config.provider, localAccess: !!config.localUserId });
+    res.json({ coachAvailable: !!config.coach, user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !config.hostingOnly && !!config.provider, localAccess: !!config.localUserId });
   });
+  router.use(coachRoutes(db, requireUser, config.coach));
   router.use(focusRoutes(db, requireUser));
   router.use(directionRoutes(db, requireUser));
   router.patch('/api/account', async (req, res) => {

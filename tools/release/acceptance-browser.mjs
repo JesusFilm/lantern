@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { runCoachingJourney } from './acceptance-coaching.mjs';
 import { chromium as defaultChromium, expect } from '@playwright/test';
 
 export const ACCEPTANCE_CHECKS = Object.freeze([
@@ -8,11 +9,16 @@ export const ACCEPTANCE_CHECKS = Object.freeze([
   'focus-authoring-persistence',
   'authorization-isolation',
   'stale-and-forged-writes',
+  'review-requests-and-notes',
   'lead-confirmation-lock',
+  'coaching-disabled-manual',
   'account-and-guide',
   'browser-errors',
   'session-revocation',
 ]);
+
+export const ENABLED_ACCEPTANCE_CHECKS = Object.freeze(ACCEPTANCE_CHECKS.map(check =>
+  check === 'coaching-disabled-manual' ? 'coaching-enabled-journey' : check));
 
 // The caller provisions disposable synthetic identities and removes their data.
 // This journey uses ordinary sessions and public browser/HTTP interfaces only.
@@ -179,6 +185,32 @@ export async function runAcceptanceBrowser({ origin, sessions, runId }, { chromi
     assert.deepEqual(await json(await read(member, path)), saved);
     checks.push(checkpoint);
 
+    checkpoint = 'review-requests-and-notes';
+    await memberPage.goto(origin+'/?page=coach');
+    await memberPage.getByRole('button',{name:'Continue draft',exact:true}).click();
+    await memberPage.getByRole('button',{name:'Ask career lead to review',exact:true}).click();
+    await memberPage.getByLabel('Note to career lead · optional').fill('Synthetic request note');
+    await memberPage.getByRole('button',{name:'Send request',exact:true}).click();
+    await expect(memberPage.getByText('Synthetic request note',{exact:true})).toBeVisible();
+    await leadPage.goto(origin+'/?page=reviews');
+    await leadPage.getByRole('button',{name:'Review focus',exact:true}).click();
+    await leadPage.getByRole('button',{name:'+ Add note',exact:true}).click();
+    await leadPage.getByLabel('Add a note',{exact:true}).fill('Synthetic lead reply');
+    await leadPage.getByRole('button',{name:'Add note',exact:true}).click();
+    await expect(leadPage.getByText('Synthetic lead reply',{exact:true})).toBeVisible();
+    const reviewPath='/api/coach/focuses/'+focusId;
+    const review=await json(await read(member,reviewPath));
+    assert.equal(review.requests[0].document.version,saved.version);
+    assert.equal(review.notes.length,2);
+    assert.equal((await read(contexts.get('peer'),reviewPath)).status(),404);
+    assert.equal((await read(contexts.get('outsider'),reviewPath)).status(),404);
+    await memberPage.goto(origin+'/?page=coach');
+    await memberPage.getByRole('button',{name:'Read reply',exact:true}).click();
+    await expect(memberPage.getByText('Synthetic lead reply',{exact:true})).toBeVisible();
+    await expect.poll(async()=> (await json(await read(member,reviewPath))).readIds.length).toBe(2);
+    await memberPage.goto(origin+'/?focus='+focusId);
+    checks.push(checkpoint);
+
     checkpoint = 'lead-confirmation-lock';
     await leadPage.goto(`${origin}/?page=department&member=${identities.member.user.id}&memberFocus=${focusId}`);
     await expect(leadPage.getByRole('heading', { name: title, exact: true })).toBeVisible();
@@ -197,6 +229,10 @@ export async function runAcceptanceBrowser({ origin, sessions, runId }, { chromi
     assert.equal(confirmed.status, 'confirmed');
     assert.equal(confirmed.confirmedBy.id, identities.lead.user.id);
     assert.equal((await write(member, 'put', path, draft(confirmed))).status(), 409);
+    checks.push(checkpoint);
+
+    checkpoint = identities.peer.coachAvailable ? 'coaching-enabled-journey' : 'coaching-disabled-manual';
+    await runCoachingJourney({ context: contexts.get('peer'), origin, runId, enabled: identities.peer.coachAvailable });
     checks.push(checkpoint);
 
     checkpoint = 'account-and-guide';

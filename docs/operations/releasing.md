@@ -37,7 +37,7 @@ Automatic admission blocks differing advertised schemas. A successful manual sch
 | Where | Evidence to inspect |
 | --- | --- |
 | Staging readiness | `stage-readiness-<sha>-<run-id>-<attempt>` contains `release-evidence.json`, preserved before acceptance. |
-| Staging acceptance | `stage-acceptance-<sha>-<run-id>-<attempt>` contains matching SHA/deployment/schema/run/attempt, ten checkpoint names and `acceptance: passed`, `cleanup: passed`. |
+| Staging acceptance | `stage-acceptance-<sha>-<run-id>-<attempt>` contains matching SHA/deployment/schema/run/attempt, twelve checkpoint names, the enabled/disabled coaching mode and `acceptance: passed`, `cleanup: passed`. |
 | Failed staging run | Actions summary separates journey checkpoint/outcome and cleanup outcome, including unknown/not reached; no passing artifact is manufactured. |
 | Production | `production-evidence-<sha>` binds readiness to the deployment; automatic evidence also records source staging run/attempt and `releaseMode`. |
 
@@ -46,3 +46,5 @@ For staging failure, inspect the failed step and safe checkpoint, distinguish pr
 A production smoke failure happens **after deployment**; a migration may already have committed. Inspect before retrying, assess the serving app/schema, and choose compatible fix-forward or manual recovery. There is no automatic rollback or persistent failure stop. To stop further releases, set repository `AUTO_PRODUCTION_ENABLED=false` and separately cancel already admitted/queued production runs. Keep staging acceptance enabled for evidence. Engineers own recovery and their built-in GitHub Actions notification preferences.
 
 For auth/OAuth/admission-policy changes, disable automatic promotion before the merge and cancel pending admissions. Complete real Google sign-in on staging before releasing that SHA. Restore automatic promotion with release authorization; rerun the current-main push CI run if a fresh automatic event is needed (CI has no manual-dispatch trigger). First activation or a changed gate needs the [activation procedure](activating-delivery.md).
+
+Schema 9 adds coaching checkpoints and review records. Follow [coaching provider setup and rollout](coaching.md) before enabling inference. The additive database guard prevents an older application instance from confirming an outdated request during replacement. Keep the migration on rollback; disabling model calls does not remove saved review data.

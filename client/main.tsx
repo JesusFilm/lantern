@@ -1,3 +1,4 @@
+import {CoachWorkspace} from "./coach/CoachWorkspace.js";
 import { Fragment, StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { SessionView } from "../shared/access.js";
@@ -9,11 +10,12 @@ import { Department } from "./workspace/Department.js";
 import "./workspace/style.css";
 function currentPage() {
   const page = new URLSearchParams(location.search).get("page");
-  return page === "department" || page === "guide" || page === "account"
+  return page === "department" || page === "guide" || page === "account" || page === "coach" || page === "reviews"
     ? page
     : "focuses";
 }
 function navigatePage(page: string) {
+  if(!window.dispatchEvent(new Event("lantern-coach-leave", {cancelable:true})))return;
   const url = new URL(location.href);
   url.searchParams.delete("member");
   url.searchParams.delete("memberFocus");
@@ -71,7 +73,7 @@ function App() {
         <nav aria-label="Main navigation">
           {[
             ...(session?.user
-              ? [["focuses", "Position focuses"], ["guide", "Guide"]]
+              ? [["focuses", "Position focuses"], ...(session.department ? [["coach", "Goal coach"]] : []), ...(session.department?.role === "career-lead" ? [["reviews", "Review requests"]] : []), ["guide", "Guide"]]
               : []),
             ["account", "Account"],
             ...(session?.department?.role === "career-lead" &&
@@ -140,7 +142,9 @@ function App() {
                   Sign out
                 </button>
               )}
-              {page === "account" ? (
+              {page === "coach" || page === "reviews" ? (
+                <CoachWorkspace key={page} session={session} lead={page === "reviews"}/>
+              ) : page === "account" ? (
                 <Account
                   user={session.user}
                   onChange={(user) =>

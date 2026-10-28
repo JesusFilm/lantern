@@ -6,7 +6,7 @@ const journeyCheckpoints = [
   'configuration', 'authenticated-identities', 'department-direction', 'mission-image',
   'focus-authoring-persistence', 'authorization-isolation', 'stale-and-forged-writes',
   'lead-confirmation-lock', 'account-and-guide', 'browser-errors', 'session-revocation',
-  'browser-close',
+  'browser-close', 'review-requests-and-notes', 'coaching-disabled-manual', 'coaching-enabled-journey',
 ];
 
 export function safeJourneyCheckpoint(error) {

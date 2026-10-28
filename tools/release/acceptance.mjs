@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { validateHostedMigrationTarget } from './settings.mjs';
-import { runAcceptanceBrowser, ACCEPTANCE_CHECKS } from './acceptance-browser.mjs';
+import { runAcceptanceBrowser, ACCEPTANCE_CHECKS, ENABLED_ACCEPTANCE_CHECKS } from './acceptance-browser.mjs';
 import { acceptanceDiagnostics, persistAcceptanceDiagnostics } from './acceptance-diagnostics.mjs';
 
 class AcceptanceFailure extends Error {
@@ -54,7 +54,8 @@ export async function acceptanceEvidence(env, readiness, execute, { fetch = glob
     const checks = await execute(update => diagnostics.report(Object.fromEntries(
       ['journey', 'journeyCheckpoint', 'cleanup'].filter(key => Object.hasOwn(update, key)).map(key => [key, update[key]]),
     )));
-    assert.deepEqual(checks, ACCEPTANCE_CHECKS);
+    const coaching = checks.includes('coaching-enabled-journey') ? 'enabled' : 'disabled';
+    assert.deepEqual(checks, coaching === 'enabled' ? ENABLED_ACCEPTANCE_CHECKS : ACCEPTANCE_CHECKS);
     diagnostics.report({ journey: 'passed', journeyCheckpoint: 'complete', cleanup: 'passed' });
     checkpoint = 'stage-health-after';
     diagnostics.report({ checkpoint });
@@ -63,11 +64,11 @@ export async function acceptanceEvidence(env, readiness, execute, { fetch = glob
       sha: env.RELEASE_SHA, target: 'stage', deployment: env.EXPECTED_DEPLOYMENT_ID,
       schemaVersion: Number(env.EXPECTED_SCHEMA_VERSION), runId: env.GITHUB_RUN_ID,
       runAttempt: Number(env.GITHUB_RUN_ATTEMPT), readiness: 'passed',
-      acceptance: 'passed', cleanup: 'passed', acceptanceSuiteVersion: 1, checks,
+      acceptance: 'passed', cleanup: 'passed', acceptanceSuiteVersion: 3, coaching, checks,
     };
   } catch (error) {
     if (checkpoint === 'journey-and-cleanup' && error instanceof Error) {
-      const journey = [...ACCEPTANCE_CHECKS, 'browser-close'].find(code =>
+      const journey = [...ACCEPTANCE_CHECKS, ...ENABLED_ACCEPTANCE_CHECKS, 'browser-close'].find(code =>
         error.message === `Staging acceptance failed [${code}].`);
       const fixture = new Map([
         ['ACCEPTANCE_FIXTURE_UNSAFE', 'fixture-scope'],

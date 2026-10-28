@@ -1,3 +1,4 @@
+import {createCoachProvider} from './coach-provider.js';
 import { localAccount } from './local-access.js';
 import { seedLocalInitiatives } from './local-initiatives.js';
 import { createServer } from 'node:http';
@@ -11,7 +12,7 @@ import { assertRuntimePrivileges } from './database-privileges.js';
 
 import { resolveRuntime } from './runtime.js';
 import { assertSchemaReady } from './schema.js';
-const { environment, connectionString, port, host, localAccess, origin, clientId, clientSecret, hosted, hostingOnly } = resolveRuntime();
+const { coach, environment, connectionString, port, host, localAccess, origin, clientId, clientSecret, hosted, hostingOnly } = resolveRuntime();
 const database = createDatabase(connectionString);
 try {
   await assertSchemaReady(database);
@@ -28,7 +29,7 @@ try {
 catch (error) { await database.end(); throw error; }
 let revision: string | undefined;
 try { revision = JSON.parse(readFileSync('release.json', 'utf8')).sha; } catch { /* Local builds need no release stamp. */ }
-const app = createApp(database, { origin, hostingOnly, localUserId, provider: clientId && clientSecret ? googleProvider(clientId, clientSecret, origin) : undefined }, hosted ? { revision, deployment: process.env.RAILWAY_DEPLOYMENT_ID } : undefined);
+const app = createApp(database, { coach:coach ? createCoachProvider(coach):undefined, origin, hostingOnly, localUserId, provider: clientId && clientSecret ? googleProvider(clientId, clientSecret, origin) : undefined }, hosted ? { revision, deployment: process.env.RAILWAY_DEPLOYMENT_ID } : undefined);
 const server = createServer(app);
 const production = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 let closeFrontend: (() => Promise<void>) | undefined;

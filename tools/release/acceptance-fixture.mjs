@@ -68,6 +68,13 @@ async function cleanup(client,runId) {
    const member=owned.get(row.user_id),confirmer=owned.get(row.confirmed_by);
    return member && row.department_id===member.departmentId && (row.confirmed_by===null || confirmer?.role==='career-lead' && confirmer.departmentId===row.department_id);
   }));
+  const focusIds=focuses.map(row=>row.id);
+  const notes=(await client.query(`SELECT n.author_id,r.focus_id FROM focus_review_notes n JOIN focus_review_requests r ON r.id=n.request_id
+    WHERE n.author_id=ANY($1::uuid[]) OR r.focus_id=ANY($2::uuid[]) FOR UPDATE OF n,r`,[users,focusIds])).rows;
+  requireOwned(notes.every(row=>owned.has(row.author_id)&&focusIds.includes(row.focus_id)));
+  const reads=(await client.query(`SELECT x.user_id,r.focus_id FROM focus_note_reads x JOIN focus_review_notes n ON n.id=x.note_id JOIN focus_review_requests r ON r.id=n.request_id
+    WHERE x.user_id=ANY($1::uuid[]) OR r.focus_id=ANY($2::uuid[]) FOR UPDATE OF x`,[users,focusIds])).rows;
+  requireOwned(reads.every(row=>owned.has(row.user_id)&&focusIds.includes(row.focus_id)));
   await client.query('DELETE FROM position_focuses WHERE id=ANY($1::uuid[])',[focuses.map(row=>row.id)]);
   await client.query('DELETE FROM department_direction WHERE department_id=ANY($1::uuid[])',[departments]);
   await client.query('DELETE FROM sessions WHERE user_id=ANY($1::uuid[])',[users]);

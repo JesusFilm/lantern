@@ -4,7 +4,7 @@ export function stageGate({ event, ref, sha, checkedSha, checks }) {
 export function promotionGate(sha, evidence, {requireAcceptance = false, runId, runAttempt} = {}) {
  if (!/^[a-f0-9]{40}$/.test(sha) || evidence.sha !== sha || evidence.readiness !== 'passed' || evidence.target !== 'stage' || !evidence.deployment || !evidence.runId || !Number.isInteger(evidence.schemaVersion)) throw new Error('Passing stage readiness for the exact SHA is required.');
  if (requireAcceptance && (
-  evidence.acceptance !== 'passed' || evidence.cleanup !== 'passed' || evidence.acceptanceSuiteVersion !== 1
+  evidence.acceptance !== 'passed' || evidence.cleanup !== 'passed' || evidence.acceptanceSuiteVersion !== 3
   || String(evidence.runId) !== String(runId) || evidence.runAttempt !== Number(runAttempt)
   || !Number.isSafeInteger(evidence.runAttempt) || evidence.runAttempt < 1
  )) throw new Error('Passing authenticated stage acceptance and cleanup from the exact run attempt are required.');
