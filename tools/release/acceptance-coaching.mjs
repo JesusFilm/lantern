@@ -45,10 +45,11 @@ export async function runCoachingJourney({ context, origin, runId, enabled }) {
     await page.getByRole('button',{name:'Add objective',exact:true}).click();
     await page.getByLabel('Objective',{exact:true}).fill('Help engineers diagnose synthetic build failures.');
   }
+  await expect(page.getByRole('checkbox', {name:'Other — none of these apply', exact:true})).toBeVisible();
   const objective=await page.getByLabel('Objective',{exact:true}).inputValue();
   await page.getByRole('button',{name:'Save changes',exact:true}).click();
   await expect(page.getByRole('dialog')).toBeHidden();
-  await page.getByRole('button',{name:'Add SMART goal',exact:true}).click();
+  await page.getByRole('button',{name:'+ Add SMART goal',exact:true}).click();
   if(enabled){
     await page.getByRole('button',{name:'Help me write this',exact:true}).click();
     await modelTurn(page.getByRole('button',{name:'Suggest actions',exact:true}));

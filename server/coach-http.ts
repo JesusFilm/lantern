@@ -97,8 +97,7 @@ export function coachRoutes(
           : ["version", "checkpointRevision"],
       );
       if (
-        !Number.isSafeInteger(req.body.checkpointRevision) ||
-        req.body.checkpointRevision < 0
+        req.body.checkpointRevision !== 0 && (typeof req.body.checkpointRevision !== "string" || !/^[0-9a-f-]{36}$/.test(req.body.checkpointRevision))
       )
         throw new AccessError(400, "Supply the saved coaching revision.");
       res.json(

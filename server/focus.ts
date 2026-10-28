@@ -387,15 +387,29 @@ async function saveCheckpoint(
   focus: PositionFocus,
   checkpoint?: CoachCheckpoint,
 ) {
-  if (checkpoint)
+  if (checkpoint) {
+    // The caller holds the focus write lock. A legacy checkpoint without a
+    // revision can be replaced once; token-bearing progress requires its token.
+    const previous = (
+      await client.query(
+        "SELECT document FROM coach_checkpoints WHERE focus_id=$1",
+        [focus.id],
+      )
+    ).rows[0]?.document as CoachCheckpoint | undefined;
+    if ((previous?.revision ?? 0) !== (checkpoint.revision ?? 0))
+      throw new AccessError(
+        409,
+        "Coaching progress changed in another window. Reopen the saved progress before replacing it.",
+      );
     await client.query(
       `INSERT INTO coach_checkpoints(focus_id,document) VALUES($1,$2)
     ON CONFLICT(focus_id) DO UPDATE SET document=excluded.document`,
       [
         focus.id,
-        JSON.stringify({ ...checkpoint, sourceVersion: focus.version }),
+        JSON.stringify({ ...checkpoint, sourceVersion: focus.version, revision: randomUUID() }),
       ],
     );
+  }
   // Manual edits retain private progress at its original sourceVersion.
   // Resumption must reconcile it explicitly; confirmation still removes it.
 }

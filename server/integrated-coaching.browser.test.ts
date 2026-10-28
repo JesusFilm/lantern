@@ -45,6 +45,9 @@ test("member can change objective type without changing content; type is visible
     ]);
     const page = await context.newPage();
     await page.goto(f.origin + "/?focus=" + saved.id);
+    const goalAction = page.locator(".read-goal").first().getByRole("button", { name: "Edit", exact: true });
+    await expect(goalAction).toBeVisible();
+    assert.ok((await goalAction.boundingBox())!.height < 30, "Goal actions stay on one line on desktop");
     await page
       .getByRole("button", { name: "Edit objective", exact: true })
       .first()

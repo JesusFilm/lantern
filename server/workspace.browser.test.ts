@@ -92,7 +92,7 @@ test(
             page.getByRole("radio", { name: "Contribution", exact: true }),
           ).toBeChecked();
           await page
-            .getByRole("radio", { name: "Leadership (optional)", exact: true })
+            .getByRole("radio", { name: "Leadership", exact: true })
             .check();
           await page
             .getByLabel("Objective", { exact: true })
@@ -109,7 +109,7 @@ test(
           ).toBeChecked();
           await page
             .getByRole("radio", {
-              name: "Personal development (optional)",
+              name: "Personal development",
               exact: true,
             })
             .check();

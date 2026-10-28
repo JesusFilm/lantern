@@ -264,10 +264,11 @@ export function useDraftFocusWorkflow() {
     }
   }
 
-  function begin(target: EditTarget) {
+  function begin(target: EditTarget, sourceOverride?: PositionFocus) {
     // Every operation, including removal and metadata, captures the same immutable
     // source/version. Reading a different focus never rebases this edit.
-    const source = target.type === "create" ? undefined : reading.focus;
+    const source =
+      target.type === "create" ? undefined : sourceOverride ?? reading.focus;
     if (target.type !== "create" && (!source || source.status !== "draft"))
       return;
     const key = ++editRevision.current;

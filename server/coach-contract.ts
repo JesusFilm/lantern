@@ -103,12 +103,13 @@ export function validateCheckpoint(value: unknown): CoachCheckpoint {
     )
   )
     return fail();
-  for (const key of ["sectionIndex", "goalIndex", "sourceVersion", "revision"])
+  for (const key of ["sectionIndex", "goalIndex", "sourceVersion"])
     if (
       value[key] !== undefined &&
       (!Number.isSafeInteger(value[key]) || Number(value[key]) < 0)
     )
       return fail();
+  if (value.revision !== undefined && (typeof value.revision !== "string" || !/^[0-9a-f-]{36}$/.test(value.revision))) return fail();
   return value as unknown as CoachCheckpoint;
 }
 export function validateSuggestion(

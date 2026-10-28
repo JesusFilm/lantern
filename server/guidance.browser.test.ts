@@ -103,10 +103,10 @@ test("first-focus guidance through the member workspace", { timeout: 90000 }, as
       await expect(page.getByRole("heading", { name: "Describe a useful change." })).toBeVisible();
       await page.getByRole("button", { name: "Hide writing help", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Describe a useful change." })).not.toBeVisible();
-      await page.getByRole("radio", { name: "Personal development (optional)", exact: true }).check();
+      await page.getByRole("radio", { name: "Personal development", exact: true }).check();
       await page.getByRole("button", { name: "Show writing help", exact: true }).click();
       await expect(page.getByRole("heading", { name: "Build a useful capability." })).toBeVisible();
-      await page.getByRole("radio", { name: "Leadership (optional)", exact: true }).check();
+      await page.getByRole("radio", { name: "Leadership", exact: true }).check();
       await expect(page.getByRole("heading", { name: "Help others succeed." })).toBeVisible();
       await page.getByRole("radio", { name: "Contribution", exact: true }).check();
       await page.setViewportSize({ width: 844, height: 390 });

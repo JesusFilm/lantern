@@ -6,7 +6,7 @@ export interface CoachCheckpoint {
   recommendedKind?: ObjectiveKind;
   adding?: boolean;
   siblings?: string[];
-  revision?: number;
+  revision?: string;
   step: number;
   sectionIndex?: number;
   goalIndex?: number;

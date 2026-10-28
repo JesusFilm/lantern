@@ -40,8 +40,8 @@ function FocusText({
   onCoach,
 }: {
   focus: PositionFocus;
-  onEdit?: (target: EditTarget) => void;
-  onCoach?: (target: EditTarget) => void;
+  onEdit?: (target: EditTarget, source: PositionFocus) => void;
+  onCoach?: (target: EditTarget, source: PositionFocus) => void;
 }) {
   return (
     <section className="cp-document">
@@ -56,7 +56,7 @@ function FocusText({
           {onEdit && (
             <button
               className="link"
-              onClick={() => onEdit({ type: "objective", section: i })}
+              onClick={() => onEdit({ type: "objective", section: i }, focus)}
             >
               Edit objective
             </button>
@@ -64,7 +64,7 @@ function FocusText({
           {onCoach && (
             <button
               className="link"
-              onClick={() => onCoach({ type: "objective", section: i })}
+              onClick={() => onCoach({ type: "objective", section: i }, focus)}
             >
               Coach
             </button>
@@ -84,7 +84,9 @@ function FocusText({
               {onEdit && (
                 <button
                   className="link"
-                  onClick={() => onEdit({ type: "goal", section: i, goal: j })}
+                  onClick={() =>
+                    onEdit({ type: "goal", section: i, goal: j }, focus)
+                  }
                 >
                   Edit goal
                 </button>
@@ -92,7 +94,9 @@ function FocusText({
               {onCoach && (
                 <button
                   className="link"
-                  onClick={() => onCoach({ type: "goal", section: i, goal: j })}
+                  onClick={() =>
+                    onCoach({ type: "goal", section: i, goal: j }, focus)
+                  }
                 >
                   Coach
                 </button>
@@ -116,8 +120,8 @@ export function CoachWorkspace({
   lead?: boolean;
   focusId?: string;
   onBack?: () => void;
-  onEdit?: (target: EditTarget) => void;
-  onCoach?: (target: EditTarget) => void;
+  onEdit?: (target: EditTarget, source: PositionFocus) => void;
+  onCoach?: (target: EditTarget, source: PositionFocus) => void;
 }) {
   const actor = session.user!.id;
   const [records, setRecords] = useState<CoachRecord[]>([]),
@@ -184,7 +188,14 @@ export function CoachWorkspace({
       window.removeEventListener("beforeunload", unload);
     };
   }, [note]);
+  function canLeaveNote() {
+    return !note.trim() || window.confirm("Discard this unsaved note?");
+  }
+  function back() {
+    if (canLeaveNote()) onBack?.();
+  }
   async function review(r: CoachRecord) {
+    if (!canLeaveNote()) return;
     setSelected(r.focus.id);
     setView("review");
     setCompose(false);
@@ -378,8 +389,7 @@ export function CoachWorkspace({
         <button
           className="link"
           onClick={() => {
-            if (note.trim() && !window.confirm("Discard this unsaved note?"))
-              return;
+            if (!canLeaveNote()) return;
             setNote("");
             setView("home");
             void refresh();
@@ -388,14 +398,7 @@ export function CoachWorkspace({
           Review requests
         </button>
       ) : (
-        <button
-          className="link"
-          onClick={() => {
-            if (note.trim() && !window.confirm("Discard this unsaved note?"))
-              return;
-            onBack?.();
-          }}
-        >
+        <button className="link" onClick={back}>
           Back to authoring
         </button>
       )}
@@ -438,8 +441,20 @@ export function CoachWorkspace({
           <h1>Review your whole focus</h1>
           <FocusText
             focus={record.focus}
-            onEdit={!lead && !locked ? onEdit : undefined}
-            onCoach={!lead && !locked ? onCoach : undefined}
+            onEdit={
+              !lead && !locked && onEdit
+                ? (target, source) => {
+                    if (canLeaveNote()) onEdit(target, source);
+                  }
+                : undefined
+            }
+            onCoach={
+              !lead && !locked && onCoach
+                ? (target, source) => {
+                    if (canLeaveNote()) onCoach(target, source);
+                  }
+                : undefined
+            }
           />
           {request && comparison(request.document, record.focus)}
           {!record.focus.sections.some(
@@ -463,7 +478,7 @@ export function CoachWorkspace({
             onChange={(e) => setNote(e.target.value)}
           />
           <div className="cp-nav">
-            <button disabled={!!busy} onClick={onBack}>
+            <button disabled={!!busy} onClick={back}>
               Back to draft
             </button>
             <button
@@ -507,7 +522,7 @@ export function CoachWorkspace({
               · Draft {request.document.version}
             </span>
             {!lead && (
-              <button onClick={onBack}>
+              <button onClick={back}>
                 {locked ? "View focus" : "Edit draft"}
               </button>
             )}

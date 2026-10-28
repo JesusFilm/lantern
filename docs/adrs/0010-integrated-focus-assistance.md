@@ -19,8 +19,8 @@ Legacy `page=coach` links resolve to Position focuses rather than another editor
 
 Extend the existing checkpoint JSON and add owner-only progress writes, using the
 same membership transaction and focus lock. Saving private progress does not change
-the focus or its version. Checkpoint revisions prevent a competing progress save
-or deletion from silently replacing newer answers. Manual document saves retain
+the focus or its version. Unique checkpoint revision tokens prevent a competing progress save
+or deletion from silently replacing newer answers, including delete/recreate races. Manual document saves retain
 checkpoints at their original source version, including legacy checkpoints.
 
 A current checkpoint resumes its named edit. A stale checkpoint remains readable;

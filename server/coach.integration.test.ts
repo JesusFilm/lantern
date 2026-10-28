@@ -121,7 +121,7 @@ test("review requests freeze a version; notes are append-only, private to partic
       id: r.focus.id,
       version: 1,
       draft: { ...draft, title: "Revised" },
-      checkpoint,
+      checkpoint: r.checkpoint,
     });
     const pending = await (await f.request("lead", path)).json();
     assert.equal(pending.requests[0].document.title, draft.title);
@@ -280,7 +280,7 @@ test("database failure rolls back both focus and checkpoint; confirmation cannot
           id: r.focus.id,
           version: 1,
           draft: { ...draft, title: "Should roll back" },
-          checkpoint: { ...checkpoint, work: "Reject this save" },
+          checkpoint: { ...r.checkpoint, work: "Reject this save" },
         })
       ).status,
       503,
@@ -420,11 +420,12 @@ test("private assistance progress preserves the draft, survives manual edits, an
     ).json();
     assert.deepEqual(r.focus, saved);
     assert.equal(r.checkpoint.entry, "objective");
-    assert.equal(r.checkpoint.revision, 1);
+    assert.equal(typeof r.checkpoint.revision, "string");
+    const progressRevision = r.checkpoint.revision;
     assert.equal((await f.request("member", path, "PUT", body)).status, 409);
     for (const role of ["peer", "lead", "outsider"])
       assert.equal(
-        (await f.request(role, path, "PUT", { ...body, checkpointRevision: 1 }))
+        (await f.request(role, path, "PUT", { ...body, checkpointRevision: progressRevision }))
           .status,
         404,
       );
@@ -441,7 +442,7 @@ test("private assistance progress preserves the draft, survives manual edits, an
       (
         await f.request("member", path, "PUT", {
           ...body,
-          checkpointRevision: 1,
+          checkpointRevision: progressRevision,
           checkpoint: { ...body.checkpoint, kind: "admin" },
         })
       ).status,
@@ -461,7 +462,7 @@ test("private assistance progress preserves the draft, survives manual edits, an
       (
         await f.request("member", path, "PUT", {
           ...body,
-          checkpointRevision: 1,
+          checkpointRevision: progressRevision,
         })
       ).status,
       409,
@@ -479,7 +480,7 @@ test("private assistance progress preserves the draft, survives manual edits, an
       (
         await f.request("member", path, "DELETE", {
           version: r.focus.version,
-          checkpointRevision: 1,
+          checkpointRevision: progressRevision,
         })
       ).status,
       200,
@@ -492,6 +493,121 @@ test("private assistance progress preserves the draft, survives manual edits, an
       ).checkpoint,
       null,
     );
+  } finally {
+    await f.close();
+  }
+});
+
+test('deleted and recreated progress rejects the original session token', async()=>{
+ const f=await coachingFixture();try{
+  const focus=await(await f.request('member','/api/focuses','POST',draft)).json(),path='/api/coach/focuses/'+focus.id+'/progress';
+  const payload={version:focus.version,checkpointRevision:0,checkpoint:{...checkpoint,entry:'objective'}};
+  const first=await(await f.request('member',path,'PUT',payload)).json();
+  assert.equal((await f.request('member',path,'DELETE',{version:focus.version,checkpointRevision:first.checkpoint.revision})).status,200);
+  const second=await(await f.request('member',path,'PUT',{...payload,checkpoint:{...payload.checkpoint,work:'New working session'}})).json();
+  assert.equal((await f.request('member',path,'PUT',{...payload,checkpointRevision:first.checkpoint.revision})).status,409);
+  assert.equal((await f.request('member',path,'DELETE',{version:focus.version,checkpointRevision:first.checkpoint.revision})).status,409);
+  const current=await(await f.request('member','/api/coach/focuses/'+focus.id)).json();assert.deepEqual(current.checkpoint,second.checkpoint);
+ }finally{await f.close();}
+});
+
+test("legacy coached saves reject newer private progress and retain both document and checkpoint", async () => {
+  const f = await coachingFixture();
+  try {
+    const initial = await (await f.request("member", "/api/coach/save", "POST", {
+      draft, checkpoint,
+    })).json();
+    const path = "/api/coach/focuses/" + initial.focus.id;
+    const progressResponse = await f.request("member", path + "/progress", "PUT", {
+      version: initial.focus.version,
+      checkpointRevision: initial.checkpoint.revision ?? 0,
+      checkpoint: { ...initial.checkpoint, entry: "objective", work: "New private answers" },
+    });
+    assert.equal(progressResponse.status, 200);
+    const progress = await progressResponse.json();
+    for (const staleCheckpoint of [initial.checkpoint, checkpoint]) {
+      const stale = await f.request("member", "/api/coach/save", "POST", {
+        id: initial.focus.id,
+        version: initial.focus.version,
+        draft: { ...draft, title: "Must not replace the document" },
+        checkpoint: staleCheckpoint,
+      });
+      assert.equal(stale.status, 409);
+      assert.deepEqual(await (await f.request("member", path)).json(), progress);
+    }
+    const accepted = await f.request("member", "/api/coach/save", "POST", {
+      id: initial.focus.id,
+      version: initial.focus.version,
+      draft: { ...draft, title: "Explicit replacement" },
+      checkpoint: { ...progress.checkpoint, work: "Accepted private answers" },
+    });
+    assert.equal(accepted.status, 200);
+    const saved = await accepted.json();
+    assert.equal(saved.focus.title, "Explicit replacement");
+    assert.equal(saved.checkpoint.work, "Accepted private answers");
+    assert.notEqual(saved.checkpoint.revision, progress.checkpoint.revision);
+    assert.equal((await f.request("member", path + "/progress", "DELETE", {
+      version: saved.focus.version,
+      checkpointRevision: progress.checkpoint.revision,
+    })).status, 409);
+  } finally {
+    await f.close();
+  }
+});
+
+test("legacy checkpoint creation and revision-less stored progress upgrade to fresh tokens", async () => {
+  const f = await coachingFixture();
+  try {
+    const createdResponse = await f.request("member", "/api/coach/save", "POST", {
+      draft, checkpoint,
+    });
+    assert.equal(createdResponse.status, 200);
+    const created = await createdResponse.json();
+    assert.match(created.checkpoint.revision, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    const path = "/api/coach/focuses/" + created.focus.id;
+    const replacedResponse = await f.request("member", "/api/coach/save", "POST", {
+      id: created.focus.id,
+      version: created.focus.version,
+      draft,
+      checkpoint: created.checkpoint,
+    });
+    assert.equal(replacedResponse.status, 200);
+    const replaced = await replacedResponse.json();
+    assert.notEqual(replaced.checkpoint.revision, created.checkpoint.revision);
+
+    // Seed the persisted format from before checkpoint revisions existed.
+    const legacyFocus = await (await f.request("member", "/api/focuses", "POST", draft)).json();
+    await f.migration.query(
+      "INSERT INTO coach_checkpoints(focus_id,document) VALUES($1,$2)",
+      [legacyFocus.id, JSON.stringify({ ...checkpoint, sourceVersion: legacyFocus.version })],
+    );
+    const legacyPath = "/api/coach/focuses/" + legacyFocus.id;
+    const legacy = await (await f.request("member", legacyPath)).json();
+    assert.equal(legacy.checkpoint.revision, undefined);
+    const upgradedResponse = await f.request("member", "/api/coach/save", "POST", {
+      id: legacyFocus.id, version: legacyFocus.version, draft,
+      checkpoint: legacy.checkpoint,
+    });
+    assert.equal(upgradedResponse.status, 200);
+    const upgraded = await upgradedResponse.json();
+    assert.equal(typeof upgraded.checkpoint.revision, "string");
+    assert.notEqual(upgraded.checkpoint.revision, replaced.checkpoint.revision);
+    assert.equal(upgraded.checkpoint.sourceVersion, upgraded.focus.version);
+    assert.equal((await f.request("member", legacyPath + "/progress", "DELETE", {
+      version: upgraded.focus.version, checkpointRevision: 0,
+    })).status, 409);
+
+    // Deletion must not let an old token recreate a consumed checkpoint.
+    assert.equal((await f.request("member", path + "/progress", "DELETE", {
+      version: replaced.focus.version, checkpointRevision: replaced.checkpoint.revision,
+    })).status, 200);
+    assert.equal((await f.request("member", "/api/coach/save", "POST", {
+      id: replaced.focus.id, version: replaced.focus.version, draft,
+      checkpoint: replaced.checkpoint,
+    })).status, 409);
+    const intact = await (await f.request("member", path)).json();
+    assert.deepEqual(intact.focus, replaced.focus);
+    assert.equal(intact.checkpoint, null);
   } finally {
     await f.close();
   }

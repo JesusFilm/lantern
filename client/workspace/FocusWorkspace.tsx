@@ -9,9 +9,9 @@ import {
 } from "../coach/FocusAssistance.js";
 import { CoachWorkspace } from "../coach/CoachWorkspace.js";
 import { api } from "./api.js";
-import { ObjectiveType, ObjectiveTypeChoices } from "./ObjectiveType.js";
+import { ObjectiveType, ObjectiveTypeChoices, objectiveTypes } from "./ObjectiveType.js";
 import { FocusObjectives } from "./FocusObjectives.js";
-import type { ObjectiveKind } from "../../shared/focus.js";
+import type { ObjectiveKind, PositionFocus } from "../../shared/focus.js";
 import { FocusHeading } from "./FocusHeading.js";
 import { Dialog } from "./Dialog.js";
 import { MissionBanner } from "./MissionBanner.js";
@@ -70,7 +70,8 @@ export function FocusWorkspace({
   );
   const [appliedProgress, setAppliedProgress] = useState<{
     id: string;
-    revision: number;
+    editKey: number;
+    revision: string | 0;
   }>();
   const [reviewing, setReviewing] = useState(false),
     [afterSave, setAfterSave] = useState<{
@@ -104,8 +105,9 @@ export function FocusWorkspace({
   function start(
     target: EditTarget,
     entry?: NonNullable<CoachCheckpoint["entry"]>,
+    source?: PositionFocus,
   ) {
-    begin(target);
+    begin(target, source);
     setAppliedProgress(undefined);
     setAfterSave(undefined);
     setAssistance(entry ? { entry } : undefined);
@@ -113,8 +115,16 @@ export function FocusWorkspace({
   const checkpoint = record?.checkpoint;
   const currentRecord = editRecord;
   function resume(here = false) {
-    if (!checkpoint || !focus) return;
-    const entry = checkpoint.entry || (checkpoint.step >= 4 ? "goal" : "work");
+    const checkpoint = here ? editRecord?.checkpoint : record?.checkpoint;
+    const source = here ? edit?.source : focus;
+    if (!checkpoint || !source) return;
+    const entry =
+      checkpoint.entry ||
+      (checkpoint.step >= 4
+        ? source.sections[checkpoint.sectionIndex ?? 0]
+          ? "goal"
+          : "objective"
+        : "work");
     if (here && edit && (edit.type === "objective" || edit.type === "goal")) {
       if (
         !window.confirm(
@@ -125,23 +135,32 @@ export function FocusWorkspace({
       )
         return;
       const fresh = assistanceCheckpoint(edit, edit.type);
+      const resumingWork = edit.type === "objective" && checkpoint.step < 2;
+      const entry = resumingWork ? "work" : edit.type;
       setAssistance({
-        entry: edit.type,
+        entry,
         checkpoint: {
           ...checkpoint,
           ...fresh,
+          entry,
           work: checkpoint.work,
           answers: checkpoint.answers,
+          question: checkpoint.question,
+          options: checkpoint.options,
+          answer: checkpoint.answer,
           action: checkpoint.action,
           date: checkpoint.date || fresh.date,
           revision: checkpoint.revision,
           objective:
             edit.type === "objective" ? checkpoint.objective : fresh.objective,
           goal: edit.type === "goal" ? checkpoint.goal : fresh.goal,
-          step: edit.type === "goal" ? (checkpoint.goal ? 6 : 4) : 2,
+          step:
+            edit.type === "goal"
+              ? checkpoint.goal ? 6 : 4
+              : resumingWork ? checkpoint.step : 2,
         },
       });
-    } else if (checkpoint.sourceVersion === focus.version) {
+    } else if (focus && checkpoint.sourceVersion === focus.version) {
       const section = checkpoint.sectionIndex ?? 0,
         goal = checkpoint.goalIndex ?? 0;
       begin(
@@ -190,7 +209,7 @@ export function FocusWorkspace({
         section: pending.section,
         goal: pending.type === "goal",
       });
-    if (result && applied?.id === result.id) {
+    if (result && applied?.id === result.id && applied.editKey === pending?.key) {
       setAppliedProgress(undefined);
       try {
         const r = await api<CoachRecord>(
@@ -215,15 +234,15 @@ export function FocusWorkspace({
           setReviewing(false);
           void reload();
         }}
-        onEdit={(target) => {
+        onEdit={(target, source) => {
           setReviewing(false);
-          start(target);
+          start(target, undefined, source);
         }}
         onCoach={
           coachAvailable
-            ? (target) => {
+            ? (target, source) => {
                 setReviewing(false);
-                start(target, target.type === "goal" ? "goal" : "objective");
+                start(target, target.type === "goal" ? "goal" : "objective", source);
               }
             : undefined
         }
@@ -463,12 +482,6 @@ export function FocusWorkspace({
               kind={edit.type === "goal" ? "goal" : edit.kind}
               focusTitle={edit.source.title}
             >
-              {edit.type === "objective" && (
-                <ObjectiveTypeChoices
-                  kind={edit.kind}
-                  onChange={(kind) => change({ type: "kind", kind })}
-                />
-              )}
               {edit.type === "goal" && (
                 <>
                   <ObjectiveType
@@ -480,9 +493,12 @@ export function FocusWorkspace({
                   </p>
                 </>
               )}
-              <label htmlFor="edit-text">
-                {edit.type === "goal" ? "SMART goal" : "Objective"}
-              </label>
+              <div className="objective-field-heading">
+                <label htmlFor="edit-text">
+                  {edit.type === "goal" ? "SMART goal" : "Objective"}
+                </label>
+                {edit.type === "objective" && <span className="badge">{objectiveTypes[edit.kind].label}</span>}
+              </div>
               <p className="writing-hint" id="writing-hint">
                 {edit.type === "goal"
                   ? "What will you do, what evidence will show progress, and by when?"
@@ -506,6 +522,12 @@ export function FocusWorkspace({
                 }
               />
               {edit.type === "objective" && (
+                <ObjectiveTypeChoices
+                  kind={edit.kind}
+                  onChange={(kind) => change({ type: "kind", kind })}
+                />
+              )}
+              {edit.type === "objective" && (
                 <InitiativeChoices
                   selection={edit.alignment}
                   readiness={edit.initiatives}
@@ -526,7 +548,7 @@ export function FocusWorkspace({
                   Help me write this
                 </button>
               )}
-              {checkpoint && (
+              {editRecord?.checkpoint && (
                 <button type="button" onClick={() => resume(true)}>
                   Resume saved help here
                 </button>
@@ -557,6 +579,7 @@ export function FocusWorkspace({
               if (assistance.checkpoint)
                 setAppliedProgress({
                   id: edit.source.id,
+                  editKey: edit.key,
                   revision: assistance.checkpoint.revision ?? 0,
                 });
               setAssistance(undefined);

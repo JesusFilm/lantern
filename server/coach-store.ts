@@ -108,7 +108,7 @@ export function coachStore(db: Pool) {
       actor: string,
       id: string,
       version: number,
-      revision: number,
+      revision: string | 0,
       checkpoint?: CoachCheckpoint,
     ) {
       return change(
@@ -153,7 +153,7 @@ export function coachStore(db: Pool) {
                 JSON.stringify({
                   ...checkpoint,
                   sourceVersion: version,
-                  revision: revision + 1,
+                  revision: randomUUID(),
                 }),
               ],
             );
