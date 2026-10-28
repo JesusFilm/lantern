@@ -83,6 +83,7 @@ test("enabling coaching requires both independent provider credentials", () => {
       resolveCoachConfig({
         COACH_ENABLED: "1",
         AI_GATEWAY_CHAT_API_KEY: "secret",
+        AI_GATEWAY_CHAT_BASE_URL: "https://gateway.example.com",
       }),
     /OPENROUTER_API_KEY/,
   );
@@ -90,8 +91,24 @@ test("enabling coaching requires both independent provider credentials", () => {
     COACH_ENABLED: "1",
     AI_GATEWAY_CHAT_API_KEY: "primary",
     OPENROUTER_API_KEY: "fallback",
+    AI_GATEWAY_CHAT_BASE_URL: "https://gateway.example.com/",
   });
+  assert.equal(config?.primary.url, "https://gateway.example.com");
   assert.equal(config?.fallback.model, "google/gemini-3.8-flash");
+});
+
+test("enabled coaching requires an explicitly configured gateway endpoint", () => {
+  for (const endpoint of [undefined, "", "   "]) {
+    assert.throws(
+      () => resolveCoachConfig({
+        COACH_ENABLED: "1",
+        AI_GATEWAY_CHAT_API_KEY: "primary",
+        OPENROUTER_API_KEY: "fallback",
+        AI_GATEWAY_CHAT_BASE_URL: endpoint,
+      }),
+      /AI_GATEWAY_CHAT_BASE_URL/,
+    );
+  }
 });
 
 for (const failure of [

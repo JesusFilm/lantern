@@ -44,7 +44,7 @@ export function verifyConfiguration(env){
  for(const key of ['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET'])requireSetting(typeof v[key]==='string' && v[key].length>0,key);
  requireSetting(v.COACH_ENABLED===undefined || ['0','1'].includes(v.COACH_ENABLED),'COACH_ENABLED');
  if(v.COACH_ENABLED==='1') {
-  for(const key of ['AI_GATEWAY_CHAT_API_KEY','OPENROUTER_API_KEY'])requireSetting(typeof v[key]==='string' && v[key].trim().length>0 && !/[\r\n]/.test(v[key]),key);
+  for(const key of ['AI_GATEWAY_CHAT_API_KEY','OPENROUTER_API_KEY','AI_GATEWAY_CHAT_BASE_URL'])requireSetting(typeof v[key]==='string' && v[key].trim().length>0 && !/[\r\n]/.test(v[key]),key);
   if(v.AI_GATEWAY_CHAT_BASE_URL){let endpoint;try{endpoint=new URL(v.AI_GATEWAY_CHAT_BASE_URL);}catch{throw new Error('Deployment preflight failed: coaching gateway URL.');}
    requireSetting(endpoint.protocol==='https:'&&!endpoint.username&&!endpoint.password&&!endpoint.search&&!endpoint.hash,'coaching gateway URL');}
  }

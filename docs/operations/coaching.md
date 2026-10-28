@@ -16,10 +16,15 @@ release artifacts or command arguments.
 | --- | --- | --- |
 | `AI_GATEWAY_CHAT_API_KEY` | Dedicated Lantern staging virtual key | Dedicated Lantern production virtual key |
 | `OPENROUTER_API_KEY` | Dedicated Lantern staging key | Dedicated Lantern production key |
-| `AI_GATEWAY_CHAT_BASE_URL` | `https://ai-gateway.jesusfilm.org` | Same endpoint |
+| `AI_GATEWAY_CHAT_BASE_URL` | `https://gateway.example.com` | Same endpoint |
 | `AI_GATEWAY_CHAT_MODEL` | `coding` | `coding` |
 | `COACH_FALLBACK_MODEL` | `google/gemini-3.8-flash` | Same model |
 | `COACH_ENABLED` | `1` after both keys are installed | `1` after staging verification |
+
+The gateway URL above is illustrative; replace it with the actual endpoint in
+Railway. There is no application default. The gateway authenticates requests
+using the dedicated virtual key; no Tailscale connection is required. Verify
+provider connectivity from staging before activation.
 
 The gateway URL is the origin before `/v1/messages`, not a URL ending in `/v1`.
 The implementation retains the Anthropic-compatible gateway protocol already used
@@ -40,8 +45,9 @@ and retention are controlled in the provider account, not by Lantern.
 Use Railway's variable editor or a secret-prompt/standard-input workflow. Stage
 variable changes without an automatic deployment while setting up both keys.
 The release configuration check and startup reject enabled coaching with either
-key missing; they do not prove the key works. Existing release tooling preserves
-unrelated Railway variables rather than replacing the complete set.
+key or the gateway URL missing; they do not prove provider connectivity. Existing
+release tooling preserves unrelated Railway variables rather than replacing the
+complete set.
 
 ## Verification before activation
 

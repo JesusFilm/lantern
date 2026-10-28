@@ -17,8 +17,8 @@ export function resolveCoachConfig(
       throw new Error(`${name} is required when coaching is enabled.`);
     return value;
   };
-  const url = (name: string, fallback: string) => {
-    const value = env[name] || fallback;
+  const url = (name: string) => {
+    const value = key(name);
     let parsed: URL;
     try {
       parsed = new URL(value);
@@ -38,7 +38,7 @@ export function resolveCoachConfig(
   return {
     primary: {
       key: key("AI_GATEWAY_CHAT_API_KEY"),
-      url: url("AI_GATEWAY_CHAT_BASE_URL", "https://ai-gateway.jesusfilm.org"),
+      url: url("AI_GATEWAY_CHAT_BASE_URL"),
       model: env.AI_GATEWAY_CHAT_MODEL || "coding",
     },
     fallback: {
