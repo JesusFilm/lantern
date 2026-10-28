@@ -396,3 +396,103 @@ test("empty suggested actions are unusable and trigger OpenRouter fallback", asy
     await new Promise<void>((r) => upstream.close(() => r()));
   }
 });
+
+test("private assistance progress preserves the draft, survives manual edits, and enforces owner/version/revision checks", async () => {
+  const f = await coachingFixture();
+  try {
+    const saved = await (
+      await f.request("member", "/api/focuses", "POST", draft)
+    ).json();
+    const path = "/api/coach/focuses/" + saved.id + "/progress";
+    const body = {
+      version: saved.version,
+      checkpointRevision: 0,
+      checkpoint: {
+        ...checkpoint,
+        entry: "objective",
+        kind: "normal",
+        adding: false,
+      },
+    };
+    assert.equal((await f.request("member", path, "PUT", body)).status, 200);
+    let r = await (
+      await f.request("member", "/api/coach/focuses/" + saved.id)
+    ).json();
+    assert.deepEqual(r.focus, saved);
+    assert.equal(r.checkpoint.entry, "objective");
+    assert.equal(r.checkpoint.revision, 1);
+    assert.equal((await f.request("member", path, "PUT", body)).status, 409);
+    for (const role of ["peer", "lead", "outsider"])
+      assert.equal(
+        (await f.request(role, path, "PUT", { ...body, checkpointRevision: 1 }))
+          .status,
+        404,
+      );
+    assert.equal(
+      (await f.request("lead", "/api/coach/focuses/" + saved.id)).status,
+      200,
+    );
+    assert.equal(
+      (await (await f.request("lead", "/api/coach/focuses/" + saved.id)).json())
+        .checkpoint,
+      null,
+    );
+    assert.equal(
+      (
+        await f.request("member", path, "PUT", {
+          ...body,
+          checkpointRevision: 1,
+          checkpoint: { ...body.checkpoint, kind: "admin" },
+        })
+      ).status,
+      400,
+    );
+    await f.request("member", "/api/focuses/" + saved.id, "PUT", {
+      ...draft,
+      title: "Updated elsewhere",
+      version: saved.version,
+    });
+    r = await (
+      await f.request("member", "/api/coach/focuses/" + saved.id)
+    ).json();
+    assert.equal(r.checkpoint.objective, checkpoint.objective);
+    assert.equal(r.checkpoint.sourceVersion, saved.version);
+    assert.equal(
+      (
+        await f.request("member", path, "PUT", {
+          ...body,
+          checkpointRevision: 1,
+        })
+      ).status,
+      409,
+    );
+    assert.equal(
+      (
+        await f.request("member", path, "DELETE", {
+          version: r.focus.version,
+          checkpointRevision: 0,
+        })
+      ).status,
+      409,
+    );
+    assert.equal(
+      (
+        await f.request("member", path, "DELETE", {
+          version: r.focus.version,
+          checkpointRevision: 1,
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await (
+          await f.request("member", "/api/coach/focuses/" + saved.id)
+        ).json()
+      ).checkpoint,
+      null,
+    );
+  } finally {
+    await f.close();
+  }
+});

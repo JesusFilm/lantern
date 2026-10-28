@@ -69,25 +69,46 @@ test("member coaches, edits the date, saves, requests review; lead replies and c
     const page = await member.newPage();
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    await page.goto(f.origin + "/?page=coach");
+    const saved = await (
+      await f.request("member", "/api/focuses", "POST", {
+        title: "Build confidence",
+        start: "2026-10-01",
+        end: "2027-03-31",
+        sections: [],
+      })
+    ).json();
+    await page.goto(f.origin + "/?focus=" + saved.id);
     await page
-      .getByRole("button", { name: "Create a focus", exact: true })
+      .getByRole("button", { name: "Help me get started", exact: true })
       .click();
     await page
-      .getByRole("textbox")
-      .first()
+      .getByLabel("Your project work")
       .fill("I work on build failures for other engineers.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await page
       .getByRole("dialog", { name: "Finding the next useful question" })
-      .waitFor({ state: "visible" });
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-    await page.getByRole("button", { name: "Next", exact: true }).click();
+      .waitFor();
     await page
-      .getByText("Review three failed builds with engineers", { exact: true })
+      .getByRole("button", { name: "Use suggestion", exact: true })
       .click();
+    await page
+      .getByRole("button", { name: "Save changes", exact: true })
+      .click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    await page
+      .getByRole("button", { name: "Add SMART goal", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Help me write this", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Suggest actions", exact: true })
+      .click();
+    await page
+      .getByLabel("Review three failed builds with engineers", { exact: true })
+      .check();
     await page.getByRole("button", { name: "Next", exact: true }).click();
-    await page.locator("input[type=date]").fill("2026-12-15");
+    await page.getByLabel("Aim for", { exact: true }).fill("2026-12-15");
     await page.getByRole("button", { name: "Next", exact: true }).click();
     const editedGoal =
       "By 15 December 2026, review build failures and record engineers' feedback.";
@@ -99,15 +120,15 @@ test("member coaches, edits the date, saves, requests review; lead replies and c
     await expect(page.getByLabel("Goal", { exact: true })).toHaveValue(
       editedGoal,
     );
-
     await page
-      .getByRole("button", { name: "Review draft", exact: true })
-      .last()
+      .getByRole("button", { name: "Use suggestion", exact: true })
       .click();
-    await page.getByRole("button", { name: "Save draft", exact: true }).click();
-    await page.getByRole("button", { name: "Saved", exact: true }).waitFor();
     await page
-      .getByRole("button", { name: "Ask career lead to review", exact: true })
+      .getByRole("button", { name: "Save changes", exact: true })
+      .click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    await page
+      .getByRole("button", { name: "Review whole focus", exact: true })
       .click();
     await page
       .getByRole("button", { name: "Send request", exact: true })
@@ -190,25 +211,39 @@ test("editing one coached goal preserves every other objective and goal after re
       { name: "lantern-session", value: "member", url: f.origin },
     ]);
     const page = await context.newPage();
-    await page.goto(f.origin + "/?page=coach");
+    await page.goto(f.origin + "/?focus=" + saved.id);
     await page
-      .getByRole("button", { name: "Continue draft", exact: true })
+      .locator(".read-goal")
+      .first()
+      .getByRole("button", { name: "Edit", exact: true })
       .click();
-    await page.getByLabel("Goal", { exact: true }).fill("Revised first goal");
-    await page.getByRole("button", { name: "Save draft", exact: true }).click();
-    await page.getByRole("button", { name: "Saved", exact: true }).waitFor();
-    await page.getByLabel("Objective to work on").selectOption("1");
     await page
-      .getByLabel("Goal", { exact: true })
+      .getByLabel("SMART goal", { exact: true })
+      .fill("Revised first goal");
+    await page
+      .getByRole("button", { name: "Save changes", exact: true })
+      .click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    await page
+      .locator(".read-section")
+      .nth(1)
+      .getByRole("button", { name: "Edit", exact: true })
+      .click();
+    await page
+      .getByLabel("SMART goal", { exact: true })
       .fill("Practise two interviews");
-    await page.getByRole("button", { name: "Save draft", exact: true }).click();
-    await page.getByRole("button", { name: "Saved", exact: true }).waitFor();
+    await page
+      .getByRole("button", { name: "Save changes", exact: true })
+      .click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
     await page.reload();
     await page
-      .getByRole("button", { name: "Continue draft", exact: true })
+      .locator(".read-section")
+      .nth(1)
+      .getByRole("button", { name: "Edit", exact: true })
       .click();
     assert.equal(
-      await page.getByLabel("Goal", { exact: true }).inputValue(),
+      await page.getByLabel("SMART goal", { exact: true }).inputValue(),
       "Practise two interviews",
     );
     const result = await (
@@ -230,13 +265,15 @@ test("editing one coached goal preserves every other objective and goal after re
       version: result.version,
     });
     await page
-      .getByLabel("Goal", { exact: true })
+      .getByLabel("SMART goal", { exact: true })
       .fill("Keep my unsaved wording");
-    await page.getByRole("button", { name: "Save draft", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Save changes", exact: true })
+      .click();
     await expect(page.getByRole("alert")).toContainText(
       "changed in another window",
     );
-    await expect(page.getByLabel("Goal", { exact: true })).toHaveValue(
+    await expect(page.getByLabel("SMART goal", { exact: true })).toHaveValue(
       "Keep my unsaved wording",
     );
   } finally {
@@ -246,7 +283,7 @@ test("editing one coached goal preserves every other objective and goal after re
   }
 });
 
-test("clearing a coached goal preserves its siblings on later saves and after reopening", async () => {
+test("clearing then explicitly removing a goal preserves its siblings on later saves and after reopening", async () => {
   const { expect } = await import("@playwright/test");
   const f = await coachingFixture(),
     vite = await createViteServer({
@@ -261,11 +298,17 @@ test("clearing a coached goal preserves its siblings on later saves and after re
         title: "Keep sibling goals",
         start: "2026-10-01",
         end: "2027-03-31",
-        sections: [{
-          kind: "normal",
-          objective: "Help engineers investigate failures",
-          goals: ["Remove this goal", "Keep the second goal", "Keep the third goal"],
-        }],
+        sections: [
+          {
+            kind: "normal",
+            objective: "Help engineers investigate failures",
+            goals: [
+              "Remove this goal",
+              "Keep the second goal",
+              "Keep the third goal",
+            ],
+          },
+        ],
       })
     ).json();
     const context = await browser.newContext();
@@ -273,28 +316,59 @@ test("clearing a coached goal preserves its siblings on later saves and after re
       { name: "lantern-session", value: "member", url: f.origin },
     ]);
     const page = await context.newPage();
-    await page.goto(f.origin + "/?page=coach");
-    await page.getByRole("button", { name: "Continue draft", exact: true }).click();
-    await page.getByLabel("Goal", { exact: true }).fill("");
-    await page.getByRole("button", { name: "Save draft", exact: true }).click();
-    await page.getByRole("button", { name: "Saved", exact: true }).waitFor();
+    await page.goto(f.origin + "/?focus=" + saved.id);
+    await page
+      .locator(".read-goal")
+      .first()
+      .getByRole("button", { name: "Edit", exact: true })
+      .click();
+    await page.getByLabel("SMART goal", { exact: true }).fill("");
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await page
+      .locator(".read-goal")
+      .first()
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Remove", exact: true })
+      .click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
     const readGoals = async () =>
-      (await (await f.request("member", "/api/focuses/" + saved.id)).json()).sections[0].goals;
-    assert.deepEqual(await readGoals(), ["Keep the second goal", "Keep the third goal"]);
-
-    await page.getByLabel("Title", { exact: true }).fill("Only change the title");
-    await page.getByRole("button", { name: "Save draft", exact: true }).click();
-    await page.getByRole("button", { name: "Saved", exact: true }).waitFor();
-    assert.deepEqual(await readGoals(), ["Keep the second goal", "Keep the third goal"]);
-
-    await page.reload();
-    await page.getByRole("button", { name: "Continue draft", exact: true }).click();
-    await expect(page.getByLabel("Goal", { exact: true })).toHaveValue("");
-    await page.getByLabel("Goal", { exact: true }).fill("A new goal after reopening");
-    await page.getByRole("button", { name: "Save draft", exact: true }).click();
-    await page.getByRole("button", { name: "Saved", exact: true }).waitFor();
+      (await (await f.request("member", "/api/focuses/" + saved.id)).json())
+        .sections[0].goals;
     assert.deepEqual(await readGoals(), [
-      "Keep the second goal", "Keep the third goal", "A new goal after reopening",
+      "Keep the second goal",
+      "Keep the third goal",
+    ]);
+    await page.getByRole("button", { name: "Edit title & dates" }).click();
+    await page.getByLabel("Document title").fill("Only change the title");
+    await page
+      .getByRole("button", { name: "Save changes", exact: true })
+      .click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    assert.deepEqual(await readGoals(), [
+      "Keep the second goal",
+      "Keep the third goal",
+    ]);
+    await page.reload();
+    await page
+      .getByRole("button", { name: "+ Add SMART goal", exact: true })
+      .click();
+    await expect(page.getByLabel("SMART goal", { exact: true })).toHaveValue(
+      "",
+    );
+    await page
+      .getByLabel("SMART goal", { exact: true })
+      .fill("A new goal after reopening");
+    await page
+      .getByRole("button", { name: "Save changes", exact: true })
+      .click();
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+    assert.deepEqual(await readGoals(), [
+      "Keep the second goal",
+      "Keep the third goal",
+      "A new goal after reopening",
     ]);
   } finally {
     await browser.close();
@@ -340,8 +414,18 @@ test("loading overlay retains input; cancellation and both-provider failure neve
       { name: "lantern-session", value: "member", url: f.origin },
     ]);
     const page = await context.newPage();
-    await page.goto(f.origin + "/?page=coach");
-    await page.getByRole("button", { name: "Create a focus" }).click();
+    const saved = await (
+      await f.request("member", "/api/focuses", "POST", {
+        title: "Failure handling",
+        start: "2026-10-01",
+        end: "2027-03-31",
+        sections: [],
+      })
+    ).json();
+    await page.goto(f.origin + "/?focus=" + saved.id);
+    await page
+      .getByRole("button", { name: "Help me get started", exact: true })
+      .click();
     const input = page.getByLabel("Your project work");
     await input.fill("Private investigation of build failures.");
     const before = await input.boundingBox();

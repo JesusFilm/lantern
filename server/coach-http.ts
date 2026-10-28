@@ -87,6 +87,32 @@ export function coachRoutes(
     )
       throw new AccessError(400, "Supply the current version.");
   };
+  for (const method of ["put", "delete"] as const)
+    router[method]("/api/coach/focuses/:id/progress", async (req, res) => {
+      const actor = (await requireUser(req)).id;
+      versionBody(
+        req.body,
+        method === "put"
+          ? ["version", "checkpointRevision", "checkpoint"]
+          : ["version", "checkpointRevision"],
+      );
+      if (
+        !Number.isSafeInteger(req.body.checkpointRevision) ||
+        req.body.checkpointRevision < 0
+      )
+        throw new AccessError(400, "Supply the saved coaching revision.");
+      res.json(
+        await store.progress(
+          actor,
+          String(req.params.id),
+          req.body.version,
+          req.body.checkpointRevision,
+          method === "put"
+            ? validateCheckpoint(req.body.checkpoint)
+            : undefined,
+        ),
+      );
+    });
   const noteText = (text: unknown) => {
     if (typeof text !== "string" || !text.trim() || text.length > 4000)
       throw new AccessError(400, "Write a note of 1–4000 characters.");

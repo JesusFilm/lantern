@@ -1,19 +1,15 @@
+import { ObjectiveType } from "./ObjectiveType.js";
 import { useEffect, useRef, useState } from "react";
 import type { ObjectiveKind, PositionFocus } from "../../shared/focus.js";
 import type { EditTarget } from "./useDraftFocusWorkflow.js";
 import { AlignmentSummary } from "./InitiativeChoices.js";
 import { useSwipeNavigation } from "./useSwipeNavigation.js";
 import { usePhoneLayout } from "./usePhoneLayout.js";
-const kindLabels: Record<ObjectiveKind, string> = {
-  normal: "Normal Objectives",
-  "personal-development": "Personal Development Objectives",
-  leadership: "Leadership Objectives",
-};
-
 /** Reading state belongs to this document; edits still use original section indices. */
-export function FocusObjectives({ focus, onEdit }: {
+export function FocusObjectives({ focus, onEdit, onCoach }: {
   focus: PositionFocus;
   onEdit: (target: EditTarget) => void;
+  onCoach?: (target: EditTarget) => void;
 }) {
   const compact = usePhoneLayout();
   const [index, setIndex] = useState(0);
@@ -63,11 +59,7 @@ export function FocusObjectives({ focus, onEdit }: {
               <div className="row section-heading">
                 <div className="section-label">
                   <h2 tabIndex={-1} ref={i === active ? heading : undefined}>Objective {i + 1}</h2>
-                  {section.kind !== "normal" && (
-                    <span className="badge">
-                      {kindLabels[section.kind]}
-                    </span>
-                  )}
+                  <ObjectiveType kind={section.kind}/>
                 </div>
                 {editable && <div className="section-tools">
                   <button
@@ -79,6 +71,7 @@ export function FocusObjectives({ focus, onEdit }: {
                   >
                     {compact ? "Edit" : "Edit objective"}
                   </button>
+                  {onCoach && <button className="link" onClick={() => onCoach({type:"objective",section:i})}>Coach</button>}
                   <button
                     className="link danger small-action"
                     onClick={() =>
@@ -107,6 +100,7 @@ export function FocusObjectives({ focus, onEdit }: {
                     >
                       Edit
                     </button>
+                    {onCoach && <button className="link" onClick={() => onCoach({type:"goal",section:i,goal:j})}>Coach</button>}
                     <button
                       className="link danger small-action"
                       onClick={() =>

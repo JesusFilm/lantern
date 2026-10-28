@@ -186,9 +186,8 @@ export async function runAcceptanceBrowser({ origin, sessions, runId }, { chromi
     checks.push(checkpoint);
 
     checkpoint = 'review-requests-and-notes';
-    await memberPage.goto(origin+'/?page=coach');
-    await memberPage.getByRole('button',{name:'Continue draft',exact:true}).click();
-    await memberPage.getByRole('button',{name:'Ask career lead to review',exact:true}).click();
+    await memberPage.goto(origin+'/?focus='+focusId);
+    await memberPage.getByRole('button',{name:'Review whole focus',exact:true}).click();
     await memberPage.getByLabel('Note to career lead · optional').fill('Synthetic request note');
     await memberPage.getByRole('button',{name:'Send request',exact:true}).click();
     await expect(memberPage.getByText('Synthetic request note',{exact:true})).toBeVisible();
@@ -204,8 +203,9 @@ export async function runAcceptanceBrowser({ origin, sessions, runId }, { chromi
     assert.equal(review.notes.length,2);
     assert.equal((await read(contexts.get('peer'),reviewPath)).status(),404);
     assert.equal((await read(contexts.get('outsider'),reviewPath)).status(),404);
-    await memberPage.goto(origin+'/?page=coach');
-    await memberPage.getByRole('button',{name:'Read reply',exact:true}).click();
+    await memberPage.goto(origin+'/?focus='+focusId);
+    await memberPage.getByRole('button',{name:'Review whole focus',exact:true}).click();
+    await memberPage.getByRole('button',{name:'Review discussion',exact:true}).click();
     await expect(memberPage.getByText('Synthetic lead reply',{exact:true})).toBeVisible();
     await expect.poll(async()=> (await json(await read(member,reviewPath))).readIds.length).toBe(2);
     await memberPage.goto(origin+'/?focus='+focusId);

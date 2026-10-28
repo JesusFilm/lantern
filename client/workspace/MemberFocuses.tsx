@@ -1,3 +1,4 @@
+import { ObjectiveType } from "./ObjectiveType.js";
 import { useEffect, useState } from "react";
 import type { MemberFocusList, MemberFocusDetail } from "../../shared/focus.js";
 import { FocusConfirmation } from "./FocusConfirmation.js";
@@ -10,12 +11,6 @@ const date = (value: string) =>
     month: "short",
     year: "numeric",
   });
-const labels = {
-  normal: "Normal Objectives",
-  "personal-development": "Personal Development Objectives",
-  leadership: "Leadership Objectives",
-};
-
 export function MemberFocuses({
   memberId,
   focusId,
@@ -87,7 +82,7 @@ export function MemberFocuses({
                 <section className="read-section" key={i}>
                   <div className="read-objective">
                     <h2>Objective {i + 1}</h2>
-                    <span className="badge">{labels[section.kind]}</span>
+                    <ObjectiveType kind={section.kind}/>
                     <p className="read-text">{section.objective}</p>
                     <AlignmentSummary alignment={section.alignment} />
                   </div>

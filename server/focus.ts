@@ -396,8 +396,6 @@ async function saveCheckpoint(
         JSON.stringify({ ...checkpoint, sourceVersion: focus.version }),
       ],
     );
-  else
-    await client.query("DELETE FROM coach_checkpoints WHERE focus_id=$1", [
-      focus.id,
-    ]);
+  // Manual edits retain private progress at its original sourceVersion.
+  // Resumption must reconcile it explicitly; confirmation still removes it.
 }

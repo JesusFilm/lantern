@@ -104,6 +104,68 @@ export function coachStore(db: Pool) {
   return {
     record,
     access,
+    progress(
+      actor: string,
+      id: string,
+      version: number,
+      revision: number,
+      checkpoint?: CoachCheckpoint,
+    ) {
+      return change(
+        actor,
+        id,
+        async (client, a) => {
+          const focus = await readOwnedFocus(client, actor, a.dept.id, id);
+          if (focus.status !== "draft" || focus.version !== version)
+            throw new AccessError(
+              409,
+              "This focus changed. Your coaching answers are retained; reopen the current draft before continuing.",
+            );
+          const previous = (
+            await client.query(
+              "SELECT document FROM coach_checkpoints WHERE focus_id::text=$1",
+              [id],
+            )
+          ).rows[0]?.document;
+          if ((previous?.revision ?? 0) !== revision)
+            throw new AccessError(
+              409,
+              "Coaching progress changed in another window. Reopen the saved progress before replacing it.",
+            );
+          if (checkpoint) {
+            const section = focus.sections[checkpoint.sectionIndex ?? 0];
+            if (
+              !checkpoint.entry ||
+              (checkpoint.sectionIndex ?? 0) > focus.sections.length ||
+              (checkpoint.entry === "goal" &&
+                (!section ||
+                  (checkpoint.goalIndex ?? 0) > section.goals.length))
+            )
+              throw new AccessError(
+                400,
+                "Choose an objective or goal in this focus.",
+              );
+            await client.query(
+              `INSERT INTO coach_checkpoints(focus_id,document) VALUES($1,$2)
+            ON CONFLICT(focus_id) DO UPDATE SET document=EXCLUDED.document`,
+              [
+                id,
+                JSON.stringify({
+                  ...checkpoint,
+                  sourceVersion: version,
+                  revision: revision + 1,
+                }),
+              ],
+            );
+          } else
+            await client.query(
+              "DELETE FROM coach_checkpoints WHERE focus_id::text=$1",
+              [id],
+            );
+        },
+        true,
+      );
+    },
     request(actor: string, id: string, version: number, note?: string) {
       return change(
         actor,

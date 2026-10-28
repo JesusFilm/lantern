@@ -1,7 +1,7 @@
 # Production coaching and versioned review
 
 Date: 2026-10-28
-Status: Accepted scope from the owner's approved prototype and production request
+Status: Accepted; member authoring and manual-save checkpoint invalidation superseded by [ADR 0010](0010-integrated-focus-assistance.md)
 
 ## Decision
 

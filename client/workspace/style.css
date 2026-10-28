@@ -1874,3 +1874,19 @@ dialog .initiative-description-field textarea { min-height: 130px; height: 140px
   .guide-navigation:has(.example-guide-steps) .topic-entry > button { height: auto; text-align: left; padding: 12px 14px; }
   .guide-navigation:has(.example-guide-steps) .lesson-steps { margin: 0; padding: 6px 12px; }
 }
+
+.objective-type, .type-choice-row { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+.type-info { display: inline-flex; align-items: center; flex-wrap: wrap; gap: .4rem; }
+.type-info > button { min-width: 44px; min-height: 44px; }
+.type-explanation { display: block; max-width: 38rem; font-size: .9rem; font-weight: normal; }
+.type-choice-row .type-choice { flex: 0 1 auto; }
+
+.coaching-stages { display: flex; flex-wrap: wrap; gap: .35rem; margin: 1rem 0; font-size: .9rem; }
+.coaching-stages [aria-current="step"] { font-weight: 600; text-decoration: underline; text-underline-offset: .4rem; }
+.focus-assistance { max-width: 44rem; margin: 1rem auto; }
+.focus-assistance textarea, .focus-assistance input[type="date"] { width: 100%; }
+.focus-assistance .cp-choice { display: flex; gap: .5rem; }
+.focus-assistance .cp-fields > label { display: block; margin-top: 1rem; }
+.focus-assistance .cp-fields > button { margin: .5rem .5rem .5rem 0; }
+.focus-review-actions, .saved-coaching { display:flex; align-items:center; flex-wrap:wrap; gap:.7rem; margin:1rem 0; }
+.saved-coaching details { flex-basis:100%; }

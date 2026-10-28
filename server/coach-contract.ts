@@ -46,6 +46,12 @@ export function validateCheckpoint(value: unknown): CoachCheckpoint {
     "sourceVersion",
     "sectionIndex",
     "goalIndex",
+    "entry",
+    "kind",
+    "recommendedKind",
+    "adding",
+    "siblings",
+    "revision",
   ];
   if (
     Object.keys(value).some((k) => !allowed.includes(k)) ||
@@ -82,7 +88,22 @@ export function validateCheckpoint(value: unknown): CoachCheckpoint {
     (value.other !== undefined && typeof value.other !== "boolean")
   )
     return fail();
-  for (const key of ["sectionIndex", "goalIndex", "sourceVersion"])
+  if (
+    (value.entry !== undefined &&
+      !["work", "objective", "goal"].includes(String(value.entry))) ||
+    (value.adding !== undefined && typeof value.adding !== "boolean") ||
+    (value.siblings !== undefined &&
+      (!Array.isArray(value.siblings) ||
+        value.siblings.length > 100 ||
+        value.siblings.some((v) => !text(v, 10000)))) ||
+    [value.kind, value.recommendedKind].some(
+      (v) =>
+        v !== undefined &&
+        !["normal", "personal-development", "leadership"].includes(String(v)),
+    )
+  )
+    return fail();
+  for (const key of ["sectionIndex", "goalIndex", "sourceVersion", "revision"])
     if (
       value[key] !== undefined &&
       (!Number.isSafeInteger(value[key]) || Number(value[key]) < 0)
@@ -110,6 +131,7 @@ export function validateSuggestion(
           "actions",
           "initiativeIds",
           "suggestedDate",
+          "recommendedKind",
         ].includes(k),
     )
   )
@@ -149,6 +171,13 @@ export function validateSuggestion(
         value.actions.length < 2 ||
         !date(value.suggestedDate))) ||
     (stage === "goal" && !value.goal)
+  )
+    return fail();
+  if (
+    value.recommendedKind !== undefined &&
+    !["normal", "personal-development", "leadership"].includes(
+      String(value.recommendedKind),
+    )
   )
     return fail();
   const result = value as CoachSuggestion;
