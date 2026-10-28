@@ -17,7 +17,7 @@ test('promotion cannot substitute newer main or accept failed/missing stage evid
 });
 
 test('automatic promotion requires authenticated acceptance and cleanup from the exact run attempt', () => {
- const evidence = {sha,readiness:'passed',target:'stage',deployment:'stage-id',runId:'123',runAttempt:2,schemaVersion:8,acceptance:'passed',cleanup:'passed',acceptanceSuiteVersion:2};
+ const evidence = {sha,readiness:'passed',target:'stage',deployment:'stage-id',runId:'123',runAttempt:2,schemaVersion:8,acceptance:'passed',cleanup:'passed',acceptanceSuiteVersion:3};
  const required = {requireAcceptance:true,runId:'123',runAttempt:2};
  assert.doesNotThrow(() => promotionGate(sha,evidence,required));
  for (const patch of [{acceptance:undefined},{acceptance:'failed'},{cleanup:undefined},{cleanup:'failed'},{acceptanceSuiteVersion:0},{runId:'124'},{runAttempt:1},{runAttempt:undefined}]) {

@@ -61,8 +61,15 @@ complete set.
    normal Qwen turn, then a deliberately unavailable **staging-only** primary URL
    and verify an OpenRouter reply. Restore the primary URL and verify Qwen recovery.
    This is a connectivity/failover check, not a coaching-quality benchmark.
-4. Run staging readiness and authenticated acceptance for the exact release. The
-   review-request/notes journey uses no live model and cleans up its synthetic data.
+4. Run staging readiness and authenticated acceptance for the exact release. With
+   `COACH_ENABLED=0`, acceptance verifies model rejection and manual draft submission.
+   With `COACH_ENABLED=1`, synthetic members also complete the deployed coaching
+   journey through save, reopen and review submission. The evidence records which
+   mode ran; all synthetic records and sessions are cleaned up. A green disabled
+   run does not certify provider connectivity.
+   Keep production coaching disabled during the schema release and staging activation.
+   Enable production only after the enabled staging journey and forced-fallback
+   connectivity check pass.
 5. Use the authorized human production release process after installing production
    keys. Verify readiness and check provider outcome logs during ordinary use.
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { runCoachingJourney } from './acceptance-coaching.mjs';
 import { chromium as defaultChromium, expect } from '@playwright/test';
 
 export const ACCEPTANCE_CHECKS = Object.freeze([
@@ -10,10 +11,14 @@ export const ACCEPTANCE_CHECKS = Object.freeze([
   'stale-and-forged-writes',
   'review-requests-and-notes',
   'lead-confirmation-lock',
+  'coaching-disabled-manual',
   'account-and-guide',
   'browser-errors',
   'session-revocation',
 ]);
+
+export const ENABLED_ACCEPTANCE_CHECKS = Object.freeze(ACCEPTANCE_CHECKS.map(check =>
+  check === 'coaching-disabled-manual' ? 'coaching-enabled-journey' : check));
 
 // The caller provisions disposable synthetic identities and removes their data.
 // This journey uses ordinary sessions and public browser/HTTP interfaces only.
@@ -224,6 +229,10 @@ export async function runAcceptanceBrowser({ origin, sessions, runId }, { chromi
     assert.equal(confirmed.status, 'confirmed');
     assert.equal(confirmed.confirmedBy.id, identities.lead.user.id);
     assert.equal((await write(member, 'put', path, draft(confirmed))).status(), 409);
+    checks.push(checkpoint);
+
+    checkpoint = identities.peer.coachAvailable ? 'coaching-enabled-journey' : 'coaching-disabled-manual';
+    await runCoachingJourney({ context: contexts.get('peer'), origin, runId, enabled: identities.peer.coachAvailable });
     checks.push(checkpoint);
 
     checkpoint = 'account-and-guide';

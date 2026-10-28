@@ -245,7 +245,7 @@ test('journey and cleanup failures are reported independently without private ex
 test('the runner retains each journey outcome when guarded cleanup succeeds or fails',async t=>{
  const {acceptanceEvidence}=await import('./acceptance.mjs');
  const checks=['authenticated-identities','department-direction','mission-image','focus-authoring-persistence',
-  'authorization-isolation','stale-and-forged-writes','review-requests-and-notes','lead-confirmation-lock','account-and-guide','browser-errors','session-revocation'];
+  'authorization-isolation','stale-and-forged-writes','review-requests-and-notes','lead-confirmation-lock','coaching-disabled-manual','account-and-guide','browser-errors','session-revocation'];
  const sha='a'.repeat(40);
  const env={RELEASE_TARGET:'stage',RELEASE_SHA:sha,APP_ORIGIN:'https://stage.example.test',
   EXPECTED_DEPLOYMENT_ID:'deployment-a',EXPECTED_SCHEMA_VERSION:'8',GITHUB_RUN_ID:'123',GITHUB_RUN_ATTEMPT:'2'};

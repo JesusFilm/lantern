@@ -43,7 +43,7 @@ Local browser tests largely use Vite/HTTP. Release integration tests additionall
 
 The main CI stage job validates configuration, applies migrations and deploys the selected revision, then verifies readiness (below). With acceptance enabled, a private runner seeds four synthetic accounts: member, peer, career lead and an outsider in another department. It supplies ordinary 15-minute sessions, then uses the deployed browser and HTTP interfaces. This starts **after Google identity verification**; there is no public test-login endpoint.
 
-The [browser runner](../../tools/release/acceptance-browser.mjs) records these eleven checkpoints in order:
+The [browser runner](../../tools/release/acceptance-browser.mjs) records these twelve checkpoints in order:
 
 | Checkpoint | What it actually does |
 | --- | --- |
@@ -55,6 +55,7 @@ The [browser runner](../../tools/release/acceptance-browser.mjs) records these e
 | `stale-and-forged-writes` | Reject an old version, forged ownership and foreign Origin; verify the document is unchanged. |
 | `review-requests-and-notes` | Member requests review of a saved focus; lead adds a note; member reads it; verify snapshot persistence, read acknowledgments and participant isolation. No live model is called. |
 | `lead-confirmation-lock` | Lead confirms; both views show the locked document without editing controls and an API edit is rejected. |
+| `coaching-disabled-manual` / `coaching-enabled-journey` | A second synthetic member creates, saves, reopens and submits a draft. With coaching off, verify inference returns 503 and manual authoring works. With coaching on, use the deployed providers for contribution questions, objective/action suggestions and a member-edited date; verify generated content persists and is submitted. |
 | `account-and-guide` | Edit/reload the member's display name; open the guide and example. |
 | `browser-errors` | Require no page JavaScript errors during the journey. |
 | `session-revocation` | Sign out supplied sessions and verify replay cannot access focuses, including after a journey failure. |
@@ -64,6 +65,8 @@ The [fixture lifecycle](../../tools/release/acceptance-fixture.mjs) holds a data
 ## Readiness and coverage limits
 
 Both deployed environments use [readiness smoke](../../tools/release/smoke.mjs): health/database readiness; matching SHA, deployment ID and schema; anonymous `/api/focuses`, `/api/department` and `/api/guide` return 401; the Google sign-in control renders without page JavaScript errors; final health still matches. **Production runs only these readiness checks**, with no synthetic business data or authenticated journey.
+
+Acceptance evidence records `coaching: enabled` or `disabled`; a flag-off run does not establish live inference. Enabled runs make at most six model turns (each may use fallback), use only synthetic work and check workflow/response contracts rather than exact wording or model quality. The runner does not deliberately disrupt the hosted primary; forced failover and restoration remain a separate activation check.
 
 Staging acceptance does not cover real Google login, enrollment, every initiative lifecycle, production backfills/data conditions, load/stress behavior or every regression. Local tests cover some of those functional gaps, but do not prove them on the hosted deployment. Complete a real Google sign-in during initial rollout and after auth/OAuth/admission-policy changes; use the [release procedure](../operations/releasing.md) to hold automatic promotion for that check. Schema changes require compatibility review and manual release. Production is rebuilt from the selected source, not promoted as an identical container image.
 

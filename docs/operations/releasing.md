@@ -37,7 +37,7 @@ Automatic admission blocks differing advertised schemas. A successful manual sch
 | Where | Evidence to inspect |
 | --- | --- |
 | Staging readiness | `stage-readiness-<sha>-<run-id>-<attempt>` contains `release-evidence.json`, preserved before acceptance. |
-| Staging acceptance | `stage-acceptance-<sha>-<run-id>-<attempt>` contains matching SHA/deployment/schema/run/attempt, eleven checkpoint names and `acceptance: passed`, `cleanup: passed`. |
+| Staging acceptance | `stage-acceptance-<sha>-<run-id>-<attempt>` contains matching SHA/deployment/schema/run/attempt, twelve checkpoint names, the enabled/disabled coaching mode and `acceptance: passed`, `cleanup: passed`. |
 | Failed staging run | Actions summary separates journey checkpoint/outcome and cleanup outcome, including unknown/not reached; no passing artifact is manufactured. |
 | Production | `production-evidence-<sha>` binds readiness to the deployment; automatic evidence also records source staging run/attempt and `releaseMode`. |
 
