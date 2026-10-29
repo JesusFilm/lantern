@@ -62,11 +62,18 @@ export function CoachWorkspace({
     [compose, setCompose] = useState(false);
   const [noteVersion, setNoteVersion] = useState<number>(),
     [confirmed, setConfirmed] = useState<number>();
+  const [readRetry, setReadRetry] = useState(0);
   const revision = useRef(0),
     mounted = useRef(true);
+  const changed = useRef(onChanged);
+  useEffect(() => { changed.current = onChanged; }, [onChanged]);
   const record = records.find((r) => r.focus.id === selected),
     request = record?.requests.at(-1),
     locked = record?.focus.status === "confirmed";
+  const displayedFocus = view === "review" && request ? record?.focus.id : undefined;
+  const unreadIds = JSON.stringify(displayedFocus
+    ? record!.notes.filter(n => !record!.readIds.includes(n.id)).map(n => n.id)
+    : []);
   function put(r: CoachRecord) {
     if (!mounted.current) return;
     revision.current++;
@@ -98,13 +105,25 @@ export function CoachWorkspace({
     };
   }, [focusId]);
   useEffect(() => {
-    if (!confirmedView || !record || !request || !locked) return;
-    const unread = record.notes.filter(n => n.authorId !== actor && !record.readIds.includes(n.id)).map(n => n.id);
-    if (!unread.length) return;
-    void api<CoachRecord>(base + "/focuses/" + record.focus.id + "/read", "POST", { noteIds: unread })
-      .then(r => { put(r); onChanged?.(); })
-      .catch(e => { if (mounted.current) setError((e as Error).message); });
-  }, [confirmedView, record]);
+    const noteIds = JSON.parse(unreadIds) as string[];
+    if (!displayedFocus || !noteIds.length) return;
+    const controller = new AbortController();
+    let active = true;
+    void api<CoachRecord>(base + "/focuses/" + displayedFocus + "/read", "POST", { noteIds }, controller.signal)
+      .then(r => {
+        if (!active || !mounted.current) return;
+        // A read response may predate a poll or mutation. Retain the displayed
+        // record and merge only the acknowledgements for the notes we showed.
+        const acknowledged = noteIds.filter(id => r.readIds.includes(id));
+        revision.current++;
+        setRecords(old => old.map(current => current.focus.id === displayedFocus
+          ? { ...current, readIds: [...new Set([...current.readIds, ...acknowledged])] }
+          : current));
+        changed.current?.();
+      })
+      .catch(e => { if (active && mounted.current) setError((e as Error).message); });
+    return () => { active = false; controller.abort(); };
+  }, [displayedFocus, unreadIds, actor, readRetry]);
   useEffect(() => {
     const nav = (e: Event) => {
       if (note.trim() && !window.confirm("Leave without saving your note?"))
@@ -126,7 +145,7 @@ export function CoachWorkspace({
   function canLeaveNote() {
     return !note.trim() || window.confirm("Discard this unsaved note?");
   }
-  async function review(r: CoachRecord) {
+  function review(r: CoachRecord) {
     if (!canLeaveNote()) return;
     setSelected(r.focus.id);
     setView("review");
@@ -134,18 +153,6 @@ export function CoachWorkspace({
     setNote("");
     setConfirmed(undefined);
     setError("");
-    try {
-      put(
-        await api<CoachRecord>(
-          base + "/focuses/" + r.focus.id + "/read",
-          "POST",
-          { noteIds: r.notes.map((n) => n.id) },
-        ),
-      );
-      onChanged?.();
-    } catch (e) {
-      setError((e as Error).message);
-    }
   }
   async function mutation(path: string, method: string, body?: unknown) {
     setBusy("Saving…");
@@ -346,7 +353,7 @@ export function CoachWorkspace({
       ) : null}
       {error && (
         <p role="alert">
-          {error} <button onClick={() => void refresh()}>Try again</button>
+          {error} <button onClick={() => { setError(""); setReadRetry(n => n + 1); void refresh(); }}>Try again</button>
         </p>
       )}
       {busy && <p role="status">{busy}</p>}
