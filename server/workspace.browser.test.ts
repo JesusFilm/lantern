@@ -71,7 +71,9 @@ test(
           await page.getByLabel("Document title").fill("Annual focus");
           await page.getByLabel("Period starts").fill("2026-01-01");
           await page.getByLabel("Period ends").fill("2026-12-31");
-          await page.getByRole("button", { name: "Save changes" }).click();
+          await page
+            .getByRole("button", { name: /^Save (changes|objective)$/ })
+            .click();
           await expect(
             page.getByRole("heading", { name: "Annual focus" }),
           ).toBeVisible();
@@ -86,18 +88,21 @@ test(
         "objective types reset to normal; editing, cancel and goal removal persist",
         async () => {
           await page
-            .getByRole("button", { name: "Add objective", exact: true })
+            .getByRole("button", { name: "+ Add objective", exact: true })
             .click();
           await expect(
             page.getByRole("radio", { name: "Contribution", exact: true }),
           ).toBeChecked();
           await page
-            .getByRole("radio", { name: "Leadership (optional)", exact: true })
+            .getByRole("radio", { name: "Leadership", exact: true })
             .check();
           await page
             .getByLabel("Objective", { exact: true })
             .fill("Support a new facilitator.");
-          await page.getByRole("button", { name: "Save changes" }).click();
+          await page.getByRole("checkbox", { name: "Other — none of these apply", exact: true }).check();
+          await page
+            .getByRole("button", { name: /^Save (changes|objective)$/ })
+            .click();
           await expect(page.locator(".read-section")).toContainText(
             "Leadership",
           );
@@ -109,21 +114,27 @@ test(
           ).toBeChecked();
           await page
             .getByRole("radio", {
-              name: "Personal development (optional)",
+              name: "Personal development",
               exact: true,
             })
             .check();
           await page
             .getByLabel("Objective", { exact: true })
             .fill("Improve my communication.");
-          await page.getByRole("button", { name: "Save changes" }).click();
+          await page.getByRole("checkbox", { name: "Other — none of these apply", exact: true }).check();
+          await page
+            .getByRole("button", { name: /^Save (changes|objective)$/ })
+            .click();
           await page
             .getByRole("button", { name: "+ Add objective", exact: true })
             .click();
           await page
             .getByLabel("Objective", { exact: true })
             .fill("Help new team members.");
-          await page.getByRole("button", { name: "Save changes" }).click();
+          await page.getByRole("checkbox", { name: "Other — none of these apply", exact: true }).check();
+          await page
+            .getByRole("button", { name: /^Save (changes|objective)$/ })
+            .click();
           await page
             .locator(".read-section")
             .first()
@@ -132,7 +143,9 @@ test(
           await page
             .getByLabel("SMART goal", { exact: true })
             .fill("Run two practice sessions by June.");
-          await page.getByRole("button", { name: "Save changes" }).click();
+          await page
+            .getByRole("button", { name: /^Save (changes|objective)$/ })
+            .click();
           await page
             .locator(".read-goal")
             .getByRole("button", { name: "Edit", exact: true })
@@ -152,8 +165,13 @@ test(
             .click();
           // Exercise the save/reload boundary with a genuinely pending HTTP write.
           await page.route("**/api/focuses/*", async (route) => {
-            if (route.request().method() === "PUT" &&
-                route.request().postData()?.includes("Run three practice sessions by July.")) {
+            if (
+              route.request().method() === "PUT" &&
+              route
+                .request()
+                .postData()
+                ?.includes("Run three practice sessions by July.")
+            ) {
               await new Promise((resolve) => setTimeout(resolve, 300));
             }
             await route.continue().catch(() => {});
@@ -161,7 +179,9 @@ test(
           await page
             .getByLabel("SMART goal", { exact: true })
             .fill("Run three practice sessions by July.");
-          await page.getByRole("button", { name: "Save changes" }).click();
+          await page
+            .getByRole("button", { name: /^Save (changes|objective)$/ })
+            .click();
           await expect(page.getByRole("dialog")).toBeHidden();
           await page.unroute("**/api/focuses/*");
           await page.reload();
@@ -177,7 +197,9 @@ test(
           await page
             .getByLabel("Objective", { exact: true })
             .fill("Support two new facilitators.");
-          await page.getByRole("button", { name: "Save changes" }).click();
+          await page
+            .getByRole("button", { name: /^Save (changes|objective)$/ })
+            .click();
           await expect(page.locator(".read-section").first()).toContainText(
             "two new facilitators",
           );
@@ -205,7 +227,9 @@ test(
             .getByRole("button", { name: "Edit title & dates" })
             .click();
           await page.getByLabel("Document title").fill("Revised annual focus");
-          await page.getByRole("button", { name: "Save changes" }).click();
+          await page
+            .getByRole("button", { name: /^Save (changes|objective)$/ })
+            .click();
           await page
             .getByRole("button", { name: "← Position focuses" })
             .click();
@@ -224,7 +248,9 @@ test(
           await page
             .getByRole("button", { name: "Guide", exact: true })
             .click();
-          await page.getByRole("button", { name: "Objectives", exact: true }).click();
+          await page
+            .getByRole("button", { name: "Objectives", exact: true })
+            .click();
           await expect(
             page.getByRole("heading", {
               name: "What makes a useful objective?",
@@ -278,7 +304,9 @@ test(
           await page
             .getByLabel("Display name", { exact: true })
             .fill("Jordan Updated");
-          await page.getByRole("button", { name: "Save changes" }).click();
+          await page
+            .getByRole("button", { name: /^Save (changes|objective)$/ })
+            .click();
           await expect(page.getByRole("dialog")).toBeHidden();
           await page.reload();
           await page
@@ -313,7 +341,7 @@ test(
       );
 
       await t.test(
-        "failed saves keep dialog text, Escape cancels, and stale saves show recovery instructions",
+        "failed saves keep editor text, Cancel discards, and stale saves show recovery instructions",
         async () => {
           await page.setViewportSize({ width: 1440, height: 1000 });
           await page
@@ -338,7 +366,9 @@ test(
                 })
               : route.continue(),
           );
-          await page.getByRole("button", { name: "Save changes" }).click();
+          await page
+            .getByRole("button", { name: /^Save (changes|objective)$/ })
+            .click();
           await expect(page.getByRole("alert")).toHaveText(
             "Temporarily unavailable.",
           );
@@ -346,7 +376,10 @@ test(
             page.getByLabel("Objective", { exact: true }),
           ).toHaveValue("Preserve this unsaved text");
           await page.unroute("**/api/focuses/*");
-          await page.keyboard.press("Escape");
+          page.once("dialog", (dialog) => dialog.accept());
+          await page
+            .getByRole("button", { name: "Cancel", exact: true })
+            .click();
           await expect(page.getByRole("dialog")).toHaveCount(0);
           const otherPage = await browser!.newPage();
           await otherPage.goto(page.url());
@@ -357,7 +390,9 @@ test(
           await otherPage
             .getByLabel("Objective", { exact: true })
             .fill("Saved by another window");
-          await otherPage.getByRole("button", { name: "Save changes" }).click();
+          await otherPage
+            .getByRole("button", { name: /^Save (changes|objective)$/ })
+            .click();
           await page
             .getByRole("button", { name: "Edit objective", exact: true })
             .first()
@@ -365,10 +400,13 @@ test(
           await page
             .getByLabel("Objective", { exact: true })
             .fill("Stale write");
-          await page.getByRole("button", { name: "Save changes" }).click();
+          await page
+            .getByRole("button", { name: /^Save (changes|objective)$/ })
+            .click();
           await expect(page.getByRole("alert")).toContainText(
             "changed in another window",
           );
+          page.once("dialog", (dialog) => dialog.accept());
           await page
             .getByRole("button", { name: "Cancel", exact: true })
             .click();

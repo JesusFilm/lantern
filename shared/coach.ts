@@ -1,6 +1,12 @@
 // Private coaching input and submitted review documents have separate visibility.
-import type { FocusDraft, PositionFocus } from "./focus.js";
+import type { FocusDraft, PositionFocus, ObjectiveKind } from "./focus.js";
 export interface CoachCheckpoint {
+  entry?: "work" | "objective" | "goal";
+  kind?: ObjectiveKind;
+  recommendedKind?: ObjectiveKind;
+  adding?: boolean;
+  siblings?: string[];
+  revision?: string;
   step: number;
   sectionIndex?: number;
   goalIndex?: number;
@@ -23,6 +29,7 @@ export interface CoachCheckpoint {
   concern: string;
 }
 export interface CoachSuggestion {
+  recommendedKind?: ObjectiveKind;
   ready?: boolean;
   question?: string;
   options?: string[];

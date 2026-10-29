@@ -11,9 +11,11 @@ const labels: Record<CoachStage, string> = {
 export function CoachPreparing({
   stage,
   onBack,
+  onClose,
 }: {
   stage: CoachStage | null;
   onBack: () => void;
+  onClose: () => void;
 }) {
   const panel = useRef<HTMLDialogElement>(null);
   const [lastStage, setLastStage] = useState<CoachStage>("clarify");
@@ -54,11 +56,7 @@ export function CoachPreparing({
         event.preventDefault();
         if (stage) onBack();
       }}
-      onClose={() =>
-        document
-          .querySelector<HTMLFieldSetElement>(".cp-fields")
-          ?.focus({ preventScroll: true })
-      }
+      onClose={onClose}
     >
       <div className="cp-wait-content">
         <span className="cp-wait-spinner" aria-hidden="true" />

@@ -10,13 +10,13 @@ export function FocusHeading({ focus, member, onBack, onMetadata, onConfirmed }:
   focus: PositionFocus;
   member: { id: string; name: string };
   onBack: () => void;
-  onMetadata: () => void;
+  onMetadata?: () => void;
   onConfirmed?: (focus: PositionFocus) => void;
 }) {
   const phone = usePhoneLayout();
   const [details, setDetails] = useState(false);
   const period = <p className="muted">{date(focus.start)} – {date(focus.end)}</p>;
-  const edit = focus.status === "draft" && <button onClick={onMetadata}>Edit title & dates</button>;
+  const edit = focus.status === "draft" && onMetadata && <button onClick={onMetadata}>Edit title & dates</button>;
   const confirmation = <FocusConfirmation focus={focus} member={member} onConfirmed={onConfirmed} />;
   return phone ? <div className="phone-focus-heading">
     <div className="focus-context-row">

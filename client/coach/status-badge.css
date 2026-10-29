@@ -1,0 +1,31 @@
+.review-status {
+  display: inline-block;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-subtle);
+  color: var(--ink);
+  font-size: var(--text-small);
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.review-status--confirmed {
+  border-color: #a7d1bb;
+  background: #e8f5ee;
+  color: #175539;
+}
+.review-status--new-notes {
+  border-color: #a6d7df;
+  background: #e8f5f7;
+  color: #006b7f;
+}
+.review-status--unsent-changes {
+  border-color: #dec48c;
+  background: #fff6e4;
+  color: #715015;
+}
+.cp-card > .cp-row {
+  margin-bottom: var(--space-3);
+}

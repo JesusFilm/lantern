@@ -25,11 +25,11 @@ export function FocusConfirmation({
   const [confirming, setConfirming] = useState(false);
   if (focus.status === "confirmed")
     return (
-      <p className="muted" role="status">
-        Confirmed by {focus.confirmedBy?.name} on{" "}
-        {new Date(focus.confirmedAt!).toLocaleString("en-NZ")}. This agreed focus
-        is read-only.
-      </p>
+      <div className="focus-confirmed" role="status">
+        <span className="review-status review-status--confirmed">Confirmed</span>
+        <span>Confirmed by {focus.confirmedBy?.name} · {new Date(focus.confirmedAt!).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric" })}</span>
+        <span>Read-only</span>
+      </div>
     );
   return (
     <>
