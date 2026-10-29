@@ -49,7 +49,7 @@ export function Guide({ content }: { content: GuideContent }) {
         <p className="intro-copy">Connect the people you serve with the contribution you can make. Prepare a focus you and your career lead can shape, agree and revisit.</p>
         <div className="focus-path" aria-label="From purpose to agreement"><span>01 · Understand</span><span>02 · Define</span><span>03 · Agree together</span></div>
       </section>
-      <div className="resource-heading"><h2>Guidance, when you need it</h2><span className="help-mark" title="Optional supporting resources" aria-label="Optional help">?</span></div>
+      <div className="resource-heading"><h2>Guidance, when you need it</h2><span className="help-mark" role="img" title="Optional supporting resources" aria-label="Optional help">?</span></div>
       <p>Choose a short walkthrough or explore a complete example. Start wherever it helps.</p>
       <div className="resource-cards">
         <button onClick={() => open('objectives')} className="resource-card"><span className="eyebrow">01 / Connect your contribution</span><strong>Critical mission objectives</strong><span>{content.objectives.description}</span><span className="card-action">Open objective walkthrough →</span></button>
