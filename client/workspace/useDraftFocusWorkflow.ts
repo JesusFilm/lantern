@@ -82,12 +82,20 @@ function selectedId() {
   return new URLSearchParams(location.search).get("focus");
 }
 
+export function workspaceHistoryIndex(): number {
+  // The browser's index also covers legacy/auth entries without our marker.
+  return window.navigation?.currentEntry?.index ??
+    history.state?.lanternHistoryIndex ?? 0;
+}
+
 function navigate(id?: string) {
   const url = new URL(location.href);
   if (id) url.searchParams.set("focus", id);
   else url.searchParams.delete("focus");
-  history.pushState(null, "", url);
+  const index = workspaceHistoryIndex() + 1;
+  history.pushState({ lanternHistoryIndex: index }, "", url);
   window.scrollTo(0, 0);
+  return index;
 }
 
 function draftOf(source: PositionFocus): FocusDraft {
@@ -122,6 +130,9 @@ export function useDraftFocusWorkflow() {
   const readRevision = useRef(0);
   const editRevision = useRef(0);
   const initiativeRevision = useRef(0);
+  const historyIndex = useRef(workspaceHistoryIndex());
+  const retainedEdit = useRef(edit);
+  retainedEdit.current = edit;
 
   async function reload() {
     const revision = ++readRevision.current;
@@ -156,18 +167,41 @@ export function useDraftFocusWorkflow() {
 
   useEffect(() => {
     void reload();
-    const pop = () => void reload();
-    window.addEventListener("popstate", pop);
+    let restoring = false;
+    const pop = (event: Event) => {
+      const destination = workspaceHistoryIndex();
+      if (restoring) {
+        restoring = false;
+        event.preventDefault();
+        return;
+      }
+      // Pending editors survive focus history traversal. Review composers do
+      // not: guard before either reload or App's page listener can unmount one.
+      // Menu navigation already asks before pushing its synthetic popstate.
+      if (
+        (event as CustomEvent<{ browser: boolean }>).detail.browser &&
+        !retainedEdit.current &&
+        !window.dispatchEvent(new Event("lantern-coach-leave", { cancelable: true }))
+      ) {
+        event.preventDefault();
+        restoring = true;
+        history.go(historyIndex.current - destination);
+        return;
+      }
+      historyIndex.current = destination;
+      void reload();
+    };
+    window.addEventListener("lantern-focus-history", pop);
     return () => {
       ++readRevision.current;
       ++editRevision.current;
       ++initiativeRevision.current;
-      window.removeEventListener("popstate", pop);
+      window.removeEventListener("lantern-focus-history", pop);
     };
   }, []);
 
   async function select(id?: string) {
-    navigate(id);
+    historyIndex.current = navigate(id);
     const revision = ++readRevision.current;
     setReading((old) => ({
       ...old,
@@ -204,7 +238,7 @@ export function useDraftFocusWorkflow() {
         ...old.items.filter((item) => item.id !== result.id),
       ].sort((a, b) => b.start.localeCompare(a.start)),
     }));
-    navigate(result.id);
+    historyIndex.current = navigate(result.id);
   }
 
   function acceptConfirmed(result: PositionFocus) {

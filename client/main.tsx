@@ -8,6 +8,11 @@ import { LearningGuide } from "./workspace/LearningGuide.js";
 import { Account } from "./workspace/Account.js";
 import { Department } from "./workspace/Department.js";
 import "./workspace/style.css";
+import { workspaceHistoryIndex } from "./workspace/useDraftFocusWorkflow.js";
+history.replaceState(
+  { ...history.state, lanternHistoryIndex: workspaceHistoryIndex() },
+  "",
+);
 function currentPage() {
   const page = new URLSearchParams(location.search).get("page");
   return page === "department" || page === "guide" || page === "account" || page === "reviews"
@@ -21,7 +26,11 @@ function navigatePage(page: string) {
   url.searchParams.delete("memberFocus");
   if (page === "focuses") url.searchParams.delete("page");
   else url.searchParams.set("page", page);
-  history.pushState(null, "", url);
+  history.pushState(
+    { lanternHistoryIndex: workspaceHistoryIndex() + 1 },
+    "",
+    url,
+  );
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 function App() {
@@ -55,7 +64,13 @@ function App() {
         setSession(undefined);
       void refresh();
     };
-    const pop = () => setPage(currentPage());
+    const pop = (event: PopStateEvent) => {
+      const traversal = new CustomEvent("lantern-focus-history", {
+        cancelable: true,
+        detail: { browser: event.isTrusted },
+      });
+      if (window.dispatchEvent(traversal)) setPage(currentPage());
+    };
     window.addEventListener("focus", run);
     window.addEventListener("lantern-access-changed", denied);
     window.addEventListener("popstate", pop);
