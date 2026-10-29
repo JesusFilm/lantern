@@ -1,39 +1,35 @@
 # Objective authoring methods
 
 Date: 2026-10-29
-Status: Implemented for owner UX feedback under the requested reimplementation
+Status: Accepted for shared authoring state ownership
 
 ## Decision
 
-Use one objective, including its goals, as the scope of manual or AI-guided
-writing. The owner rejected the layered suggestion, coaching-progress and draft
-states in the first implementation. Both methods now update the same pending
-objective and use one ordinary Save objective action. Quick manual goal edits
-remain shortcuts. Method choice is local presentation state, not a stored flag.
+Manual and AI-guided authoring share one in-memory pending objective, including
+its nested goals, owned by the source-bound draft workflow. AI output changes that
+pending state through typed intents; the ordinary focus write interface persists
+the original document/version. Authoring method is presentation state rather than
+a persisted domain flag. The current authoring path does not write separate
+coaching checkpoints.
 
-Guidance has explicit work, objective, goals and check-objective stages. Generation
-occurs during relevant transitions. Merely opening an existing objective does not
-regenerate it. Existing-objective guidance first asks what the member wants to
-improve; an empty answer continues to its goals. Back and method switching retain
-input. Goal planning has one date control; changing the plan regenerates wording
-for inspection, while unchanged plans retain member edits. Failures and stale saves
-retain the pending edit.
-Saving writes the original focus version, preserving unrelated sections.
+The shared document renderer owns objective/goal hierarchy across member and
+career-lead views. Edit callbacks carry the displayed snapshot. Review requests
+and notes retain their separate module and persistence contracts; server-resolved
+authority remains independent of the authoring method.
 
-The UI no longer writes separate coaching progress. Existing checkpoints and
-legacy HTTP contracts remain protected and readable; the member can copy earlier
-working notes into a new unsaved objective. Notes are never implicitly deleted or
-rebased onto a different current objective. No migration is required.
+## Rationale and alternatives
 
-A shared document renderer owns objective/goal hierarchy for member authoring,
-whole-focus review and career-lead reading. It carries the displayed snapshot in
-edit callbacks. Review requests, notes and confirmation remain separate role tasks.
-Shared spacing, typography and form rules replace conflicting per-editor styles.
+Separate manual and coaching drafts would require synchronization, competing
+save lifecycles and additional rules for reconciling generated content. A shared
+pending objective uses the existing optimistic version checks and keeps changes
+local to the source document. A common renderer avoids divergent representations
+of the same saved hierarchy across roles.
 
 ## Consequences
 
-This replaces the authoring interaction of [ADR 0010](0010-integrated-focus-assistance.md),
-not its checkpoint concurrency, ownership or history safeguards. No provider/model,
-authentication, deployment switch or database-schema change is needed. Unsaved
-pre-objective answers follow ordinary unsaved-form behavior with leave warnings.
-The detailed experience remains subject to the owner's walkthrough of this preview.
+This replaces authoring state ownership in [ADR 0010](0010-integrated-focus-assistance.md).
+Its legacy checkpoint concurrency, ownership and history safeguards remain in force;
+stored checkpoints are retained without exposing a second authoring lifecycle.
+No database migration, provider or authentication change is required. Pending edits
+are transient rather than durably saved assistance sessions. UI flows, controls,
+validation and recovery behavior belong in the [PRD](../PRD.md).

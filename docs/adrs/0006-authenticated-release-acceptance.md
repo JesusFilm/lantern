@@ -3,11 +3,10 @@
 Date: 2026-10-21
 Status: Accepted by the repository owner
 
-[ADR 0008](0008-staging-gate-and-production-smoke.md) refines the release policy:
-GitHub notifications, a usable manual acceptance override, engineer recovery and
-minimal production smoke. The broader ADR 0007 proposal is superseded. The private
-staging runner remains implemented; permanent password login is not implemented.
-Hosted activation requires rehearsal and owner authorization.
+Superseded: 2026-10-21 — release policy refined by
+[ADR 0008](0008-staging-gate-and-production-smoke.md): manual acceptance override,
+engineer recovery and production readiness smoke. The staging fixture and
+exact-revision evidence architecture below remains in force.
 
 ## Decision
 
