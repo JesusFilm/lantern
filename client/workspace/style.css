@@ -1031,6 +1031,15 @@ h2[tabindex="-1"]:focus {
   font-weight: 600;
   color: #415c74;
 }
+.focus-confirmed {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 20px 0 24px;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
 .member-focus-detail .focus-confirmation-row > button {
   margin-left: auto;
 }

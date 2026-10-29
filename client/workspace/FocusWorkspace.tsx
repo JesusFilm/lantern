@@ -127,7 +127,7 @@ export function FocusWorkspace({
             onMetadata={reviewing ? undefined : () => begin({ type: "metadata" })}
             onConfirmed={canConfirm ? acceptConfirmed : undefined}
           />
-          <div className="focus-review-actions">
+          {!reviewing && <div className="focus-review-actions">
             {!reviewing && <button onClick={() => setReviewing(true)}>
               Review & discussion
             </button>}
@@ -149,7 +149,7 @@ export function FocusWorkspace({
                   : ""}
               </span>
             ) : null}
-          </div>
+          </div>}
           {recordError && (
             <p role="alert">
               {recordError}{" "}

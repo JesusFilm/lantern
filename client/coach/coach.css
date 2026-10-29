@@ -62,7 +62,18 @@
 }
 .cp-request-actions {
   justify-content: flex-end;
+  margin-top: var(--space-3);
+  padding-top: 0;
+  border: 0;
 }
+.cp-request {
+  padding: var(--panel-padding);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.cp-request h2 { margin: 0 0 var(--space-4); }
+.cp-request textarea { min-height: 96px; }
 .coach-workspace + .focus-objectives {
   margin-top: var(--space-6);
 }

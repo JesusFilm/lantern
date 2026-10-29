@@ -38,6 +38,12 @@ test("member review status distinguishes unsent changes from confirmation", asyn
     await page.reload();
     await expect(status).toContainText("Confirmed");
     await expect(status).not.toContainText("Changes not sent");
+    await page.getByRole("button", { name: "Review & discussion" }).click();
+    await page.getByRole("button", { name: "Review discussion", exact: true }).click();
+    await expect(page.getByText("Confirmed", { exact: true })).toHaveCount(1);
+    await expect(page.getByText(/Requested version/)).toHaveCount(0);
+    await expect(page.getByText(/Confirmed by lead/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Notes", exact: true })).toBeVisible();
   } finally {
     await browser.close();
     await vite.close();
@@ -67,6 +73,7 @@ test("member requests review alongside the saved focus", async () => {
     await page.getByRole("button", { name: "Review & discussion" }).click();
     await expect(page.getByRole("heading", { name: "Integrated review" })).toBeVisible();
     await expect(page.getByText("Support engineers", { exact: true })).toHaveCount(1);
+    await expect(page.getByRole("region", { name: "Request review" })).toBeVisible();
     for (const viewport of [
       { width: 1280, height: 900 },
       { width: 768, height: 1024 },

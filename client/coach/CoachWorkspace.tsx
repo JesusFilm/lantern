@@ -363,8 +363,8 @@ export function CoachWorkspace({
         </>
       )}
       {view === "request" && record && (
-        <>
-          <h2>Request review</h2>
+        <section className="cp-request" aria-labelledby="request-review-title">
+          <h2 id="request-review-title">Request review</h2>
           {request && comparison(request.document, record.focus)}
           {displayedVersion !== undefined && displayedVersion !== record.focus.version && <p role="alert">This focus has changed. Return to the focus and reload before requesting review.</p>}
           {!record.focus.sections.some(
@@ -417,7 +417,7 @@ export function CoachWorkspace({
                   : "Send request"}
             </button>
           </div>
-        </>
+        </section>
       )}
       {view === "review" && record && request && (
         <>
@@ -426,7 +426,7 @@ export function CoachWorkspace({
             <p className="muted">{record.memberName}’s position focus</p>
           )}
           <div className="cp-row cp-between">
-            {lead ? <div className="cp-row"><StatusBadge status={locked ? "confirmed" : "review-requested"} />{!locked && record.focus.version !== request.document.version && <StatusBadge status="unsent-changes" />}{record.notes.some(n => n.authorId !== actor && !n.deletedAt && !record.readIds.includes(n.id)) && <StatusBadge status="new-notes" />}<span className="cp-muted">{locked ? "Requested version " + request.document.version : "Draft " + request.document.version}</span></div> : <span className="cp-muted">{locked ? "Confirmed · Requested version " + request.document.version : "Review requested · Draft " + request.document.version}</span>}
+            {lead ? <div className="cp-row"><StatusBadge status={locked ? "confirmed" : "review-requested"} />{!locked && record.focus.version !== request.document.version && <StatusBadge status="unsent-changes" />}{record.notes.some(n => n.authorId !== actor && !n.deletedAt && !record.readIds.includes(n.id)) && <StatusBadge status="new-notes" />}<span className="cp-muted">{locked ? "Requested version " + request.document.version : "Draft " + request.document.version}</span></div> : !locked && <span className="cp-muted">{"Review requested · Draft " + request.document.version}</span>}
           </div>
           {lead && (
             <>
