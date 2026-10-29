@@ -124,14 +124,14 @@ export function FocusWorkspace({
             focus={focus}
             member={member}
             onBack={() => { if (leaveReview()) select(); }}
-            onMetadata={() => { if (leaveReview()) begin({ type: "metadata" }); }}
+            onMetadata={reviewing ? undefined : () => begin({ type: "metadata" })}
             onConfirmed={canConfirm ? acceptConfirmed : undefined}
           />
           <div className="focus-review-actions">
-            <button onClick={() => { if (!reviewing || leaveReview()) setReviewing(!reviewing); }}>
-              {reviewing ? "Close review" : "Review & discussion"}
-            </button>
-            {focus.status === "draft" && <button onClick={() => { if (leaveReview()) start({ type: "objective", section: focus.sections.length, adding: true }); }}>+ Add objective</button>}
+            {!reviewing && <button onClick={() => setReviewing(true)}>
+              Review & discussion
+            </button>}
+            {!reviewing && focus.status === "draft" && <button onClick={() => start({ type: "objective", section: focus.sections.length, adding: true })}>+ Add objective</button>}
             {record?.requests.length ? (
               <span className="muted">
                 {focus.status === "confirmed"
@@ -156,13 +156,13 @@ export function FocusWorkspace({
               <button onClick={() => void refreshRecord()}>Refresh</button>
             </p>
           )}
-          {reviewing && <CoachWorkspace session={session} focusId={focus.id} displayedVersion={focus.version} onBack={() => { setReviewing(false); void reload(); void refreshRecord(); }} onChanged={() => void refreshRecord()} />}
+          {reviewing && <CoachWorkspace session={session} focusId={focus.id} displayedVersion={focus.version} onChanged={() => void refreshRecord()} />}
           <FocusObjectives
             key={"reader-" + focus.id}
             focus={focus}
-            onEdit={(target) => { if (leaveReview()) start(target); }}
+            onEdit={reviewing ? undefined : (target) => start(target)}
             onCoach={
-              coachAvailable ? (target) => { if (leaveReview()) start(target, "guided"); } : undefined
+              !reviewing && coachAvailable ? (target) => start(target, "guided") : undefined
             }
           />
         </>

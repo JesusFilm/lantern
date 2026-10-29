@@ -39,14 +39,12 @@ export function CoachWorkspace({
   session,
   lead = false,
   focusId,
-  onBack,
   onChanged,
   displayedVersion,
 }: {
   session: SessionView;
   lead?: boolean;
   focusId?: string;
-  onBack?: () => void;
   onChanged?: () => void;
   displayedVersion?: number;
 }) {
@@ -117,9 +115,6 @@ export function CoachWorkspace({
   }, [note]);
   function canLeaveNote() {
     return !note.trim() || window.confirm("Discard this unsaved note?");
-  }
-  function back() {
-    if (canLeaveNote()) onBack?.();
   }
   async function review(r: CoachRecord) {
     if (!canLeaveNote()) return;
@@ -392,10 +387,7 @@ export function CoachWorkspace({
             disabled={!!busy}
             onChange={(e) => setNote(e.target.value)}
           />
-          <div className="cp-nav">
-            <button disabled={!!busy} onClick={back}>
-              Back to draft
-            </button>
+          <div className="cp-nav cp-request-actions">
             <button
               className="primary"
               disabled={
@@ -435,11 +427,6 @@ export function CoachWorkspace({
           )}
           <div className="cp-row cp-between">
             {lead ? <div className="cp-row"><StatusBadge status={locked ? "confirmed" : "review-requested"} />{!locked && record.focus.version !== request.document.version && <StatusBadge status="unsent-changes" />}{record.notes.some(n => n.authorId !== actor && !n.deletedAt && !record.readIds.includes(n.id)) && <StatusBadge status="new-notes" />}<span className="cp-muted">{locked ? "Requested version " + request.document.version : "Draft " + request.document.version}</span></div> : <span className="cp-muted">{locked ? "Confirmed · Requested version " + request.document.version : "Review requested · Draft " + request.document.version}</span>}
-            {!lead && (
-              <button onClick={back}>
-                {locked ? "View focus" : "Edit draft"}
-              </button>
-            )}
           </div>
           {lead && (
             <>

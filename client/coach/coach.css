@@ -60,6 +60,12 @@
 .cp-field {
   margin-top: var(--space-6);
 }
+.cp-request-actions {
+  justify-content: flex-end;
+}
+.coach-workspace + .focus-objectives {
+  margin-top: var(--space-6);
+}
 .cp-field > label {
   margin-top: 0;
 }

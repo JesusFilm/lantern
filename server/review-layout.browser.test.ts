@@ -128,14 +128,14 @@ test("member and lead read the same objective hierarchy while requested versions
     await member
       .getByRole("button", { name: "Review & discussion", exact: true })
       .click();
-    await assertDocument(member, true);
+    await assertDocument(member, false);
     await member
       .getByRole("button", { name: "Send request", exact: true })
       .click();
     await expect(
       member.getByText("Review requested · Draft 1", { exact: true }),
     ).toBeVisible();
-    await assertDocument(member, true);
+    await assertDocument(member, false);
 
     const leadContext = await browser.newContext();
     await leadContext.addCookies([

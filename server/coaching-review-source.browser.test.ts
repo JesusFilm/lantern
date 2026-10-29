@@ -67,12 +67,42 @@ test("member requests review alongside the saved focus", async () => {
     await page.getByRole("button", { name: "Review & discussion" }).click();
     await expect(page.getByRole("heading", { name: "Integrated review" })).toBeVisible();
     await expect(page.getByText("Support engineers", { exact: true })).toHaveCount(1);
+    for (const viewport of [
+      { width: 1280, height: 900 },
+      { width: 768, height: 1024 },
+      { width: 667, height: 375 },
+      { width: 390, height: 844 },
+      { width: 320, height: 568 },
+    ]) {
+      await page.setViewportSize(viewport);
+      for (const name of [
+        "Edit title & dates", "+ Add objective", "Add objective",
+        "Edit objective", "Guide with AI", "Remove", "Edit",
+        "+ Add SMART goal", "Back to draft", "Close review",
+      ]) {
+        await expect(page.getByRole("button", { name, exact: true, includeHidden: true })).toHaveCount(0);
+      }
+      await expect(page.getByRole("button", { name: "← Position focuses", exact: true })).toBeVisible();
+      const send = page.getByRole("button", { name: "Send request", exact: true });
+      await send.scrollIntoViewIfNeeded();
+      const sendBox = await send.boundingBox();
+      const panelBox = await page.getByRole("region", { name: "Objective 1" }).boundingBox();
+      assert.ok(sendBox && panelBox && panelBox.y - sendBox.y - sendBox.height >= 16,
+        "Review actions need breathing room before the objective panel");
+    }
     await page.getByLabel("Note to career lead · optional").fill("Please review this");
     await page.getByRole("button", { name: "Send request" }).click();
     await expect(page.getByText("Please review this", { exact: true })).toBeVisible();
     const record = await (await f.request("member", "/api/coach/focuses/" + source.id)).json();
     assert.equal(record.requests[0].document.version, source.version);
     assert.equal(record.notes[0].body, "Please review this");
+    await expect(page.getByRole("button", { name: "Edit draft", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "← Position focuses", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Position focuses", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Integrated review", exact: true }).click();
+    await expect(page.getByRole("button", { name: "+ Add objective", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Edit objective", exact: true })).toBeVisible();
+    assert.deepEqual((await (await f.request("member", "/api/focuses/" + source.id)).json()).sections, source.sections);
   } finally { await browser.close(); await vite.close(); await f.close(); }
 });
 
@@ -129,9 +159,7 @@ test("review navigation preserves dirty notes when discard is declined", async (
       await dialog.dismiss();
     });
     const exits = [
-      page.getByRole("button", { name: "Edit objective", exact: true }),
-      page.getByRole("button", { name: "Edit title & dates", exact: true }),
-      page.getByRole("button", { name: "Close review", exact: true }),
+      page.getByRole("button", { name: "← Position focuses", exact: true }),
       page.getByRole("button", { name: "Review discussion", exact: true }),
     ];
     for (const exit of exits) {
@@ -147,10 +175,12 @@ test("review navigation preserves dirty notes when discard is declined", async (
     const discussionNote = page.getByLabel("Add a note", { exact: true });
     await discussionNote.fill("Keep my unfinished discussion note");
     page.once("dialog", (dialog) => dialog.dismiss());
-    await page.getByRole("button", { name: "Close review", exact: true }).click();
+    await page.getByRole("button", { name: "← Position focuses", exact: true }).click();
     await expect(discussionNote).toHaveValue("Keep my unfinished discussion note");
     page.once("dialog", (dialog) => dialog.accept());
-    await page.getByRole("button", { name: "Close review", exact: true }).click();
+    await page.getByRole("button", { name: "← Position focuses", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Position focuses", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Dirty review note", exact: true }).click();
     await expect(page.getByRole("button", { name: "Review & discussion" })).toBeVisible();
     const record = await (
       await f.request("member", "/api/coach/focuses/" + source.id)

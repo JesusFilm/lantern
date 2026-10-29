@@ -11,7 +11,7 @@ export function FocusObjectives({
   onCoach,
 }: {
   focus: PositionFocus;
-  onEdit: (target: EditTarget) => void;
+  onEdit?: (target: EditTarget) => void;
   onCoach?: (target: EditTarget) => void;
 }) {
   const compact = usePhoneLayout();
@@ -93,7 +93,7 @@ export function FocusObjectives({
           <h2 ref={heading} tabIndex={-1}>
             A blank position focus
           </h2>
-          {focus.status === "draft" && <><p>Add your first objective when you’re ready.</p>
+          {focus.status === "draft" && onEdit && <><p>Add your first objective when you’re ready.</p>
           <button
             className="primary"
             onClick={() =>
