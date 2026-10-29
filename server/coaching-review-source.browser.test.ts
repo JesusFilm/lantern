@@ -19,7 +19,7 @@ test("member review status distinguishes unsent changes from confirmation", asyn
     assert.equal(created.status, 201);
     const focus = await created.json();
     const path = "/api/coach/focuses/" + focus.id;
-    assert.equal((await f.request("member", path + "/request", "POST", { version: focus.version })).status, 200);
+    assert.equal((await f.request("member", path + "/request", "POST", { version: focus.version, note: "A preserved discussion" })).status, 200);
     const context = await browser.newContext();
     await context.addCookies([{ name: "lantern-session", value: "member", url: f.origin }]);
     const page = await context.newPage();
@@ -36,14 +36,18 @@ test("member review status distinguishes unsent changes from confirmation", asyn
     const record = await (await f.request("member", path)).json();
     assert.equal(record.focus.version, next.version + 1);
     await page.reload();
-    await expect(status).toContainText("Confirmed");
-    await expect(status).not.toContainText("Changes not sent");
-    await page.getByRole("button", { name: "Review & discussion" }).click();
-    await page.getByRole("button", { name: "Review discussion", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Review & discussion" })).toHaveCount(0);
+    await expect(page.getByText("A preserved discussion", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Add note|Delete note/ })).toHaveCount(0);
     await expect(page.getByText("Confirmed", { exact: true })).toHaveCount(1);
     await expect(page.getByText(/Requested version/)).toHaveCount(0);
     await expect(page.getByText(/Confirmed by lead/)).toBeVisible();
     await expect(page.getByRole("heading", { name: "Notes", exact: true })).toBeVisible();
+    await context.addCookies([{ name: "lantern-session", value: "lead", url: f.origin }]);
+    await page.goto(f.origin + "/?page=reviews");
+    await page.getByRole("button", { name: "Review focus", exact: true }).click();
+    await expect(page.getByText("A preserved discussion", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Add note|Delete note/ })).toHaveCount(0);
   } finally {
     await browser.close();
     await vite.close();

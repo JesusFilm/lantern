@@ -127,16 +127,14 @@ export function FocusWorkspace({
             onMetadata={reviewing ? undefined : () => begin({ type: "metadata" })}
             onConfirmed={canConfirm ? acceptConfirmed : undefined}
           />
-          {!reviewing && <div className="focus-review-actions">
+          {!reviewing && focus.status === "draft" && <div className="focus-review-actions">
             {!reviewing && <button onClick={() => setReviewing(true)}>
               Review & discussion
             </button>}
             {!reviewing && focus.status === "draft" && <button onClick={() => start({ type: "objective", section: focus.sections.length, adding: true })}>+ Add objective</button>}
             {record?.requests.length ? (
               <span className="muted">
-                {focus.status === "confirmed"
-                  ? "Confirmed"
-                  : record.requests.at(-1)?.document.version === focus.version
+                {record.requests.at(-1)?.document.version === focus.version
                   ? "Review requested"
                   : "Changes not sent"}
                 {record.notes.some(
@@ -156,7 +154,7 @@ export function FocusWorkspace({
               <button onClick={() => void refreshRecord()}>Refresh</button>
             </p>
           )}
-          {reviewing && <CoachWorkspace session={session} focusId={focus.id} displayedVersion={focus.version} onChanged={() => void refreshRecord()} />}
+          {reviewing && focus.status === "draft" && <CoachWorkspace session={session} focusId={focus.id} displayedVersion={focus.version} onChanged={() => void refreshRecord()} />}
           <FocusObjectives
             key={"reader-" + focus.id}
             focus={focus}
@@ -165,6 +163,9 @@ export function FocusWorkspace({
               !reviewing && coachAvailable ? (target) => start(target, "guided") : undefined
             }
           />
+          {focus.status === "confirmed" && record && (record.requests.length ?
+            <CoachWorkspace key={focus.id} session={session} focusId={focus.id} confirmedView onChanged={() => void refreshRecord()} /> :
+            <section className="cp-notes"><h2>Notes</h2><p className="cp-muted">No notes yet.</p></section>)}
         </>
       ) : (
         <div className="focus-overview">

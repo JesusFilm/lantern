@@ -41,18 +41,20 @@ export function CoachWorkspace({
   focusId,
   onChanged,
   displayedVersion,
+  confirmedView = false,
 }: {
   session: SessionView;
   lead?: boolean;
   focusId?: string;
   onChanged?: () => void;
   displayedVersion?: number;
+  confirmedView?: boolean;
 }) {
   const actor = session.user!.id;
   const [records, setRecords] = useState<CoachRecord[]>([]),
     [selected, setSelected] = useState(focusId || "");
   const [view, setView] = useState<"home" | "request" | "review">(
-    focusId ? "request" : "home",
+    confirmedView ? "review" : focusId ? "request" : "home",
   );
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(""),
@@ -95,6 +97,14 @@ export function CoachWorkspace({
       window.removeEventListener("focus", run);
     };
   }, [focusId]);
+  useEffect(() => {
+    if (!confirmedView || !record || !request || !locked) return;
+    const unread = record.notes.filter(n => n.authorId !== actor && !record.readIds.includes(n.id)).map(n => n.id);
+    if (!unread.length) return;
+    void api<CoachRecord>(base + "/focuses/" + record.focus.id + "/read", "POST", { noteIds: unread })
+      .then(r => { put(r); onChanged?.(); })
+      .catch(e => { if (mounted.current) setError((e as Error).message); });
+  }, [confirmedView, record]);
   useEffect(() => {
     const nav = (e: Event) => {
       if (note.trim() && !window.confirm("Leave without saving your note?"))
@@ -159,7 +169,7 @@ export function CoachWorkspace({
     <section className="cp-notes">
       <div className="cp-row cp-between">
         <h2>Notes</h2>
-        <button
+        {!locked && <button
           className="link"
           disabled={compose || !!busy}
           onClick={() => {
@@ -168,7 +178,7 @@ export function CoachWorkspace({
           }}
         >
           + Add note
-        </button>
+        </button>}
       </div>
       {record.notes.map((n) => (
         <article key={n.id}>
@@ -189,7 +199,7 @@ export function CoachWorkspace({
                 </details>
               )}
             </span>
-            {!n.deletedAt && n.authorId === actor && (
+            {!locked && !n.deletedAt && n.authorId === actor && (
               <button
                 className="link cp-delete"
                 disabled={!!busy}
@@ -203,13 +213,15 @@ export function CoachWorkspace({
         </article>
       ))}
       {!record.notes.length && <p className="cp-muted">No notes yet.</p>}
-      {compose && (
+      {compose && (!locked || note.trim()) && (
         <div className="cp-field">
           <label htmlFor="new-note">Add a note</label>
+          {locked && <p role="status">This focus was confirmed. Your unsent note cannot be sent; you can copy it before closing.</p>}
           <textarea
             id="new-note"
             value={note}
             disabled={!!busy}
+            readOnly={!!locked}
             onChange={(e) => setNote(e.target.value)}
           />
           <div className="cp-row cp-end">
@@ -222,7 +234,7 @@ export function CoachWorkspace({
             >
               Cancel
             </button>
-            <button
+            {!locked && <button
               className="primary"
               disabled={!note.trim() || !!busy}
               onClick={async () => {
@@ -238,7 +250,7 @@ export function CoachWorkspace({
               }}
             >
               Add note
-            </button>
+            </button>}
           </div>
         </div>
       )}
@@ -421,7 +433,7 @@ export function CoachWorkspace({
       )}
       {view === "review" && record && request && (
         <>
-          {lead ? <h1>{request.document.title}</h1> : <h2>Review discussion</h2>}
+          {lead ? <h1>{request.document.title}</h1> : !confirmedView && <h2>Review discussion</h2>}
           {lead && (
             <p className="muted">{record.memberName}’s position focus</p>
           )}

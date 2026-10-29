@@ -617,3 +617,30 @@ test("a note being composed stays bound to the request the lead actually read", 
     await f.close();
   }
 });
+
+test("confirmation preserves an unsent note for copying without allowing it to be sent", async () => {
+  const { draft } = await import("./coach-test-support.js");
+  const f = await coachingFixture(), vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
+  f.app.use(vite.middlewares);
+  const browser = await chromium.launch();
+  try {
+    const focus = await (await f.request("member", "/api/focuses", "POST", draft)).json();
+    const path = "/api/coach/focuses/" + focus.id;
+    await f.request("member", path + "/request", "POST", { version: 1 });
+    const context = await browser.newContext();
+    await context.addCookies([{ name: "lantern-session", value: "lead", url: f.origin }]);
+    const page = await context.newPage();
+    await page.goto(f.origin + "/?page=reviews");
+    await page.getByRole("button", { name: "Review focus" }).click();
+    await page.getByRole("button", { name: "+ Add note" }).click();
+    await page.getByLabel("Add a note").fill("Keep this unfinished thought");
+    assert.equal((await f.request("lead", path + "/confirm", "POST", { version: 1 })).status, 200);
+    await page.evaluate("window.dispatchEvent(new Event('focus'))");
+    await expect(page.getByText(/Your unsent note cannot be sent/)).toBeVisible();
+    await expect(page.getByLabel("Add a note")).toHaveValue("Keep this unfinished thought");
+    await expect(page.getByLabel("Add a note")).toHaveAttribute("readonly", "");
+    await expect(page.getByRole("button", { name: "Add note", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    await expect(page.getByLabel("Add a note")).toHaveCount(0);
+  } finally { await browser.close(); await vite.close(); await f.close(); }
+});

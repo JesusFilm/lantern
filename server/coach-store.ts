@@ -101,6 +101,11 @@ export function coachStore(db: Pool) {
       );
     return row;
   }
+  async function requireDraftNotes(client: PoolClient, a: Awaited<ReturnType<typeof access>>, id: string) {
+    const focus = await readOwnedFocus(client, a.owner, a.dept.id, id);
+    if (focus.status !== "draft")
+      throw new AccessError(409, "Notes are read-only after the focus is confirmed.");
+  }
   return {
     record,
     access,
@@ -199,7 +204,8 @@ export function coachStore(db: Pool) {
       );
     },
     addNote(actor: string, id: string, version: number, body: string) {
-      return change(actor, id, async (client) => {
+      return change(actor, id, async (client, a) => {
+        await requireDraftNotes(client, a, id);
         const request = await latest(client, id, version);
         await client.query(
           "INSERT INTO focus_review_notes(id,request_id,author_id,body) VALUES($1,$2,$3,$4)",
@@ -208,7 +214,8 @@ export function coachStore(db: Pool) {
       });
     },
     removeNote(actor: string, id: string, noteId: string) {
-      return change(actor, id, async (client) => {
+      return change(actor, id, async (client, a) => {
+        await requireDraftNotes(client, a, id);
         const result = await client.query(
           `UPDATE focus_review_notes n SET deleted_at=COALESCE(n.deleted_at,now()) FROM focus_review_requests r
         WHERE n.id::text=$1 AND n.author_id=$2 AND n.request_id=r.id AND r.focus_id::text=$3 RETURNING n.id`,

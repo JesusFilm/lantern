@@ -147,6 +147,15 @@ test("review requests freeze a version; notes are append-only, private to partic
     assert.equal(confirmed.focus.status, "confirmed");
     assert.equal(confirmed.checkpoint, null);
     assert.equal(confirmed.requests.length, 2);
+    for (const role of ["member", "lead"]) {
+      assert.equal((await f.request(role, path + "/notes", "POST", { version: 2, body: "Late note" })).status, 409);
+      const ownNote = confirmed.notes.find((note: any) => note.authorId === f.ids[role as "member" | "lead"] && !note.deletedAt);
+      assert.ok(ownNote);
+      assert.equal((await f.request(role, path + "/notes/" + ownNote.id, "DELETE")).status, 409);
+    }
+    assert.equal((await f.request("outsider", path + "/notes", "POST", { version: 2, body: "Intrusion" })).status, 404);
+    const after = await (await f.request("member", path)).json();
+    assert.deepEqual(after.notes, confirmed.notes);
     assert.equal(
       (
         await f.request("member", "/api/coach/save", "POST", {
