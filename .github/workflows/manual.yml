@@ -1,0 +1,36 @@
+name: QA manual release
+# Publishes each new manual edition as a GitHub release, so QA can always open
+# https://github.com/JesusFilm/lantern/releases/latest/download/lantern-manual.pdf
+on:
+  push:
+    branches: [main]
+    paths: [docs/manual/manifest.json]
+permissions:
+  contents: write
+concurrency:
+  group: manual-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '24.22.1', cache: npm }
+      - run: npm ci
+      - run: npm run manual:check
+      - name: Publish the edition once
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          edition=$(node -p "require('./docs/manual/manifest.json').edition")
+          date=$(node -p "require('./docs/manual/manifest.json').editionDate")
+          tag="manual-$edition"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            echo "$tag is already published."
+            exit 0
+          fi
+          printf 'Lantern QA manual, edition %s (%s), generated from %s.\n\nOpen lantern-manual.pdf below. Screenshots use synthetic data.\n' "$edition" "$date" "$GITHUB_SHA" > notes.md
+          gh release create "$tag" docs/manual/lantern-manual.pdf --target "$GITHUB_SHA" --title "QA manual, edition $edition" --notes-file notes.md --latest
+

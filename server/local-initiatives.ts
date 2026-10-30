@@ -5,7 +5,7 @@ import { membershipWrite } from "./membership.js";
 
 // Engineering's current staging identities. These are defaults for synthetic
 // local walkthroughs; ordinary startup never changes hosted team direction.
-const defaults: Array<Pick<StrategicInitiative, "name" | "appearance" | "description">> = [
+export const initiativeDefaults: Array<Pick<StrategicInitiative, "name" | "appearance" | "description">> = [
   { name: "Love What We Build", description: "Understand who our work serves, why it matters to the mission, and whether it helps. This initiative connects meaningful ownership with access to the people and evidence needed to shape solutions. It includes understanding user needs, clarifying decisions we own, and using feedback after delivery to improve what we build and guide what happens next.", appearance: { icon: "heart", color: "#c74998" } },
   { name: "Rethink How We Build", description: "Improve how we move from an identified need to a validated outcome as AI changes the way we work. This includes stronger problem framing, effective use of agents, quality and validation throughout development, and shared tools and practices that help the whole team. Human judgment and responsibility remain central as we experiment, evaluate results and share useful capabilities.", appearance: { icon: "lightbulb", color: "#3276b0" } },
   { name: "Role Clarity And Growth", description: "Connect the team’s strategy to each person’s contribution, desired results and personal development. This initiative helps people understand their responsibilities, how their strengths complement others, and the capabilities they need to develop. Position Focus makes that connection practical over roughly six months, with support from the Career Leader and relevant managers, adapting as priorities change.", appearance: { icon: "sprout", color: "#267c65" } },
@@ -27,7 +27,7 @@ export async function seedLocalInitiatives(db: Pool, localUserId: string) {
     const saved = await client.query("SELECT initiatives FROM department_direction WHERE department_id=$1 FOR UPDATE", [department]);
     const initiatives: StrategicInitiative[] = saved.rows[0]?.initiatives ?? [];
     let changed = false;
-    for (const preset of defaults) {
+    for (const preset of initiativeDefaults) {
       const matches = initiatives.filter(item => item.name.trim().toLowerCase() === preset.name.toLowerCase());
       if (matches.length) {
         for (const item of matches) {

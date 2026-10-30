@@ -156,6 +156,7 @@ are rejected. This script is manual; it is not run on deployment.
 - `server/`: HTTP, authentication, persistence, migrations and administrative commands.
 - `shared/`: typed contracts.
 - `tools/release/`: delivery gates and readiness checks.
+- `tools/manual/`: the generated [QA manual](docs/development/manual.md) (`npm run manual`).
 - `docs/`: product scope, priorities, domain language and architecture decisions.
 
 [AGENTS.md](AGENTS.md) defines engineering principles. The optional [ticket-board tool](tools/ticket-board/README.md) works with an empty board; it does not define project direction.
