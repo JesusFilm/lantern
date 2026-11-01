@@ -11,7 +11,7 @@
     "build": "tsc -p tsconfig.server.json && vite build",
     "start": "node dist/server/index.js --production",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.check.json",
-    "test": "node --env-file-if-exists=.env --import tsx --test --test-concurrency=1 server/*.test.ts tools/ticket-board/tickets.test.ts tools/release/*.test.mjs",
+    "test": "node --env-file-if-exists=.env --import tsx --test --test-concurrency=1 server/*.test.ts tools/ticket-board/tickets.test.ts tools/release/*.test.mjs tools/review/*.test.mjs",
     "db:start": "docker compose up -d --wait database",
     "db:stop": "docker compose stop database",
     "tickets": "tsx watch tools/ticket-board/index.ts",
@@ -27,7 +27,7 @@
     "access:ops:compiled": "node dist/server/operations.js",
     "db:bootstrap": "node dist/server/bootstrap-database.js",
     "db:migrate:local": "node --env-file=.env.migration dist/server/migrate.js",
-    "test:local": "node --env-file=.env.example --import tsx --test --test-concurrency=1 server/*.test.ts tools/ticket-board/tickets.test.ts tools/release/*.test.mjs",
+    "test:local": "node --env-file=.env.example --import tsx --test --test-concurrency=1 server/*.test.ts tools/ticket-board/tickets.test.ts tools/release/*.test.mjs tools/review/*.test.mjs",
     "db:transition": "node dist/server/transition-database.js",
     "db:verify": "node dist/server/verify-database.js",
     "db:rehearse:local": "node --env-file=.env.example --import tsx tools/database/rehearse-recovery.ts"
