@@ -1,6 +1,6 @@
 # Independent review gate
 
-Every pull request into `main` gets an automated review published as the required check **Independent review**. The check is not a formal pull request approval and does not replace a human code owner for protected paths.
+Every pull request into `main` gets an automated review published as the required check **Independent review**. The check is the enforcement mechanism; it is not a formal pull request approval, and no formal approval or Code Owner review is required.
 
 ## How it works
 
@@ -22,21 +22,24 @@ Every pull request into `main` gets an automated review published as the require
 | Variable | `AI_REVIEW_GATEWAY_BASE_URL` (https, reachable from GitHub-hosted runners) | `ai-review` |
 | Variable | `AI_REVIEW_MODEL` | `ai-review` |
 
-## Protected paths and human review
+## Changing the review mechanism
 
-`.github/**`, `tools/review/**`, `tools/release/**`, `CODEOWNERS` and this guide control the gate and releases. The AI check is not sufficient for them: a human code owner other than the pull request author must approve. [review.mjs](../../tools/review/review.mjs) lists these paths in the check summary.
+`.github/**`, `tools/review/**`, `tools/release/**` and this guide control the gate and releases; [review.mjs](../../tools/review/review.mjs) names them in the check summary. The repository has one owner and one authoring identity, so control comes from separation of keys and from where code runs, not from a second reviewer:
+
+- The App signing key and gateway key live only in the `ai-review` environment (deployment branch `main` only). The authoring identity cannot read or set them, and a pull request cannot reach them.
+- A pull request is always judged by the harness already on `main`, so a change to the gate cannot alter the review of itself. It takes effect only after merge.
+- Before a protected-path change merges: an independent inspection by a separate reviewer (Codex) at the exact head SHA, re-done after any further commit, and the owner's explicit authorization to merge. Record both in the delivery audit.
+- Existing branch protection, administrator enforcement and the required checks are unchanged by this guide.
 
 ## Enabling the gate (one time, in order)
 
-1. Require one approval, dismiss stale approvals and require approval of the most recent push on `main`.
-2. Merge a pull request that adds only `CODEOWNERS` (owners are a named human decision), approved by a code owner.
-3. Require Code Owner review.
-4. Merge the gate pull request (workflow, harness, tests, this guide) with the same approval. Do not require the check yet.
-5. Enter the environment secrets and variables above.
-6. Run the forgery test below on disposable branches, then a real pull request into `main`.
-7. Add **Independent review** as a required check whose source is the GitHub App, not "any source".
+1. Independent inspection of the gate pull request at its final head SHA; the owner authorizes the merge.
+2. Merge the gate pull request (workflow, harness, tests, this guide). Do not require the check yet.
+3. Owner enters the `ai-review` secrets and variables above.
+4. Run the forgery test below on disposable branches, then a real pull request into `main`.
+5. Add **Independent review** as a required check whose source is the GitHub App, not "any source".
 
-## Forgery test (before step 7)
+## Forgery test (before step 5)
 
 Any workflow on any branch with `checks: write` can post a passing check under the GitHub Actions identity onto any commit, so a requirement pinned to GitHub Actions can be forged. A requirement pinned to the App cannot be satisfied by that identity. Prove it on disposable base branches, with administrators included in the rules:
 

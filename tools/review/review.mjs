@@ -24,7 +24,7 @@ async function api(fetch, token, method, path, { body, accept = 'application/vnd
 
 function render({ verdict, conclusion, files, protectedFiles }) {
   const lines = verdict.findings.map(f => `- **${f.severity}**${f.file ? ` \`${f.file}${f.line ? `:${f.line}` : ''}\`` : ''}: ${f.message}`);
-  const notes = protectedFiles.length ? `\n\nThis change touches protected paths (${protectedFiles.join(', ')}); a human code owner must approve it. This check is not a formal pull request approval.` : '\n\nThis check is not a formal pull request approval.';
+  const notes = protectedFiles.length ? `\n\nThis change touches protected paths (${protectedFiles.join(', ')}); it needs independent inspection and the owner's authorization before merge. This check is not a formal pull request approval.` : '\n\nThis check is not a formal pull request approval.';
   const annotations = verdict.findings.filter(f => f.file && f.line && files.includes(f.file)).slice(0, MAX_ANNOTATIONS).map(f => ({
     path: f.file, start_line: f.line, end_line: f.line, annotation_level: f.severity === 'minor' ? 'notice' : f.severity === 'major' ? 'warning' : 'failure', message: f.message,
   }));
