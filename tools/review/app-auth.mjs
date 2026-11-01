@@ -23,7 +23,7 @@ export async function installationToken({ fetch, appId, privateKey, repository }
   const installation = await github(fetch, jwt, 'GET', `/repos/${repository}/installation`);
   const { token } = await github(fetch, jwt, 'POST', `/app/installations/${installation.id}/access_tokens`, {
     repositories: [name],
-    permissions: { checks: 'write', pull_requests: 'read', contents: 'read' },
+    permissions: { checks: 'write', pull_requests: 'write', contents: 'read' },
   });
   if (!token) throw new Error('GitHub App installation token missing from response');
   return token;

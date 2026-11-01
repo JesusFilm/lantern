@@ -1,4 +1,6 @@
 import { installationToken } from './app-auth.mjs';
+import { createFeedback, escapeText } from './feedback.mjs';
+import { api } from './github.mjs';
 import { callModel } from './gateway.mjs';
 import { buildUserMessage, SYSTEM_PROMPT } from './prompt.mjs';
 import { decide, parseVerdict } from './verdict.mjs';
@@ -14,23 +16,15 @@ export function diffFiles(diff) {
 
 export const protectedPathsIn = diff => diffFiles(diff).filter(file => PROTECTED.some(pattern => pattern.test(file)));
 
-async function api(fetch, token, method, path, { body, accept = 'application/vnd.github+json' } = {}) {
-  return fetch(`https://api.github.com${path}`, {
-    method,
-    headers: { Authorization: `Bearer ${token}`, Accept: accept, 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' },
-    body: body && JSON.stringify(body),
-  });
-}
-
 function render({ verdict, conclusion, files, protectedFiles }) {
-  const lines = verdict.findings.map(f => `- **${f.severity}**${f.file ? ` \`${f.file}${f.line ? `:${f.line}` : ''}\`` : ''}: ${f.message}`);
-  const notes = protectedFiles.length ? `\n\nThis change touches protected paths (${protectedFiles.join(', ')}); it needs independent inspection and the owner's authorization before merge. This check is not a formal pull request approval.` : '\n\nThis check is not a formal pull request approval.';
+  const lines = verdict.findings.map(f => `- **${f.severity}**${f.file ? ` ${escapeText(f.file, 300)}${f.line ? `:${f.line}` : ''}` : ''}: ${escapeText(f.message)}`);
+  const notes = protectedFiles.length ? `\n\nThis change touches protected paths (${protectedFiles.map(file => escapeText(file, 200)).join(', ')}); it needs independent inspection and the owner's authorization before merge. This check is not a formal pull request approval.` : '\n\nThis check is not a formal pull request approval.';
   const annotations = verdict.findings.filter(f => f.file && f.line && files.includes(f.file)).slice(0, MAX_ANNOTATIONS).map(f => ({
     path: f.file, start_line: f.line, end_line: f.line, annotation_level: f.severity === 'minor' ? 'notice' : f.severity === 'major' ? 'warning' : 'failure', message: f.message,
   }));
   return {
     title: conclusion === 'success' ? 'Review passed' : 'Review requires changes',
-    summary: `${verdict.summary}${notes}`.slice(0, 60_000),
+    summary: `${escapeText(verdict.summary, 4000)}${notes}`.slice(0, 60_000),
     text: (lines.length ? lines.join('\n') : 'No findings.').slice(0, 60_000),
     annotations,
   };
@@ -48,6 +42,8 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
   const opened = await api(fetch, token, 'POST', `/repos/${repository}/check-runs`, { body: { name: CHECK_NAME, head_sha: expectedSha, status: 'in_progress', output: { title: 'Review running', summary: 'Waiting for the independent review to finish.' } } });
   if (!opened.ok) throw new Error(`Could not open check run (status ${opened.status})`);
   const { id } = await opened.json();
+  const feedback = createFeedback({ fetch, token, repository, prNumber, sha: expectedSha, checkUrl: `https://github.com/${repository}/pull/${prNumber}/checks?check_run_id=${id}` });
+  await feedback.announce();
 
   let result;
   try {
@@ -55,7 +51,9 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
   } catch (error) {
     result = failure('Review could not complete', `The review failed closed: ${String(error.message).slice(0, 300)}`);
   }
-  const done = await api(fetch, token, 'PATCH', `/repos/${repository}/check-runs/${id}`, { body: { status: 'completed', conclusion: result.conclusion, output: result.output } });
+  const note = await feedback.publish({ conclusion: result.conclusion, verdict: result.verdict, failureSummary: result.output.summary, protectedFiles: result.protectedFiles, diff: result.diff });
+  const output = { ...result.output, summary: `${result.output.summary}\n\nPull request feedback: ${note}`.slice(0, 60_000) };
+  const done = await api(fetch, token, 'PATCH', `/repos/${repository}/check-runs/${id}`, { body: { status: 'completed', conclusion: result.conclusion, output } });
   if (!done.ok) throw new Error(`Could not complete check run (status ${done.status})`);
   return { conclusion: result.conclusion };
 
@@ -68,6 +66,7 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
     const text = await callModel({ fetch, baseUrl: gatewayBaseUrl, apiKey: gatewayApiKey, model, system: SYSTEM_PROMPT, user: buildUserMessage({ title: pull.title, body: pull.body, diff }) });
     const verdict = parseVerdict(text);
     const { conclusion } = decide(verdict);
-    return { conclusion, output: render({ verdict, conclusion, files: diffFiles(diff), protectedFiles: protectedPathsIn(diff) }) };
+    const protectedFiles = protectedPathsIn(diff);
+    return { conclusion, verdict, diff, protectedFiles, output: render({ verdict, conclusion, files: diffFiles(diff), protectedFiles }) };
   }
 }

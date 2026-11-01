@@ -4,12 +4,23 @@ Every pull request into `main` gets an automated review published as the require
 
 ## How it works
 
-[independent-review.yml](../../.github/workflows/independent-review.yml) runs on `pull_request_target`, so it executes the workflow and harness from `main`, never code from the pull request. It never checks out or runs pull request code. [tools/review](../../tools/review) mints a short-lived installation token for the **Lantern Independent Review** GitHub App (Checks write, Pull requests read, Contents read, this repository only), reads the diff through the API, asks the AI gateway for a strict JSON verdict, and publishes the check on the exact head SHA.
+[independent-review.yml](../../.github/workflows/independent-review.yml) runs on `pull_request_target`, so it executes the workflow and harness from `main`, never code from the pull request. It never checks out or runs pull request code. [tools/review](../../tools/review) mints a short-lived installation token for the **Lantern Independent Review** GitHub App (Checks write, Pull requests write, Contents read, this repository only), reads the diff through the API, asks the AI gateway for a strict JSON verdict, and publishes the check on the exact head SHA.
 
 - The check opens `in_progress`, then completes as `success` or `failure`. Neutral, skipped and cancelled are never produced, because GitHub treats some of them as passing.
 - Fail closed: a missing, empty or oversized diff, a gateway error or truncation, a malformed verdict, or a verdict with any blocker or major finding completes the check as `failure`. If the check cannot be opened or completed, the job fails and the required check stays unsatisfied.
 - A new push gets a fresh review. A verdict is posted only if the PR is open and its head still equals the SHA that triggered the run.
 - Pull request title, description and diff are treated as untrusted in the prompt. This reduces, but does not remove, prompt-injection risk; the verdict is advisory evidence plus a gate, not a proof of correctness.
+
+## Pull request feedback
+
+Besides the check, the harness leaves comments so the result is visible on the pull request. They never gate anything; the check does.
+
+- **One summary comment**, found by a hidden marker and authored by the App, is edited in place on every run. It states the short head SHA, the verdict, the findings and a link to the check. When a new commit starts a run, the comment is first rewritten as "Reviewing `new`; the earlier verdict for `old` is superseded", then replaced with the new verdict.
+- **At most 10 inline comments** in one review, only for blocker or major findings whose line is in the diff. Minor findings, findings with no location and findings outside the diff appear in the summary and the check only. A repeated run on the same commit does not repeat a comment.
+- **Review event is always `COMMENT`.** The harness never sends APPROVE or REQUEST_CHANGES, never merges, and has no Contents write. A test enforces the endpoint allowlist and the event.
+- Text from the model or the pull request is escaped (mentions, HTML, images, links, autolinks, issue references) and length-capped before it is published.
+- A run for a commit that is no longer the head publishes no comments. It still completes its own check on its own SHA.
+- If a comment cannot be published, the check still reports the verdict and its summary says "Pull request feedback: could not be published" with the HTTP status. A comment failure never changes the verdict.
 
 ## Names
 
@@ -53,5 +64,6 @@ Delete the disposable branches and rules afterwards.
 ## Limits
 
 - The existing CI checks are pinned to the GitHub Actions identity and are, by the same mechanism, forgeable by anyone who can push a workflow. They are not protected by this gate.
+- Comment behaviour is unit-tested against a fake GitHub; the first real run confirms how GitHub renders and attributes the comments (including that the comment author is `lantern-independent-review[bot]`).
 - Unit tests use a fake gateway: they prove harness logic, not model quality or gateway reachability.
 - Rotate the App key and gateway key about yearly, or immediately after suspected exposure.
