@@ -99,7 +99,7 @@ function patchMismatch(section, file) {
   return null;
 }
 
-export function assessChange(diff, files) {
+export function assessChange(diff, files, artifacts = new Set()) {
   const sections = parseDiff(diff);
   const listed = new Map(files.map(file => [file.filename, file]));
   const seen = new Map();
@@ -107,9 +107,11 @@ export function assessChange(diff, files) {
   const renames = [];
   for (const section of sections) {
     if (!section.path) { problems.push({ path: '(unreadable file header)', reason: 'unreadable file header' }); continue; }
+    if (seen.has(section.path)) problems.push({ path: section.path, reason: 'duplicate diff section' });
     seen.set(section.path, section);
     const file = listed.get(section.path);
     if (!file) problems.push({ path: section.path, reason: 'in the diff but not in the file list for this comparison' });
+    else if (artifacts.has(section.path)) continue;
     else if (!section.reviewable) problems.push({ path: section.path, reason: section.reason });
     else if (file.patch && patchMismatch(section, file)) problems.push({ path: section.path, reason: `the diff does not match the patch GitHub lists for this file (truncated or altered): ${patchMismatch(section, file)}` });
     else if (!file.patch && !(section.pureRename || section.emptyFile)) problems.push({ path: section.path, reason: 'no patch in the file list' });
