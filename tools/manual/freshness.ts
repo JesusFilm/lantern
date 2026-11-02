@@ -46,7 +46,7 @@ export function isProductSource(path: string) {
   if (path.startsWith("tools/manual/")) return !/\/(README\.md|_[^/]*)$/.test(path);
   return (
     ["client/", "shared/", "server/", "public/"].some((prefix) => path.startsWith(prefix)) ||
-    ["index.html", "vite.config.ts", "docs/PRD.md"].includes(path)
+    ["index.html", "vite.config.ts", "package.json", "package-lock.json", ".nvmrc", "docs/PRD.md"].includes(path)
   );
 }
 

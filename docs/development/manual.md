@@ -43,7 +43,7 @@ Commit everything under `docs/manual`. `npm run manual` builds the client into a
 - a screenshot, supplied capture or the PDF differs from the manifest;
 - a screenshot is missing or not recorded.
 
-Product source means `client/`, `shared/`, `server/`, `public/`, `index.html`, `vite.config.ts`, [PRD.md](../PRD.md) and the manual tooling. Tests and test support files are excluded. [isProductSource](../../tools/manual/freshness.ts) defines the exact rule.
+Product source means `client/`, `shared/`, `server/`, `public/`, `index.html`, `vite.config.ts`, Node and dependency configuration, [PRD.md](../PRD.md) and the manual tooling. Tests and test support files are excluded. [isProductSource](../../tools/manual/freshness.ts) defines the exact rule.
 
 When two branches both regenerate, the manual files conflict. Resolve the conflict by merging the source changes, then running `npm run manual` again; never merge the generated files by hand.
 

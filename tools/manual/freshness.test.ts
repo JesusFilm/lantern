@@ -13,6 +13,7 @@ async function project(t: import("node:test").TestContext) {
   await write("server/focus.ts", "save()");
   await write("server/focus.integration.test.ts", "test()");
   await write("docs/PRD.md", "# Lantern");
+  await write("package-lock.json", "dependency version 1");
   await write("README.md", "unrelated");
   await write("docs/manual/screenshots/home.png", "png-1");
   await write("docs/manual/lantern-manual.pdf", "pdf-1");
@@ -37,6 +38,13 @@ test("changing product source without regenerating names the changed files", asy
   assert.match(result.errors.join("\n"), /changed: client\/main.tsx/);
   assert.match(result.errors.join("\n"), /added: shared\/new-feature.ts/);
   assert.match(result.errors.join("\n"), /npm run manual/);
+});
+
+test("a dependency change requires the manual to be regenerated", async (t) => {
+  const { layout, write } = await project(t);
+  await recordManifest(layout, { edition: 1, editionDate: "2026-10-30", deck: "d1" });
+  await write("package-lock.json", "dependency version 2");
+  assert.match((await checkManual(layout)).errors.join("\n"), /changed: package-lock.json/);
 });
 
 test("tests, unrelated docs and the manual's own output do not make the manual stale", async (t) => {

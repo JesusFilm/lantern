@@ -1,10 +1,11 @@
 {
-  "edition": 4,
+  "edition": 5,
   "editionDate": "2026-11-02",
-  "deck": "1e1ef8bf0b0f741b0b7aa6ca0a9b410c53e740486809964efdd110c5c54acde1",
+  "deck": "d83aaa77019aec60fd253e8c80fd6ca27e7e748aa18eaf0f54f78226941f6b94",
   "sources": {
-    "fingerprint": "5c2696ca1ad2d41e57fc72df0d1499ac25d7e3735fbeb1897bd5b5d46f29e0f7",
+    "fingerprint": "0e3980eacce58a9e731ee2e55abfe1fed4ac7290b097377226e8f2def248bf57",
     "files": {
+      ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "9c72ae29512d56a1b87a2978a0dc3ae4b99eeff84cc3b04fcae02c5f3993eafc",
       "client/coach/CoachPreparing.tsx": "08ba217572bc5465ab73c3db2d665ef9969bf8547033745db70bfa2fc837a7f3",
       "client/coach/CoachWorkspace.tsx": "05bbd5c19563ca30b133367fdd3354279aac76b6543f7803d93665e9b320a901",
@@ -48,6 +49,8 @@
       "client/workspace/useSwipeNavigation.ts": "3afbeefed498f713fc7e42e6d8fcc313dba7d8dd20a2f3aca59631d23820d420",
       "docs/PRD.md": "84a89ee3832860521a1997861f2195a872e5a65d5f548485e39c050a9ce07280",
       "index.html": "c4c92001d1353aba35bf9ed354a613b7f5b5eb9201f46fca916add00b124883a",
+      "package-lock.json": "0bcc5076f1ce430032038d9f4b1284e248c5bf6a07cbaf0aac5086079c925845",
+      "package.json": "a438a17485ba2f9eec2bad1307f4ba9759b7127a7faac6039ea693de953630b1",
       "public/google-sign-in.png": "e048546f162b43a5f3809796f88df02a8e13f07ca1280a9c1635018956e05c05",
       "public/mission-jesus-geometric.png": "9a3777341ec85501dd17b0e7793e0ccd9ea31a84a9fe85032013a5afc72097b9",
       "server/access.ts": "fe0738f37afda3887e83e314f477a3d6674bc77149d2fca2dcef0634f3715fd5",
@@ -95,7 +98,7 @@
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
       "tools/manual/check.ts": "74a86ee33518d7d5c4ceb22680cbb5ef587340a7d22c235c7e76fd4c42e38f35",
       "tools/manual/content.ts": "c0e4b3246ab560ed9539d3da498cc73a202eb12bfcf9bd5ffdeb4bf277e84bfe",
-      "tools/manual/freshness.ts": "6aa7dc335aca6c3aa95630e51897abc8b38901490b20adbfcea014170a2dd325",
+      "tools/manual/freshness.ts": "af50e310bc2661ece832e973cf0a6943fd4925ff77dd8b18f2c2f200349037ba",
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",
@@ -164,5 +167,5 @@
       }
     }
   },
-  "pdf": "eb14e038c211744f6b8daa8de3e03a8e821a51e24c52cbffd7c156583abfe71e"
+  "pdf": "28987190fbef4c3627cac8b620c46b1f4fe1a7b769429788bef0b26663fbf31b"
 }
