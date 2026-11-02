@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { api } from './github.mjs';
 
 const pdfPath = 'docs/manual/lantern-manual.pdf';
-const screenshot = /^docs\/manual\/screenshots\/([a-z0-9][a-z0-9-]*\.png)$/;
+const screenshot = /^docs\/manual\/screenshots\/([A-Za-z0-9][A-Za-z0-9._-]*\.png)$/;
 const allowed = path => path === pdfPath || screenshot.test(path);
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const maxBytes = 20_000_000;

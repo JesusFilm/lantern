@@ -19,6 +19,8 @@ test('a generated PDF is accounted for while source still reaches the model', as
   assert.match(userMessage(w), /server\/guide\.browser\.test\.ts/);
   assert.match(userMessage(w), /docs\/manual\/manifest\.json/);
   assert.doesNotMatch(userMessage(w), /Binary files/);
+  assert.match(userMessage(w), /artifact contents were not provided/i);
+  assert.match(userMessage(w), /lantern-manual\.pdf/);
   assert.match(finalCheck(w).output.summary, /lantern-manual\.pdf/);
   assert.match(finalCheck(w).output.summary, /not.*model|model.*not/i);
 });
@@ -35,14 +37,14 @@ test('missing or inconsistent manifest and non-PDF content fail before model rev
 });
 
 test('PNG additions and modifications require their own head manifest hash', async () => {
-  const name = 'guide-start.png';
+  const name = 'guide_start.png';
   const imagePath = `docs/manual/screenshots/${name}`;
   const image = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.from('fixture')]);
   for (const metadata of ['index 1111111..2222222 100644', 'new file mode 100644\nindex 0000000..2222222']) {
     const change = `diff --git a/${imagePath} b/${imagePath}\n${metadata}\nBinary files a/${imagePath} and b/${imagePath} differ\n`;
     const w = world({ diff: DIFF + change, contents: { [`${imagePath}@head`]: image, 'docs/manual/manifest.json@head': JSON.stringify({ screenshots: { [name]: hash(image) } }) } });
     assert.equal((await run(w)).conclusion, 'success');
-    assert.match(finalCheck(w).output.summary, /guide-start\.png/);
+    assert.match(finalCheck(w).output.summary, /guide\\_start\.png/);
   }
 });
 

@@ -172,7 +172,7 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
     const text = await callModel({
       fetch, baseUrl: gatewayBaseUrl, apiKey: gatewayApiKey, model,
       system: buildSystem({ guidance, baseSha, nonce }),
-      user: buildUserMessage({ title: pull.title, body: pull.body, diff: diff.split(/^(?=diff --git )/m).filter(section => !artifacts.some(path => section.startsWith(`diff --git a/${path} b/${path}\n`))).join(''), files: context, renames, baseSha, headSha: expectedSha, nonce }),
+      user: buildUserMessage({ title: pull.title, body: pull.body, diff: diff.split(/^(?=diff --git )/m).filter(section => !artifacts.some(path => section.startsWith(`diff --git a/${path} b/${path}\n`))).join(''), files: context, renames, artifacts, baseSha, headSha: expectedSha, nonce }),
     });
     const verdict = parseVerdict(text);
     const { conclusion } = decide(verdict);
