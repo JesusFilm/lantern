@@ -4,6 +4,7 @@ import { MAX_FILES, assessChange, diffFiles, diffRightLines, protectedPathsIn } 
 import { CHECK_TEXT_MAX, createFeedback, escapeText, findingLine, fitFindings } from './feedback.mjs';
 import { api } from './github.mjs';
 import { callModel } from './gateway.mjs';
+import { manualArtifacts } from './manual-artifacts.mjs';
 import { buildSystem, buildUserMessage, newNonce } from './prompt.mjs';
 import { decide, parseVerdict } from './verdict.mjs';
 
@@ -149,7 +150,10 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
     if (!Array.isArray(files)) return failure('File list unavailable', 'GitHub returned no file list, so completeness could not be checked and the change was not reviewed.');
     if (files.length >= MAX_FILES) return failure('Too many files', `The change lists ${MAX_FILES} or more files, which may be truncated, so it was not reviewed. Split the change.`);
 
-    const { problems, renames } = assessChange(diff, files);
+    let artifacts;
+    try { artifacts = await manualArtifacts({ fetch, token, repository, headSha: expectedSha, diff, files }); }
+    catch (error) { return failure('Unreviewable manual artifact', escapeText(error.message, 500)); }
+    const { problems, renames } = assessChange(diff, files, new Set(artifacts));
     if (problems.length) {
       const listed = problems.slice(0, MAX_LISTED_PROBLEMS).map(p => `- ${escapeText(p.path, 200)}: ${p.reason}`).join('\n');
       const more = problems.length > MAX_LISTED_PROBLEMS ? `\n- and ${problems.length - MAX_LISTED_PROBLEMS} more` : '';
@@ -158,7 +162,7 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
 
     const paths = files.flatMap(file => [file.filename, file.previous_filename].filter(Boolean));
     const guidance = await loadGuidance({ fetch, token, repository, baseSha, paths });
-    const context = await loadFileContext({ fetch, token, repository, headSha: expectedSha, files });
+    const context = await loadFileContext({ fetch, token, repository, headSha: expectedSha, files: files.filter(file => !artifacts.includes(file.filename)) });
     const insufficient = [...guidance.map(file => ({ ...file, kind: 'repository guidance' })), ...context.map(file => ({ ...file, kind: file.added ? 'added file, checked as text' : 'full file at head' }))].filter(file => file.omitted || file.clipped);
     if (insufficient.length) {
       const listed = insufficient.slice(0, MAX_LISTED_PROBLEMS).map(file => `- ${escapeText(file.path, 200)} (${file.kind}): ${file.omitted ? `not provided, ${file.omitted}` : `longer than the limit and cut off`}`).join('\n');
@@ -168,13 +172,14 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
     const text = await callModel({
       fetch, baseUrl: gatewayBaseUrl, apiKey: gatewayApiKey, model,
       system: buildSystem({ guidance, baseSha, nonce }),
-      user: buildUserMessage({ title: pull.title, body: pull.body, diff, files: context, renames, baseSha, headSha: expectedSha, nonce }),
+      user: buildUserMessage({ title: pull.title, body: pull.body, diff: diff.split(/^(?=diff --git )/m).filter(section => !artifacts.some(path => section.startsWith(`diff --git a/${path} b/${path}\n`))).join(''), files: context, renames, baseSha, headSha: expectedSha, nonce }),
     });
     const verdict = parseVerdict(text);
     const { conclusion } = decide(verdict);
     const protectedFiles = protectedPathsIn(diff);
     const notes = [`Reviewed ${baseSha.slice(0, 7)}...${expectedSha.slice(0, 7)} with ${guidance.length} trusted guidance file${guidance.length === 1 ? '' : 's'} from the base commit.`];
     notes.push(`Full head content was provided for ${context.length} modified file${context.length === 1 ? '' : 's'}; files the change depends on but does not modify were not provided.`);
+    if (artifacts.length) notes.push(`Not assessed by the model: ${artifacts.map(path => escapeText(path, 200)).join(', ')}. File signatures and SHA-256 matched the editable head manifest; this does not verify generation or visual correctness.`);
     return { conclusion, verdict, diff, protectedFiles, output: render({ verdict, conclusion, rightLines: diffRightLines(diff), protectedFiles, notes }) };
   }
 }
