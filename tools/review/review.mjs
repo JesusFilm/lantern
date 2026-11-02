@@ -1,7 +1,7 @@
 import { installationToken } from './app-auth.mjs';
 import { CONTEXT_FILE_MAX, CONTEXT_TOTAL_MAX, loadFileContext, loadGuidance } from './context.mjs';
 import { MAX_FILES, assessChange, diffFiles, diffRightLines, protectedPathsIn } from './diff.mjs';
-import { createFeedback, escapeText } from './feedback.mjs';
+import { CHECK_TEXT_MAX, createFeedback, escapeText, findingLine, fitFindings } from './feedback.mjs';
 import { api } from './github.mjs';
 import { callModel } from './gateway.mjs';
 import { buildSystem, buildUserMessage, newNonce } from './prompt.mjs';
@@ -22,7 +22,13 @@ const MAX_LISTED_PROBLEMS = 20;
 const FULL_SHA = /^[0-9a-f]{40}$/;
 
 function render({ verdict, conclusion, rightLines, protectedFiles, notes }) {
-  const lines = verdict.findings.map(f => `- **${f.severity}**${f.file ? ` ${escapeText(f.file, 300)}${f.line ? `:${f.line}` : ''}` : ''}: ${escapeText(f.message)}`);
+  const total = verdict.findings.length;
+  const shown = fitFindings(verdict.findings, CHECK_TEXT_MAX - 500);
+  const lines = verdict.findings.slice(0, shown).map(findingLine);
+  if (shown < total) {
+    notes = [...notes, `Only the first ${shown} of ${total} findings fit in the check's size limit; the other ${total - shown} are not shown.`];
+    lines.push(`- ${total - shown} more findings are not shown because of the check's size limit.`);
+  }
   const closing = protectedFiles.length ? `\n\nThis change touches protected paths (${protectedFiles.map(file => escapeText(file, 200)).join(', ')}); it needs independent inspection and the owner's authorization before merge. This check is not a formal pull request approval.` : '\n\nThis check is not a formal pull request approval.';
   const extra = notes.length ? `\n\n${notes.map(note => `- ${note}`).join('\n')}` : '';
   const annotations = verdict.findings.filter(f => f.file && f.line && rightLines.get(f.file)?.has(f.line)).slice(0, MAX_ANNOTATIONS).map(f => ({
@@ -36,7 +42,7 @@ function render({ verdict, conclusion, rightLines, protectedFiles, notes }) {
   return {
     title: conclusion === 'success' ? 'Review passed' : 'Review requires changes',
     summary: `${escapeText(verdict.summary, 4000)}${closing}${extra}`.slice(0, 60_000),
-    text: (lines.length ? lines.join('\n') : 'No findings.').slice(0, 60_000),
+    text: lines.length ? lines.join('\n') : 'No findings.',
     annotations,
   };
 }
@@ -68,16 +74,23 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
   const { annotations = [], ...rest } = result.output;
   const complete = output => api(fetch, token, 'PATCH', `/repos/${repository}/check-runs/${id}`, { body: { status: 'completed', conclusion: result.conclusion, output } }).then(response => (response.ok ? null : `status ${response.status}`), () => 'a network error');
   let summary = result.output.summary.slice(0, 60_000);
-  let problem = await complete({ ...rest, summary, ...(annotations.length ? { annotations } : {}) });
+  let sent = false;
+  const attempt = async output => {
+    const failed = await complete(output);
+    if (failed && !/^status 4\d\d$/.test(failed)) sent = true;
+    return failed;
+  };
+  let problem = await attempt({ ...rest, summary, ...(annotations.length ? { annotations } : {}) });
   if (problem && annotations.length) {
     summary = `${summary}\n\nAnnotations could not be attached (${problem}); the findings are listed in the details.`.slice(0, 60_000);
-    problem = await complete({ ...rest, summary });
+    problem = await attempt({ ...rest, summary });
   }
-  // A failed request may still have been applied, so read the check back.
+  // A failed request may still have been applied, or may still arrive: only an HTTP 4xx answer to every attempt, with the check read back as open, proves nothing was recorded.
   const state = problem ? await completionState() : 'accepted';
   if (state !== 'accepted') {
-    await feedback.markIncomplete({ reason: `the completion request failed (${problem})`, confirmed: state === 'open' });
-    throw new Error(`Could not complete check run (${problem}${state === 'open' ? '' : '; the outcome could not be confirmed'})`);
+    const refused = state === 'open' && !sent;
+    await feedback.markIncomplete({ reason: `the completion request failed (${problem})`, confirmed: refused });
+    throw new Error(`Could not complete check run (${problem}${refused ? '' : '; the outcome could not be confirmed'})`);
   }
   // Publish only after GitHub accepted the final state, so a comment never says Passed for an unfinished check.
   const note = await feedback.publish({ conclusion: result.conclusion, verdict: result.verdict, failureSummary: result.output.summary, protectedFiles: result.protectedFiles, diff: result.diff });

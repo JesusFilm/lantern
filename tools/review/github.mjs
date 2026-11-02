@@ -6,14 +6,17 @@ export async function api(fetch, token, method, path, { body, accept = 'applicat
   });
 }
 
-export async function listAll(fetch, token, path) {
+export const LIST_MAX_PAGES = 30;
+
+// A full last page at the page limit may hide more items, so it is reported as truncated rather than treated as complete.
+export async function listAll(fetch, token, path, maxPages = LIST_MAX_PAGES) {
   const items = [];
-  for (let page = 1; page <= 10; page++) {
+  for (let page = 1; page <= maxPages; page++) {
     const response = await api(fetch, token, 'GET', `${path}?per_page=100&page=${page}`);
     if (!response.ok) throw new Error(`status ${response.status}`);
     const batch = await response.json();
     items.push(...batch);
-    if (batch.length < 100) break;
+    if (batch.length < 100) return { items, truncated: false };
   }
-  return items;
+  return { items, truncated: true };
 }

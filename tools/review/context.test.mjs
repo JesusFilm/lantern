@@ -117,18 +117,18 @@ test('context sufficiency: a file exactly at the limit is provided whole; the mo
 });
 
 test('context sufficiency: when the total context budget runs out the later files are not silently dropped', async () => {
-  const names = ['a.ts', 'b.ts', 'c.ts', 'd.ts'];
+  const names = ['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts'];
   const contents = Object.fromEntries(names.map(n => [n + '@head', 'z'.repeat(50_000)]));
   const diffOf = list => list.map(n => section(n, '@@ -1 +1 @@\n-a\n+b\n')).join('');
-  const four = world({ diff: diffOf(names), contents });
-  assert.equal((await run(four)).conclusion, 'failure');
-  assert.equal(modelCalls(four).length, 0);
-  assert.match(finalCheck(four).output.summary, /d\.ts \(full file at head\): not provided, the context budget was used up/);
-  const three = world({ diff: diffOf(names.slice(0, 3)), contents });
-  assert.equal((await run(three)).conclusion, 'success');
-  const clipped = world({ diff: diffOf(names.slice(0, 3)), contents: { ...contents, 'c.ts@head': 'z'.repeat(59_000) } });
+  const five = world({ diff: diffOf(names), contents });
+  assert.equal((await run(five)).conclusion, 'failure');
+  assert.equal(modelCalls(five).length, 0);
+  assert.match(finalCheck(five).output.summary, /e\.ts \(full file at head\): not provided, the context budget was used up/);
+  const fits = world({ diff: diffOf(names.slice(0, 4)), contents });
+  assert.equal((await run(fits)).conclusion, 'success');
+  const clipped = world({ diff: diffOf(names.slice(0, 4)), contents: { ...contents, 'c.ts@head': 'z'.repeat(59_000) } });
   assert.equal((await run(clipped)).conclusion, 'failure');
-  assert.match(finalCheck(clipped).output.summary, /c\.ts \(full file at head\): longer than the limit and cut off/);
+  assert.match(finalCheck(clipped).output.summary, /d\.ts \(full file at head\): longer than the limit and cut off/);
 });
 
 test('context sufficiency: clipped or budgeted-out repository guidance fails closed instead of reaching the model partially', async () => {
@@ -139,6 +139,13 @@ test('context sufficiency: clipped or budgeted-out repository guidance fails clo
   };
   for (const [name, contents] of Object.entries(cases)) {
     const w = world({ diff: HUNK_DIFF, contents });
+    assert.equal((await run(w)).conclusion, 'failure', name);
+    assert.equal(modelCalls(w).length, 0, name);
+    assert.match(finalCheck(w).output.title, /Insufficient context/, name);
+    assert.match(finalCheck(w).output.summary, /\(repository guidance\)/, name);
+  }
+  for (const [name, bytes] of [['binary', new Uint8Array([0x00, 0xff, 0xfe, 0x41])], ['not UTF-8', new Uint8Array([0xff, 0xfe, 0x41])]]) {
+    const w = world({ diff: HUNK_DIFF, contents: { 'AGENTS.md@base': bytes } });
     assert.equal((await run(w)).conclusion, 'failure', name);
     assert.equal(modelCalls(w).length, 0, name);
     assert.match(finalCheck(w).output.title, /Insufficient context/, name);

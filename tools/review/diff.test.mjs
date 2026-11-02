@@ -57,6 +57,33 @@ test('pure rename: the model sees the full head content of a dormant file moved 
   }
 });
 
+test('pure rename of binary or non-UTF-8 content fails closed: the model never sees replacement characters, and valid non-ASCII text passes intact', async () => {
+  const moved = 'diff --git a/docs/blob.yml b/.github/workflows/blob.yml\nsimilarity index 100%\nrename from docs/blob.yml\nrename to .github/workflows/blob.yml\n';
+  const key = '.github/workflows/blob.yml@head';
+  const cases = [
+    ['NUL and invalid UTF-8', new Uint8Array([0x00, 0xff, 0xfe, 0x41]), /binary \(it contains NUL bytes\)/],
+    ['NUL in otherwise valid text', new Uint8Array([0x61, 0x00, 0x62]), /binary \(it contains NUL bytes\)/],
+    ['invalid UTF-8 without NUL', new Uint8Array([0xff, 0xfe, 0x41]), /not valid UTF-8 text/],
+    ['truncated multibyte sequence', new Uint8Array([0x61, 0xe2, 0x9c]), /not valid UTF-8 text/],
+  ];
+  for (const [name, bytes, reason] of cases) {
+    const w = world({ diff: moved, contents: { [key]: bytes } });
+    assert.equal((await run(w)).conclusion, 'failure', name);
+    assert.equal(modelCalls(w).length, 0, name);
+    assert.match(finalCheck(w).output.title, /Insufficient context/, name);
+    assert.match(finalCheck(w).output.summary, reason, name);
+    assert.match(finalCheck(w).output.summary, /blob\.yml/, name);
+  }
+  const text = 'name: h\u00e9llo \u2713 \u{1F600}\n';
+  const ok = world({ diff: moved, contents: { [key]: new TextEncoder().encode(text) } });
+  assert.equal((await run(ok)).conclusion, 'success');
+  assert.ok(userMessage(ok).includes(text));
+  assert.ok(!userMessage(ok).includes('\uFFFD'));
+  const bom = world({ diff: moved, contents: { [key]: new Uint8Array([0xef, 0xbb, 0xbf, 0x61]) } });
+  assert.equal((await run(bom)).conclusion, 'success');
+  assert.ok(userMessage(bom).includes('\uFEFFa'));
+});
+
 test('unreviewable content: pure renames and empty files are an explicit allowed policy and are disclosed to the model', async () => {
   const w = world({ diff: DIFF + RENAME + EMPTY_ADDED });
   const result = await run(w);

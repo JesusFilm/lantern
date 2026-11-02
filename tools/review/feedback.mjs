@@ -1,12 +1,15 @@
 import { createHash } from 'node:crypto';
 import { diffRightLines } from './diff.mjs';
-import { api, listAll } from './github.mjs';
+import { LIST_MAX_PAGES, api, listAll } from './github.mjs';
 
 export { diffRightLines };
 export const APP_LOGIN = 'lantern-independent-review[bot]';
 export const COMMENT_MARKER = '<!-- lantern-independent-review -->';
 export const MAX_INLINE = 10;
 const MAX_LISTED = 30;
+const COMMENT_FINDINGS_MAX = 30_000;
+export const CHECK_TEXT_MAX = 60_000;
+const TOO_MANY = `more than ${LIST_MAX_PAGES * 100}`;
 const HEAD = /<!-- head:([0-9a-f]{40}) -->/;
 const RUN = /<!-- run:(\d+) -->/;
 const FINDING = /<!-- lantern-ir:([0-9a-f]{16}) -->/;
@@ -32,6 +35,19 @@ export const inlineCandidates = (verdict, rightLines) => verdict.findings
 
 const where = f => (f.file ? ` ${escapeText(f.file, 300)}${f.line ? `:${f.line}` : ''}` : '');
 const shortSha = sha => sha.slice(0, 7);
+export const findingLine = f => `- **${f.severity}**${where(f)}: ${escapeText(f.message)}`;
+
+// How many whole findings, from the start, fit in max characters.
+export function fitFindings(findings, max) {
+  let used = 0;
+  let count = 0;
+  for (const f of findings) {
+    used += findingLine(f).length + 1;
+    if (used > max) break;
+    count++;
+  }
+  return count;
+}
 const findingKey = (sha, f) => createHash('sha256').update([sha, f.file, f.line, f.message].join('\0')).digest('hex').slice(0, 16);
 
 export function summaryComment({ state, sha, runId, checkUrl, verdict, failureSummary, protectedFiles = [] }) {
@@ -43,9 +59,12 @@ export function summaryComment({ state, sha, runId, checkUrl, verdict, failureSu
   let body = `${head}**${label}** for \`${shortSha(sha)}\`\n\n`;
   if (verdict) {
     body += `${escapeText(verdict.summary, 4000)}\n\n`;
-    if (verdict.findings.length) {
-      body += `### Findings (${verdict.findings.length})\n\n${verdict.findings.slice(0, MAX_LISTED).map(f => `- **${f.severity}**${where(f)}: ${escapeText(f.message)}`).join('\n')}\n`;
-      if (verdict.findings.length > MAX_LISTED) body += `- and ${verdict.findings.length - MAX_LISTED} more in the check\n`;
+    const total = verdict.findings.length;
+    if (total) {
+      const listed = fitFindings(verdict.findings.slice(0, MAX_LISTED), COMMENT_FINDINGS_MAX);
+      const inCheck = fitFindings(verdict.findings, CHECK_TEXT_MAX - 500);
+      body += `### Findings (${total})\n\n${verdict.findings.slice(0, listed).map(findingLine).join('\n')}\n`;
+      if (listed < total) body += inCheck >= total ? `- and ${total - listed} more in the check\n` : `- and ${total - listed} more not listed here; the check lists only the first ${inCheck} of ${total} because of its size limit, so ${total - inCheck} are not shown anywhere\n`;
       body += '\n';
     }
   } else {
@@ -69,8 +88,9 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, runId,
   const isMine = comment => boundTo(comment) === sha && RUN.exec(comment.body)?.[1] === String(runId);
 
   async function ownComments() {
-    const comments = await listAll(fetch, token, commentsPath);
-    return comments.filter(c => c.user?.login === APP_LOGIN && typeof c.body === 'string' && c.body.startsWith(COMMENT_MARKER));
+    const { items, truncated } = await listAll(fetch, token, commentsPath);
+    if (truncated) throw new Error(`the pull request has ${TOO_MANY} comments, so this run's comment cannot be located safely`);
+    return items.filter(c => c.user?.login === APP_LOGIN && typeof c.body === 'string' && c.body.startsWith(COMMENT_MARKER));
   }
 
   async function write(body, existing) {
@@ -93,7 +113,7 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, runId,
 
   async function postInline(findings) {
     if (!isCurrent(await readPull())) return 'inline comments not posted: the pull request moved to a newer commit or closed';
-    const existing = await listAll(fetch, token, `/repos/${repository}/pulls/${prNumber}/comments`);
+    const { items: existing, truncated } = await listAll(fetch, token, `/repos/${repository}/pulls/${prNumber}/comments`);
     const done = new Set(existing.filter(c => c.user?.login === APP_LOGIN).map(findingOf));
     const fresh = findings.filter(f => !done.has(findingKey(sha, f)));
     if (!fresh.length) return `${findings.length ? 'inline findings already posted' : 'no inline findings'}`;
@@ -106,14 +126,16 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, runId,
       },
     });
     if (!response.ok) throw new Error(`status ${response.status}`);
-    const removed = await removeDuplicates((await response.json()).id, new Set(fresh.map(f => findingKey(sha, f))));
+    const removed = truncated ? `; ${TOO_MANY} review comments exist, so duplicates could not be checked` : await removeDuplicates((await response.json()).id, new Set(fresh.map(f => findingKey(sha, f))));
     return `${fresh.length} inline comment${fresh.length === 1 ? '' : 's'} posted${removed}`;
   }
 
   // Listing and posting are not atomic, so concurrent runs can post the same finding; each run then deletes its own non-oldest copies. Best effort, not exactly-once.
   async function removeDuplicates(reviewId, keys) {
     try {
-      const mine = (await listAll(fetch, token, `/repos/${repository}/pulls/${prNumber}/comments`)).filter(c => c.user?.login === APP_LOGIN).sort((a, b) => a.id - b.id);
+      const { items, truncated } = await listAll(fetch, token, `/repos/${repository}/pulls/${prNumber}/comments`);
+      if (truncated) throw new Error(`${TOO_MANY} review comments exist`);
+      const mine = items.filter(c => c.user?.login === APP_LOGIN).sort((a, b) => a.id - b.id);
       const oldest = new Map();
       for (const c of mine) if (keys.has(findingOf(c)) && !oldest.has(findingOf(c))) oldest.set(findingOf(c), c.id);
       const extra = mine.filter(c => c.pull_request_review_id === reviewId && keys.has(findingOf(c)) && oldest.get(findingOf(c)) !== c.id);

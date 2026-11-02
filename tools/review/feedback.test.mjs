@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { decide, parseVerdict } from './verdict.mjs';
-import { COMMENT_MARKER, MAX_INLINE, diffRightLines, escapeText } from './feedback.mjs';
+import { APP_LOGIN, CHECK_TEXT_MAX, COMMENT_MARKER, MAX_INLINE, diffRightLines, escapeText } from './feedback.mjs';
+import { LIST_MAX_PAGES, listAll } from './github.mjs';
 import { runReview } from './review.mjs';
 import { SHA, TOKEN, verdict, SHA_B, world, config, run, finalCheck, HUNK_DIFF, manyLinesDiff, finding, failing, writes, ours, github, olderComment, completionCheck, summaryOf, forB } from './fake-github.mjs';
 import { describeResult } from './review.mjs';
@@ -247,8 +248,8 @@ test('final decision: a Passed summary is never published unless the head was ve
 test('completion failure: a rejected completion leaves only a Not completed notice for this run, never a verdict, and the job fails', async () => {
   const other = olderComment('c'.repeat(40), 'Passed');
   const untouched = other.body;
-  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), failOn: 'PATCH /repos/o/r/check-runs/900', seed: [other] });
-  await assert.rejects(run(w), /Could not complete check run \(status 500\)/);
+  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), failOn: 'PATCH /repos/o/r/check-runs/900', failStatus: 422, seed: [other] });
+  await assert.rejects(run(w), /Could not complete check run \(status 422\)/);
   assert.equal(other.body, untouched);
   assert.equal(ours(w).length, 2);
   assert.doesNotMatch(summaryOf(w).replace(untouched, ''), /Passed|Requires changes|Bug here/);
@@ -258,9 +259,9 @@ test('completion failure: a rejected completion leaves only a Not completed noti
   assert.equal(w.reviews.length, 0);
 
   const retry = world({ diff: HUNK_DIFF, model: failing([finding()]), traps: [{ on: 'PATCH /repos/o/r/check-runs/900', nth: 2, before: api => { api.state.failCheckPatch = true; } }], failFirst: 'PATCH /repos/o/r/check-runs/900' });
-  await assert.rejects(run(retry), /Could not complete check run \(status 502\)/);
-  assert.match(summaryOf(retry), /Not completed/);
-  assert.doesNotMatch(summaryOf(retry), /Requires changes|Passed/);
+  await assert.rejects(run(retry), /Could not complete check run \(status 502; the outcome could not be confirmed\)/);
+  assert.match(summaryOf(retry), /Outcome unconfirmed/);
+  assert.doesNotMatch(summaryOf(retry), /Requires changes|Passed|Not completed|no verdict is recorded/);
 });
 
 test('completion failure: a network error on the final update is reconciled against the check, never reported as unrecorded without evidence', async () => {
@@ -270,10 +271,14 @@ test('completion failure: a network error on the final update is reconciled agai
   assert.match(summaryOf(accepted), /\*\*Passed\*\*/);
   assert.doesNotMatch(summaryOf(accepted), /Not completed|unconfirmed/);
 
-  const rejected = world({ diff: HUNK_DIFF, traps: [{ on: 'PATCH /repos/o/r/check-runs/900', before: () => { throw new Error('socket closed'); } }] });
-  await assert.rejects(run(rejected), /Could not complete check run \(a network error\)/);
-  assert.match(summaryOf(rejected), /\*\*Not completed\*\*[\s\S]*a network error[\s\S]*no verdict is recorded/);
-  assert.equal(completionCheck(rejected), undefined);
+  const delayed = world({ diff: HUNK_DIFF, traps: [{ on: 'PATCH /repos/o/r/check-runs/900', before: () => { throw new Error('socket closed'); } }] });
+  await assert.rejects(run(delayed), /Could not complete check run \(a network error; the outcome could not be confirmed\)/);
+  assert.equal(completionCheck(delayed), undefined, 'the check reads as open right after the failure');
+  assert.match(summaryOf(delayed), /\*\*Outcome unconfirmed\*\*/);
+  assert.doesNotMatch(summaryOf(delayed), /Not completed|no verdict is recorded/);
+  await delayed.fetch('https://api.github.com/repos/o/r/check-runs/900', { method: 'PATCH', body: JSON.stringify({ status: 'completed', conclusion: 'success', output: { title: 'late', summary: 'late' } }) });
+  assert.equal(completionCheck(delayed).conclusion, 'success', 'the request that seemed lost completes the check later');
+  assert.doesNotMatch(summaryOf(delayed), /no verdict is recorded/);
 
   const unknown = world({ diff: HUNK_DIFF, failOn: 'GET /repos/o/r/check-runs/900', traps: [lost()] });
   await assert.rejects(run(unknown), /a network error; the outcome could not be confirmed/);
@@ -293,7 +298,7 @@ test('completion failure: if the Not completed notice cannot be written, or the 
   assert.ok(!JSON.stringify(down.checks).includes(TOKEN));
 
   const unreadable = world({ diff: HUNK_DIFF, failOn: 'GET /repos/o/r/issues/5/comments', traps: [{ on: 'POST /repos/o/r/check-runs', after: api => { api.state.failCheckPatch = true; } }] });
-  await assert.rejects(run(unreadable), /Could not complete check run \(status 502\)/);
+  await assert.rejects(run(unreadable), /Could not complete check run \(status 502/);
   assert.equal(ours(unreadable).length, 0);
 });
 
@@ -391,9 +396,132 @@ test('same-SHA runs: an older run finishing after a newer one changes neither it
   const stuck = [];
   await run(world({ diff: HUNK_DIFF, shared: stuck, checkIds: [902] }));
   const kept = stuck[0].body;
-  await assert.rejects(run(world({ diff: HUNK_DIFF, shared: stuck, checkIds: [900], failOn: 'PATCH /repos/o/r/check-runs/900' })), /Could not complete/);
+  await assert.rejects(run(world({ diff: HUNK_DIFF, shared: stuck, checkIds: [900], failOn: 'PATCH /repos/o/r/check-runs/900', failStatus: 404 })), /Could not complete/);
   assert.equal(stuck[0].body, kept);
   assert.equal(stuck.length, 2);
   assert.match(stuck[1].body, /<!-- run:900 -->[\s\S]*\*\*Not completed\*\*/);
   assert.doesNotMatch(stuck[1].body, /Passed|Requires changes/);
+});
+
+const stubPages = (total, seen = []) => async url => {
+  const page = Number(new URL(url).searchParams.get('page'));
+  seen.push(page);
+  return new Response(JSON.stringify(Array.from({ length: Math.max(0, Math.min(100, total - (page - 1) * 100)) }, (_, i) => ({ id: (page - 1) * 100 + i }))));
+};
+
+test('listing: pages past the first 1,000 items are read, and a listing that may hide more is reported as truncated, never as complete', async () => {
+  assert.equal(LIST_MAX_PAGES, 30);
+  for (const [total, truncated] of [[0, false], [1, false], [99, false], [100, false], [250, false], [299, false], [300, true], [301, true], [1500, true]]) {
+    const seen = [];
+    const result = await listAll(stubPages(total, seen), 't', '/x', 3);
+    assert.equal(result.truncated, truncated, String(total));
+    assert.equal(result.items.length, Math.min(total, 300), String(total));
+    assert.ok(seen.length <= 3, String(total));
+  }
+  const fullDefault = await listAll(stubPages(2999), 't', '/x');
+  assert.deepEqual([fullDefault.items.length, fullDefault.truncated, fullDefault.items.at(-1).id], [2999, false, 2998]);
+  assert.equal((await listAll(stubPages(3000), 't', '/x')).truncated, true);
+  await assert.rejects(listAll(async () => new Response('{}', { status: 502 }), 't', '/x'), /status 502/);
+});
+
+const others = (count, base) => Array.from({ length: count }, (_, i) => ({ id: base + i, user: { login: 'someone' }, pull_request_review_id: 1, body: 'unrelated' }));
+
+test('listing limits: an already posted finding is found beyond 1,000 comments; at 3,000 review comments the findings are still posted and the unchecked duplicates are said so', async () => {
+  const model = failing([finding()]);
+  const first = world({ diff: HUNK_DIFF, model });
+  await run(first);
+  const posted = first.reviewComments[0];
+  const deleted = w => w.calls.filter(c => c.method === 'DELETE');
+
+  const deep = world({ diff: HUNK_DIFF, model });
+  deep.reviewComments.push(...others(2_500, 10_000), { ...posted, id: 99_999 }, ...others(498, 20_000));
+  assert.equal(deep.reviewComments.length, 2_999);
+  const found = await run(deep);
+  assert.equal(deep.reviews.length, 0);
+  assert.match(found.feedback.note, /inline findings already posted/);
+  assert.equal(finalCheck(deep).conclusion, 'failure');
+
+  const full = world({ diff: HUNK_DIFF, model });
+  full.reviewComments.push(...others(3_000, 10_000));
+  const result = await run(full);
+  assert.equal(full.reviews.length, 1);
+  assert.equal(full.reviewComments.length, 3_001);
+  assert.match(result.feedback.note, /1 inline comment posted; more than 3000 review comments exist, so duplicates could not be checked/);
+  assert.equal(deleted(full).length, 0);
+  assert.equal(finalCheck(full).conclusion, 'failure');
+  assert.match(finalCheck(full).output.summary, /duplicates could not be checked/);
+
+  const beyond = world({ diff: HUNK_DIFF, model });
+  beyond.reviewComments.push(...others(2_998, 10_000));
+  const ok = await run(beyond);
+  assert.doesNotMatch(ok.feedback.note, /could not be checked/);
+
+  const tipping = world({ diff: HUNK_DIFF, model });
+  tipping.reviewComments.push(...others(2_999, 10_000));
+  const tipped = await run(tipping);
+  assert.equal(tipping.reviews.length, 1);
+  assert.match(tipped.feedback.note, /1 inline comment posted; duplicates from a concurrent run could not be checked or removed \(more than 3000 review comments exist\)/);
+  assert.equal(deleted(tipping).length, 0);
+});
+
+test('listing limits: with more than 3,000 comments the summary comment cannot be located safely, so none is written, and the verdict is unchanged', async () => {
+  const crowded = world({ diff: HUNK_DIFF, seed: others(3_000, 20_000).map(c => ({ id: c.id, user: c.user, body: c.body })) });
+  const result = await run(crowded);
+  assert.equal(result.conclusion, 'success');
+  assert.equal(finalCheck(crowded).conclusion, 'success');
+  assert.equal(crowded.calls.filter(c => c.method === 'POST' && /issues\/5\/comments$/.test(c.path)).length, 0);
+  assert.match(finalCheck(crowded).output.summary, /could not be published \(summary comment: the pull request has more than 3000 comments/);
+
+  const fits = world({ diff: HUNK_DIFF, seed: others(2_999, 20_000).map(c => ({ id: c.id, user: c.user, body: c.body })) });
+  await run(fits);
+  assert.equal(ours(fits).length, 1);
+});
+
+const longFindings = (count, size) => Array.from({ length: count }, (_, i) => finding({ severity: 'minor', file: undefined, line: undefined, message: `F${String(i).padStart(2, '0')} ${'x'.repeat(size)}` }));
+
+test('long findings: when every finding fits in the check the summary points to it; when not, both surfaces say exactly what is missing and nothing points to details that are not there', async () => {
+  assert.equal(CHECK_TEXT_MAX, 60_000);
+
+  const fits = world({ diff: HUNK_DIFF, model: failing(longFindings(30, 1_800)) });
+  await run(fits);
+  const fitsCheck = finalCheck(fits).output;
+  assert.ok(fitsCheck.text.length <= CHECK_TEXT_MAX);
+  assert.ok(fitsCheck.text.includes('F29 '));
+  assert.doesNotMatch(fitsCheck.summary, /Only the first/);
+  const fitsBody = ours(fits)[0].body;
+  assert.ok(fitsBody.length < 65_536);
+  assert.match(fitsBody, /### Findings \(30\)/);
+  assert.match(fitsBody, /- and 14 more in the check/);
+  assert.doesNotMatch(fitsBody, /not shown anywhere/);
+
+  const w = world({ diff: HUNK_DIFF, model: failing(longFindings(40, 1_800)) });
+  await run(w);
+  const check = finalCheck(w).output;
+  assert.ok(check.text.length <= CHECK_TEXT_MAX);
+  const inCheck = (check.text.match(/^- \*\*minor\*\*: F\d\d /gm) ?? []).length;
+  assert.ok(inCheck > 0 && inCheck < 40);
+  assert.ok(check.text.includes(`F${String(inCheck - 1).padStart(2, '0')} `));
+  assert.ok(!check.text.includes(`F${String(inCheck).padStart(2, '0')} `));
+  assert.ok(check.summary.includes(`Only the first ${inCheck} of 40 findings fit in the check's size limit; the other ${40 - inCheck} are not shown.`));
+  assert.match(check.text, new RegExp(`${40 - inCheck} more findings are not shown`));
+  const body = ours(w)[0].body;
+  assert.ok(body.length < 65_536);
+  const listed = (body.match(/^- \*\*minor\*\*: F\d\d /gm) ?? []).length;
+  assert.ok(listed > 0 && listed < inCheck);
+  assert.ok(body.includes(`the check lists only the first ${inCheck} of 40 because of its size limit, so ${40 - inCheck} are not shown anywhere`));
+  assert.ok(body.includes(`and ${40 - listed} more not listed here`));
+  assert.doesNotMatch(body, /more in the check/);
+  assert.equal(finalCheck(w).conclusion, 'failure');
+});
+
+test('long findings: messages longer than the per-message cap and as many findings as the gateway response allows still leave a bounded, truthful check and comment', async () => {
+  const w = world({ diff: HUNK_DIFF, model: failing(longFindings(55, 2_100)) });
+  await run(w);
+  const check = finalCheck(w).output;
+  assert.ok(check.text.length <= CHECK_TEXT_MAX && check.summary.length <= 60_000);
+  assert.match(check.summary, /Only the first \d+ of 55 findings fit/);
+  const body = ours(w)[0].body;
+  assert.ok(body.length < 65_536);
+  assert.match(body, /### Findings \(55\)/);
+  assert.match(body, /are not shown anywhere/);
 });

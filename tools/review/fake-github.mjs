@@ -38,7 +38,7 @@ export function filesFromDiff(diff) {
   });
 }
 
-export function world({ headSha = SHA, heads, state = 'open', diff = DIFF, files, compares = {}, diffStatus = 200, listStatus = 200, contents = {}, model = verdict(), modelStatus = 200, stopReason = 'end_turn', failOn, failFirst, seed = [], shared, checkIds = [], moveHeadAfterModel, traps = [] } = {}) {
+export function world({ headSha = SHA, heads, state = 'open', diff = DIFF, files, compares = {}, diffStatus = 200, listStatus = 200, contents = {}, model = verdict(), modelStatus = 200, stopReason = 'end_turn', failOn, failStatus = 500, failFirst, seed = [], shared, checkIds = [], moveHeadAfterModel, traps = [] } = {}) {
   const calls = [];
   const checks = [];
   const comments = shared ?? [...seed];
@@ -77,7 +77,7 @@ export function world({ headSha = SHA, heads, state = 'open', diff = DIFF, files
   };
   const api_ = { state: state_, comments, reviewComments, calls, checks };
   const handle = async (u, method, body, init, key) => {
-    if (failOn === key) return json({ message: `boom ${TOKEN}` }, 500);
+    if (failOn === key) return json({ message: `boom ${TOKEN}` }, failStatus);
     if (failFirst === key && !failed.has(key)) { failed.add(key); return json({ message: 'flaky' }, 500); }
     if (u.host === 'gateway.example') {
       if (moveHeadAfterModel) state_.head = moveHeadAfterModel;
