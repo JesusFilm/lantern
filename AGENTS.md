@@ -15,6 +15,7 @@ Load the relevant guide when its task applies; follow its source links only for 
 | Run/write tests, explain coverage, or assess what a green check proves | [Testing](docs/development/testing.md): local commands, staging journeys, production checks and limits |
 | Merge, release, change schema or delivery switches, or recover a failed release | [Releasing](docs/operations/releasing.md): automatic/manual paths, evidence and recovery |
 | Change product or data-model behavior | [PRD](docs/PRD.md), [domain terms](GLOSSARY.md), [priorities](docs/ROADMAP.md) |
+| Change product source or prepare a QA hand-off | [QA manual](docs/development/manual.md): check coverage and wording, update affected slides and screenshots, then regenerate |
 | Choose/change an architectural approach or record a decision | [ADR instructions](docs/adrs/AGENTS.md) |
 
 Keep guides focused on current instructions. Replace obsolete guidance and remove completed plans; keep execution history in PRs/CI evidence and historical decisions in ADRs with links to their replacements.
