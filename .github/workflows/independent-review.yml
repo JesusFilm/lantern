@@ -1,0 +1,36 @@
+name: Independent review
+
+# Runs trusted code from main on pull_request_target. It never checks out or executes pull request code;
+# the harness reads the diff through the GitHub API and publishes the "Independent review" check as the
+# dedicated GitHub App. See docs/operations/review-gate.md.
+on:
+  pull_request_target:
+    # edited fires for title, body and base-branch edits; only a base-branch edit (a retarget) starts a review.
+    types: [opened, synchronize, reopened, ready_for_review, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ (github.event.action == 'edited' && github.event.changes.base.ref.from == null) && format('ignored-edit-{0}', github.run_id) || format('independent-review-{0}', github.event.pull_request.number) }}
+  cancel-in-progress: true
+
+jobs:
+  run-review:
+    if: github.event.pull_request.base.ref == 'main' && github.event.pull_request.draft == false && (github.event.action != 'edited' || github.event.changes.base.ref.from != null)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ai-review
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Run independent review
+        env:
+          AI_REVIEW_APP_ID: ${{ vars.AI_REVIEW_APP_ID }}
+          AI_REVIEW_APP_PRIVATE_KEY: ${{ secrets.AI_REVIEW_APP_PRIVATE_KEY }}
+          AI_REVIEW_GATEWAY_BASE_URL: ${{ vars.AI_REVIEW_GATEWAY_BASE_URL }}
+          AI_REVIEW_GATEWAY_API_KEY: ${{ secrets.AI_REVIEW_GATEWAY_API_KEY }}
+          AI_REVIEW_MODEL: ${{ vars.AI_REVIEW_MODEL }}
+        run: node tools/review/main.mjs
