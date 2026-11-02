@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
-        with: { node-version: '24.22.1', cache: npm }
+        with: { node-version: '26.13.0', cache: npm }
       - run: npm ci
       - run: npm run typecheck
   tests:
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
-        with: { node-version: '24.22.1', cache: npm }
+        with: { node-version: '26.13.0', cache: npm }
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run build
@@ -56,7 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
-        with: { node-version: '24.22.1', cache: npm }
+        with: { node-version: '26.13.0', cache: npm }
       - run: npm ci
       - run: npm run build
       - run: node tools/release/stamp.mjs
@@ -89,7 +89,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
       - uses: actions/setup-node@v7
-        with: { node-version: '24.22.1', cache: npm }
+        with: { node-version: '26.13.0', cache: npm }
       - name: Enforce exact revision and successful checks
         env:
           CHECK_RESULTS: ${{ toJSON(needs) }}
