@@ -27,6 +27,15 @@ jobs:
         with: { node-version: '26.13.0', cache: npm }
       - run: npm ci
       - run: npm run typecheck
+  review-harness:
+    name: review harness tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '26.13.0' }
+      - run: node --test tools/review/*.test.mjs
   tests:
     name: PostgreSQL HTTP and browser tests
     runs-on: ubuntu-latest
