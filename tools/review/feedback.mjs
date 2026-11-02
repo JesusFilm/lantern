@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
+import { diffRightLines } from './diff.mjs';
 import { api, listAll } from './github.mjs';
 
+export { diffRightLines };
 export const APP_LOGIN = 'lantern-independent-review[bot]';
 export const COMMENT_MARKER = '<!-- lantern-independent-review -->';
 export const MAX_INLINE = 10;
@@ -21,25 +23,6 @@ export function escapeText(value, max = 2000) {
     .replace(/www\./gi, 'www&#46;');
 }
 
-export function diffRightLines(diff) {
-  const files = new Map();
-  let lines = null;
-  let line = 0;
-  let inHunk = false;
-  for (const text of diff.split('\n')) {
-    if (text.startsWith('diff --git ')) { inHunk = false; lines = null; continue; }
-    if (!inHunk) {
-      const header = /^\+\+\+ b\/(.+)$/.exec(text);
-      if (header) { lines = new Set(); files.set(header[1], lines); continue; }
-    }
-    const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(text);
-    if (hunk) { inHunk = true; line = Number(hunk[1]); continue; }
-    if (!inHunk || !lines) continue;
-    if (text.startsWith('+') || text.startsWith(' ')) { lines.add(line); line++; }
-  }
-  return files;
-}
-
 export const inlineCandidates = (verdict, rightLines) => verdict.findings
   .filter(f => f.severity !== 'minor' && f.file && f.line && rightLines.get(f.file)?.has(f.line))
   .slice(0, MAX_INLINE);
@@ -48,9 +31,10 @@ const where = f => (f.file ? ` ${escapeText(f.file, 300)}${f.line ? `:${f.line}`
 const shortSha = sha => sha.slice(0, 7);
 const findingKey = (sha, f) => createHash('sha256').update([sha, f.file, f.line, f.message].join('\0')).digest('hex').slice(0, 16);
 
-export function summaryComment({ state, sha, previousSha, checkUrl, verdict, failureSummary, protectedFiles = [] }) {
+export function summaryComment({ state, sha, previousSha, currentSha, checkUrl, checksUrl, verdict, failureSummary, protectedFiles = [] }) {
   const head = `${COMMENT_MARKER}\n<!-- head:${sha} -->\n## Independent review\n\n`;
   const link = `[Open the check](${checkUrl})`;
+  if (state === 'superseded') return `${head}**Superseded**: the head is now \`${shortSha(currentSha)}\`, so this comment no longer describes it. See the [checks](${checksUrl}) for its verdict.`;
   if (state === 'running') {
     const superseded = previousSha && previousSha !== sha ? ` The earlier verdict for \`${shortSha(previousSha)}\` is superseded.` : '';
     return `${head}**Reviewing** \`${shortSha(sha)}\`.${superseded}\n\n${link}`;
@@ -73,6 +57,15 @@ export function summaryComment({ state, sha, previousSha, checkUrl, verdict, fai
 
 export function createFeedback({ fetch, token, repository, prNumber, sha, checkUrl }) {
   const commentsPath = `/repos/${repository}/issues/${prNumber}/comments`;
+  const checksUrl = `https://github.com/${repository}/pull/${prNumber}/checks`;
+
+  async function readPull() {
+    const response = await api(fetch, token, 'GET', `/repos/${repository}/pulls/${prNumber}`);
+    if (!response.ok) throw new Error(`status ${response.status}`);
+    return response.json();
+  }
+
+  const isCurrent = pull => pull.state === 'open' && pull.head.sha === sha;
 
   async function ownComment() {
     const comments = await listAll(fetch, token, commentsPath);
@@ -87,14 +80,23 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, checkU
     return existing ? 'updated' : 'created';
   }
 
-  async function headIsCurrent() {
-    const response = await api(fetch, token, 'GET', `/repos/${repository}/pulls/${prNumber}`);
-    if (!response.ok) throw new Error(`status ${response.status}`);
-    const pull = await response.json();
-    return pull.state === 'open' && pull.head.sha === sha;
+  // GitHub has no compare-and-swap for comments: guard before the write, repair after it.
+  async function guardedUpsert(build) {
+    if (!isCurrent(await readPull())) return { written: false };
+    const existing = await ownComment();
+    const how = await upsert(build(existing), existing);
+    const after = await readPull();
+    if (after.head.sha === sha) return { written: true, how };
+    const own = await ownComment();
+    if (own && HEAD.exec(own.body)?.[1] === sha) {
+      await upsert(summaryComment({ state: 'superseded', sha, currentSha: after.head.sha, checksUrl }), own);
+      return { written: true, how, repaired: true };
+    }
+    return { written: true, how };
   }
 
   async function postInline(findings) {
+    if (!isCurrent(await readPull())) return 'inline comments not posted: the pull request moved to a newer commit or closed';
     const existing = await listAll(fetch, token, `/repos/${repository}/pulls/${prNumber}/comments`);
     const done = new Set(existing.filter(c => c.user?.login === APP_LOGIN).map(c => /<!-- lantern-ir:([0-9a-f]{16}) -->/.exec(c.body ?? '')?.[1]));
     const fresh = findings.filter(f => !done.has(findingKey(sha, f)));
@@ -114,18 +116,17 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, checkU
   return {
     async announce() {
       try {
-        const existing = await ownComment();
-        const previousSha = existing ? HEAD.exec(existing.body)?.[1] : undefined;
-        await upsert(summaryComment({ state: 'running', sha, previousSha, checkUrl }), existing);
+        await guardedUpsert(existing => summaryComment({ state: 'running', sha, previousSha: existing ? HEAD.exec(existing.body)?.[1] : undefined, checkUrl }));
       } catch { /* the final publication reports any problem */ }
     },
 
     async publish({ conclusion, verdict, failureSummary, protectedFiles, diff }) {
       const notes = [];
       try {
-        if (!(await headIsCurrent())) return 'not published: the pull request moved to a newer commit or closed.';
-        const existing = await ownComment();
-        notes.push(`summary comment ${await upsert(summaryComment({ state: conclusion, sha, checkUrl, verdict, failureSummary, protectedFiles }), existing)}`);
+        const result = await guardedUpsert(() => summaryComment({ state: conclusion, sha, checkUrl, verdict, failureSummary, protectedFiles }));
+        if (!result.written) return 'not published: the pull request moved to a newer commit or closed.';
+        notes.push(`summary comment ${result.how}${result.repaired ? ', then marked superseded because the head moved while publishing' : ''}`);
+        if (result.repaired) return `${notes.join('; ')}.`;
       } catch (error) {
         return `could not be published (summary comment: ${error.message}). The verdict above is unaffected.`;
       }
