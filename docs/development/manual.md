@@ -8,6 +8,27 @@ For human testers' accounts and resetting staging examples, see [QA staging](../
 
 ## Regenerate after changing the product
 
+The agent or developer making the change owns the manual update. Before finishing
+the change:
+
+1. Compare each changed user-visible behavior, role, workflow, validation and
+   failure state with the existing slides and capture scenes. Use the product
+   requirements and implementation to establish expected behavior.
+2. Update or add slides so their descriptions, steps and checks cover the
+   change. Update the capture scenes and synthetic data to show affected UI
+   states; identify screens that require a supplied capture.
+3. Regenerate the manual using the commands below. Inspect affected screenshots
+   and rendered PDF pages for accurate content, legibility, scroll coverage and
+   callouts. Correct any issues and regenerate again.
+4. Run the freshness check and include the manual changes with the product
+   change. Report any missing supplied captures or checks that could not be
+   verified.
+
+The CI freshness check verifies that the recorded files match the source; it
+does not assess whether the manual covers the behavior or whether its wording
+and screenshots are correct. The person or coding agent making the change
+performs that assessment as part of the work.
+
 ```sh
 docker compose --env-file .env.example up -d --wait database
 npm run manual
