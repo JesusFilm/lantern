@@ -69,7 +69,7 @@ export function fitFindings(findings, max) {
 }
 const findingKey = (sha, f) => createHash('sha256').update([sha, f.file, f.line, f.message].join('\0')).digest('hex').slice(0, 16);
 
-export function summaryComment({ state, sha, runId, checkUrl, verdict, failureSummary, protectedFiles = [] }) {
+export function summaryComment({ state, sha, runId, checkUrl, verdict, failureSummary, protectedFiles = [], annotationsRejected = false }) {
   const head = `${COMMENT_MARKER}\n<!-- head:${sha} -->\n<!-- run:${runId} -->\n## Independent review\n\n`;
   const link = `[Open the check](${checkUrl})`;
   if (state === 'incomplete') return `${head}**Not completed** for \`${shortSha(sha)}\`\n\nThe check run could not be completed (${escapeText(failureSummary, 200)}), so no verdict is recorded for this commit. Run the review again.\n\n${link}`;
@@ -83,7 +83,7 @@ export function summaryComment({ state, sha, runId, checkUrl, verdict, failureSu
       const listed = fitFindings(verdict.findings.slice(0, MAX_LISTED), COMMENT_FINDINGS_MAX);
       const inCheck = fitFindings(verdict.findings, CHECK_TEXT_MAX - 500);
       body += `### Findings (${total})\n\n${verdict.findings.slice(0, listed).map(findingLine).join('\n')}\n`;
-      if (listed < total) body += inCheck >= total ? `- and ${total - listed} more in the check\n` : `- and ${total - listed} more not listed here; the check text lists only the first ${inCheck} of ${total} because of its size limit, so ${total - inCheck} are not listed in either text; some may appear as inline review comments or check annotations, which have their own limits, so no surface here is a full listing\n`;
+      if (listed < total) body += inCheck >= total ? `- and ${total - listed} more in the check\n` : `- and ${total - listed} more not listed here; the check text lists only the first ${inCheck} of ${total} because of its size limit, so ${total - inCheck} are not listed in either text; some may appear as ${annotationsRejected ? 'inline review comments (check annotations could not be attached), which have their own limits' : 'inline review comments or check annotations, which have their own limits'}, so no surface here is a full listing\n`;
       body += '\n';
     }
   } else {
@@ -177,10 +177,10 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, runId,
       } catch { /* the run already fails and the check stays unfinished */ }
     },
 
-    async publish({ conclusion, verdict, failureSummary, protectedFiles, diff }) {
+    async publish({ conclusion, verdict, failureSummary, protectedFiles, diff, annotationsRejected }) {
       const notes = [];
       try {
-        const result = await guardedUpsert(() => summaryComment({ state: conclusion, sha, runId, checkUrl, verdict, failureSummary, protectedFiles }));
+        const result = await guardedUpsert(() => summaryComment({ state: conclusion, sha, runId, checkUrl, verdict, failureSummary, protectedFiles, annotationsRejected }));
         if (!result.written) return 'not published: the pull request moved to a newer commit or closed.';
         notes.push(`summary comment ${result.how}`);
       } catch (error) {
