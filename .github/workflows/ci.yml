@@ -42,7 +42,7 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18
         env:
           POSTGRES_PASSWORD: isolated_ci
           POSTGRES_DB: lantern_test
