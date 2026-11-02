@@ -72,7 +72,58 @@ Choose the capture mode by what the reader needs to see:
 
 Add `crop` to the `viewport`, `frames` or `tall` modes to keep the text legible on a slide. Long desktop pages use frames cropped to `.workspace`; dialogs crop to `role=dialog`.
 
-Fonts are system fonts, so screenshots from another operating system differ slightly. Regenerate on the same Linux environment where practical.
+## Rendering environment
+
+Screenshots are pixel-compared, and the manual uses system fonts (`system-ui`, `sans-serif`, `Georgia, serif`, `ui-monospace`). A machine with different fonts shifts line breaks and fails the slide-fit check, or rewrites every screenshot. Regenerate only where the environment below holds. The tooling pins the device profiles, locale, timezone, clock and motion; the rest is your machine.
+
+| Requirement | Value |
+| --- | --- |
+| Node | the version in [.nvmrc](../../.nvmrc) |
+| Playwright and Chromium | the `@playwright/test` version in the lockfile (1.64.1, Chromium 156.0.8078.4 when this was written), installed with `npx playwright install chromium` |
+| Linux | Debian/Ubuntu-style fontconfig (2.14); other operating systems render differently |
+| `system-ui`, `sans-serif` | Noto Sans (Regular and Bold) |
+| `Georgia, serif` | Liberation Serif, not Noto Serif. Chromium picks this itself, so `fc-match Georgia` is not a reliable test |
+| `ui-monospace, monospace` | DejaVu Sans Mono |
+| Emoji | Noto Color Emoji |
+| Network | the app and the browser talk over loopback. When a proxy is configured through `HTTP_PROXY` and `NODE_USE_ENV_PROXY=1`, set `NO_PROXY=127.0.0.1,localhost`; otherwise generation fails with `fetch failed` |
+
+These font files reproduced the committed screenshots exactly (0 of 44 changed) on 3 November 2026:
+
+| Face | SHA-256 |
+| --- | --- |
+| NotoSans-Regular.ttf | `89c3c497f618fdaa0b2d1e98fef93582f28c71debd2c4a8cdf41f190ced2909d` |
+| NotoSans-Bold.ttf | `e83493c945848ecd4a9ad0f6d19164541a0d3e23a9c952304a00a46e00272ac5` |
+| LiberationSerif-Regular.ttf | `350f4ffd773cae53560c63dca3d89a5070595614fde12f772bf43feb63d81064` |
+| LiberationSerif-Bold.ttf | `bb033fae52dcbf67a55494a08829aaa788324624d72a195af7f93da3061c928f` |
+| DejaVuSansMono.ttf | `a54dca07c76d6289e717e75e0a58c0128f6d7269ef3faf76417c9d7d3bba37ab` |
+| DejaVuSansMono-Bold.ttf | `2d67eed9b325ee2e69f906ce4f3f6264d5105230a13352c8494daad4f17b12c8` |
+| NotoColorEmoji.ttf | `9fd0a3d0ce84d77e3185dfbae77bd1abf3926aa49a032e354d076c4f17151f10` |
+
+To see which faces Chromium actually uses, ask it:
+
+```sh
+cat > fonts-probe.mjs <<'JS'
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch();
+const page = await browser.newPage();
+const cases = [['system-ui, sans-serif', 400], ['Georgia, serif', 400], ['ui-monospace, monospace', 400], ['system-ui, sans-serif', 700]];
+await page.setContent(cases.map(([f, w], i) => `<p id="p${i}" style="font-family:${f};font-weight:${w}">Hello</p>`).join(''));
+const cdp = await page.context().newCDPSession(page);
+await cdp.send('DOM.enable'); await cdp.send('CSS.enable');
+const { root } = await cdp.send('DOM.getDocument');
+for (const [i, [f, w]] of cases.entries()) {
+  const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector: '#p' + i });
+  const { fonts } = await cdp.send('CSS.getPlatformFontsForNode', { nodeId });
+  console.log(f, w, '->', fonts.map((x) => x.postScriptName).join(', '));
+}
+await browser.close();
+JS
+node fonts-probe.mjs; rm fonts-probe.mjs
+```
+
+Expect `NotoSans-Regular`, `LiberationSerif`, `DejaVuSansMono` and `NotoSans-Bold`.
+
+**Acceptance test.** On an unmodified checkout of `main`, `npm run manual` must report `0 screenshot(s) changed of 44` and `The deck is unchanged`. If it rewrites screenshots or fails the slide-fit check, the environment is wrong. Do not commit the output. Fix the fonts first (the probe above shows what Chromium chose) and repeat. When screenshots change after a product change, inspect each changed image and the matching PDF page and confirm the difference is intended before committing. A change to the product source alone also issues a new edition, because the source fingerprint is printed on the cover.
 
 ## Supplied captures
 
