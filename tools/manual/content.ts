@@ -58,7 +58,7 @@ export const chapters: Chapter[] = [
       {
         kind: "people",
         title: "The people in the screenshots",
-        lead: "The screenshots follow five fictional people. On staging you will be given accounts that play the same roles.",
+        lead: "The screenshots follow five fictional people in a local demonstration. QA uses their own Google accounts in the staging QA department.",
         people: [
           { name: "Aroha Ngata", role: "Member · Engineering", text: "Has a confirmed focus for the second half of 2026 and is drafting one for 2027." },
           { name: "Sam Patel", role: "Member · Engineering", text: "Has sent two versions of a focus to the career lead for review." },

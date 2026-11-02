@@ -1,9 +1,9 @@
 {
-  "edition": 1,
-  "editionDate": "2026-10-30",
-  "deck": "5ec9735d18a07abd850ea6e5b68e38eff8db714690072b6a771145ffcf521616",
+  "edition": 4,
+  "editionDate": "2026-11-02",
+  "deck": "1e1ef8bf0b0f741b0b7aa6ca0a9b410c53e740486809964efdd110c5c54acde1",
   "sources": {
-    "fingerprint": "10545defec34db2d5e33ac864855a663c8501afdc7f479673b10495d072dc87b",
+    "fingerprint": "5c2696ca1ad2d41e57fc72df0d1499ac25d7e3735fbeb1897bd5b5d46f29e0f7",
     "files": {
       "client/Guide.tsx": "9c72ae29512d56a1b87a2978a0dc3ae4b99eeff84cc3b04fcae02c5f3993eafc",
       "client/coach/CoachPreparing.tsx": "08ba217572bc5465ab73c3db2d665ef9969bf8547033745db70bfa2fc837a7f3",
@@ -94,11 +94,13 @@
       "shared/mission-image.ts": "578da384bea0ebf3e60fc460387b19933c05e441d651c57603578e6641573ba9",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
       "tools/manual/check.ts": "74a86ee33518d7d5c4ceb22680cbb5ef587340a7d22c235c7e76fd4c42e38f35",
-      "tools/manual/content.ts": "31575ea2809eaf35551aeaa55888c9962125af04f06dfb5d5414c17a06e171b0",
+      "tools/manual/content.ts": "c0e4b3246ab560ed9539d3da498cc73a202eb12bfcf9bd5ffdeb4bf277e84bfe",
       "tools/manual/freshness.ts": "6aa7dc335aca6c3aa95630e51897abc8b38901490b20adbfcea014170a2dd325",
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",
+      "tools/manual/qa-fixture.ts": "1b9c8578df30b38b47b79c07c84cc3958791bc8b30b0771dd8b3e73b5d53d591",
+      "tools/manual/qa-stage.ts": "57173baa13fb288ac5aca9e26ec24683deba2ef5258b7550260caac09cca96e8",
       "tools/manual/render.ts": "eedd830fcf3ccbdd403a8b3563b487be2edda4041ed4f6a724795dbaba2dda0c",
       "tools/manual/tsconfig.json": "b2c53bf7e0a9203acae2292d0215afb5abb1d3e90311ace1b9e8a11ec37ef1ac",
       "tools/manual/world.ts": "ad1e6771049c5de93e85e7d23e7f13d9a0ee0a0b344c24ef63a5865793377686",
@@ -162,5 +164,5 @@
       }
     }
   },
-  "pdf": "a583d8a39a73926305949c5c53caecdf47ac24d7ffcd29e3e7fc194711066fda"
+  "pdf": "eb14e038c211744f6b8daa8de3e03a8e821a51e24c52cbffd7c156583abfe71e"
 }

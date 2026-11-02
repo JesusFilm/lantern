@@ -4,6 +4,8 @@ The QA manual is a PDF slide deck for testers. Each feature gets one slide cover
 
 QA can always open the latest edition at <https://github.com/JesusFilm/lantern/releases/latest/download/lantern-manual.pdf>. Each edition is also browsable in the repository at [docs/manual/lantern-manual.pdf](../manual/lantern-manual.pdf).
 
+For human testers' accounts and resetting staging examples, see [QA staging](../operations/qa-staging.md). The fictional screenshot identities are local fixtures, not staging logins.
+
 ## Regenerate after changing the product
 
 ```sh
