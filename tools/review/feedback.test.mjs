@@ -502,13 +502,13 @@ test('long findings: when every finding fits in the check the summary points to 
   assert.ok(inCheck > 0 && inCheck < 40);
   assert.ok(check.text.includes(`F${String(inCheck - 1).padStart(2, '0')} `));
   assert.ok(!check.text.includes(`F${String(inCheck).padStart(2, '0')} `));
-  assert.ok(check.summary.includes(`Only the first ${inCheck} of 40 findings fit in the check's size limit; the other ${40 - inCheck} are not shown.`));
-  assert.match(check.text, new RegExp(`${40 - inCheck} more findings are not shown`));
+  assert.ok(check.summary.includes(`Only the first ${inCheck} of 40 findings fit in the check text's size limit; the other ${40 - inCheck} are not listed in it.`));
+  assert.match(check.text, new RegExp(`${40 - inCheck} more findings are not listed here`));
   const body = ours(w)[0].body;
   assert.ok(body.length < 65_536);
   const listed = (body.match(/^- \*\*minor\*\*: F\d\d /gm) ?? []).length;
   assert.ok(listed > 0 && listed < inCheck);
-  assert.ok(body.includes(`the check lists only the first ${inCheck} of 40 because of its size limit, so ${40 - inCheck} are not shown anywhere`));
+  assert.ok(body.includes(`the check text lists only the first ${inCheck} of 40 because of its size limit, so ${40 - inCheck} are not listed in either text`));
   assert.ok(body.includes(`and ${40 - listed} more not listed here`));
   assert.doesNotMatch(body, /more in the check/);
   assert.equal(finalCheck(w).conclusion, 'failure');
@@ -523,7 +523,8 @@ test('long findings: messages longer than the per-message cap and as many findin
   const body = ours(w)[0].body;
   assert.ok(body.length < 65_536);
   assert.match(body, /### Findings \(55\)/);
-  assert.match(body, /are not shown anywhere/);
+  assert.match(body, /are not listed in either text/);
+  assert.doesNotMatch(body, /anywhere/);
 });
 
 test('escaped text is bounded and any cut is marked with the exact amount missing, never silent and never mid-character', () => {
@@ -578,4 +579,29 @@ test('long finding messages: a message cut for an annotation says so; the check 
   assert.match(annotation.message, /\[truncated: \d+ more characters not shown\]$/);
   assert.ok(annotation.message.length <= 1_000);
   assert.ok(finalCheck(w).output.text.includes(REMEDIATION));
+});
+
+test('long line-specific findings: no surface claims a finding is absent everywhere or promises a full listing; each says what it omits', async () => {
+  const lineFindings = Array.from({ length: 55 }, (_, i) => finding({ severity: 'major', line: 1 + (i % 4), message: `L${String(i).padStart(2, '0')} ${'y'.repeat(2_100)}` }));
+  const w = world({ diff: HUNK_DIFF, model: failing(lineFindings) });
+  await run(w);
+  const check = finalCheck(w).output;
+  const body = ours(w)[0].body;
+  const review = w.reviews[0];
+  const inCheck = (check.text.match(/^- \*\*major\*\* client\/Guide\.tsx:\d: L\d\d /gm) ?? []).length;
+  assert.ok(inCheck > 0 && inCheck < 55);
+  assert.equal(review.comments.length, 10);
+  assert.equal(completionCheck(w).output.annotations.length, 50);
+  assert.ok(review.comments.every(c => c.body.length <= 8_100));
+
+  for (const [name, surface] of [['comment', body], ['check', check.text + check.summary], ['review', review.body]]) {
+    assert.doesNotMatch(surface, /anywhere|full verdict/, name);
+  }
+  assert.match(body, /not listed in either text; some may appear as inline review comments or check annotations/);
+  assert.match(body, /no surface here is a full listing/);
+  assert.match(check.summary, /not listed in it\. Findings on lines in the diff may also appear as annotations or inline review comments/);
+  assert.ok(check.summary.includes('Only the first 50 of 55 findings on lines in the diff are annotated.'));
+  assert.match(review.body, /at most 10 are posted inline/);
+  assert.match(review.body, /none of them is a full listing; the check is the gate/);
+  assert.ok(check.text.length <= CHECK_TEXT_MAX && body.length < 65_536);
 });

@@ -26,12 +26,14 @@ function render({ verdict, conclusion, rightLines, protectedFiles, notes }) {
   const shown = fitFindings(verdict.findings, CHECK_TEXT_MAX - 500);
   const lines = verdict.findings.slice(0, shown).map(findingLine);
   if (shown < total) {
-    notes = [...notes, `Only the first ${shown} of ${total} findings fit in the check's size limit; the other ${total - shown} are not shown.`];
-    lines.push(`- ${total - shown} more findings are not shown because of the check's size limit.`);
+    notes = [...notes, `Only the first ${shown} of ${total} findings fit in the check text's size limit; the other ${total - shown} are not listed in it. Findings on lines in the diff may also appear as annotations or inline review comments, which have their own limits, so no surface is a full listing.`];
+    lines.push(`- ${total - shown} more findings are not listed here because of the check text's size limit.`);
   }
   const closing = protectedFiles.length ? `\n\nThis change touches protected paths (${protectedFiles.map(file => escapeText(file, 200)).join(', ')}); it needs independent inspection and the owner's authorization before merge. This check is not a formal pull request approval.` : '\n\nThis check is not a formal pull request approval.';
+  const annotated = verdict.findings.filter(f => f.file && f.line && rightLines.get(f.file)?.has(f.line));
+  if (annotated.length > MAX_ANNOTATIONS) notes = [...notes, `Only the first ${MAX_ANNOTATIONS} of ${annotated.length} findings on lines in the diff are annotated.`];
   const extra = notes.length ? `\n\n${notes.map(note => `- ${note}`).join('\n')}` : '';
-  const annotations = verdict.findings.filter(f => f.file && f.line && rightLines.get(f.file)?.has(f.line)).slice(0, MAX_ANNOTATIONS).map(f => ({
+  const annotations = annotated.slice(0, MAX_ANNOTATIONS).map(f => ({
     path: f.file,
     start_line: f.line,
     end_line: f.line,

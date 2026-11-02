@@ -83,7 +83,7 @@ export function summaryComment({ state, sha, runId, checkUrl, verdict, failureSu
       const listed = fitFindings(verdict.findings.slice(0, MAX_LISTED), COMMENT_FINDINGS_MAX);
       const inCheck = fitFindings(verdict.findings, CHECK_TEXT_MAX - 500);
       body += `### Findings (${total})\n\n${verdict.findings.slice(0, listed).map(findingLine).join('\n')}\n`;
-      if (listed < total) body += inCheck >= total ? `- and ${total - listed} more in the check\n` : `- and ${total - listed} more not listed here; the check lists only the first ${inCheck} of ${total} because of its size limit, so ${total - inCheck} are not shown anywhere\n`;
+      if (listed < total) body += inCheck >= total ? `- and ${total - listed} more in the check\n` : `- and ${total - listed} more not listed here; the check text lists only the first ${inCheck} of ${total} because of its size limit, so ${total - inCheck} are not listed in either text; some may appear as inline review comments or check annotations, which have their own limits, so no surface here is a full listing\n`;
       body += '\n';
     }
   } else {
@@ -140,7 +140,7 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, runId,
       body: {
         commit_id: sha,
         event: 'COMMENT',
-        body: `Independent review of \`${shortSha(sha)}\`: ${fresh.length} blocker or major finding${fresh.length === 1 ? '' : 's'} on specific lines. See the summary comment for the full verdict. This is not a formal approval or change request.`,
+        body: `Independent review of \`${shortSha(sha)}\`: ${fresh.length} blocker or major finding${fresh.length === 1 ? '' : 's'} on specific lines (at most ${MAX_INLINE} are posted inline). The summary comment and the check also list findings, but each has a size limit and may be truncated, so none of them is a full listing; the check is the gate. This is not a formal approval or change request.`,
         comments: fresh.map(f => ({ path: f.file, line: f.line, side: 'RIGHT', body: `**${f.severity}**: ${escapeText(f.message, FINDING_MESSAGE_MAX)}\n\n<!-- lantern-ir:${findingKey(sha, f)} -->` })),
       },
     });
