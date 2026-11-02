@@ -2,19 +2,8 @@ import { useEffect, useState } from "react";
 import type { MemberFocusList, MemberFocusDetail } from "../../shared/focus.js";
 import { FocusConfirmation } from "./FocusConfirmation.js";
 import { api } from "./api.js";
-import { AlignmentSummary } from "./InitiativeChoices.js";
-
-const date = (value: string) =>
-  new Date(value + "T12:00:00").toLocaleDateString("en-NZ", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-const labels = {
-  normal: "Normal Objectives",
-  "personal-development": "Personal Development Objectives",
-  leadership: "Leadership Objectives",
-};
+import { FocusDocument } from "./FocusDocument.js";
+import { formatFocusDate as date } from "./focusDate.js";
 
 export function MemberFocuses({
   memberId,
@@ -48,9 +37,11 @@ export function MemberFocuses({
   }, [memberId, focusId, attempt]);
   return (
     <section className={focusId ? "member-focus-detail" : undefined}>
-      {!focusId && <button className="link back" onClick={() => navigate()}>
-        ← Department
-      </button>}
+      {!focusId && (
+        <button className="link back" onClick={() => navigate()}>
+          ← Department
+        </button>
+      )}
       {error ? (
         <p role="alert">
           {error}{" "}
@@ -65,9 +56,17 @@ export function MemberFocuses({
               <div className="member-context">
                 <div className="member-identity">
                   <span className="member-initials" aria-hidden="true">
-                    {data.member.name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("")}
+                    {data.member.name
+                      .trim()
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((part) => part[0])
+                      .join("")}
                   </span>
-                  <div><strong>{data.member.name}</strong><span className="muted">Member</span></div>
+                  <div>
+                    <strong>{data.member.name}</strong>
+                    <span className="muted">Member</span>
+                  </div>
                 </div>
                 <button className="link" onClick={() => navigate(memberId)}>
                   View all position focuses <span aria-hidden="true">→</span>
@@ -81,31 +80,13 @@ export function MemberFocuses({
                   </p>
                 </div>
               </header>
-              <FocusConfirmation key={data.focus.id} focus={data.focus} member={data.member}
-                onConfirmed={(focus) => setData({member: data.member, focus})} />
-              {data.focus.sections.map((section, i) => (
-                <section className="read-section" key={i}>
-                  <div className="read-objective">
-                    <h2>Objective {i + 1}</h2>
-                    <span className="badge">{labels[section.kind]}</span>
-                    <p className="read-text">{section.objective}</p>
-                    <AlignmentSummary alignment={section.alignment} />
-                  </div>
-                  <div className="read-goals">
-                    <h3>SMART goals</h3>
-                    {section.goals.map((goal, j) => (
-                      <div className="read-goal" key={j}>
-                        <span className="goal-number">{j + 1}</span>
-                        <p className="read-text">{goal}</p>
-                      </div>
-                    ))}
-                    {!section.goals.length && (
-                      <p className="muted">No goals yet.</p>
-                    )}
-                  </div>
-                </section>
-              ))}
-              {!data.focus.sections.length && <p>No objectives yet.</p>}
+              <FocusConfirmation
+                key={data.focus.id}
+                focus={data.focus}
+                member={data.member}
+                onConfirmed={(focus) => setData({ member: data.member, focus })}
+              />
+              <FocusDocument focus={data.focus} showPeriod={false} />
             </>
           ) : (
             <>

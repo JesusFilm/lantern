@@ -36,6 +36,7 @@ Use TDD and a focused test while changing behavior; run typecheck, build and the
 | Data and permissions | Real PostgreSQL persistence, stale/forged writes, cross-member/department denial, separated runtime/migration/admin roles, migrations, bootstrap and recovery failure paths. `server/database-*.test.ts`, `server/migration.integration.test.ts` |
 | Delivery safeguards | Configuration/target checks, migration failures, evidence identity/freshness, manual override, cleanup/interruption recovery and safe diagnostics. `tools/release/*.test.mjs` |
 | Supporting tools | Local ticket-board behavior. `tools/ticket-board/tickets.test.ts` |
+| QA manual tooling | Screenshot capture (scroll frames, fixed bars, crops, settling, failures), slide image layout and manual freshness. `tools/manual/*.test.ts` |
 
 Local browser tests largely use Vite/HTTP. Release integration tests additionally exercise built assets, HTTPS smoke and restricted database roles locally. These do not establish hosted networking/configuration or real Google interaction.
 
@@ -89,11 +90,14 @@ Desktop and mobile are supported. For UI changes:
 4. Run the existing automated browser suite. Before release, check real iOS/Android
    keyboards, native pickers, browser chrome, pinch/OS gestures and enlarged text;
    check desktop text enlargement and browser zoom. Emulation does not certify these.
-5. Summarize coverage, critique and unverified checks in the PR. Keep generated
+5. Summarize coverage, critique and unverified checks in the PR. Keep review
    screenshots and disposable verification scripts out of Git; remove them after
-   review. Retain only the minimum evidence needed for an active review.
+   review. Retain only the minimum evidence needed for an active review. The
+   generated [QA manual](manual.md) is the exception: regenerate and commit it.
 
 Existing browser tests run in CI. This checklist does not imply a dedicated
 responsive regression suite or automatic visual approval.
 
 Coaching provider tests use local HTTP fixtures for Qwen-first routing, OpenRouter fallback, cooldown, timeout, malformed output, cancellation and safe errors. Coaching HTTP/browser tests use restricted PostgreSQL roles for atomic save/resume, review snapshots, notes, access isolation and multi-objective preservation. These tests do not evaluate model quality or establish hosted provider connectivity. See [coaching rollout](../operations/coaching.md).
+
+Objective authoring browser journeys cover explicit manual/AI-guided methods, a single objective save with nested goals, editable types, sibling preservation, method switching, cancellation, failure recovery, legacy working-note preservation and member inline review alongside lead snapshot review. The same authenticated acceptance runner now enters assistance through Position focuses. Provider fixtures verify workflow contracts, not the usefulness of generated wording.

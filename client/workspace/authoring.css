@@ -1,0 +1,729 @@
+/* Shared foundations and authoring components. Keep geometry here, not in flows. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --text-small: 13px;
+  --text-body: 16px;
+  --text-section: 20px;
+  --text-title: 28px;
+  --ink: #19334e;
+  --muted: #536984;
+  --accent: #007e95;
+  --border: #d8e1e8;
+  --surface: #fff;
+  --canvas: #f4f6f8;
+  --surface-subtle: #f5f8fa;
+  --radius: 8px;
+  --content-width: 880px;
+  --editor-width: 720px;
+  --panel-padding: var(--space-6);
+}
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--canvas);
+  font:
+    var(--text-body) / 1.5 system-ui,
+    sans-serif;
+  overflow-wrap: anywhere;
+}
+.main {
+  margin-left: 222px;
+  padding: var(--space-8) var(--space-8) 48px;
+}
+.workspace {
+  max-width: var(--content-width);
+  margin: 0 auto;
+}
+header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin: 0 0 var(--space-6);
+}
+header > div {
+  min-width: 0;
+}
+header p {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+h1 {
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: 650;
+  letter-spacing: -0.5px;
+  line-height: 1.25;
+}
+h2 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-section);
+  font-weight: 600;
+  line-height: 1.35;
+}
+h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 1.5;
+}
+p {
+  margin: 0 0 var(--space-4);
+}
+.muted,
+small {
+  color: var(--muted);
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--surface);
+  font-size: var(--text-small);
+  font-weight: 600;
+  line-height: 1.5;
+  cursor: pointer;
+}
+button:hover {
+  background: #e9f6f8;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.primary:hover {
+  background: #00677b;
+}
+.link {
+  padding: var(--space-2);
+  border-color: transparent;
+  color: var(--accent);
+  background: transparent;
+}
+.link:hover {
+  background: #e9f6f8;
+}
+input,
+select,
+textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid #acbfce;
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--surface);
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+label {
+  display: block;
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--ink);
+}
+.field {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.field > label {
+  margin: 0;
+}
+.field > button {
+  justify-self: start;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.metadata {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.card {
+  padding: var(--panel-padding);
+  margin-bottom: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.badge {
+  display: inline-block;
+  padding: var(--space-1) var(--space-2);
+  border-radius: 4px;
+  font-size: var(--text-small);
+  font-weight: 400;
+  color: #376974;
+  background: #edf5f5;
+}
+
+/* Dialogs have one scrollable content region and reachable actions. */
+dialog {
+  width: min(var(--editor-width), calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: var(--panel-padding);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 12px 48px #102a4c26;
+  overflow: hidden;
+}
+dialog::backdrop {
+  background: #102b4566;
+}
+dialog > form {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 82px);
+}
+dialog h2 {
+  flex-shrink: 0;
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-section);
+}
+.dialog-content {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-1);
+}
+.dialog-fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.dialog-fields > label:first-child {
+  margin-top: 0;
+}
+.dialog-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.dialog-actions button {
+  overflow-wrap: normal;
+}
+dialog [role="alert"] {
+  flex-shrink: 0;
+  margin: var(--space-3) 0 0;
+}
+.goal-parent {
+  margin-bottom: var(--space-6);
+}
+.goal-parent p {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-body);
+}
+
+/* An objective is the common visual unit in authoring and both review roles. */
+.focus-document {
+  min-width: 0;
+}
+.focus-period {
+  margin: 0 0 var(--space-6);
+  font-size: var(--text-small);
+}
+.read-section {
+  margin: 0 0 var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.read-section[hidden] {
+  display: none;
+}
+.read-objective {
+  padding: var(--panel-padding);
+  padding-bottom: var(--space-4);
+}
+.section-heading {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+.section-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.read-section h2 {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-small);
+  font-weight: 600;
+}
+.section-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+.read-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.read-objective > .read-text {
+  margin-top: var(--space-3);
+  font-size: var(--text-section);
+  font-weight: 600;
+  line-height: 1.5;
+  max-width: 70ch;
+}
+.read-goals {
+  padding: 0 var(--panel-padding) var(--panel-padding);
+}
+.read-goals h3 {
+  margin: 0;
+  padding: var(--space-4) 0 var(--space-2);
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-small);
+  font-weight: 600;
+}
+.read-goal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.read-goal {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+.read-goal:last-child {
+  border-bottom: 0;
+}
+.read-goal .read-text {
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+.goal-number {
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+.goal-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+.goal-tools button {
+  white-space: nowrap;
+}
+.read-goals > button {
+  margin-top: var(--space-2);
+}
+.edit-action {
+  border-color: var(--border);
+}
+.small-action {
+  font-size: var(--text-small);
+  font-weight: 400;
+}
+.alignment-summary {
+  margin-top: var(--space-4);
+}
+.alignment-summary h3 {
+  margin-bottom: var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-small);
+  font-weight: 400;
+}
+.alignment-summary ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.alignment-summary li {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Manual and AI-guided authoring share a shell, fields and final save action. */
+.objective-editor {
+  max-width: var(--editor-width);
+  margin: 0 auto;
+}
+.authoring-header {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+.authoring-header > p {
+  margin: 0;
+}
+.authoring-header h1:focus {
+  outline: none;
+}
+.authoring-method {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-small);
+  color: var(--muted);
+}
+.authoring-fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.authoring-fields > :last-child {
+  margin-bottom: 0;
+}
+.authoring-fields :is(input, textarea, select, button),
+.objective-editor > [role="alert"] {
+  scroll-margin-block: var(--space-4) calc(144px + env(safe-area-inset-bottom));
+}
+.authoring-fields + [role="alert"] {
+  margin-top: var(--space-4);
+}
+.authoring-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0 0 var(--space-4);
+  margin: 0 0 var(--space-6);
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-small);
+}
+.authoring-stages > span {
+  white-space: nowrap;
+}
+.authoring-stages [aria-current="step"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+.authoring-section {
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border);
+}
+.authoring-section > h2 {
+  margin-bottom: var(--space-4);
+}
+.authoring-fields > .authoring-section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.authoring-section > .field + .field {
+  margin-top: var(--space-4);
+}
+.authoring-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+  padding: var(--space-4) 0 max(16px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--canvas);
+}
+.objective-methods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.objective-methods button {
+  min-height: 80px;
+  font-size: var(--text-body);
+}
+.guided-choices {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: var(--space-4) 0;
+  padding: 0;
+  border: 0;
+}
+.guided-choices legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-small);
+  font-weight: 600;
+}
+.guided-choices > button {
+  text-align: left;
+}
+.guided-choices label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 44px;
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: var(--text-body);
+  font-weight: 400;
+  cursor: pointer;
+}
+.guided-choices label:has(input:checked) {
+  border-color: var(--accent);
+  background: #edf8fa;
+}
+.guided-choices input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 3px 0 0;
+  accent-color: var(--accent);
+}
+.goal-editor-list {
+  display: grid;
+  gap: var(--space-6);
+  margin-bottom: var(--space-4);
+}
+.goal-editor-list .field + .field {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.initiative-choices,
+.objective-types {
+  min-width: 0;
+  padding: 0;
+  margin: var(--space-6) 0;
+  border: 0;
+}
+.initiative-choices legend,
+.objective-types legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-small);
+  font-weight: 600;
+  color: var(--ink);
+}
+.initiative-choices > p {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-small);
+}
+.initiative-options {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.initiative-option,
+.type-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  min-width: 0;
+  padding: var(--space-2) 0;
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--text-body);
+  font-weight: 400;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.initiative-option input,
+.type-choice input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+}
+.initiative-option > span {
+  min-width: 0;
+}
+.initiative-option small {
+  display: block;
+  font-size: var(--text-small);
+}
+.initiative-other {
+  margin-top: var(--space-1);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+.type-choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+  min-height: 44px;
+}
+.type-choice-row > .muted {
+  font-size: var(--text-small);
+}
+.objective-type {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.type-info {
+  display: contents;
+}
+.type-info > button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--space-2);
+}
+.type-explanation {
+  display: block;
+  flex-basis: 100%;
+  max-width: 38rem;
+  padding: var(--space-2) 0;
+  color: var(--muted);
+  font-size: var(--text-small);
+  font-weight: 400;
+}
+@media (max-width: 620px) {
+  :root {
+    --panel-padding: var(--space-4);
+    --text-title: 24px;
+  }
+  .main {
+    margin-left: 0;
+    padding: var(--space-4) var(--space-4) var(--space-6);
+  }
+  header {
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .metadata,
+  .objective-methods {
+    grid-template-columns: 1fr;
+  }
+  .row {
+    flex-wrap: wrap;
+  }
+  .section-heading {
+    gap: var(--space-1);
+  }
+  .section-tools {
+    margin-left: -8px;
+  }
+  .read-goal {
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+  .read-goal .read-text,
+  .goal-number {
+    padding-top: 0;
+  }
+  .goal-tools {
+    grid-column: 2;
+    justify-content: flex-start;
+    margin-left: -8px;
+  }
+  dialog[open]:has(.focus-writing) {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  dialog[open]:has(.focus-writing) > form {
+    height: 100%;
+    max-height: 100%;
+  }
+  dialog[open]:has(.focus-writing) .dialog-content {
+    flex: 1;
+  }
+  .authoring-actions > button {
+    flex: 0 1 auto;
+  }
+}
+@media (min-width: 621px) and (max-width: 900px) {
+  .main {
+    margin-left: 180px;
+    padding: var(--space-6);
+  }
+}
+@media (max-width: 900px) and (max-height: 500px) and (pointer: coarse) {
+  .main {
+    margin-left: 0;
+    padding: var(--space-4);
+  }
+  dialog[open]:has(.focus-writing) {
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+  }
+  dialog[open]:has(.focus-writing) > form {
+    height: 100%;
+    max-height: 100%;
+  }
+  dialog[open]:has(.focus-writing) .dialog-content {
+    flex: 1;
+  }
+}

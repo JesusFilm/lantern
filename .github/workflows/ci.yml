@@ -7,6 +7,16 @@ on:
 permissions:
   contents: read
 jobs:
+  manual:
+    name: QA manual matches the source
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '26.13.0', cache: npm }
+      - run: npm ci
+      - run: npm run manual:check
   typecheck:
     name: typecheck
     runs-on: ubuntu-latest
@@ -14,9 +24,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
-        with: { node-version: '24.22.1', cache: npm }
+        with: { node-version: '26.13.0', cache: npm }
       - run: npm ci
       - run: npm run typecheck
+  review-harness:
+    name: review harness tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '26.13.0' }
+      - run: node --test tools/review/*.test.mjs
   tests:
     name: PostgreSQL HTTP and browser tests
     runs-on: ubuntu-latest
@@ -34,7 +53,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
-        with: { node-version: '24.22.1', cache: npm }
+        with: { node-version: '26.13.0', cache: npm }
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run build
@@ -46,7 +65,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
-        with: { node-version: '24.22.1', cache: npm }
+        with: { node-version: '26.13.0', cache: npm }
       - run: npm ci
       - run: npm run build
       - run: node tools/release/stamp.mjs
@@ -79,7 +98,7 @@ jobs:
         with:
           ref: ${{ github.sha }}
       - uses: actions/setup-node@v7
-        with: { node-version: '24.22.1', cache: npm }
+        with: { node-version: '26.13.0', cache: npm }
       - name: Enforce exact revision and successful checks
         env:
           CHECK_RESULTS: ${{ toJSON(needs) }}

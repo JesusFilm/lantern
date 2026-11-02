@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { RegisteredUser, SessionView } from "../../shared/access.js";
 import { api as request } from "./api.js";
 import { TeamDirection } from "./TeamDirection.js";
+import { workspaceHistoryIndex } from "./useDraftFocusWorkflow.js";
 const api = <T,>(path: string, body?: unknown) =>
   request<T>(path, body === undefined ? "GET" : "POST", body);
 const explanation = (user: RegisteredUser) =>
@@ -31,7 +32,7 @@ export function Department({
     setTab(value);
     const url = new URL(location.href);
     url.searchParams.set("departmentTab", value);
-    history.replaceState(null, "", url);
+    history.replaceState({ ...history.state, lanternHistoryIndex: workspaceHistoryIndex() }, "", url);
   }
   function navigate(member?: string, focus?: string) {
     const url = new URL(location.href);
@@ -41,7 +42,7 @@ export function Department({
     else url.searchParams.delete("member");
     if (focus) url.searchParams.set("memberFocus", focus);
     else url.searchParams.delete("memberFocus");
-    history.pushState(null, "", url);
+    history.pushState({ lanternHistoryIndex: workspaceHistoryIndex() + 1 }, "", url);
     setSelection(route());
   }
   useEffect(() => {

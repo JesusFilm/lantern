@@ -1,7 +1,8 @@
 # Production coaching and versioned review
 
 Date: 2026-10-28
-Status: Accepted scope from the owner's approved prototype and production request
+Status: Accepted for provider isolation and versioned review storage
+Superseded: 2026-10-29 — authoring and checkpoint lifecycle replaced by [ADR 0010](0010-integrated-focus-assistance.md) and [ADR 0011](0011-objective-authoring-methods.md).
 
 ## Decision
 
@@ -11,10 +12,10 @@ Coaching targets one objective/goal while retaining the rest of its source docum
 a stale source cannot silently overwrite newer work. Save, request review and
 career-lead confirmation remain separate actions.
 
-Extend the focus write transaction to include an optional owner-only coaching
-checkpoint. Normal manual saves invalidate the checkpoint and confirmation removes
-it. Store review requests as immutable full-focus version snapshots; notes reference
-a request, allow addition/author soft-deletion, and use per-user read acknowledgments.
+Store review requests as immutable full-focus version snapshots; notes reference
+a request and use per-user read acknowledgments. Focus writes, notes and confirmation
+share server-enforced authority and transaction locking. Current authoring and
+discussion behavior is defined in the [PRD](../PRD.md).
 Require the latest requested version to match the latest saved version before
 confirmation whenever a request exists. Enforce that rule in the shared confirmation
 path and a database guard covering older instances during rollout. Existing manual

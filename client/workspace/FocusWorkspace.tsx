@@ -1,32 +1,113 @@
-import { FocusObjectives } from "./FocusObjectives.js";
-import type { ObjectiveKind } from "../../shared/focus.js";
+import { useEffect, useState } from "react";
+import type { SessionView } from "../../shared/access.js";
+import type { PositionFocus } from "../../shared/focus.js";
+import { useFocusRecord } from "../coach/useFocusRecord.js";
+import { CoachWorkspace } from "../coach/CoachWorkspace.js";
+import {
+  useDraftFocusWorkflow,
+  type EditTarget,
+} from "./useDraftFocusWorkflow.js";
+import { ObjectiveEditor, type AuthoringMethod } from "./ObjectiveEditor.js";
+import { ObjectiveType } from "./ObjectiveType.js";
 import { FocusHeading } from "./FocusHeading.js";
+import { FocusObjectives } from "./FocusObjectives.js";
 import { Dialog } from "./Dialog.js";
 import { MissionBanner } from "./MissionBanner.js";
-import { InitiativeChoices } from "./InitiativeChoices.js";
-import { useDraftFocusWorkflow } from "./useDraftFocusWorkflow.js";
-import { WritingHelp } from "./WritingHelp.js";
 const date = (value: string) =>
   new Date(value + "T12:00:00").toLocaleDateString("en-NZ", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
-const kindLabels: Record<ObjectiveKind, string> = {
-  normal: "Contribution",
-  "personal-development": "Personal development (optional)",
-  leadership: "Leadership (optional)",
-};
-export function FocusWorkspace({ member, canConfirm, onGuide }: {
+export function FocusWorkspace({
+  member,
+  canConfirm,
+  onGuide,
+  coachAvailable = false,
+  session,
+}: {
   member: { id: string; name: string };
   canConfirm: boolean;
-  departmentId: string;
   onGuide: () => void;
+  coachAvailable?: boolean;
+  session: SessionView;
+  departmentId: string;
 }) {
   const {
-    items, focus, direction, loading, error, edit,
-    reload, select, begin, change, cancel, save, retryInitiatives, acceptConfirmed,
+    items,
+    focus,
+    direction,
+    loading,
+    error,
+    edit,
+    reload,
+    select,
+    begin,
+    change,
+    cancel,
+    save,
+    retryInitiatives,
+    acceptConfirmed,
   } = useDraftFocusWorkflow();
+  const {
+    record,
+    error: recordError,
+    refresh: refreshRecord,
+  } = useFocusRecord(focus?.id, focus?.version);
+  const [method, setMethod] = useState<AuthoringMethod>("manual"),
+    [reviewing, setReviewing] = useState(false);
+  useEffect(() => setReviewing(false), [focus?.id]);
+  useEffect(() => {
+    const leave = (e: BeforeUnloadEvent) => {
+      if (edit) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    const nav = (e: Event) => {
+      if (edit && !window.confirm("Leave without saving your changes?"))
+        e.preventDefault();
+    };
+    window.addEventListener("beforeunload", leave);
+    window.addEventListener("lantern-coach-leave", nav);
+    return () => {
+      window.removeEventListener("beforeunload", leave);
+      window.removeEventListener("lantern-coach-leave", nav);
+    };
+  }, [edit]);
+  function start(
+    target: EditTarget,
+    chosen?: AuthoringMethod,
+    source?: PositionFocus,
+  ) {
+    setMethod(
+      chosen ??
+        (target.type === "objective" && target.adding && coachAvailable
+          ? "choose"
+          : "manual"),
+    );
+    begin(target, source);
+  }
+  const saveEdit = async () => {
+    const result = await save();
+    if (result) void refreshRecord();
+  };
+  if (edit?.type === "objective")
+    return (
+      <ObjectiveEditor
+        key={edit.key}
+        edit={edit}
+        initialMethod={method}
+        available={coachAvailable}
+        onChange={change}
+        onSave={saveEdit}
+        onCancel={cancel}
+        onRetryInitiatives={retryInitiatives}
+      />
+    );
+  function leaveReview() {
+    return window.dispatchEvent(new Event("lantern-coach-leave", { cancelable: true }));
+  }
   return (
     <>
       {error && (
@@ -34,12 +115,57 @@ export function FocusWorkspace({ member, canConfirm, onGuide }: {
           {error} <button onClick={() => void reload()}>Try again</button>
         </p>
       )}
-      {loading ? <p role="status">Loading position focuses…</p> : focus ? (
+      {loading ? (
+        <p role="status">Loading position focuses…</p>
+      ) : focus ? (
         <>
-          <FocusHeading key={"heading-" + focus.id} focus={focus} member={member}
-            onBack={() => select()} onMetadata={() => begin({ type: "metadata" })}
-            onConfirmed={canConfirm ? acceptConfirmed : undefined} />
-          <FocusObjectives key={"reader-" + focus.id} focus={focus} onEdit={begin} />
+          <FocusHeading
+            key={"heading-" + focus.id}
+            focus={focus}
+            member={member}
+            onBack={() => { if (leaveReview()) select(); }}
+            onMetadata={reviewing ? undefined : () => begin({ type: "metadata" })}
+            onConfirmed={canConfirm ? acceptConfirmed : undefined}
+          />
+          {!reviewing && focus.status === "draft" && <div className="focus-review-actions">
+            {!reviewing && <button onClick={() => setReviewing(true)}>
+              Review & discussion
+            </button>}
+            {!reviewing && focus.status === "draft" && <button onClick={() => start({ type: "objective", section: focus.sections.length, adding: true })}>+ Add objective</button>}
+            {record?.requests.length ? (
+              <span className="muted">
+                {record.requests.at(-1)?.document.version === focus.version
+                  ? "Review requested"
+                  : "Changes not sent"}
+                {record.notes.some(
+                  (n) =>
+                    n.authorId !== member.id &&
+                    !n.deletedAt &&
+                    !record.readIds.includes(n.id),
+                )
+                  ? " · New notes"
+                  : ""}
+              </span>
+            ) : null}
+          </div>}
+          {recordError && (
+            <p role="alert">
+              {recordError}{" "}
+              <button onClick={() => void refreshRecord()}>Refresh</button>
+            </p>
+          )}
+          {reviewing && focus.status === "draft" && <CoachWorkspace session={session} focusId={focus.id} displayedVersion={focus.version} onChanged={() => void refreshRecord()} />}
+          <FocusObjectives
+            key={"reader-" + focus.id}
+            focus={focus}
+            onEdit={reviewing ? undefined : (target) => start(target)}
+            onCoach={
+              !reviewing && coachAvailable ? (target) => start(target, "guided") : undefined
+            }
+          />
+          {focus.status === "confirmed" && record && (record.requests.length ?
+            <CoachWorkspace key={focus.id} session={session} focusId={focus.id} confirmedView onChanged={() => void refreshRecord()} /> :
+            <section className="cp-notes"><h2>Notes</h2><p className="cp-muted">No notes yet.</p></section>)}
         </>
       ) : (
         <div className="focus-overview">
@@ -54,7 +180,12 @@ export function FocusWorkspace({ member, canConfirm, onGuide }: {
               New position focus
             </button>
           </header>
-          {direction && <MissionBanner mission={direction.mission} image={direction.missionImage} />}
+          {direction && (
+            <MissionBanner
+              mission={direction.mission}
+              image={direction.missionImage}
+            />
+          )}
           {items.length ? (
             <table className="focus-list">
               <thead>
@@ -68,10 +199,7 @@ export function FocusWorkspace({ member, canConfirm, onGuide }: {
                 {items.map((x) => (
                   <tr key={x.id}>
                     <td>
-                      <button
-                        className="link"
-                        onClick={() => select(x.id)}
-                      >
+                      <button className="link" onClick={() => select(x.id)}>
                         {x.title}
                       </button>
                     </td>
@@ -88,10 +216,20 @@ export function FocusWorkspace({ member, canConfirm, onGuide }: {
           ) : (
             <div className="empty-base">
               <h2>Your first position focus</h2>
-              <p>Start with a small draft, then talk it through with your career lead.</p>
-              <p>The Guide explains the process and shows what a useful objective and SMART goals can look like.</p>
-              <button className="primary" onClick={onGuide}>Start here</button>
-              <p className="muted">An incomplete draft is a useful starting point.</p>
+              <p>
+                Start with a small draft, then talk it through with your career
+                lead.
+              </p>
+              <p>
+                The Guide explains the process and shows what a useful objective
+                and SMART goals can look like.
+              </p>
+              <button className="primary" onClick={onGuide}>
+                Start here
+              </button>
+              <p className="muted">
+                An incomplete draft is a useful starting point.
+              </p>
             </div>
           )}
         </div>
@@ -100,70 +238,48 @@ export function FocusWorkspace({ member, canConfirm, onGuide }: {
         <Dialog
           key={edit.key}
           title={
-            edit.type === "remove-goal" || edit.type === "remove-objective"
-              ? "Remove this " +
+            edit.type === "goal"
+              ? edit.adding
+                ? "Add SMART goal"
+                : "Edit SMART goal"
+              : "Remove this " +
                 (edit.type === "remove-goal"
                   ? "goal"
                   : "objective and its goals") +
                 "?"
-              : (edit.adding ? "Add " : "Edit ") +
-                (edit.type === "goal" ? "SMART goal" : "objective")
           }
           saveLabel={edit.type.startsWith("remove") ? "Remove" : "Save changes"}
           onClose={cancel}
-          onSave={save}
+          onSave={saveEdit}
         >
-          {edit.type === "remove-goal" || edit.type === "remove-objective" ? (
+          {edit.type === "goal" ? (
+            <div className="focus-writing manual-authoring">
+              <div className="goal-parent">
+                <ObjectiveType
+                  kind={edit.source.sections[edit.section]!.kind}
+                />
+                <p>{edit.source.sections[edit.section]!.objective}</p>
+              </div>
+              <div className="field">
+                <label htmlFor="edit-text">SMART goal</label>
+                <textarea
+                  id="edit-text"
+                  name="text"
+                  required
+                  maxLength={10000}
+                  autoFocus
+                  value={edit.text}
+                  onChange={(e) =>
+                    change({ type: "text", text: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+          ) : (
             <>
               <p className="muted">Position focus: {edit.source.title}</p>
               <p>This removes the content from your saved position focus.</p>
             </>
-          ) : (
-            <WritingHelp kind={edit.type === "goal" ? "goal" : edit.kind} focusTitle={edit.source.title}>
-              {edit.type === "objective" && edit.adding && (
-                <fieldset className="objective-types">
-                  <legend>Objective type</legend>
-                  {Object.entries(kindLabels).map(([kind, label]) => (
-                    <label className="type-choice" key={kind}>
-                      <input
-                        type="radio"
-                        name="kind"
-                        value={kind}
-                        checked={edit.kind === kind}
-                        onChange={() => change({ type: "kind", kind: kind as ObjectiveKind })}
-                      />
-                      <strong>{label}</strong>
-                    </label>
-                  ))}
-                </fieldset>
-              )}
-              {edit.type === "goal" && <p className="muted">For objective: {edit.source.sections[edit.section]?.objective}</p>}
-              <label htmlFor="edit-text">
-                {edit.type === "goal" ? "SMART goal" : "Objective"}
-              </label>
-              <p className="writing-hint" id="writing-hint">{edit.type === "goal"
-                ? "What will you do, what evidence will show progress, and by when?"
-                : "Who will benefit, what will improve, and why does it matter?"}</p>
-              <textarea
-                id="edit-text"
-                aria-describedby="writing-hint"
-                name="text"
-                placeholder={edit.type === "goal" ? "By [date], [action], with [evidence of progress]…" : "Help [people] to [useful change] so that [why it matters]…"}
-                required
-                maxLength={10000}
-                autoFocus
-                value={edit.text}
-                onChange={event => change({ type: "text", text: event.target.value })}
-              />
-              {edit.type === "objective" && <InitiativeChoices
-                selection={edit.alignment}
-                readiness={edit.initiatives}
-                onInitiative={(id, checked) => change({ type: "initiative", id, checked })}
-                onOther={checked => change({ type: "other", checked })}
-                onRetry={retryInitiatives}
-              />}
-              <p className="muted writing-draft-note">A partial draft is fine. You can refine the wording with your career lead before confirmation.</p>
-            </WritingHelp>
           )}
         </Dialog>
       )}
@@ -172,9 +288,11 @@ export function FocusWorkspace({ member, canConfirm, onGuide }: {
           key={edit.key}
           title={edit.source ? "Edit title & dates" : "New position focus"}
           onClose={cancel}
-          onSave={save}
+          onSave={saveEdit}
         >
-          {edit.source && <p className="muted">Position focus: {edit.source.title}</p>}
+          {edit.source && (
+            <p className="muted">Position focus: {edit.source.title}</p>
+          )}
           <label htmlFor="title">Document title</label>
           <input
             id="title"
@@ -182,7 +300,12 @@ export function FocusWorkspace({ member, canConfirm, onGuide }: {
             required
             maxLength={200}
             value={edit.values.title}
-            onChange={event => change({ type: "metadata", values: { title: event.target.value } })}
+            onChange={(event) =>
+              change({
+                type: "metadata",
+                values: { title: event.target.value },
+              })
+            }
           />
           <div className="metadata">
             <div>
@@ -193,7 +316,12 @@ export function FocusWorkspace({ member, canConfirm, onGuide }: {
                 type="date"
                 required
                 value={edit.values.start}
-                onChange={event => change({ type: "metadata", values: { start: event.target.value } })}
+                onChange={(event) =>
+                  change({
+                    type: "metadata",
+                    values: { start: event.target.value },
+                  })
+                }
               />
             </div>
             <div>
@@ -204,7 +332,12 @@ export function FocusWorkspace({ member, canConfirm, onGuide }: {
                 type="date"
                 required
                 value={edit.values.end}
-                onChange={event => change({ type: "metadata", values: { end: event.target.value } })}
+                onChange={(event) =>
+                  change({
+                    type: "metadata",
+                    values: { end: event.target.value },
+                  })
+                }
               />
             </div>
           </div>

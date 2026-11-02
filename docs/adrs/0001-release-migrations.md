@@ -3,11 +3,12 @@
 Date: 2026-10-20
 Status: Accepted by the repository owner
 
-The manual-only production trigger is superseded by
-[ADR 0006](0006-authenticated-release-acceptance.md). The migration architecture
-and credential separation below remain in force.
+Superseded: 2026-10-21 — production trigger policy replaced by
+[ADR 0006](0006-authenticated-release-acceptance.md) and
+[ADR 0008](0008-staging-gate-and-production-smoke.md). Migration architecture
+and credential separation remain in force.
 
-GitHub Actions applies versioned database migrations before deploying the webapp from the same full main commit SHA. Staging runs automatically after successful main checks; production is manually dispatched. Production receives the schema and application only, with its data kept separate.
+GitHub Actions applies versioned database migrations before deploying the webapp from the same full main commit SHA. Release triggers and promotion gates follow ADR 0006 and ADR 0008. Production receives the schema and application only, with its data kept separate.
 
 Within each environment, the webapp and migration scripts connect to the same PostgreSQL database using different accounts and network routes. The webapp uses Railway’s private network and a restricted runtime account. GitHub Actions runs outside that private network, so migrations use a public PostgreSQL TCP proxy and a schema-changing migration account. Each GitHub environment holds that connection and the public certificate for its database’s private certificate authority (CA), which the runner uses to verify TLS. Owner and administrative credentials remain outside delivery jobs.
 

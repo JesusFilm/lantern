@@ -1,0 +1,46 @@
+name: Restore QA staging data
+on:
+  workflow_dispatch:
+    inputs:
+      lead:
+        description: Career lead (keep current on later resets)
+        type: choice
+        required: true
+        options:
+          - keep
+          - SharonQA
+          - SushmaQA
+          - EstherQA
+permissions:
+  contents: read
+concurrency:
+  group: lantern-qa-stage
+  cancel-in-progress: false
+jobs:
+  restore:
+    if: github.ref == 'refs/heads/main' && github.repository == 'JesusFilm/lantern'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: stage
+    env:
+      RELEASE_TARGET: stage
+      RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT }}
+      RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}
+      LANTERN_DB_EXPECTED_ENDPOINT: ${{ vars.LANTERN_DB_EXPECTED_ENDPOINT }}
+      LANTERN_DB_NAME: ${{ vars.LANTERN_DB_NAME }}
+      LANTERN_DB_SCHEMA: lantern
+      LANTERN_DB_RUNTIME_ROLE: ${{ vars.LANTERN_DB_RUNTIME_ROLE }}
+      LANTERN_DB_MIGRATION_ROLE: ${{ vars.LANTERN_DB_MIGRATION_ROLE }}
+      LANTERN_DB_ADMIN_ROLE: ${{ vars.LANTERN_DB_ADMIN_ROLE }}
+      MIGRATION_DATABASE_URL: ${{ secrets.MIGRATION_DATABASE_URL }}
+      MIGRATION_DATABASE_CA: ${{ secrets.MIGRATION_DATABASE_CA }}
+      QA_SHARON: ${{ secrets.QA_SHARON_EMAIL }}
+      QA_SUSHMA: ${{ secrets.QA_SUSHMA_EMAIL }}
+      QA_ESTHER: ${{ secrets.QA_ESTHER_EMAIL }}
+      QA_LEAD: ${{ inputs.lead }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '26.13.0', cache: npm }
+      - run: npm ci
+      - run: node --import tsx tools/manual/qa-stage.ts
