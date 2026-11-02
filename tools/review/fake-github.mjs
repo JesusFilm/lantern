@@ -4,27 +4,17 @@ import { APP_LOGIN, COMMENT_MARKER } from './feedback.mjs';
 import { runReview } from './review.mjs';
 
 export const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
-
 export const pem = privateKey.export({ type: 'pkcs8', format: 'pem' });
-
 export const SHA = 'a'.repeat(40);
-
 export const KEY = 'sk-test-SECRET-gateway-key';
-
 export const TOKEN = 'ghs_SECRETinstallationtoken';
 
 export const b64 = value => Buffer.from(value, 'base64url').toString();
-
 export const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-
 export const DIFF = 'diff --git a/client/Guide.tsx b/client/Guide.tsx\n--- a/client/Guide.tsx\n+++ b/client/Guide.tsx\n@@ -1 +1 @@\n-a\n+b\n';
-
 export const WORKFLOW_DIFF = 'diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml\n--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -1 +1 @@\n-a\n+b\n';
-
 export const verdict = (patch = {}) => JSON.stringify({ decision: 'approve', summary: 'Looks correct.', findings: [], ...patch });
-
 export const BASE = 'd'.repeat(40);
-
 export const SHA_B = 'b'.repeat(40);
 
 export function filesFromDiff(diff) {
@@ -85,7 +75,7 @@ export function world({ headSha = SHA, heads, state = 'open', diff = DIFF, files
     for (const trap of traps) if (trap.done && !trap.afterRan && trap.after && key.startsWith(trap.on)) { trap.afterRan = true; trap.after(api_); }
     return result;
   };
-  const api_ = { state: state_, comments, reviewComments, calls };
+  const api_ = { state: state_, comments, reviewComments, calls, checks };
   const handle = async (u, method, body, init, key) => {
     if (failOn === key) return json({ message: `boom ${TOKEN}` }, 500);
     if (failFirst === key && !failed.has(key)) { failed.add(key); return json({ message: 'flaky' }, 500); }
@@ -113,6 +103,8 @@ export function world({ headSha = SHA, heads, state = 'open', diff = DIFF, files
       if (found === null) return json({ message: 'Not Found' }, 404);
       return typeof found === 'number' ? json({ message: 'err' }, found) : new Response(found, { status: 200 });
     }
+    const checkRun = /^\/repos\/o\/r\/check-runs\/(\d+)$/.exec(u.pathname);
+    if (method === 'GET' && checkRun) { const done = checks.findLast(c => c.patch && c.run === Number(checkRun[1])); return json(done ? { id: done.run, status: 'completed', conclusion: done.conclusion } : { id: Number(checkRun[1]), status: 'in_progress' }); }
     if (method === 'POST' && u.pathname === '/repos/o/r/check-runs') { checks.push({ ...body }); return json({ id: ids.shift() ?? 900 }, 201); }
     if (method === 'PATCH' && /^\/repos\/o\/r\/check-runs\/\d+$/.test(u.pathname) && state_.failCheckPatch) return json({ message: 'down' }, 502);
     if (method === 'PATCH' && /^\/repos\/o\/r\/check-runs\/\d+$/.test(u.pathname)) { checks.push({ ...body, patch: true, run: Number(u.pathname.split('/').at(-1)) }); return json({ id: 900 }); }
@@ -124,69 +116,43 @@ export function world({ headSha = SHA, heads, state = 'open', diff = DIFF, files
     if (method === 'PATCH' && edit && state_.failComments) return json({ message: 'down' }, 500);
     if (method === 'PATCH' && edit) { const c = comments.find(x => x.id === Number(edit[1])); if (!c || c.user.login !== APP_LOGIN) return json({ message: 'not yours' }, 403); c.body = body.body; return json(c); }
     if (method === 'GET' && u.pathname === '/repos/o/r/pulls/5/comments') return page(reviewComments);
-    if (method === 'POST' && u.pathname === '/repos/o/r/pulls/5/reviews') { reviews.push(body); for (const c of body.comments ?? []) reviewComments.push({ id: nextId++, user: { login: APP_LOGIN }, ...c }); return json({ id: nextId++ }, 200); }
+    if (method === 'POST' && u.pathname === '/repos/o/r/pulls/5/reviews') { const reviewId = nextId++; reviews.push(body); for (const c of body.comments ?? []) reviewComments.push({ id: nextId++, user: { login: APP_LOGIN }, pull_request_review_id: reviewId, ...c }); return json({ id: reviewId }, 200); }
+    const removal = /^\/repos\/o\/r\/pulls\/comments\/(\d+)$/.exec(u.pathname);
+    if (method === 'DELETE' && removal) { const at = reviewComments.findIndex(c => c.id === Number(removal[1])); if (state_.failDelete) return json({ message: 'down' }, 500); if (at < 0) return json({ message: 'Not Found' }, 404); reviewComments.splice(at, 1); return new Response(null, { status: 204 }); }
     return json({ message: `unexpected ${method} ${u.pathname}` }, 404);
   };
   return { fetch, calls, checks, comments, reviewComments, reviews, state: state_ };
 }
-
 export const config = { repository: 'o/r', prNumber: 5, expectedSha: SHA, appId: '5571876', privateKey: pem, gatewayBaseUrl: 'https://gateway.example', gatewayApiKey: KEY, model: 'qwen-test' };
-
 export const run = (w, patch = {}) => runReview({ ...config, ...patch, fetch: w.fetch });
-
 export const finalCheck = w => w.checks.at(-1);
-
 export const completionCheck = w => w.checks.find(c => c.patch);
-
 export const HUNK_DIFF = 'diff --git a/client/Guide.tsx b/client/Guide.tsx\n--- a/client/Guide.tsx\n+++ b/client/Guide.tsx\n@@ -1,3 +1,4 @@\n a\n-b\n+B\n+c\n d\n';
-
 export const manyLinesDiff = n => `diff --git a/new.ts b/new.ts\n--- /dev/null\n+++ b/new.ts\n@@ -0,0 +1,${n} @@\n${Array.from({ length: n }, (_, i) => `+line ${i + 1}`).join('\n')}\n`;
-
 export const finding = (patch = {}) => ({ severity: 'major', file: 'client/Guide.tsx', line: 2, message: 'Bug here.', ...patch });
-
 export const failing = findings => verdict({ decision: 'request_changes', summary: 'Needs work.', findings });
-
 export const writes = w => w.calls.filter(c => c.host === 'api.github.com' && c.method !== 'GET' && !/check-runs|access_tokens/.test(c.path));
-
 export const ours = w => w.comments.filter(c => c.user.login === APP_LOGIN && c.body.startsWith(COMMENT_MARKER));
-
 export const OTHER_DIFF = 'diff --git a/client/Other.tsx b/client/Other.tsx\n--- a/client/Other.tsx\n+++ b/client/Other.tsx\n@@ -1 +1 @@\n-x\n+y\n';
-
 export const BINARY = 'diff --git a/logo.png b/logo.png\nnew file mode 100644\nindex 0000000..1111111\nBinary files /dev/null and b/logo.png differ\n';
-
 export const MODE_ONLY = 'diff --git a/run.sh b/run.sh\nold mode 100644\nnew mode 100755\n';
-
 export const RENAME = 'diff --git a/old-name.ts b/new-name.ts\nsimilarity index 100%\nrename from old-name.ts\nrename to new-name.ts\n';
-
 export const EMPTY_ADDED = 'diff --git a/empty.txt b/empty.txt\nnew file mode 100644\nindex 0000000..e69de29\n';
-
 export const modelCalls = w => w.calls.filter(c => c.host === 'gateway.example');
-
 export const userMessage = w => modelCalls(w)[0].body.messages[0].content;
-
 export const systemPrompt = w => modelCalls(w)[0].body.system;
-
 export const github = (w, re) => w.calls.filter(c => c.host === 'api.github.com' && re.test(`${c.method} ${c.path}`));
-
 export const olderComment = (sha, text = 'Passed', runId = 1) => ({ id: 7, user: { login: APP_LOGIN }, body: `${COMMENT_MARKER}\n<!-- head:${sha} -->\n<!-- run:${runId} -->\n## Independent review\n\n**${text}**` });
-
 export const section = (name, ...hunks) => `diff --git a/${name} b/${name}\n--- a/${name}\n+++ b/${name}\n${hunks.join('')}`;
 
 export const HUNK_1 = '@@ -1,3 +1,3 @@\n a\n-b\n+B\n d\n';
 
 export const HUNK_2 = '@@ -10,3 +10,3 @@\n x\n-y\n+Y\n z\n';
-
 export const TWO_HUNKS = section('client/Guide.tsx', HUNK_1, HUNK_2);
-
 export const ONE_HUNK = section('client/Guide.tsx', HUNK_1);
-
 export const AUTH_DIFF = section('server/auth.ts', '@@ -1 +1 @@\n-a\n+b\n');
-
 export const authContents = text => ({ 'server/auth.ts@head': text });
 
-
 export const summaryOf = w => ours(w).map(c => c.body).join('\n---\n');
-
 export const forB = text => ({ id: 5000, user: { login: APP_LOGIN }, body: `${COMMENT_MARKER}\n<!-- head:${SHA_B} -->\n<!-- run:1 -->\n## Independent review\n\n**${text}** for the newer head` });
-
 export const workflow = readFileSync(new URL('../../.github/workflows/independent-review.yml', import.meta.url), 'utf8');

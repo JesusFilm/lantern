@@ -77,7 +77,7 @@ test('context: hostile PR text cannot close the untrusted delimiters or pose as 
   assert.match(systemPrompt(w), /BEGIN-UNTRUSTED n0nce/);
 });
 
-test('context: errors that name PR-controlled paths are escaped in the check', async () => {
+test('context: errors and insufficiency listings that name PR-controlled paths are escaped in the check', async () => {
   const name = 'weird/@octocat [x](https:~~evil.example) <b>.ts';
   const diff = `diff --git a/${name} b/${name}\n--- a/${name}\n+++ b/${name}\n@@ -1 +1 @@\n-a\n+b\n`;
   const w = world({ diff, contents: { [`${name}@head`]: 502 } });
@@ -87,6 +87,12 @@ test('context: errors that name PR-controlled paths are escaped in the check', a
   assert.doesNotMatch(finalCheck(w).output.summary, /@\w|<b>|\]\(/);
   assert.doesNotMatch(w.comments.map(c => c.body).join('\n'), /@\w|<b>/);
   assert.ok(!everything.includes(TOKEN));
+
+  const long = 'evil [x](http://a.example) @team.ts';
+  const clipped = world({ diff: section(long, '@@ -1 +1 @@\n-a\n+b\n'), contents: { [long + '@head']: 'q'.repeat(60_001) } });
+  await run(clipped);
+  assert.doesNotMatch(finalCheck(clipped).output.summary, /\[x\]\(http| @team/);
+  assert.match(finalCheck(clipped).output.summary, /Nothing was approved/);
 });
 
 test('context sufficiency: a modified file clipped before its authorization logic is never approved, whatever the model says', async () => {
@@ -140,14 +146,4 @@ test('context sufficiency: clipped or budgeted-out repository guidance fails clo
   }
   const whole = world({ diff: HUNK_DIFF, contents: { 'AGENTS.md@base': 'G'.repeat(30_000), 'CONTEXT.md@base': 'C'.repeat(30_000) } });
   assert.equal((await run(whole)).conclusion, 'success');
-});
-
-test('context sufficiency: the failure lists the files, escaped, and the check says what was not provided', async () => {
-  const name = 'evil [x](http://a.example) @team.ts';
-  const w = world({ diff: section(name, '@@ -1 +1 @@\n-a\n+b\n'), contents: { [name + '@head']: 'q'.repeat(60_001) } });
-  await run(w);
-  const summary = finalCheck(w).output.summary;
-  assert.ok(!summary.includes('[x](http'), summary);
-  assert.ok(!summary.includes(' @team'), summary);
-  assert.match(summary, /Nothing was approved/);
 });

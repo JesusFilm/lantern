@@ -70,7 +70,6 @@ test('a new commit gets its own comment and fresh findings; the older SHA\'s com
   const NEW = 'c'.repeat(40);
   const w = world({ diff: HUNK_DIFF, model: failing([finding()]) });
   await run(w);
-  assert.ok(ours(w)[0].body.includes(`head:${SHA}`));
   const before = ours(w)[0].body;
   const w2 = world({ diff: HUNK_DIFF, model: failing([finding()]), headSha: NEW, seed: w.comments });
   await runReview({ ...config, expectedSha: NEW, fetch: w2.fetch });
@@ -79,21 +78,14 @@ test('a new commit gets its own comment and fresh findings; the older SHA\'s com
   const forOld = ours(w2).find(c => c.body.includes(`head:${SHA}`));
   assert.match(forNew.body, /Requires changes\*\* for \`ccccccc\`/);
   assert.equal(forOld.body, before);
-  assert.match(forNew.body, /Every run, including a rerun for the same commit, writes its own comment/);
   assert.equal(w2.reviews[0].commit_id, NEW);
 });
 
-test('a run for a superseded head publishes nothing to the pull request', async () => {
-  const stale = world({ headSha: 'b'.repeat(40), diff: HUNK_DIFF });
-  await run(stale);
-  assert.equal(writes(stale).length, 0);
-
-  const NEW = 'b'.repeat(40);
-  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), moveHeadAfterModel: NEW });
+test('a run whose head moved during the review publishes nothing to the pull request', async () => {
+  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), moveHeadAfterModel: SHA_B });
   const result = await run(w);
   assert.equal(result.conclusion, 'failure');
   assert.equal(finalCheck(w).conclusion, 'failure');
-  assert.equal(w.checks[0].head_sha, SHA);
   assert.equal(w.reviews.length, 0);
   assert.equal(ours(w).length, 0);
   assert.match(finalCheck(w).output.summary, /not published: the pull request moved/);
@@ -101,6 +93,7 @@ test('a run for a superseded head publishes nothing to the pull request', async 
 
 test('inline review is COMMENT-only, capped at 10, limited to blocker/major findings on commentable lines', async () => {
   const findings = [
+    finding({ severity: 'minor', file: 'new.ts', line: 1, message: 'Nit.' }),
     ...Array.from({ length: 15 }, (_, i) => finding({ file: 'new.ts', line: i + 1, message: `Defect ${i + 1}.` })),
     finding({ file: 'new.ts', line: 99, message: 'Not in diff.' }),
     finding({ file: 'elsewhere.ts', line: 1, message: 'Other file.' }),
@@ -120,10 +113,26 @@ test('inline review is COMMENT-only, capped at 10, limited to blocker/major find
   assert.equal(finalCheck(w).conclusion, 'failure');
 });
 
-test('minor findings never become inline comments', async () => {
-  const w = world({ diff: HUNK_DIFF, model: failing([finding({ severity: 'minor', line: 2 }), finding({ line: 3 })]) });
-  await run(w);
-  assert.deepEqual(w.reviews[0].comments.map(c => c.line), [3]);
+test('concurrent runs of one commit that both post inline findings end with one copy of each; a failed cleanup is reported', async () => {
+  const model = failing([finding(), finding({ line: 3, message: 'Second.' })]);
+  const w = world({ diff: HUNK_DIFF, model, checkIds: [901, 902] });
+  const results = await Promise.all([run(w), run(w)]);
+  assert.equal(w.reviews.length, 2);
+  assert.deepEqual(w.reviewComments.map(c => c.pull_request_review_id), [1000, 1000]);
+  const notes = results.map(r => r.feedback.note);
+  assert.equal(notes.filter(n => /2 duplicates of a concurrent run removed/.test(n)).length, 1);
+  assert.equal(notes.filter(n => /2 inline comments posted\.$/.test(n)).length, 1);
+
+  const stuck = world({ diff: HUNK_DIFF, model, checkIds: [901, 902], traps: [{ on: 'POST /repos/o/r/pulls/5/reviews', after: api => { api.state.failDelete = true; } }] });
+  const both = await Promise.all([run(stuck), run(stuck)]);
+  assert.equal(stuck.reviewComments.length, 4);
+  assert.equal(both.filter(r => /could not be checked or removed \(status 500\)/.test(r.feedback.note)).length, 1);
+  assert.deepEqual(both.map(r => r.conclusion), ['failure', 'failure']);
+
+  const gone = world({ diff: HUNK_DIFF, model, checkIds: [901, 902], traps: [{ on: 'DELETE /repos/o/r/pulls/comments', before: api => { api.reviewComments.splice(0); } }] });
+  const raced = (await Promise.all([run(gone), run(gone)])).map(r => r.feedback.note);
+  assert.equal(raced.filter(n => /duplicates of a concurrent run removed/.test(n)).length, 1);
+  assert.doesNotMatch(raced.join(), /could not be checked/);
 });
 
 test('the harness can only comment: every review is COMMENT, even for request_changes, and no merge or approval call exists', async () => {
@@ -145,16 +154,6 @@ test('the harness can only comment: every review is COMMENT, even for request_ch
     const source = readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
     assert.doesNotMatch(source, /APPROVE|REQUEST_CHANGES|\/merge|\/dismissals|\/submissions/, file);
   }
-});
-
-test('a comment on someone else\'s forged marker is never edited; ours is created separately', async () => {
-  const forged = { id: 7, user: { login: 'mallory' }, body: `${COMMENT_MARKER}\n<!-- head:${SHA} -->\n<!-- run:900 -->\nPassed` };
-  const w = world({ diff: HUNK_DIFF, seed: [forged] });
-  await run(w);
-  assert.ok(forged.body.endsWith('Passed'));
-  assert.equal(github(w, /^PATCH \/repos\/o\/r\/issues\/comments/).length, 0);
-  assert.equal(w.comments.length, 2);
-  assert.equal(ours(w).length, 1);
 });
 
 test('publication failures are visible in the check and never change the verdict or leak secrets', async () => {
@@ -188,6 +187,7 @@ test('annotations: messages are escaped and bounded, limited to commentable line
   const manyMinor = world({ diff: manyLinesDiff(60), model: verdict({ findings: Array.from({ length: 60 }, (_, i) => ({ severity: 'minor', file: 'new.ts', line: i + 1, message: `Nit ${i + 1}.` })) }) });
   await run(manyMinor);
   assert.equal(completionCheck(manyMinor).output.annotations.length, 50);
+  assert.equal(completionCheck(manyMinor).output.annotations[0].annotation_level, 'notice');
 });
 
 test('annotations: if GitHub rejects the annotations the check still completes with the same verdict and a visible note', async () => {
@@ -203,90 +203,87 @@ test('annotations: if GitHub rejects the annotations the check still completes w
   assert.match(patches[1].output.summary, /Annotations could not be attached \(status 500\)/);
 });
 
-test('stale writes: a run whose head already moved never writes the summary comment or inline comments', async () => {
-  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), heads: [SHA, SHA_B], seed: [olderComment('c'.repeat(40), 'Earlier')] });
-  await run(w);
-  assert.equal(writes(w).length, 0);
-  assert.match(w.comments[0].body, /Earlier/);
-  assert.equal(w.reviews.length, 0);
+test('stale writes: a run whose head moved, before or after its summary, writes nothing further, and a move at the write leaves only its own labelled comment', async () => {
+  const before = world({ diff: HUNK_DIFF, model: failing([finding()]), heads: [SHA, SHA_B], seed: [olderComment('c'.repeat(40), 'Earlier')] });
+  await run(before);
+  assert.equal(writes(before).length, 0);
+  assert.match(before.comments[0].body, /Earlier/);
+
+  const after = world({ diff: HUNK_DIFF, model: failing([finding()]), traps: [{ on: 'POST /repos/o/r/issues/5/comments', after: api => { api.state.head = SHA_B; } }] });
+  assert.equal((await run(after)).conclusion, 'failure');
+  assert.equal(after.reviews.length, 0);
+  assert.match(ours(after)[0].body, /Requires changes\*\* for \`aaaaaaa\`/);
+  assert.match(finalCheck(after).output.summary, /inline comments not posted: the pull request moved/);
+
+  const during = world({ diff: HUNK_DIFF, traps: [{ on: 'POST /repos/o/r/issues/5/comments', before: api => { api.state.head = SHA_B; } }] });
+  await run(during);
+  assert.equal(ours(during).length, 1);
+  assert.match(ours(during)[0].body, /head:a+ -->[\s\S]*\*\*Passed\*\* for \`aaaaaaa\`[\s\S]*check run 900/);
+  assert.doesNotMatch(summaryOf(during), /bbbbbbb/);
 });
 
-test('stale writes: a head that moves between the guard and a write leaves only text labelled with its own SHA and run, and no cross-SHA edit', async () => {
-  const w = world({ diff: HUNK_DIFF, traps: [{ on: 'POST /repos/o/r/issues/5/comments', before: api => { api.state.head = SHA_B; } }] });
-  await run(w);
-  assert.equal(ours(w).length, 1);
-  assert.ok(ours(w)[0].body.includes(`head:${SHA}`));
-  assert.match(ours(w)[0].body, /\*\*Passed\*\* for \`aaaaaaa\`/);
-  assert.match(ours(w)[0].body, /check run 900/);
-  assert.doesNotMatch(summaryOf(w), /Superseded|bbbbbbb/);
-});
-
-test('stale writes: no inline comments are posted if the head moved after the summary was written', async () => {
-  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), traps: [{ on: 'POST /repos/o/r/issues/5/comments', after: api => { api.state.head = SHA_B; } }] });
-  const result = await run(w);
-  assert.equal(result.conclusion, 'failure');
-  assert.equal(w.reviews.length, 0);
-  assert.match(ours(w)[0].body, /Requires changes\*\* for \`aaaaaaa\`/);
-  assert.match(finalCheck(w).output.summary, /inline comments not posted: the pull request moved/);
-});
-
-test('final decision: a Passed summary is never published unless the head was verified first', async () => {
+test('final decision: a Passed summary is never published unless the head was verified first, and the check is completed before any verdict comment', async () => {
   const moved = world({ diff: HUNK_DIFF, heads: [SHA, SHA_B] });
   assert.equal((await run(moved)).conclusion, 'failure');
-  assert.doesNotMatch(summaryOf(moved), /Passed/);
-  assert.equal(writes(moved).some(c => /Passed/.test(JSON.stringify(c.body))), false);
-
   const unreadable = world({ diff: HUNK_DIFF, traps: [{ on: 'GET /repos/o/r/pulls/5', nth: 2, before: api => { api.state.pullFails = true; }, after: api => { api.state.pullFails = false; } }] });
   assert.equal((await run(unreadable)).conclusion, 'failure');
-  assert.doesNotMatch(summaryOf(unreadable), /Passed/);
   assert.match(finalCheck(unreadable).output.summary, /could not be confirmed/);
-  assert.equal(writes(unreadable).some(c => /Passed/.test(JSON.stringify(c.body))), false);
-});
+  for (const w of [moved, unreadable]) {
+    assert.doesNotMatch(summaryOf(w), /Passed/);
+    assert.equal(writes(w).some(c => /Passed/.test(JSON.stringify(c.body))), false);
+  }
 
-test('completion order: the check is completed before any comment says Passed or Requires changes', async () => {
-  for (const [name, model, text] of [['passing', verdict(), /Passed/], ['failing', failing([finding()]), /Requires changes/]]) {
+  for (const [model, text] of [[verdict(), /Passed/], [failing([finding()]), /Requires changes/]]) {
     const w = world({ diff: HUNK_DIFF, model });
     await run(w);
     const order = w.calls.filter(c => c.host === 'api.github.com').map(c => ({ at: `${c.method} ${c.path}`, body: JSON.stringify(c.body ?? '') }));
     const completed = order.findIndex(c => c.at === 'PATCH /repos/o/r/check-runs/900' && /"status":"completed"/.test(c.body));
     const verdictWrite = order.findIndex(c => /\/issues\/(5\/comments|comments\/\d+)$/.test(c.at) && text.test(c.body));
-    assert.ok(completed >= 0 && verdictWrite > completed, `${name}: completed at ${completed}, verdict comment at ${verdictWrite}`);
-    assert.match(finalCheck(w).output.summary, /Pull request feedback: summary comment (created|updated)/, name);
+    assert.ok(completed >= 0 && verdictWrite > completed, `completed at ${completed}, verdict comment at ${verdictWrite}`);
+    assert.match(finalCheck(w).output.summary, /Pull request feedback: summary comment (created|updated)/);
   }
 });
 
-test('completion failure: if GitHub rejects the completion no comment says Passed, a Not completed notice is the only comment, and the job fails', async () => {
-  const w = world({ diff: HUNK_DIFF, failOn: 'PATCH /repos/o/r/check-runs/900' });
-  await assert.rejects(run(w), /Could not complete check run \(status 500\)/);
-  assert.equal(ours(w).length, 1);
-  assert.doesNotMatch(summaryOf(w), /Passed|Requires changes|Reviewing/);
-  assert.match(summaryOf(w), /\*\*Not completed\*\* for \`aaaaaaa\`/);
-  assert.match(summaryOf(w), /no verdict is recorded/);
-  assert.match(summaryOf(w), /<!-- run:900 -->/);
-  assert.equal(w.checks.some(c => c.status === 'completed' && !c.patch), false);
-  assert.equal(writes(w).some(c => /Passed/.test(JSON.stringify(c.body))), false);
-
+test('completion failure: a rejected completion leaves only a Not completed notice for this run, never a verdict, and the job fails', async () => {
   const other = olderComment('c'.repeat(40), 'Passed');
   const untouched = other.body;
-  const elsewhere = world({ diff: HUNK_DIFF, failOn: 'PATCH /repos/o/r/check-runs/900', seed: [other] });
-  await assert.rejects(run(elsewhere), /Could not complete/);
+  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), failOn: 'PATCH /repos/o/r/check-runs/900', seed: [other] });
+  await assert.rejects(run(w), /Could not complete check run \(status 500\)/);
   assert.equal(other.body, untouched);
+  assert.equal(ours(w).length, 2);
+  assert.doesNotMatch(summaryOf(w).replace(untouched, ''), /Passed|Requires changes|Bug here/);
+  assert.match(summaryOf(w), /<!-- run:900 -->[\s\S]*\*\*Not completed\*\* for \`aaaaaaa\`[\s\S]*no verdict is recorded/);
+  assert.equal(w.checks.some(c => c.status === 'completed' && !c.patch), false);
+  assert.equal(writes(w).some(c => /Passed|Bug here/.test(JSON.stringify(c.body))), false);
+  assert.equal(w.reviews.length, 0);
 
-  const failing_ = world({ diff: HUNK_DIFF, model: failing([finding()]), failOn: 'PATCH /repos/o/r/check-runs/900' });
-  await assert.rejects(run(failing_), /Could not complete/);
-  assert.doesNotMatch(summaryOf(failing_), /Bug here|Requires changes/);
-  assert.equal(failing_.reviews.length, 0);
+  const retry = world({ diff: HUNK_DIFF, model: failing([finding()]), traps: [{ on: 'PATCH /repos/o/r/check-runs/900', nth: 2, before: api => { api.state.failCheckPatch = true; } }], failFirst: 'PATCH /repos/o/r/check-runs/900' });
+  await assert.rejects(run(retry), /Could not complete check run \(status 502\)/);
+  assert.match(summaryOf(retry), /Not completed/);
+  assert.doesNotMatch(summaryOf(retry), /Requires changes|Passed/);
 });
 
-test('completion failure: a failure after the annotation retry is the same honest outcome, and an annotation-only rejection still completes first', async () => {
-  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), traps: [{ on: 'PATCH /repos/o/r/check-runs/900', nth: 2, before: api => { api.state.failCheckPatch = true; } }], failFirst: 'PATCH /repos/o/r/check-runs/900' });
-  await assert.rejects(run(w), /Could not complete check run \(status 502\)/);
-  assert.match(summaryOf(w), /Not completed/);
-  assert.doesNotMatch(summaryOf(w), /Requires changes|Passed/);
+test('completion failure: a network error on the final update is reconciled against the check, never reported as unrecorded without evidence', async () => {
+  const lost = () => ({ on: 'PATCH /repos/o/r/check-runs/900', after: () => { throw new Error('socket closed'); } });
+  const accepted = world({ diff: HUNK_DIFF, traps: [lost()] });
+  assert.equal((await run(accepted)).conclusion, 'success');
+  assert.match(summaryOf(accepted), /\*\*Passed\*\*/);
+  assert.doesNotMatch(summaryOf(accepted), /Not completed|unconfirmed/);
 
-  const ok = world({ diff: HUNK_DIFF, model: failing([finding()]), failFirst: 'PATCH /repos/o/r/check-runs/900' });
-  assert.equal((await run(ok)).conclusion, 'failure');
-  assert.match(summaryOf(ok), /Requires changes/);
+  const rejected = world({ diff: HUNK_DIFF, traps: [{ on: 'PATCH /repos/o/r/check-runs/900', before: () => { throw new Error('socket closed'); } }] });
+  await assert.rejects(run(rejected), /Could not complete check run \(a network error\)/);
+  assert.match(summaryOf(rejected), /\*\*Not completed\*\*[\s\S]*a network error[\s\S]*no verdict is recorded/);
+  assert.equal(completionCheck(rejected), undefined);
+
+  const unknown = world({ diff: HUNK_DIFF, failOn: 'GET /repos/o/r/check-runs/900', traps: [lost()] });
+  await assert.rejects(run(unknown), /a network error; the outcome could not be confirmed/);
+  assert.match(summaryOf(unknown), /\*\*Outcome unconfirmed\*\*[\s\S]*may or may not have recorded a verdict/);
+  assert.doesNotMatch(summaryOf(unknown), /no verdict is recorded|Passed|Not completed/);
+  assert.equal(completionCheck(unknown).conclusion, 'success');
+
+  const other = world({ diff: HUNK_DIFF, traps: [{ on: 'PATCH /repos/o/r/check-runs/900', after: api => { api.checks.at(-1).conclusion = 'failure'; throw new Error('socket closed'); } }] });
+  await assert.rejects(run(other), /could not be confirmed/);
+  assert.match(summaryOf(other), /Outcome unconfirmed/);
 });
 
 test('completion failure: if the Not completed notice cannot be written, or the comments cannot be read, the job still fails with the check unfinished', async () => {
@@ -303,33 +300,23 @@ test('completion failure: if the Not completed notice cannot be written, or the 
 const NOTE = 'summary comment created; no inline findings.';
 const noteDown = (on = 'POST /repos/o/r/issues/5/comments') => ({ on, after: api => { api.state.failCheckPatch = true; } });
 
-test('feedback note: a rejected note update is reported accurately and the verdict stands', async () => {
+test('feedback note: a rejected note update is reported in the log and the verdict stands, also when the comment itself failed', async () => {
   const w = world({ diff: HUNK_DIFF, traps: [noteDown()] });
   const result = await run(w);
-  assert.equal(result.conclusion, 'success');
   assert.deepEqual(result.feedback, { note: NOTE, recorded: false, problem: 'status 502' });
   assert.equal(completionCheck(w).conclusion, 'success');
-  assert.match(summaryOf(w), /\*\*Passed\*\* for \`aaaaaaa\`/);
   assert.doesNotMatch(completionCheck(w).output.summary, /Pull request feedback/);
-  const log = describeResult(result);
-  assert.match(log, /^Review completed: success\. Pull request feedback: summary comment created; no inline findings\./);
-  assert.match(log, /\n::warning::The check summary could not be updated .*\(status 502\)/);
+  assert.match(describeResult(result), /^Review completed: success\. Pull request feedback: summary comment created; no inline findings\.\n::warning::The check summary could not be updated .*\(status 502\)/);
+
+  const both = world({ diff: HUNK_DIFF, failOn: 'POST /repos/o/r/issues/5/comments', traps: [noteDown()] });
+  const bothResult = await run(both);
+  assert.equal(bothResult.conclusion, 'success');
+  assert.match(bothResult.feedback.note, /could not be published \(summary comment: status 500\)/);
+  assert.match(describeResult(bothResult), /could not be published[\s\S]*::warning::.*status 502/);
+  assert.ok(!describeResult(bothResult).includes(TOKEN));
 });
 
-test('feedback note: when the comment fails and the note update fails too, the log says both and the check keeps its verdict', async () => {
-  const w = world({ diff: HUNK_DIFF, failOn: 'POST /repos/o/r/issues/5/comments', traps: [noteDown()] });
-  const result = await run(w);
-  assert.equal(result.conclusion, 'success');
-  assert.equal(result.feedback.recorded, false);
-  assert.match(result.feedback.note, /could not be published \(summary comment: status 500\)/);
-  assert.doesNotMatch(completionCheck(w).output.summary, /Pull request feedback/);
-  const log = describeResult(result);
-  assert.match(log, /could not be published \(summary comment: status 500\)/);
-  assert.match(log, /::warning::.*status 502/);
-  assert.ok(!log.includes(TOKEN));
-});
-
-test('feedback note: a network error is reported, a transient failure is retried once, and success carries the note into the check', async () => {
+test('feedback note: a network error is reported, a transient failure is retried once, a recorded note raises no warning, and a skipped run has nothing to report', async () => {
   const thrown = times => ({ on: 'PATCH /repos/o/r/check-runs/900', nth: 2, times, before: () => { throw new Error('socket closed'); } });
   const down = world({ diff: HUNK_DIFF, traps: [thrown(2)] });
   const result = await run(down);
@@ -340,68 +327,48 @@ test('feedback note: a network error is reported, a transient failure is retried
   const flaky = world({ diff: HUNK_DIFF, traps: [thrown(1)] });
   const retried = await run(flaky);
   assert.deepEqual(retried.feedback, { note: NOTE, recorded: true });
-  assert.doesNotMatch(describeResult(retried), /::warning::/);
+  assert.equal(describeResult(retried), `Review completed: success. Pull request feedback: ${NOTE}`);
   assert.match(flaky.checks.filter(c => c.patch).at(-1).output.summary, /Pull request feedback: summary comment created; no inline findings\./);
-});
-
-test('feedback note: a skipped run has nothing to report and a recorded note produces no warning', async () => {
   assert.equal(describeResult({ skipped: true }), 'Skipped: pull request head moved or pull request closed.');
-  const w = world({ diff: HUNK_DIFF });
-  const result = await run(w);
-  assert.equal(result.feedback.recorded, true);
-  assert.equal(describeResult(result), `Review completed: success. Pull request feedback: ${NOTE}`);
 });
 
 const patchedIds = w => w.calls.filter(c => c.method === 'PATCH' && /issues\/comments\/\d+$/.test(c.path)).map(c => Number(c.path.split('/').at(-1)));
 
-test('comment race: an older run never overwrites a newer SHA\'s verdict, even if that verdict appears after the run listed the comments', async () => {
+test('comment races: another SHA\'s, run\'s or author\'s comment, a forged marker, or a newer verdict that appears after the listing is never edited', async () => {
+  const at = (id, comment) => ({ ...comment, id });
+  const seeded = [
+    at(6, olderComment('c'.repeat(40), 'Passed')),
+    at(7, { user: { login: 'someone' }, body: olderComment('f'.repeat(40), 'Passed').body }),
+    at(8, { user: { login: 'mallory' }, body: olderComment(SHA, 'Passed', 900).body }),
+    at(9, olderComment(SHA, 'Requires changes', 899)),
+  ];
   const newer = forB('Passed');
-  const before = newer.body;
-  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), traps: [{ on: 'POST /repos/o/r/issues/5/comments', before: api => { api.state.head = SHA_B; api.comments.push(newer); } }] });
+  const snapshot = [...seeded, newer].map(c => c.body);
+  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), seed: seeded, traps: [{ on: 'POST /repos/o/r/issues/5/comments', before: api => { api.state.head = SHA_B; api.comments.push(newer); } }] });
   await run(w);
-  assert.equal(newer.body, before);
-  assert.equal(patchedIds(w).includes(5000), false);
-  const mine = ours(w).find(c => c.body.includes(`head:${SHA}`));
-  assert.match(mine.body, /for \`aaaaaaa\`/);
-});
-
-test('comment race: a restored earlier head and a stale run for it write only their own run\'s comment', async () => {
-  const stored = olderComment(SHA, 'Requires changes', 800);
-  const newer = forB('Passed');
-  const keep = [stored.body, newer.body];
-  const w = world({ diff: HUNK_DIFF, seed: [stored, newer] });
-  await run(w);
+  assert.deepEqual([...seeded, newer].map(c => c.body), snapshot);
   assert.deepEqual(patchedIds(w), []);
-  assert.deepEqual([stored.body, newer.body], keep);
-  assert.equal(ours(w).filter(c => c.body.includes('<!-- run:900 -->')).length, 1);
-
+  assert.equal(w.comments.length, 6);
+  assert.equal(ours(w).filter(c => c.body.includes('<!-- run:900 -->') && c.body.includes(`head:${SHA}`)).length, 1);
 });
 
-test('comment race: comments for older SHAs and other authors are never touched, and every run labels its comment with its own SHA', async () => {
-  const old1 = olderComment('c'.repeat(40), 'Passed');
-  const old2 = { ...olderComment('e'.repeat(40), 'Reviewing'), id: 8 };
-  const foreign = { id: 9, user: { login: 'someone' }, body: olderComment('f'.repeat(40), 'Passed').body };
-  const w = world({ diff: HUNK_DIFF, seed: [old1, old2, foreign] });
-  const snapshot = [old1.body, old2.body, foreign.body];
-  await run(w);
-  assert.deepEqual([old1.body, old2.body, foreign.body], snapshot);
-  assert.deepEqual(patchedIds(w).filter(id => [7, 8, 9].includes(id)), []);
-  assert.equal(ours(w).filter(c => c.body.includes(`head:${SHA}`)).length, 1);
-});
-
-test('comment race: duplicate comments for the same run are kept consistent, and another run\'s comment for the same SHA is left alone', async () => {
+test('comment races: duplicates of one run are kept consistent, and a newer same-SHA run that appears after the listing is left alone', async () => {
   const dup = olderComment(SHA, 'Passed', 900);
   const dup2 = { ...olderComment(SHA, 'Passed', 900), id: 8 };
-  const sibling = { ...olderComment(SHA, 'Requires changes', 899), id: 9 };
-  const before = sibling.body;
-  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), seed: [dup, dup2, sibling] });
+  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), seed: [dup, dup2] });
   await run(w);
   assert.match(dup.body, /Requires changes/);
   assert.equal(dup2.body, dup.body);
-  assert.equal(sibling.body, before);
+
+  const shared = [];
+  const racing = world({ diff: HUNK_DIFF, shared, checkIds: [901], traps: [{ on: 'GET /repos/o/r/issues/5/comments', after: () => { shared.push({ ...olderComment(SHA, 'Requires changes', 902), id: 3000 }); } }] });
+  await run(racing);
+  assert.equal(github(racing, /^PATCH \/repos\/o\/r\/issues\/comments\/\d+$/).length, 0);
+  assert.match(shared.find(c => c.id === 3000).body, /Requires changes/);
+  assert.equal(shared.filter(c => c.body.includes('<!-- run:901 -->')).length, 1);
 });
 
-test('same-SHA runs: an older run that finishes after a newer run for the same commit cannot change the newer run\'s comment or check', async () => {
+test('same-SHA runs: an older run finishing after a newer one changes neither its comment nor its check; a run in flight has no comment; one that cannot complete leaves only its own notice', async () => {
   const shared = [];
   const newer = world({ diff: HUNK_DIFF, model: failing([finding()]), shared, checkIds: [902] });
   const older = world({ diff: HUNK_DIFF, model: verdict(), shared, checkIds: [901] });
@@ -411,40 +378,22 @@ test('same-SHA runs: an older run that finishes after a newer run for the same c
   assert.equal((await run(older)).conclusion, 'success');
   assert.equal(newerComment.body, snapshot);
   assert.match(snapshot, /Requires changes/);
-  assert.equal(shared.length, 2);
-  const olderComment_ = shared.find(c => c.body.includes('<!-- run:901 -->'));
-  assert.match(olderComment_.body, /\*\*Passed\*\*.*check run 901/s);
+  assert.match(shared.find(c => c.body.includes('<!-- run:901 -->')).body, /\*\*Passed\*\*.*check run 901/s);
   assert.equal(github(older, /^PATCH \/repos\/o\/r\/issues\/comments\/\d+$/).length, 0);
   assert.equal(newer.checks.find(c => c.patch).conclusion, 'failure');
   assert.equal(older.checks.find(c => c.patch).conclusion, 'success');
   assert.equal(older.checks.find(c => c.patch).run, 901);
-});
 
-test('same-SHA runs: a run in flight has written no comment, so a cancelled run leaves nothing stale; one that cannot complete leaves only its own Not completed notice', async () => {
   let during;
-  const inFlight = world({ diff: HUNK_DIFF, traps: [{ on: 'POST /v1/messages', before: api => { during = api.comments.length; } }] });
-  await run(inFlight);
+  await run(world({ diff: HUNK_DIFF, traps: [{ on: 'POST /v1/messages', before: api => { during = api.comments.length; } }] }));
   assert.equal(during, 0);
-  assert.equal(ours(inFlight).length, 1);
 
-  const shared = [];
-  await run(world({ diff: HUNK_DIFF, shared, checkIds: [902] }));
-  const snapshot = shared[0].body;
-  await assert.rejects(run(world({ diff: HUNK_DIFF, shared, checkIds: [900], failOn: 'PATCH /repos/o/r/check-runs/900' })), /Could not complete/);
-  assert.equal(shared[0].body, snapshot);
-  assert.match(snapshot, /Passed.*check run 902/s);
-  assert.equal(shared.length, 2);
-  assert.match(shared[1].body, /<!-- run:900 -->/);
-  assert.match(shared[1].body, /\*\*Not completed\*\*/);
-  assert.doesNotMatch(shared[1].body, /Passed|Requires changes/);
-});
-
-test('same-SHA runs: the comment of a newer run that appears after the older run listed the comments is still never edited', async () => {
-  const shared = [];
-  const racing = world({ diff: HUNK_DIFF, model: verdict(), shared, checkIds: [901], traps: [{ on: 'GET /repos/o/r/issues/5/comments', after: () => { shared.push({ ...olderComment(SHA, 'Requires changes', 902), id: 3000 }); } }] });
-  await run(racing);
-  const newerComment = shared.find(c => c.id === 3000);
-  assert.equal(github(racing, /^PATCH \/repos\/o\/r\/issues\/comments\/\d+$/).length, 0);
-  assert.match(newerComment.body, /Requires changes/);
-  assert.equal(shared.filter(c => c.body.includes('<!-- run:901 -->')).length, 1);
+  const stuck = [];
+  await run(world({ diff: HUNK_DIFF, shared: stuck, checkIds: [902] }));
+  const kept = stuck[0].body;
+  await assert.rejects(run(world({ diff: HUNK_DIFF, shared: stuck, checkIds: [900], failOn: 'PATCH /repos/o/r/check-runs/900' })), /Could not complete/);
+  assert.equal(stuck[0].body, kept);
+  assert.equal(stuck.length, 2);
+  assert.match(stuck[1].body, /<!-- run:900 -->[\s\S]*\*\*Not completed\*\*/);
+  assert.doesNotMatch(stuck[1].body, /Passed|Requires changes/);
 });

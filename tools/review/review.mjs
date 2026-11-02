@@ -66,22 +66,36 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
   const moved = () => failure('Head moved or could not be verified', `The pull request head could not be confirmed as \`${expectedSha.slice(0, 7)}\` after the review, so the verdict was discarded and the check fails closed. A new run reviews the new head.`);
   if (result.conclusion === 'success' && !(await headStillCurrent())) result = moved();
   const { annotations = [], ...rest } = result.output;
-  const complete = output => api(fetch, token, 'PATCH', `/repos/${repository}/check-runs/${id}`, { body: { status: 'completed', conclusion: result.conclusion, output } });
+  const complete = output => api(fetch, token, 'PATCH', `/repos/${repository}/check-runs/${id}`, { body: { status: 'completed', conclusion: result.conclusion, output } }).then(response => (response.ok ? null : `status ${response.status}`), () => 'a network error');
   let summary = result.output.summary.slice(0, 60_000);
-  let done = await complete({ ...rest, summary, ...(annotations.length ? { annotations } : {}) });
-  if (!done.ok && annotations.length) {
-    summary = `${summary}\n\nAnnotations could not be attached (status ${done.status}); the findings are listed in the details.`.slice(0, 60_000);
-    done = await complete({ ...rest, summary });
+  let problem = await complete({ ...rest, summary, ...(annotations.length ? { annotations } : {}) });
+  if (problem && annotations.length) {
+    summary = `${summary}\n\nAnnotations could not be attached (${problem}); the findings are listed in the details.`.slice(0, 60_000);
+    problem = await complete({ ...rest, summary });
   }
-  if (!done.ok) {
-    await feedback.markIncomplete({ reason: `GitHub rejected the completion with status ${done.status}` });
-    throw new Error(`Could not complete check run (status ${done.status})`);
+  // A failed request may still have been applied, so read the check back.
+  const state = problem ? await completionState() : 'accepted';
+  if (state !== 'accepted') {
+    await feedback.markIncomplete({ reason: `the completion request failed (${problem})`, confirmed: state === 'open' });
+    throw new Error(`Could not complete check run (${problem}${state === 'open' ? '' : '; the outcome could not be confirmed'})`);
   }
-  // The comment is published only after GitHub accepted the check's final state, so it can never say Passed for an unfinished check.
+  // Publish only after GitHub accepted the final state, so a comment never says Passed for an unfinished check.
   const note = await feedback.publish({ conclusion: result.conclusion, verdict: result.verdict, failureSummary: result.output.summary, protectedFiles: result.protectedFiles, diff: result.diff });
-  const record = () => complete({ ...rest, summary: `${summary}\n\nPull request feedback: ${note}`.slice(0, 60_000) }).then(response => (response.ok ? null : `status ${response.status}`), () => 'a network error');
+  const record = () => complete({ ...rest, summary: `${summary}\n\nPull request feedback: ${note}`.slice(0, 60_000) });
   const failed = (await record()) && (await record());
   return { conclusion: result.conclusion, feedback: { note, recorded: !failed, ...(failed ? { problem: failed } : {}) } };
+
+  async function completionState() {
+    try {
+      const response = await api(fetch, token, 'GET', `/repos/${repository}/check-runs/${id}`);
+      if (!response.ok) return 'unknown';
+      const check = await response.json();
+      if (check.status !== 'completed') return 'open';
+      return check.conclusion === result.conclusion ? 'accepted' : 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
 
   async function headStillCurrent() {
     try {

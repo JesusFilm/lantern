@@ -46,7 +46,7 @@ export async function loadFileContext({ fetch, token, repository, headSha, files
   const context = [];
   let total = 0;
   for (const file of files) {
-    if (!file.patch || file.status === 'added' || file.status === 'removed') continue;
+    if (file.status === 'added' || file.status === 'removed') continue;
     const text = await fetchText(fetch, token, repository, file.filename, headSha);
     if (text === null) { context.push({ path: file.filename, omitted: 'the file was not found at the head commit' }); continue; }
     const room = Math.min(CONTEXT_FILE_MAX, CONTEXT_TOTAL_MAX - total);

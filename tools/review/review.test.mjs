@@ -9,7 +9,7 @@ import { appJwt, installationToken } from './app-auth.mjs';
 import { callModel } from './gateway.mjs';
 import { decide, parseVerdict } from './verdict.mjs';
 import { CHECK_NAME, protectedPathsIn, runReview } from './review.mjs';
-import { privateKey, publicKey, pem, SHA, KEY, TOKEN, b64, json, DIFF, WORKFLOW_DIFF, verdict, SHA_B, filesFromDiff, world, config, run, finalCheck, HUNK_DIFF, OTHER_DIFF, modelCalls, userMessage, github, completionCheck, workflow } from './fake-github.mjs';
+import { privateKey, publicKey, pem, SHA, KEY, TOKEN, b64, json, DIFF, WORKFLOW_DIFF, verdict, SHA_B, filesFromDiff, world, config, run, finalCheck, HUNK_DIFF, OTHER_DIFF, modelCalls, userMessage, github, workflow } from './fake-github.mjs';
 
 test('app JWT is RS256, short-lived and verifiable with the app public key', () => {
   const jwt = appJwt({ appId: '5571876', privateKey: pem, now: 1_000_000 });
@@ -72,8 +72,8 @@ test('a passing review opens an in-progress check then completes success on the 
   const result = await run(w);
   assert.equal(result.conclusion, 'success');
   const [open, done] = w.checks;
-  assert.equal(open.name, CHECK_NAME);
   assert.equal(open.name, 'Independent review');
+  assert.equal(CHECK_NAME, open.name);
   assert.equal(open.head_sha, SHA);
   assert.equal(open.status, 'in_progress');
   assert.equal(done.patch, true);
@@ -100,7 +100,6 @@ test('every failure path completes the check as failure, never neutral, and leak
     const done = finalCheck(w);
     assert.equal(done.conclusion, 'failure', name);
     assert.equal(result.conclusion, 'failure', name);
-    assert.ok(['success', 'failure'].includes(done.conclusion));
     const everything = JSON.stringify(w.checks);
     for (const secret of [KEY, TOKEN, 'BEGIN PRIVATE KEY']) assert.ok(!everything.includes(secret), `${name} leaked ${secret}`);
   }
@@ -131,14 +130,6 @@ test('protected-path changes are reported in the check output', async () => {
   assert.match(finalCheck(w).output.summary, /protected/i);
 });
 
-test('findings become annotations only for files in the diff', async () => {
-  const w = world({ model: verdict({ findings: [{ severity: 'minor', file: 'client/Guide.tsx', line: 1, message: 'Nit here.' }, { severity: 'minor', file: 'other.ts', line: 4, message: 'Elsewhere.' }] }) });
-  await run(w);
-  const out = completionCheck(w).output;
-  assert.deepEqual(out.annotations.map(a => [a.path, a.start_line, a.annotation_level]), [['client/Guide.tsx', 1, 'notice']]);
-  assert.match(out.text, /Elsewhere/);
-});
-
 test('SHA binding: the diff is fetched by immutable base and head SHA, never from the moving pull request', async () => {
   const w = world({ diff: DIFF });
   const result = await run(w);
@@ -151,22 +142,18 @@ test('SHA binding: the diff is fetched by immutable base and head SHA, never fro
   assert.match(finalCheck(w).output.summary, /Reviewed ddddddd\.\.\.aaaaaaa/);
 });
 
-test('SHA binding: a passing model response is discarded when the head moved during the review', async () => {
-  const w = world({ diff: HUNK_DIFF, moveHeadAfterModel: SHA_B });
-  const result = await run(w);
-  assert.equal(result.conclusion, 'failure');
-  assert.equal(finalCheck(w).conclusion, 'failure');
-  assert.equal(finalCheck(w).head_sha, undefined);
-  assert.equal(w.checks[0].head_sha, SHA);
-  assert.match(finalCheck(w).output.title, /Head moved or could not be verified/);
-  assert.ok(!w.comments.some(c => /\*\*Passed\*\*/.test(c.body)));
-});
-
-test('SHA binding: a head that cannot be re-read after the review also fails closed', async () => {
-  const w = world({ diff: HUNK_DIFF, traps: [{ on: 'POST /v1/messages', after: api => { api.state.pullFails = true; } }] });
-  const result = await run(w);
-  assert.equal(result.conclusion, 'failure');
-  assert.match(finalCheck(w).output.title, /could not be verified/);
+test('SHA binding: a passing verdict is discarded when the head moved or cannot be re-read after the review, so it never attaches to an unverified SHA', async () => {
+  const moved = world({ diff: HUNK_DIFF, moveHeadAfterModel: SHA_B });
+  const unreadable = world({ diff: HUNK_DIFF, traps: [{ on: 'POST /v1/messages', after: api => { api.state.pullFails = true; } }] });
+  const never = world({ diff: DIFF, traps: [{ on: 'GET /repos/o/r/compare', before: api => { api.state.head = SHA_B; } }] });
+  for (const w of [moved, unreadable, never]) {
+    assert.equal((await run(w)).conclusion, 'failure');
+    assert.equal(w.checks[0].head_sha, SHA);
+    assert.equal(w.checks.filter(c => c.conclusion === 'success').length, 0);
+    assert.ok(!w.comments.some(c => /\*\*Passed\*\*/.test(c.body)));
+  }
+  assert.match(finalCheck(moved).output.title, /Head moved or could not be verified/);
+  assert.match(finalCheck(unreadable).output.title, /could not be verified/);
 });
 
 test('SHA binding: head moved to another commit and restored still reviews the original SHA content', async () => {
@@ -180,13 +167,6 @@ test('SHA binding: head moved to another commit and restored still reviews the o
   assert.doesNotMatch(userMessage(w), /Other\.tsx/);
   assert.equal(w.checks[0].head_sha, SHA);
   assert.equal(result.conclusion, 'success');
-});
-
-test('SHA binding: head never restored fails closed, so a verdict never attaches to a SHA it did not verify', async () => {
-  const w = world({ diff: DIFF, traps: [{ on: 'GET /repos/o/r/compare', before: api => { api.state.head = SHA_B; } }] });
-  const result = await run(w);
-  assert.equal(result.conclusion, 'failure');
-  assert.equal(w.checks.filter(c => c.conclusion === 'success').length, 0);
 });
 
 test('SHA binding: a pull request without a base SHA is not reviewed', async () => {

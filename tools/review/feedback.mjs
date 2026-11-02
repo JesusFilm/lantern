@@ -9,6 +9,8 @@ export const MAX_INLINE = 10;
 const MAX_LISTED = 30;
 const HEAD = /<!-- head:([0-9a-f]{40}) -->/;
 const RUN = /<!-- run:(\d+) -->/;
+const FINDING = /<!-- lantern-ir:([0-9a-f]{16}) -->/;
+const findingOf = comment => FINDING.exec(comment.body ?? '')?.[1];
 
 export function escapeText(value, max = 2000) {
   return String(value ?? '')
@@ -36,6 +38,7 @@ export function summaryComment({ state, sha, runId, checkUrl, verdict, failureSu
   const head = `${COMMENT_MARKER}\n<!-- head:${sha} -->\n<!-- run:${runId} -->\n## Independent review\n\n`;
   const link = `[Open the check](${checkUrl})`;
   if (state === 'incomplete') return `${head}**Not completed** for \`${shortSha(sha)}\`\n\nThe check run could not be completed (${escapeText(failureSummary, 200)}), so no verdict is recorded for this commit. Run the review again.\n\n${link}`;
+  if (state === 'unconfirmed') return `${head}**Outcome unconfirmed** for \`${shortSha(sha)}\`\n\nThe final update of the check run failed (${escapeText(failureSummary, 200)}) and its state could not be read back, so GitHub may or may not have recorded a verdict for this commit. Read the status of the **Independent review** check, which is the gate.\n\n${link}`;
   const label = state === 'success' ? 'Passed' : 'Requires changes';
   let body = `${head}**${label}** for \`${shortSha(sha)}\`\n\n`;
   if (verdict) {
@@ -78,7 +81,7 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, runId,
     return { how: existing ? 'updated' : 'created', id: existing?.id ?? (await response.json()).id };
   }
 
-  // A run writes only the comment bound to its own SHA and run id: comments have no compare-and-swap, so editing another run's could overwrite a newer result.
+  // Only this run's own comment is written: comments have no compare-and-swap.
   async function guardedUpsert(build) {
     if (!isCurrent(await readPull())) return { written: false };
     const mine = (await ownComments()).filter(isMine);
@@ -91,7 +94,7 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, runId,
   async function postInline(findings) {
     if (!isCurrent(await readPull())) return 'inline comments not posted: the pull request moved to a newer commit or closed';
     const existing = await listAll(fetch, token, `/repos/${repository}/pulls/${prNumber}/comments`);
-    const done = new Set(existing.filter(c => c.user?.login === APP_LOGIN).map(c => /<!-- lantern-ir:([0-9a-f]{16}) -->/.exec(c.body ?? '')?.[1]));
+    const done = new Set(existing.filter(c => c.user?.login === APP_LOGIN).map(findingOf));
     const fresh = findings.filter(f => !done.has(findingKey(sha, f)));
     if (!fresh.length) return `${findings.length ? 'inline findings already posted' : 'no inline findings'}`;
     const response = await api(fetch, token, 'POST', `/repos/${repository}/pulls/${prNumber}/reviews`, {
@@ -103,13 +106,33 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, runId,
       },
     });
     if (!response.ok) throw new Error(`status ${response.status}`);
-    return `${fresh.length} inline comment${fresh.length === 1 ? '' : 's'} posted`;
+    const removed = await removeDuplicates((await response.json()).id, new Set(fresh.map(f => findingKey(sha, f))));
+    return `${fresh.length} inline comment${fresh.length === 1 ? '' : 's'} posted${removed}`;
+  }
+
+  // Listing and posting are not atomic, so concurrent runs can post the same finding; each run then deletes its own non-oldest copies. Best effort, not exactly-once.
+  async function removeDuplicates(reviewId, keys) {
+    try {
+      const mine = (await listAll(fetch, token, `/repos/${repository}/pulls/${prNumber}/comments`)).filter(c => c.user?.login === APP_LOGIN).sort((a, b) => a.id - b.id);
+      const oldest = new Map();
+      for (const c of mine) if (keys.has(findingOf(c)) && !oldest.has(findingOf(c))) oldest.set(findingOf(c), c.id);
+      const extra = mine.filter(c => c.pull_request_review_id === reviewId && keys.has(findingOf(c)) && oldest.get(findingOf(c)) !== c.id);
+      let removed = 0;
+      for (const c of extra) {
+        const response = await api(fetch, token, 'DELETE', `/repos/${repository}/pulls/comments/${c.id}`);
+        if (response.ok || response.status === 404) removed++;
+        else throw new Error(`status ${response.status}`);
+      }
+      return removed ? `; ${removed} duplicate${removed === 1 ? '' : 's'} of a concurrent run removed` : '';
+    } catch (error) {
+      return `; duplicates from a concurrent run could not be checked or removed (${error.message})`;
+    }
   }
 
   return {
-    async markIncomplete({ reason }) {
+    async markIncomplete({ reason, confirmed = true }) {
       try {
-        await guardedUpsert(() => summaryComment({ state: 'incomplete', sha, runId, checkUrl, failureSummary: reason }));
+        await guardedUpsert(() => summaryComment({ state: confirmed ? 'incomplete' : 'unconfirmed', sha, runId, checkUrl, failureSummary: reason }));
       } catch { /* the run already fails and the check stays unfinished */ }
     },
 
