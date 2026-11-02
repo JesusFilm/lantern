@@ -1,12 +1,12 @@
 {
-  "edition": 6,
-  "editionDate": "2026-11-02",
-  "deck": "5fd320ebf678738cf8894d6f7ac39248d7c8431f1f2882cda8d437a938b111b7",
+  "edition": 7,
+  "editionDate": "2026-11-03",
+  "deck": "b779e8923ad57d41a94f18347b3379afbcc68f1deabfd3346d8d54d02032819c",
   "sources": {
-    "fingerprint": "03687b3c1e75c0a4b4c57b1bab5942a563c2d1a1607c8b1b84cb6fcf2db307b6",
+    "fingerprint": "51e0d5855f6baf4e18e7f1a629275dc00bb3910e6aff1207b6e1c94f71df3c33",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
-      "client/Guide.tsx": "9c72ae29512d56a1b87a2978a0dc3ae4b99eeff84cc3b04fcae02c5f3993eafc",
+      "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
       "client/coach/CoachPreparing.tsx": "08ba217572bc5465ab73c3db2d665ef9969bf8547033745db70bfa2fc837a7f3",
       "client/coach/CoachWorkspace.tsx": "05bbd5c19563ca30b133367fdd3354279aac76b6543f7803d93665e9b320a901",
       "client/coach/StatusBadge.ts": "c711778994e08f5fd3875d07fbc03b3d5c2e65bf7fe60549ba934a62829a45be",
@@ -167,5 +167,5 @@
       }
     }
   },
-  "pdf": "1125145c11acaa75074c64aa168c0b9105b15440c0378be790d72862ca23d55e"
+  "pdf": "a745b6bce1ee50cbb98db2b29ce5609443b1e71032d9fa739cfd44d25efa3fc5"
 }

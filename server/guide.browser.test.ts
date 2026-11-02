@@ -20,6 +20,7 @@ test('Guide browser acceptance: independent walkthroughs, navigation, context, e
     await t.test('optional resources start closed, SMART is independent and context stays reader-controlled', async () => {
       await page.goto(origin);
       await expect(page.getByRole('heading', { name: 'Find the purpose. Give your work direction.' })).toBeVisible();
+      await expect(page.getByRole('img', { name: 'Optional help' })).toBeVisible();
       await expect(page.getByRole('region', { name: 'SMART goals', exact: true })).toHaveCount(0);
       const contextButton = page.getByRole('button', { name: 'Our shared context' });
       await expect(contextButton).toHaveAttribute('aria-expanded', 'false');
