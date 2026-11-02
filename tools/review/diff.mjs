@@ -79,12 +79,10 @@ export function protectedPathsIn(diff) {
 }
 
 const patchLines = text => String(text).replace(/\r?\n$/, '').split('\n');
-// Format, control and unassigned characters and U+FFFD are the ones the two GitHub representations of a patch can render differently.
-const fold = text => text.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Co}\p{Cn}\uFFFD]/gu, '');
 const hunkHeader = line => /^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@/.exec(line)?.[0];
 
 // Compare the hunks sent to the model with GitHub's separately returned patch and counts, so a diff cut between complete hunks cannot pass.
-// Structure (counts, line count, line kinds, hunk headers) must be identical; the text of a line is compared after folding invisible characters.
+// The text must be identical, invisible characters included: a changed or removed control character is exactly what a hidden-character attack looks like, and the model must see what GitHub lists. The reasons only locate the first difference.
 function patchMismatch(section, file) {
   if (file.additions !== section.additions || file.deletions !== section.deletions || file.changes !== section.additions + section.deletions) {
     return 'its additions, deletions and total do not match the counts GitHub lists';
@@ -96,7 +94,7 @@ function patchMismatch(section, file) {
     const [x, y] = [sent[i], listed[i]];
     const header = hunkHeader(x);
     if (x[0] !== y[0] || (header !== undefined && header !== hunkHeader(y))) return `patch line ${i + 1} differs in structure`;
-    if (header === undefined && fold(x) !== fold(y)) return `patch line ${i + 1} differs in text`;
+    if (x !== y) return `patch line ${i + 1} differs in text`;
   }
   return null;
 }

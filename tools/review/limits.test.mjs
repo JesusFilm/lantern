@@ -21,7 +21,7 @@ const repoFetch = async url => {
 const modified = path => ({ filename: path, status: 'modified', patch: '@@ -1 +1 @@\n-a\n+b', additions: 1, deletions: 1, changes: 2 });
 const load = files => loadFileContext({ fetch: repoFetch, token: 't', repository: 'o/r', headSha: 'a'.repeat(40), files });
 
-test('P1 context limits: every file of the gate keeps headroom under the per-file limit, so a real edit stays reviewable', async () => {
+test('context limits: every file of the gate keeps headroom under the per-file limit, so a real edit stays reviewable', async () => {
   assert.ok(GATE_FILES.length >= 15, `found ${GATE_FILES.length} gate files`);
   for (const path of GATE_FILES) {
     const size = read(path).length;
@@ -33,7 +33,7 @@ test('P1 context limits: every file of the gate keeps headroom under the per-fil
   }
 });
 
-test('P1 context limits: a change touching every file of the gate at once still fits the total budget with headroom', async () => {
+test('context limits: a change touching every file of the gate at once still fits the total budget with headroom', async () => {
   const total = GATE_FILES.reduce((sum, path) => sum + read(path).length, 0);
   assert.ok(total <= CONTEXT_TOTAL_MAX * 0.9, `the gate files total ${total} characters against a ${CONTEXT_TOTAL_MAX} budget`);
   const entries = await load(GATE_FILES.map(modified));
@@ -41,7 +41,7 @@ test('P1 context limits: a change touching every file of the gate at once still 
   assert.deepEqual(entries.filter(e => e.omitted || e.clipped).map(e => e.path), []);
 });
 
-test('P1 context limits: the real trusted guidance fits whole, for every path class that adds a guidance file', async () => {
+test('context limits: the real trusted guidance fits whole, for every path class that adds a guidance file', async () => {
   const paths = ['tools/review/review.mjs', 'docs/adrs/0001-x.md', '.github/workflows/ci.yml', 'docs/operations/releasing.md'];
   const wanted = guidancePaths(paths).map(item => item.path);
   assert.deepEqual(wanted.filter(path => !GUIDANCE.includes(path)), [], 'every guidance path the loader asks for exists in the repository');
@@ -53,7 +53,7 @@ test('P1 context limits: the real trusted guidance fits whole, for every path cl
   assert.ok(loaded.reduce((sum, file) => sum + file.text.length, 0) <= 45_000, 'guidance total is within three quarters of the 60,000 budget');
 });
 
-test('P1 context limits: a file over the limit is clipped and reported, so the headroom assertions above are what keep the gate usable', async () => {
+test('context limits: a file over the limit is clipped and reported, so the headroom assertions above are what keep the gate usable', async () => {
   const big = { fetch: async () => new Response('x'.repeat(CONTEXT_FILE_MAX + 1), { status: 200 }), token: 't', repository: 'o/r', headSha: 'a'.repeat(40), files: [modified('big.mjs')] };
   const [entry] = await loadFileContext(big);
   assert.equal(entry.clipped, true);

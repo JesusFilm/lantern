@@ -8,6 +8,7 @@ export const COMMENT_MARKER = '<!-- lantern-independent-review -->';
 export const MAX_INLINE = 10;
 const MAX_LISTED = 30;
 const HEAD = /<!-- head:([0-9a-f]{40}) -->/;
+const RUN = /<!-- run:(\d+) -->/;
 
 export function escapeText(value, max = 2000) {
   return String(value ?? '')
@@ -31,13 +32,10 @@ const where = f => (f.file ? ` ${escapeText(f.file, 300)}${f.line ? `:${f.line}`
 const shortSha = sha => sha.slice(0, 7);
 const findingKey = (sha, f) => createHash('sha256').update([sha, f.file, f.line, f.message].join('\0')).digest('hex').slice(0, 16);
 
-export function summaryComment({ state, sha, checkUrl, verdict, failureSummary, protectedFiles = [] }) {
-  const head = `${COMMENT_MARKER}\n<!-- head:${sha} -->\n## Independent review\n\n`;
+export function summaryComment({ state, sha, runId, checkUrl, verdict, failureSummary, protectedFiles = [] }) {
+  const head = `${COMMENT_MARKER}\n<!-- head:${sha} -->\n<!-- run:${runId} -->\n## Independent review\n\n`;
   const link = `[Open the check](${checkUrl})`;
   if (state === 'incomplete') return `${head}**Not completed** for \`${shortSha(sha)}\`\n\nThe check run could not be completed (${escapeText(failureSummary, 200)}), so no verdict is recorded for this commit. Run the review again.\n\n${link}`;
-  if (state === 'running') {
-    return `${head}**Reviewing** \`${shortSha(sha)}\`.\n\n${link}`;
-  }
   const label = state === 'success' ? 'Passed' : 'Requires changes';
   let body = `${head}**${label}** for \`${shortSha(sha)}\`\n\n`;
   if (verdict) {
@@ -51,10 +49,10 @@ export function summaryComment({ state, sha, checkUrl, verdict, failureSummary, 
     body += `${escapeText(failureSummary, 600)}\n\n`;
   }
   if (protectedFiles.length) body += `This change touches protected paths (${protectedFiles.map(file => escapeText(file, 200)).join(', ')}); it needs independent inspection and the owner's authorization before merge.\n\n`;
-  return `${body}${link}\n\nAutomated advisory review of \`${shortSha(sha)}\` only. Each push gets its own comment and an older comment is never rewritten, so confirm the pull request head is \`${shortSha(sha)}\` before relying on this. The **Independent review** check is the gate. This is not a formal pull request approval or change request.`;
+  return `${body}${link}\n\nAutomated advisory review of \`${shortSha(sha)}\` only. This is the result of one review run (check run ${runId}). Every run, including a rerun for the same commit, writes its own comment and no run edits another's, so confirm the pull request head is \`${shortSha(sha)}\` and read the status of the **Independent review** check, which is the gate. This is not a formal pull request approval or change request.`;
 }
 
-export function createFeedback({ fetch, token, repository, prNumber, sha, checkUrl }) {
+export function createFeedback({ fetch, token, repository, prNumber, sha, runId, checkUrl }) {
   const commentsPath = `/repos/${repository}/issues/${prNumber}/comments`;
 
   async function readPull() {
@@ -65,6 +63,7 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, checkU
 
   const isCurrent = pull => pull.state === 'open' && pull.head.sha === sha;
   const boundTo = comment => HEAD.exec(comment.body)?.[1];
+  const isMine = comment => boundTo(comment) === sha && RUN.exec(comment.body)?.[1] === String(runId);
 
   async function ownComments() {
     const comments = await listAll(fetch, token, commentsPath);
@@ -79,12 +78,10 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, checkU
     return { how: existing ? 'updated' : 'created', id: existing?.id ?? (await response.json()).id };
   }
 
-  // One comment per head SHA. A run only ever rewrites comments bound to its own SHA and never edits another commit's
-  // comment: without compare-and-swap, any cross-run overwrite (a collapse or a repair) can land on a newer verdict, for
-  // example after a head is restored to an earlier commit.
+  // A run writes only the comment bound to its own SHA and run id: comments have no compare-and-swap, so editing another run's could overwrite a newer result.
   async function guardedUpsert(build) {
     if (!isCurrent(await readPull())) return { written: false };
-    const mine = (await ownComments()).filter(c => boundTo(c) === sha);
+    const mine = (await ownComments()).filter(isMine);
     const body = build();
     const { how } = await write(body, mine[0]);
     for (const duplicate of mine.slice(1)) await write(body, duplicate);
@@ -110,24 +107,16 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, checkU
   }
 
   return {
-    async announce() {
-      try {
-        await guardedUpsert(() => summaryComment({ state: 'running', sha, checkUrl }));
-      } catch { /* the final publication reports any problem */ }
-    },
-
-    // The check run could not be completed: a comment still saying "Reviewing" must say so rather than imply a verdict.
     async markIncomplete({ reason }) {
       try {
-        const mine = (await ownComments()).filter(c => boundTo(c) === sha);
-        for (const comment of mine) await write(summaryComment({ state: 'incomplete', sha, checkUrl, failureSummary: reason }), comment);
+        await guardedUpsert(() => summaryComment({ state: 'incomplete', sha, runId, checkUrl, failureSummary: reason }));
       } catch { /* the run already fails and the check stays unfinished */ }
     },
 
     async publish({ conclusion, verdict, failureSummary, protectedFiles, diff }) {
       const notes = [];
       try {
-        const result = await guardedUpsert(() => summaryComment({ state: conclusion, sha, checkUrl, verdict, failureSummary, protectedFiles }));
+        const result = await guardedUpsert(() => summaryComment({ state: conclusion, sha, runId, checkUrl, verdict, failureSummary, protectedFiles }));
         if (!result.written) return 'not published: the pull request moved to a newer commit or closed.';
         notes.push(`summary comment ${result.how}`);
       } catch (error) {

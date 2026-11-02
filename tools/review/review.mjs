@@ -9,6 +9,13 @@ import { decide, parseVerdict } from './verdict.mjs';
 
 export { diffFiles, protectedPathsIn };
 export const CHECK_NAME = 'Independent review';
+
+// When the note update fails, the job log is the only place left to say so.
+export const describeResult = result => {
+  if (result.skipped) return 'Skipped: pull request head moved or pull request closed.';
+  const line = `Review completed: ${result.conclusion}. Pull request feedback: ${result.feedback.note}`;
+  return result.feedback.recorded ? line : `${line}\n::warning::The check summary could not be updated with the pull request feedback outcome (${result.feedback.problem}); the check verdict above is unaffected.`;
+};
 const MAX_DIFF_BYTES = 150_000;
 const MAX_ANNOTATIONS = 50;
 const MAX_LISTED_PROBLEMS = 20;
@@ -48,8 +55,7 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
   const opened = await api(fetch, token, 'POST', `/repos/${repository}/check-runs`, { body: { name: CHECK_NAME, head_sha: expectedSha, status: 'in_progress', output: { title: 'Review running', summary: 'Waiting for the independent review to finish.' } } });
   if (!opened.ok) throw new Error(`Could not open check run (status ${opened.status})`);
   const { id } = await opened.json();
-  const feedback = createFeedback({ fetch, token, repository, prNumber, sha: expectedSha, checkUrl: `https://github.com/${repository}/pull/${prNumber}/checks?check_run_id=${id}` });
-  await feedback.announce();
+  const feedback = createFeedback({ fetch, token, repository, prNumber, sha: expectedSha, runId: id, checkUrl: `https://github.com/${repository}/pull/${prNumber}/checks?check_run_id=${id}` });
 
   let result;
   try {
@@ -73,8 +79,9 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
   }
   // The comment is published only after GitHub accepted the check's final state, so it can never say Passed for an unfinished check.
   const note = await feedback.publish({ conclusion: result.conclusion, verdict: result.verdict, failureSummary: result.output.summary, protectedFiles: result.protectedFiles, diff: result.diff });
-  await complete({ ...rest, summary: `${summary}\n\nPull request feedback: ${note}`.slice(0, 60_000) }).catch(() => {});
-  return { conclusion: result.conclusion };
+  const record = () => complete({ ...rest, summary: `${summary}\n\nPull request feedback: ${note}`.slice(0, 60_000) }).then(response => (response.ok ? null : `status ${response.status}`), () => 'a network error');
+  const failed = (await record()) && (await record());
+  return { conclusion: result.conclusion, feedback: { note, recorded: !failed, ...(failed ? { problem: failed } : {}) } };
 
   async function headStillCurrent() {
     try {

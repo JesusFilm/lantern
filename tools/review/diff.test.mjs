@@ -6,7 +6,7 @@ import { protectedPathsIn } from './review.mjs';
 import { assessChange, diffFiles } from './diff.mjs';
 import { SHA, json, DIFF, BASE, filesFromDiff, world, run, finalCheck, OTHER_DIFF, BINARY, MODE_ONLY, RENAME, EMPTY_ADDED, modelCalls, userMessage, github, section, HUNK_1, TWO_HUNKS, ONE_HUNK } from './fake-github.mjs';
 
-test('P1 unreviewable content: binary, omitted, mode-only and unlisted files fail closed before any model call', async () => {
+test('unreviewable content: binary, omitted, mode-only and unlisted files fail closed before any model call', async () => {
   const cases = {
     'binary mixed with reviewable': { diff: DIFF + BINARY, expect: /logo\.png.*binary file/ },
     'mode only mixed with reviewable': { diff: DIFF + MODE_ONLY, expect: /run\.sh/ },
@@ -28,7 +28,7 @@ test('P1 unreviewable content: binary, omitted, mode-only and unlisted files fai
   }
 });
 
-test('P1 unreviewable content: a truncated or unreadable file list fails closed', async () => {
+test('unreviewable content: a truncated or unreadable file list fails closed', async () => {
   const section = name => `diff --git a/${name} b/${name}\n--- a/${name}\n+++ b/${name}\n@@ -1 +1 @@\n-a\n+b\n`;
   const names = n => Array.from({ length: n }, (_, i) => `f${i}.ts`);
   const consistent = n => ({ diff: names(n).map(section).join('') });
@@ -40,7 +40,7 @@ test('P1 unreviewable content: a truncated or unreadable file list fails closed'
   }
 });
 
-test('P1 unreviewable content: pure renames and empty files are an explicit allowed policy and are disclosed to the model', async () => {
+test('unreviewable content: pure renames and empty files are an explicit allowed policy and are disclosed to the model', async () => {
   const w = world({ diff: DIFF + RENAME + EMPTY_ADDED });
   const result = await run(w);
   assert.equal(result.conclusion, 'success');
@@ -51,7 +51,7 @@ test('P1 unreviewable content: pure renames and empty files are an explicit allo
   assert.equal(assessChange(edited, filesFromDiff(edited)).problems.length, 0);
 });
 
-test('P1 unreviewable content: a hunk line that looks like a file header cannot hide or invent a file', () => {
+test('unreviewable content: a hunk line that looks like a file header cannot hide or invent a file', () => {
   const tricky = 'diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1,2 +1,3 @@\n keep\n+++ b/secret/forged.txt\n+more\n';
   assert.deepEqual(diffFiles(tricky), ['a.txt']);
   assert.deepEqual([...diffRightLines(tricky).get('a.txt')], [1, 2, 3]);
@@ -61,7 +61,7 @@ test('P1 unreviewable content: a hunk line that looks like a file header cannot 
   assert.equal(assessChange(cut, [{ filename: 'a.txt', status: 'modified', changes: 1, patch: '@@' }]).problems[0].reason, 'incomplete patch');
 });
 
-test('P1 patch completeness: a diff cut between two complete hunks fails closed, even though what remains is well formed', async () => {
+test('patch completeness: a diff cut between two complete hunks fails closed, even though what remains is well formed', async () => {
   const full = filesFromDiff(TWO_HUNKS);
   const cases = {
     'model diff omits the second hunk': { diff: ONE_HUNK, files: full },
@@ -84,7 +84,7 @@ test('P1 patch completeness: a diff cut between two complete hunks fails closed,
   assert.match(userMessage(complete), /@@ -10,3 \+10,3 @@/);
 });
 
-test('P1 patch completeness: each listed count is checked on its own, and non-numeric counts are rejected', async () => {
+test('patch completeness: each listed count is checked on its own, and non-numeric counts are rejected', async () => {
   const [good] = filesFromDiff(TWO_HUNKS);
   const bad = {
     'additions only': { ...good, additions: good.additions + 1, changes: good.changes + 1 },
@@ -104,7 +104,7 @@ test('P1 patch completeness: each listed count is checked on its own, and non-nu
   }
 });
 
-test('P1 patch completeness: no-newline markers and renamed files with edits still match their listed patch', async () => {
+test('patch completeness: no-newline markers and renamed files with edits still match their listed patch', async () => {
   const noNewline = section('a.txt', '@@ -1 +1 @@\n-a\n\\ No newline at end of file\n+b\n\\ No newline at end of file\n');
   assert.deepEqual(assessChange(noNewline, filesFromDiff(noNewline)).problems, []);
   const edited = 'diff --git a/a.ts b/b.ts\nsimilarity index 80%\nrename from a.ts\nrename to b.ts\n--- a/a.ts\n+++ b/b.ts\n' + HUNK_1;
@@ -112,7 +112,7 @@ test('P1 patch completeness: no-newline markers and renamed files with edits sti
   assert.equal(assessChange(edited.replace('+B', '+C'), filesFromDiff(edited)).problems.length, 1);
 });
 
-test('P2 mode changes: a 100% rename that also changes the file mode is not a pure rename and is not approved', async () => {
+test('mode changes: a 100% rename that also changes the file mode is not a pure rename and is not approved', async () => {
   const renameMode = 'diff --git a/run.sh b/bin/run.sh\nold mode 100644\nnew mode 100755\nsimilarity index 100%\nrename from run.sh\nrename to bin/run.sh\n';
   assert.deepEqual(assessChange(RENAME, filesFromDiff(RENAME)).renames, [{ from: 'old-name.ts', to: 'new-name.ts' }]);
   const assessed = assessChange(renameMode, filesFromDiff(renameMode));
@@ -137,27 +137,30 @@ const BIDI = /[\u202a-\u202e\u2066-\u2069]/g;
 const withFiles = edit => real.files.map(file => (file.filename === 'tools/review/feedback.mjs' ? { ...file, patch: edit(file.patch) } : file));
 const problemsFor = (diff, files) => assessChange(diff, files).problems;
 
-test('P1 patch fidelity: the real GitHub compare (diff media type and JSON patches) is accepted, including the file with Unicode control characters', () => {
+test('patch fidelity: the real GitHub compare (diff media type and JSON patches) is accepted, including the file with Unicode control characters', () => {
   assert.equal(real.files.length, 3);
   assert.ok((real.diff.match(BIDI) ?? []).length >= 4, 'the captured diff carries the bidirectional control characters');
   assert.deepEqual(problemsFor(real.diff, real.files), []);
 });
 
-test('P1 patch fidelity: invisible characters the two GitHub representations can render differently do not reject the change', () => {
-  const variants = {
+test('patch fidelity: the raw GitHub representation must match exactly, so a changed or removed invisible character fails closed', () => {
+  assert.deepEqual(problemsFor(real.diff, withFiles(patch => `${patch}\n`)), [], 'a trailing newline is the only tolerated difference');
+  const hidden = {
     'control characters dropped from the JSON patch': patch => patch.replace(BIDI, ''),
     'control characters replaced by U+FFFD': patch => patch.replace(BIDI, '\ufffd'),
+    'one control character replaced by another': patch => patch.replace('\u202e', '\u202d'),
+    'a zero-width character inserted': patch => patch.replace('+import', '+\u200b\ufeffimport'),
     'CRLF line endings': patch => patch.replace(/\n/g, '\r\n'),
-    'trailing newline': patch => `${patch}\n`,
-    'zero-width and BOM characters inserted': patch => patch.replace('+import', '+\u200b\ufeffimport'),
   };
-  for (const [name, edit] of Object.entries(variants)) assert.deepEqual(problemsFor(real.diff, withFiles(edit)), [], name);
-
-  const stripped = real.diff.replace(BIDI, '');
-  assert.deepEqual(problemsFor(stripped, real.files), [], 'control characters dropped from the diff text instead');
+  for (const [name, edit] of Object.entries(hidden)) {
+    const problems = problemsFor(real.diff, withFiles(edit));
+    assert.equal(problems.length, 1, name);
+    assert.match(problems[0].reason, /patch line \d+ differs in text/, name);
+  }
+  assert.equal(problemsFor(real.diff.replace(BIDI, ''), real.files).length, 1, 'control characters dropped from the diff text instead');
 });
 
-test('P1 patch fidelity: the same real data with anything visible changed, cut or reshaped still fails closed', () => {
+test('patch fidelity: the same real data with anything visible changed, cut or reshaped still fails closed', () => {
   const feedbackDiff = real.diff;
   const mutate = (name, diff, files, expect) => {
     const problems = problemsFor(diff, files);
@@ -185,7 +188,7 @@ test('P1 patch fidelity: the same real data with anything visible changed, cut o
   }), /counts|patch lines/);
 });
 
-test('P1 patch fidelity: the real compare flows through the whole harness and reaches the model with every file complete', async () => {
+test('patch fidelity: the real compare flows through the whole harness and reaches the model with every file complete', async () => {
   const w = world({ compares: { [`${BASE}...${SHA}`]: { diff: real.diff, files: real.files } } });
   const result = await run(w);
   assert.equal(result.conclusion, 'success');
@@ -193,10 +196,25 @@ test('P1 patch fidelity: the real compare flows through the whole harness and re
   assert.match(finalCheck(w).output.summary, /protected paths/);
 
   const dropped = world({ compares: { [`${BASE}...${SHA}`]: { diff: real.diff, files: withFiles(patch => patch.replace(BIDI, '')) } } });
-  assert.equal((await run(dropped)).conclusion, 'success');
+  assert.equal((await run(dropped)).conclusion, 'failure');
+  assert.equal(modelCalls(dropped).length, 0);
 
   const altered = world({ compares: { [`${BASE}...${SHA}`]: { diff: real.diff, files: withFiles(patch => patch.replace('createHash', 'createHAsh')) } } });
   assert.equal((await run(altered)).conclusion, 'failure');
   assert.equal(modelCalls(altered).length, 0);
   assert.match(finalCheck(altered).output.summary, /feedback\.mjs: the diff does not match the patch GitHub lists .*patch line \d+ differs in text/);
+});
+
+test('patch fidelity: an added file whose patch differs only by a zero-width character is never reviewed, in either direction', async () => {
+  const added = text => `diff --git a/server/role.ts b/server/role.ts\nnew file mode 100644\nindex 0000000..1111111\n--- /dev/null\n+++ b/server/role.ts\n@@ -0,0 +1 @@\n+${text}\n`;
+  const [plain, hidden] = [added('role = "admin"'), added('role = "ad\u200bmin"')];
+  for (const [diff, listed] of [[plain, hidden], [hidden, plain]]) {
+    const w = world({ diff, files: filesFromDiff(listed) });
+    assert.equal((await run(w)).conclusion, 'failure');
+    assert.equal(modelCalls(w).length, 0);
+    assert.match(finalCheck(w).output.summary, /differs in text/);
+  }
+  const same = world({ diff: hidden, files: filesFromDiff(hidden) });
+  assert.equal((await run(same)).conclusion, 'success');
+  assert.ok(userMessage(same).includes('ad\u200bmin'));
 });

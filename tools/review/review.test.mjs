@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
 import { createVerify } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import { appJwt, installationToken } from './app-auth.mjs';
 import { callModel } from './gateway.mjs';
@@ -135,7 +139,7 @@ test('findings become annotations only for files in the diff', async () => {
   assert.match(out.text, /Elsewhere/);
 });
 
-test('P1 SHA binding: the diff is fetched by immutable base and head SHA, never from the moving pull request', async () => {
+test('SHA binding: the diff is fetched by immutable base and head SHA, never from the moving pull request', async () => {
   const w = world({ diff: DIFF });
   const result = await run(w);
   assert.equal(result.conclusion, 'success');
@@ -147,7 +151,7 @@ test('P1 SHA binding: the diff is fetched by immutable base and head SHA, never 
   assert.match(finalCheck(w).output.summary, /Reviewed ddddddd\.\.\.aaaaaaa/);
 });
 
-test('P1 SHA binding: a passing model response is discarded when the head moved during the review', async () => {
+test('SHA binding: a passing model response is discarded when the head moved during the review', async () => {
   const w = world({ diff: HUNK_DIFF, moveHeadAfterModel: SHA_B });
   const result = await run(w);
   assert.equal(result.conclusion, 'failure');
@@ -158,14 +162,14 @@ test('P1 SHA binding: a passing model response is discarded when the head moved 
   assert.ok(!w.comments.some(c => /\*\*Passed\*\*/.test(c.body)));
 });
 
-test('P1 SHA binding: a head that cannot be re-read after the review also fails closed', async () => {
+test('SHA binding: a head that cannot be re-read after the review also fails closed', async () => {
   const w = world({ diff: HUNK_DIFF, traps: [{ on: 'POST /v1/messages', after: api => { api.state.pullFails = true; } }] });
   const result = await run(w);
   assert.equal(result.conclusion, 'failure');
   assert.match(finalCheck(w).output.title, /could not be verified/);
 });
 
-test('P1 SHA binding: head moved to another commit and restored still reviews the original SHA content', async () => {
+test('SHA binding: head moved to another commit and restored still reviews the original SHA content', async () => {
   const compares = { [`${'d'.repeat(40)}...${SHA}`]: { diff: DIFF, files: filesFromDiff(DIFF) }, [`${'d'.repeat(40)}...${SHA_B}`]: { diff: OTHER_DIFF, files: filesFromDiff(OTHER_DIFF) } };
   const w = world({ compares, traps: [
     { on: 'GET /repos/o/r/compare', before: api => { api.state.head = SHA_B; } },
@@ -178,14 +182,14 @@ test('P1 SHA binding: head moved to another commit and restored still reviews th
   assert.equal(result.conclusion, 'success');
 });
 
-test('P1 SHA binding: head never restored fails closed, so a verdict never attaches to a SHA it did not verify', async () => {
+test('SHA binding: head never restored fails closed, so a verdict never attaches to a SHA it did not verify', async () => {
   const w = world({ diff: DIFF, traps: [{ on: 'GET /repos/o/r/compare', before: api => { api.state.head = SHA_B; } }] });
   const result = await run(w);
   assert.equal(result.conclusion, 'failure');
   assert.equal(w.checks.filter(c => c.conclusion === 'success').length, 0);
 });
 
-test('P1 SHA binding: a pull request without a base SHA is not reviewed', async () => {
+test('SHA binding: a pull request without a base SHA is not reviewed', async () => {
   const w = world();
   const original = w.fetch;
   const fetch = async (url, init) => {
@@ -224,4 +228,23 @@ test('review workflow passes exactly the documented secrets and variables to the
   const holders = workflow.split(/\n      - /).filter(step => /secrets\.|vars\./.test(step));
   assert.equal(holders.length, 1);
   assert.match(holders[0], /run: node tools\/review\/main\.mjs\s*$/);
+});
+
+test('job log: main.mjs prints the feedback outcome, and a ::warning:: when the check note could not be recorded', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'review-'));
+  try {
+    const event = join(dir, 'event.json');
+    writeFileSync(event, JSON.stringify({ pull_request: { number: 5, head: { sha: SHA } } }));
+    const env = { ...process.env, GITHUB_EVENT_PATH: event, GITHUB_REPOSITORY: 'o/r', AI_REVIEW_APP_ID: '5571876', AI_REVIEW_APP_PRIVATE_KEY: pem, AI_REVIEW_GATEWAY_BASE_URL: 'https://gateway.example', AI_REVIEW_GATEWAY_API_KEY: KEY, AI_REVIEW_MODEL: 'm' };
+    const logFor = traps => {
+      writeFileSync(join(dir, 'preload.mjs'), `import { world, HUNK_DIFF } from ${JSON.stringify(new URL('./fake-github.mjs', import.meta.url).href)}; globalThis.fetch = world({ diff: HUNK_DIFF, traps: ${traps} }).fetch;`);
+      return execFileSync('node', ['--import', join(dir, 'preload.mjs'), new URL('./main.mjs', import.meta.url).pathname], { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    };
+    assert.equal(logFor('[]'), 'Review completed: success. Pull request feedback: summary comment created; no inline findings.\n');
+    const warned = logFor("[{ on: 'POST /repos/o/r/issues/5/comments', after: api => { api.state.failCheckPatch = true; } }]");
+    assert.match(warned, /^Review completed: success\..*\n::warning::.*\(status 502\)/);
+    assert.ok(!warned.includes(KEY) && !warned.includes(TOKEN));
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
 });

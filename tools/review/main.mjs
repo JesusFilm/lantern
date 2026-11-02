@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { runReview } from './review.mjs';
+import { describeResult, runReview } from './review.mjs';
 
 const need = name => {
   const value = process.env[name];
@@ -19,4 +19,4 @@ const result = await runReview({
   model: need('AI_REVIEW_MODEL'),
   fetch,
 });
-console.log(result.skipped ? 'Skipped: pull request head moved or pull request closed.' : `Review completed: ${result.conclusion}`);
+console.log(describeResult(result));

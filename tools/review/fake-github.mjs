@@ -48,16 +48,18 @@ export function filesFromDiff(diff) {
   });
 }
 
-export function world({ headSha = SHA, heads, state = 'open', diff = DIFF, files, compares = {}, diffStatus = 200, listStatus = 200, contents = {}, model = verdict(), modelStatus = 200, stopReason = 'end_turn', failOn, failFirst, seed = [], moveHeadAfterModel, traps = [] } = {}) {
+export function world({ headSha = SHA, heads, state = 'open', diff = DIFF, files, compares = {}, diffStatus = 200, listStatus = 200, contents = {}, model = verdict(), modelStatus = 200, stopReason = 'end_turn', failOn, failFirst, seed = [], shared, checkIds = [], moveHeadAfterModel, traps = [] } = {}) {
   const calls = [];
   const checks = [];
-  const comments = [...seed];
+  const comments = shared ?? [...seed];
   const reviewComments = [];
   const reviews = [];
   const sequence = heads ? [...heads] : null;
   const state_ = { head: headSha };
   const failed = new Set();
-  let nextId = Math.max(1000, ...seed.map(c => c.id + 1));
+  let nextId = 1000;
+  const nextCommentId = () => Math.max(1000, ...comments.map(c => c.id + 1));
+  const ids = [...checkIds];
   const contentFor = (path, ref) => {
     const key = `${path}@${ref === BASE ? 'base' : ref === SHA ? 'head' : ref}`;
     if (key in contents) return contents[key];
@@ -71,7 +73,14 @@ export function world({ headSha = SHA, heads, state = 'open', diff = DIFF, files
     const call = { method, host: u.host, path: u.pathname, search: u.search, headers: init.headers, body };
     calls.push(call);
     const key = `${method} ${u.pathname}`;
-    for (const trap of traps) if (!trap.done && key.startsWith(trap.on) && (trap.nth ?? 1) === (trap.count = (trap.count ?? 0) + 1)) { trap.done = true; trap.before?.(api_); }
+    for (const trap of traps) {
+      if (trap.done || !key.startsWith(trap.on)) continue;
+      trap.count = (trap.count ?? 0) + 1;
+      const first = trap.nth ?? 1;
+      if (trap.count < first) continue;
+      if (trap.count >= first + (trap.times ?? 1) - 1) trap.done = true;
+      trap.before?.(api_);
+    }
     const result = await handle(u, method, body, init, key);
     for (const trap of traps) if (trap.done && !trap.afterRan && trap.after && key.startsWith(trap.on)) { trap.afterRan = true; trap.after(api_); }
     return result;
@@ -104,12 +113,13 @@ export function world({ headSha = SHA, heads, state = 'open', diff = DIFF, files
       if (found === null) return json({ message: 'Not Found' }, 404);
       return typeof found === 'number' ? json({ message: 'err' }, found) : new Response(found, { status: 200 });
     }
-    if (method === 'POST' && u.pathname === '/repos/o/r/check-runs') { checks.push({ ...body }); return json({ id: 900 }, 201); }
-    if (method === 'PATCH' && u.pathname === '/repos/o/r/check-runs/900' && state_.failCheckPatch) return json({ message: 'down' }, 502);
-    if (method === 'PATCH' && u.pathname === '/repos/o/r/check-runs/900') { checks.push({ ...body, patch: true }); return json({ id: 900 }); }
+    if (method === 'POST' && u.pathname === '/repos/o/r/check-runs') { checks.push({ ...body }); return json({ id: ids.shift() ?? 900 }, 201); }
+    if (method === 'PATCH' && /^\/repos\/o\/r\/check-runs\/\d+$/.test(u.pathname) && state_.failCheckPatch) return json({ message: 'down' }, 502);
+    if (method === 'PATCH' && /^\/repos\/o\/r\/check-runs\/\d+$/.test(u.pathname)) { checks.push({ ...body, patch: true, run: Number(u.pathname.split('/').at(-1)) }); return json({ id: 900 }); }
     const page = items => json(items.slice((Number(u.searchParams.get('page') ?? 1) - 1) * 100, Number(u.searchParams.get('page') ?? 1) * 100));
     if (method === 'GET' && u.pathname === '/repos/o/r/issues/5/comments') return page(comments);
-    if (method === 'POST' && u.pathname === '/repos/o/r/issues/5/comments') { const c = { id: nextId++, user: { login: APP_LOGIN }, body: body.body }; comments.push(c); return json(c, 201); }
+    if (method === 'POST' && u.pathname === '/repos/o/r/issues/5/comments' && state_.failComments) return json({ message: 'down' }, 500);
+    if (method === 'POST' && u.pathname === '/repos/o/r/issues/5/comments') { const c = { id: nextCommentId(), user: { login: APP_LOGIN }, body: body.body }; comments.push(c); return json(c, 201); }
     const edit = /^\/repos\/o\/r\/issues\/comments\/(\d+)$/.exec(u.pathname);
     if (method === 'PATCH' && edit && state_.failComments) return json({ message: 'down' }, 500);
     if (method === 'PATCH' && edit) { const c = comments.find(x => x.id === Number(edit[1])); if (!c || c.user.login !== APP_LOGIN) return json({ message: 'not yours' }, 403); c.body = body.body; return json(c); }
@@ -158,7 +168,7 @@ export const systemPrompt = w => modelCalls(w)[0].body.system;
 
 export const github = (w, re) => w.calls.filter(c => c.host === 'api.github.com' && re.test(`${c.method} ${c.path}`));
 
-export const olderComment = (sha, text = 'Reviewing') => ({ id: 7, user: { login: APP_LOGIN }, body: `${COMMENT_MARKER}\n<!-- head:${sha} -->\n## Independent review\n\n**${text}**` });
+export const olderComment = (sha, text = 'Passed', runId = 1) => ({ id: 7, user: { login: APP_LOGIN }, body: `${COMMENT_MARKER}\n<!-- head:${sha} -->\n<!-- run:${runId} -->\n## Independent review\n\n**${text}**` });
 
 export const section = (name, ...hunks) => `diff --git a/${name} b/${name}\n--- a/${name}\n+++ b/${name}\n${hunks.join('')}`;
 
@@ -177,6 +187,6 @@ export const authContents = text => ({ 'server/auth.ts@head': text });
 
 export const summaryOf = w => ours(w).map(c => c.body).join('\n---\n');
 
-export const forB = text => ({ id: 5000, user: { login: APP_LOGIN }, body: `${COMMENT_MARKER}\n<!-- head:${SHA_B} -->\n## Independent review\n\n**${text}** for the newer head` });
+export const forB = text => ({ id: 5000, user: { login: APP_LOGIN }, body: `${COMMENT_MARKER}\n<!-- head:${SHA_B} -->\n<!-- run:1 -->\n## Independent review\n\n**${text}** for the newer head` });
 
 export const workflow = readFileSync(new URL('../../.github/workflows/independent-review.yml', import.meta.url), 'utf8');
