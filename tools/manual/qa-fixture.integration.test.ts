@@ -105,3 +105,48 @@ test("provision two registered QA participants and preserve unrelated acceptance
     await assert.rejects(resetQaDepartment(f.admin, { participants: ["qa0@example.test", "qa1@example.test", "qa2@example.test"] }), /unexpected confirm/i);
   } finally { await f.close(); }
 });
+
+
+for (const reference of ["note", "read receipt"] as const) test(`reset preserves an outside ${reference} committed concurrently with its ownership checks`, async () => {
+  const f = await coachingFixture();
+  const writer = await f.migration.connect();
+  let resetting: Promise<unknown> | undefined;
+  try {
+    for (const i of [0, 1]) {
+      await f.admin.query("INSERT INTO users(id,google_sub,email,name) VALUES($1,$2,$3,'QA')", [randomUUID(), "race-" + i, `race${i}@example.test`]);
+      await f.admin.query("INSERT INTO approved_emails VALUES($1)", [`race${i}@example.test`]);
+    }
+    const options = { participants: ["race0@example.test", "race1@example.test", "race2@example.test"], lead: "race0@example.test" };
+    await resetQaDepartment(f.migration, options);
+    const request = (await f.admin.query("SELECT r.id,r.focus_id FROM focus_review_requests r JOIN position_focuses f ON f.id=r.focus_id WHERE f.title='Ready for review'")).rows[0];
+    const noteId = randomUUID();
+    await writer.query("BEGIN");
+    const pid = (await writer.query("SELECT pg_backend_pid() AS pid")).rows[0].pid;
+    const existingNote = (await f.admin.query("SELECT id FROM focus_review_notes WHERE request_id=$1", [request.id])).rows[0].id;
+    if (reference === "note")
+      await writer.query("INSERT INTO focus_review_notes(id,request_id,author_id,body) VALUES($1,$2,$3,'Outside note')", [noteId, request.id, f.ids.outsider]);
+    else
+      await writer.query("INSERT INTO focus_note_reads(note_id,user_id) VALUES($1,$2)", [existingNote, f.ids.outsider]);
+    // The writer bypasses the application's cooperative advisory lock. Wait for
+    // the reset's real FK/row lock conflict, then commit the new reference.
+    resetting = resetQaDepartment(f.migration, options);
+    const rejected = assert.rejects(resetting, reference === "note" ? /unexpected note author/i : /unexpected note reader/i);
+    const deadline = Date.now() + 5000;
+    while (!(await f.admin.query("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE $1=ANY(pg_blocking_pids(pid))) AS waiting", [pid])).rows[0].waiting) {
+      assert.ok(Date.now() < deadline, "reset must reach the concurrent writer");
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    await writer.query("COMMIT");
+    await rejected;
+    if (reference === "note")
+      assert.equal((await f.admin.query("SELECT count(*)::int n FROM focus_review_notes WHERE id=$1", [noteId])).rows[0].n, 1);
+    else
+      assert.equal((await f.admin.query("SELECT count(*)::int n FROM focus_note_reads WHERE note_id=$1 AND user_id=$2", [existingNote, f.ids.outsider])).rows[0].n, 1);
+    assert.equal((await f.admin.query("SELECT count(*)::int n FROM position_focuses WHERE id=$1", [request.focus_id])).rows[0].n, 1);
+  } finally {
+    await writer.query("ROLLBACK");
+    writer.release();
+    await resetting?.catch(() => {});
+    await f.close();
+  }
+});

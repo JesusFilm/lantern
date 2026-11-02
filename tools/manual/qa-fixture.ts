@@ -38,8 +38,12 @@ export async function resetQaDepartment(db: Pool, options: { participants: strin
     if (unexpected.rowCount) throw new Error("Unexpected focus ownership prevents QA reset.");
     const foreignConfirmation = await client.query("SELECT id FROM position_focuses WHERE department_id=$1 AND confirmed_by IS NOT NULL AND NOT (confirmed_by=ANY($2::uuid[])) FOR UPDATE", [id, users.map((u) => u.id)]);
     if (foreignConfirmation.rowCount) throw new Error("Unexpected confirmer prevents QA reset.");
+    // A focus lock stops new requests, but not notes on existing requests.
+    // Lock each cascading parent before validating its children.
+    await client.query("SELECT r.id FROM focus_review_requests r JOIN position_focuses f ON f.id=r.focus_id WHERE f.department_id=$1 FOR UPDATE OF r", [id]);
     const foreignNotes = await client.query(`SELECT n.id FROM focus_review_notes n JOIN focus_review_requests r ON r.id=n.request_id JOIN position_focuses f ON f.id=r.focus_id WHERE f.department_id=$1 AND NOT (n.author_id=ANY($2::uuid[])) FOR UPDATE OF n`, [id, users.map((u) => u.id)]);
     if (foreignNotes.rowCount) throw new Error("Unexpected note author prevents QA reset.");
+    await client.query("SELECT n.id FROM focus_review_notes n JOIN focus_review_requests r ON r.id=n.request_id JOIN position_focuses f ON f.id=r.focus_id WHERE f.department_id=$1 FOR UPDATE OF n", [id]);
     const foreignReads = await client.query(`SELECT x.user_id FROM focus_note_reads x JOIN focus_review_notes n ON n.id=x.note_id JOIN focus_review_requests r ON r.id=n.request_id JOIN position_focuses f ON f.id=r.focus_id WHERE f.department_id=$1 AND NOT (x.user_id=ANY($2::uuid[])) FOR UPDATE OF x`, [id, users.map((u) => u.id)]);
     if (foreignReads.rowCount) throw new Error("Unexpected note reader prevents QA reset.");
     await client.query("DELETE FROM position_focuses WHERE department_id=$1 AND user_id=ANY($2::uuid[])", [id, users.map((u) => u.id)]);

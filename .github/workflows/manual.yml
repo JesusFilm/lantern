@@ -27,8 +27,15 @@ jobs:
           edition=$(node -p "require('./docs/manual/manifest.json').edition")
           date=$(node -p "require('./docs/manual/manifest.json').editionDate")
           tag="manual-$edition"
-          if gh release view "$tag" > /dev/null 2>&1; then
-            echo "$tag is already published."
+          if draft=$(gh release view "$tag" --json isDraft --jq '.isDraft'); then
+            if [ "$draft" = "true" ]; then
+              # gh create uploads through a draft. A failed upload/publish can
+              # leave that draft behind; resume it instead of reporting success.
+              gh release upload "$tag" docs/manual/lantern-manual.pdf --clobber
+              gh release edit "$tag" --draft=false --latest
+            else
+              echo "$tag is already published."
+            fi
             exit 0
           fi
           printf 'Lantern QA manual, edition %s (%s), generated from %s.\n\nOpen lantern-manual.pdf below. Screenshots use synthetic data.\n' "$edition" "$date" "$GITHUB_SHA" > notes.md

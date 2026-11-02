@@ -10,7 +10,11 @@ A repository administrator must first configure the stage environment secrets
 corresponding approved Google addresses. Do not commit email addresses or print
 them in Actions logs. The workflow uses the existing stage migration connection,
 CA and target settings. It checks the repository, main branch, dispatch event,
-stage Railway project/environment IDs, stage database role, endpoint and CA.
+stage Railway project/environment IDs, the pinned staging endpoint
+(`ballast.proxy.rlwy.net:56588`) and configured CA. Before resetting, it also checks
+that the connected database, schema and non-elevated migration login match stage.
+A staging TCP proxy rotation requires updating this pin and the release setup's
+production exclusion together; changing workflow variables alone cannot retarget it.
 The stage environment's access controls apply.
 
 At least two QA participants must sign in once before the first run. Open
@@ -28,8 +32,10 @@ initiatives.
 For safety it refuses ambiguous or unapproved identities, an existing career
 lead from another department, a conflicting QA department, unexpected memberships,
 foreign focus ownership, or outside confirmation/note/read references. A
-failure rolls the transaction back and emits a generic message without personal
-data. A current member with no focuses in another department can move into QA;
-existing focuses outside QA block the move and need separate review. Resolve
-mismatches through an authorized staging operator; don't broaden the deletion
-scope or use production credentials.
+reset locks focus roots, review requests and notes before checking their children,
+so concurrent references are checked before cascading deletion. A failure rolls
+the transaction back and emits a generic message without personal data. A
+current member with no focuses in another department can move into QA; existing
+focuses outside QA block the move and need separate review. Resolve mismatches
+through an authorized staging operator; don't broaden the deletion scope or use
+production credentials.

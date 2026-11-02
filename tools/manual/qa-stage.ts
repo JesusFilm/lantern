@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import pg from "pg";
+import { assertDatabaseTarget } from "../../server/database-privileges.js";
 // Shared target validation is maintained as a JavaScript module.
 // @ts-expect-error The release module has no TypeScript declaration.
 import { validateHostedMigrationTarget } from "../release/settings.mjs";
@@ -19,10 +20,14 @@ try {
   assert.ok(emails.every((v) => typeof v === "string" && /^[^\s@]+@[^\s@]+$/.test(v)));
   const choices = { SharonQA: env.QA_SHARON, SushmaQA: env.QA_SUSHMA, EstherQA: env.QA_ESTHER };
   assert.ok(env.QA_LEAD === "keep" || Object.hasOwn(choices, env.QA_LEAD ?? ""));
+  // The stage labels and connection settings can otherwise all agree while
+  // pointing somewhere else. Pin the endpoint also excluded by production setup.
+  assert.equal(env.LANTERN_DB_EXPECTED_ENDPOINT, "ballast.proxy.rlwy.net:56588");
   const { url } = validateHostedMigrationTarget(env, "stage", env.MIGRATION_DATABASE_CA);
-  // Match the release tooling's pinned Railway CA and verify-ca semantics.
+  // Match the release tooling's configured Railway CA and verify-ca semantics.
   const db = new pg.Pool({ connectionString: url.href, ssl: { ca: env.MIGRATION_DATABASE_CA, rejectUnauthorized: true, checkServerIdentity: () => undefined }, options: "-c search_path=lantern" });
   try {
+    await assertDatabaseTarget(db, { database: env.LANTERN_DB_NAME!, schema: "lantern", role: "lantern_stage_migration" });
     const result = await resetQaDepartment(db, { participants: emails as string[], lead: env.QA_LEAD === "keep" ? undefined : choices[env.QA_LEAD as keyof typeof choices] });
     console.log(`QA fixture restored. Registered: ${result.registered}; awaiting first sign-in: ${result.missing}.`);
   } finally { await db.end(); }
