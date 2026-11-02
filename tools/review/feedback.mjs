@@ -15,19 +15,38 @@ const RUN = /<!-- run:(\d+) -->/;
 const FINDING = /<!-- lantern-ir:([0-9a-f]{16}) -->/;
 const findingOf = comment => FINDING.exec(comment.body ?? '')?.[1];
 
-export function escapeText(value, max = 2000) {
-  return String(value ?? '')
-    .replace(/[\u0000-\u0008\u000b-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, max)
+const markup = text => text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/([\\`*_~|[\]()!])/g, '\\$1')
     .replace(/#(?=\d)/g, '#&#8203;')
     .replace(/@/g, '@&#8203;')
     .replace(/:\/\//g, ':&#8203;//')
     .replace(/www\./gi, 'www&#46;');
+
+// The escaped result is at most max characters. Text cut to fit always says so and how much is missing.
+export function escapeText(value, max = 2000) {
+  const clean = String(value ?? '')
+    .replace(/[\u0000-\u0008\u000b-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const whole = markup(clean);
+  if (whole.length <= max) return whole;
+  const cut = n => {
+    let kept = clean.slice(0, n);
+    if (/[\ud800-\udbff]$/.test(kept)) kept = kept.slice(0, -1);
+    const missing = clean.length - kept.length;
+    return `${markup(kept)} [truncated: ${missing} more character${missing === 1 ? '' : 's'} not shown]`;
+  };
+  let low = 0;
+  let high = clean.length;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (cut(mid).length <= max) low = mid; else high = mid - 1;
+  }
+  return cut(low).slice(0, max);
 }
+
+export const FINDING_MESSAGE_MAX = 8000;
 
 export const inlineCandidates = (verdict, rightLines) => verdict.findings
   .filter(f => f.severity !== 'minor' && f.file && f.line && rightLines.get(f.file)?.has(f.line))
@@ -35,7 +54,7 @@ export const inlineCandidates = (verdict, rightLines) => verdict.findings
 
 const where = f => (f.file ? ` ${escapeText(f.file, 300)}${f.line ? `:${f.line}` : ''}` : '');
 const shortSha = sha => sha.slice(0, 7);
-export const findingLine = f => `- **${f.severity}**${where(f)}: ${escapeText(f.message)}`;
+export const findingLine = f => `- **${f.severity}**${where(f)}: ${escapeText(f.message, FINDING_MESSAGE_MAX)}`;
 
 // How many whole findings, from the start, fit in max characters.
 export function fitFindings(findings, max) {
@@ -122,7 +141,7 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, runId,
         commit_id: sha,
         event: 'COMMENT',
         body: `Independent review of \`${shortSha(sha)}\`: ${fresh.length} blocker or major finding${fresh.length === 1 ? '' : 's'} on specific lines. See the summary comment for the full verdict. This is not a formal approval or change request.`,
-        comments: fresh.map(f => ({ path: f.file, line: f.line, side: 'RIGHT', body: `**${f.severity}**: ${escapeText(f.message)}\n\n<!-- lantern-ir:${findingKey(sha, f)} -->` })),
+        comments: fresh.map(f => ({ path: f.file, line: f.line, side: 'RIGHT', body: `**${f.severity}**: ${escapeText(f.message, FINDING_MESSAGE_MAX)}\n\n<!-- lantern-ir:${findingKey(sha, f)} -->` })),
       },
     });
     if (!response.ok) throw new Error(`status ${response.status}`);

@@ -525,3 +525,57 @@ test('long findings: messages longer than the per-message cap and as many findin
   assert.match(body, /### Findings \(55\)/);
   assert.match(body, /are not shown anywhere/);
 });
+
+test('escaped text is bounded and any cut is marked with the exact amount missing, never silent and never mid-character', () => {
+  const plain = escapeText('x'.repeat(5000), 100);
+  assert.ok(plain.length <= 100);
+  const [, missing] = /\[truncated: (\d+) more characters not shown\]$/.exec(plain);
+  assert.equal(plain.indexOf('x') === 0 && plain.replace(/ \[truncated.*$/, '').length + Number(missing), 5000);
+  const expanding = escapeText('<'.repeat(5000), 300);
+  assert.ok(expanding.length <= 300 && /\[truncated: \d+ more characters not shown\]$/.test(expanding));
+  assert.ok(!/&l?t?$/.test(expanding.replace(/ \[truncated.*$/, '')));
+  for (let max = 60; max < 120; max++) {
+    const emoji = escapeText('\u{1F600}'.repeat(500), max);
+    assert.ok(emoji.length <= max);
+    assert.ok(!/[\ud800-\udbff] \[truncated/.test(emoji), `lone surrogate at max ${max}`);
+  }
+  assert.equal(escapeText('x'.repeat(100), 100), 'x'.repeat(100));
+  assert.doesNotMatch(escapeText('short'), /truncated/);
+  assert.match(escapeText('ab', 1), /^.{0,1}$/);
+});
+
+const REMEDIATION = 'Remediation: validate the token before reading the claims and reject the request otherwise.';
+
+test('long finding messages: a 2,021-character message keeps its remediation on the comment, the check and the inline comment; one past the cap is marked on each surface', async () => {
+  const whole = `${'A'.repeat(2021 - REMEDIATION.length - 1)} ${REMEDIATION}`;
+  assert.equal(whole.length, 2021);
+  const w = world({ diff: HUNK_DIFF, model: failing([finding({ message: whole }), finding({ severity: 'minor', file: undefined, line: undefined, message: whole })]) });
+  await run(w);
+  const body = ours(w)[0].body;
+  assert.equal(body.split(REMEDIATION).length - 1, 2);
+  assert.equal(finalCheck(w).output.text.split(REMEDIATION).length - 1, 2);
+  assert.ok(w.reviews[0].comments[0].body.includes(REMEDIATION));
+  for (const surface of [body, finalCheck(w).output.text, w.reviews[0].comments[0].body]) assert.doesNotMatch(surface, /truncated/);
+
+  const huge = `${'B'.repeat(9_000)} ${REMEDIATION}`;
+  const long = world({ diff: HUNK_DIFF, model: failing([finding({ message: huge }), finding({ severity: 'minor', file: undefined, line: undefined, message: huge })]) });
+  await run(long);
+  const marker = /\[truncated: (\d+) more characters not shown\]/;
+  for (const [name, surface] of [['comment', ours(long)[0].body], ['check', finalCheck(long).output.text], ['inline', long.reviews[0].comments[0].body]]) {
+    const missing = Number(marker.exec(surface)?.[1]);
+    assert.ok(missing >= huge.length - 8_000 && missing <= huge.length - 7_000, `${name}: ${missing}`);
+    assert.ok(!surface.includes(REMEDIATION), name);
+  }
+  assert.ok(ours(long)[0].body.length < 65_536);
+  assert.ok(finalCheck(long).output.text.length <= CHECK_TEXT_MAX);
+});
+
+test('long finding messages: a message cut for an annotation says so; the check still carries more of the text', async () => {
+  const message = `${'C'.repeat(1_500)} ${REMEDIATION}`;
+  const w = world({ diff: HUNK_DIFF, model: failing([finding({ message })]) });
+  await run(w);
+  const [annotation] = completionCheck(w).output.annotations;
+  assert.match(annotation.message, /\[truncated: \d+ more characters not shown\]$/);
+  assert.ok(annotation.message.length <= 1_000);
+  assert.ok(finalCheck(w).output.text.includes(REMEDIATION));
+});

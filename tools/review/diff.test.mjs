@@ -84,6 +84,46 @@ test('pure rename of binary or non-UTF-8 content fails closed: the model never s
   assert.ok(userMessage(bom).includes('\uFEFFa'));
 });
 
+const addedFile = (name, line) => `diff --git a/${name} b/${name}\nnew file mode 100644\nindex 0000000..1111111\n--- /dev/null\n+++ b/${name}\n@@ -0,0 +1 @@\n+${line}\n`;
+const withBytes = (text, marker, bytes) => { const at = text.indexOf(marker); return Buffer.concat([Buffer.from(text.slice(0, at)), Buffer.from(bytes), Buffer.from(text.slice(at + marker.length))]); };
+
+test('raw diff bytes: an invalid byte or NUL in the diff itself, even in an added file whose patch decodes cleanly, fails closed before the model is called', async () => {
+  const shown = addedFile('new.ts', 'const a = "\u{FFFD}";');
+  const files = filesFromDiff(shown);
+  for (const [name, bytes, reason] of [['0xff without NUL', [0xff], /not valid UTF-8 text/], ['NUL', [0x00], /binary \(it contains NUL bytes\)/], ['truncated sequence', [0xe2, 0x9c], /not valid UTF-8 text/]]) {
+    const w = world({ diff: withBytes(shown, '\u{FFFD}', bytes), files });
+    assert.equal((await run(w)).conclusion, 'failure', name);
+    assert.equal(modelCalls(w).length, 0, name);
+    assert.match(finalCheck(w).output.title, /Unreviewable changes/, name);
+    assert.match(finalCheck(w).output.summary, reason, name);
+  }
+  const genuine = world({ diff: Buffer.from(shown), files, contents: { 'new.ts@head': 'const a = "\u{FFFD}";\n' } });
+  assert.equal((await run(genuine)).conclusion, 'success');
+  assert.ok(userMessage(genuine).includes('const a = "\u{FFFD}";'));
+});
+
+test('added files: the raw head content is validated even though the diff already shows it, so GitHub-side replacement of invalid bytes cannot be approved', async () => {
+  const shown = addedFile('new.ts', 'const a = "\u{FFFD}";');
+  const key = 'new.ts@head';
+  for (const [name, found, reason] of [
+    ['0xff without NUL', new Uint8Array([0x63, 0xff, 0x0a]), /not valid UTF-8 text/],
+    ['NUL', new Uint8Array([0x63, 0x00, 0x0a]), /binary \(it contains NUL bytes\)/],
+    ['missing', null, /not found at the head commit/],
+  ]) {
+    const w = world({ diff: shown, contents: { [key]: found } });
+    assert.equal((await run(w)).conclusion, 'failure', name);
+    assert.equal(modelCalls(w).length, 0, name);
+    assert.match(finalCheck(w).output.title, /Insufficient context/, name);
+    assert.match(finalCheck(w).output.summary, /new\.ts \(added file, checked as text\)/, name);
+    assert.match(finalCheck(w).output.summary, reason, name);
+  }
+  const valid = world({ diff: shown, contents: { [key]: new TextEncoder().encode('const a = "\u{FFFD}";\n') } });
+  assert.equal((await run(valid)).conclusion, 'success');
+  assert.doesNotMatch(userMessage(valid), /full file at head: new\.ts/);
+  const huge = world({ diff: shown, contents: { [key]: 'x'.repeat(200_000) } });
+  assert.equal((await run(huge)).conclusion, 'success');
+});
+
 test('unreviewable content: pure renames and empty files are an explicit allowed policy and are disclosed to the model', async () => {
   const w = world({ diff: DIFF + RENAME + EMPTY_ADDED });
   const result = await run(w);

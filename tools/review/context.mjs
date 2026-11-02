@@ -14,9 +14,14 @@ async function fetchText(fetch, token, repository, path, ref) {
   const response = await api(fetch, token, 'GET', `/repos/${repository}/contents/${encoded}?ref=${ref}`, { accept: 'application/vnd.github.raw+json' });
   if (response.status === 404) return null;
   if (!response.ok) throw new Error(`could not read ${path} at ${ref.slice(0, 7)} (status ${response.status})`);
-  const bytes = Buffer.from(await response.arrayBuffer());
-  if (bytes.includes(0)) return { omitted: 'the file is binary (it contains NUL bytes)' };
-  try { return DECODER.decode(bytes); } catch { return { omitted: 'the file is not valid UTF-8 text' }; }
+  const decoded = decodeStrict(new Uint8Array(await response.arrayBuffer()));
+  return decoded.problem ? { omitted: `the file is ${decoded.problem}` } : decoded.text;
+}
+
+// Raw bytes only: Response.text() would replace invalid UTF-8 with U+FFFD and hide the corruption. A genuine U+FFFD (EF BF BD) is valid and passes.
+export function decodeStrict(bytes) {
+  if (bytes.includes(0)) return { problem: 'binary (it contains NUL bytes)' };
+  try { return { text: DECODER.decode(bytes) }; } catch { return { problem: 'not valid UTF-8 text' }; }
 }
 
 export function guidancePaths(paths) {
@@ -50,8 +55,13 @@ export async function loadFileContext({ fetch, token, repository, headSha, files
   const context = [];
   let total = 0;
   for (const file of files) {
-    if (file.status === 'added' || file.status === 'removed') continue;
+    if (file.status === 'removed') continue;
     const text = await fetchText(fetch, token, repository, file.filename, headSha);
+    // An added file's content is already in the diff, so it is only validated here, not provided twice.
+    if (file.status === 'added') {
+      if (text === null || text.omitted) context.push({ path: file.filename, added: true, omitted: text === null ? 'the file was not found at the head commit' : text.omitted });
+      continue;
+    }
     if (text === null) { context.push({ path: file.filename, omitted: 'the file was not found at the head commit' }); continue; }
     if (text.omitted) { context.push({ path: file.filename, omitted: text.omitted }); continue; }
     const room = Math.min(CONTEXT_FILE_MAX, CONTEXT_TOTAL_MAX - total);

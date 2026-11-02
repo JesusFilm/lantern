@@ -1,5 +1,5 @@
 import { installationToken } from './app-auth.mjs';
-import { CONTEXT_FILE_MAX, CONTEXT_TOTAL_MAX, loadFileContext, loadGuidance } from './context.mjs';
+import { CONTEXT_FILE_MAX, CONTEXT_TOTAL_MAX, decodeStrict, loadFileContext, loadGuidance } from './context.mjs';
 import { MAX_FILES, assessChange, diffFiles, diffRightLines, protectedPathsIn } from './diff.mjs';
 import { CHECK_TEXT_MAX, createFeedback, escapeText, findingLine, fitFindings } from './feedback.mjs';
 import { api } from './github.mjs';
@@ -126,9 +126,12 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
     const compare = `/repos/${repository}/compare/${baseSha}...${expectedSha}`;
     const diffResponse = await api(fetch, token, 'GET', compare, { accept: 'application/vnd.github.diff' });
     if (!diffResponse.ok) return failure('Diff unavailable', `GitHub could not provide the diff (status ${diffResponse.status}), so the change was not reviewed.`);
-    const diff = await diffResponse.text();
+    const diffBytes = new Uint8Array(await diffResponse.arrayBuffer());
+    const decoded = decodeStrict(diffBytes);
+    if (decoded.problem) return failure('Unreviewable changes', `The diff is ${decoded.problem}, so what the model would read may differ from the real change and the change was not reviewed.`);
+    const diff = decoded.text;
     if (!diff.trim()) return failure('Diff unavailable', 'The diff was empty, so the change was not reviewed.');
-    if (Buffer.byteLength(diff) > MAX_DIFF_BYTES) return failure('Diff too large', `The diff exceeds ${MAX_DIFF_BYTES} bytes and was not reviewed. Split the change.`);
+    if (diffBytes.length > MAX_DIFF_BYTES) return failure('Diff too large', `The diff exceeds ${MAX_DIFF_BYTES} bytes and was not reviewed. Split the change.`);
 
     const listResponse = await api(fetch, token, 'GET', `${compare}?per_page=100`);
     if (!listResponse.ok) return failure('File list unavailable', `GitHub could not list the changed files (status ${listResponse.status}), so completeness could not be checked and the change was not reviewed.`);
@@ -146,7 +149,7 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
     const paths = files.flatMap(file => [file.filename, file.previous_filename].filter(Boolean));
     const guidance = await loadGuidance({ fetch, token, repository, baseSha, paths });
     const context = await loadFileContext({ fetch, token, repository, headSha: expectedSha, files });
-    const insufficient = [...guidance.map(file => ({ ...file, kind: 'repository guidance' })), ...context.map(file => ({ ...file, kind: 'full file at head' }))].filter(file => file.omitted || file.clipped);
+    const insufficient = [...guidance.map(file => ({ ...file, kind: 'repository guidance' })), ...context.map(file => ({ ...file, kind: file.added ? 'added file, checked as text' : 'full file at head' }))].filter(file => file.omitted || file.clipped);
     if (insufficient.length) {
       const listed = insufficient.slice(0, MAX_LISTED_PROBLEMS).map(file => `- ${escapeText(file.path, 200)} (${file.kind}): ${file.omitted ? `not provided, ${file.omitted}` : `longer than the limit and cut off`}`).join('\n');
       const more = insufficient.length > MAX_LISTED_PROBLEMS ? `\n- and ${insufficient.length - MAX_LISTED_PROBLEMS} more` : '';
