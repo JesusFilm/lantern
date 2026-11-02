@@ -36,8 +36,10 @@ function filesFromDiff(diff) {
     const file = {
       filename: renameTo ?? plus ?? header[2],
       status: /^new file mode/m.test(section) ? 'added' : /^deleted file mode/m.test(section) ? 'removed' : /^rename from/m.test(section) ? 'renamed' : 'modified',
-      changes: patch ? patch.split('\n').filter(l => /^[+-]/.test(l)).length : 0,
+      additions: patch ? patch.split('\n').filter(l => /^\+/.test(l)).length : 0,
+      deletions: patch ? patch.split('\n').filter(l => /^-/.test(l)).length : 0,
     };
+    file.changes = file.additions + file.deletions;
     if (patch) file.patch = patch;
     if (file.status === 'renamed') file.previous_filename = /^rename from (.+)$/m.exec(section)[1];
     return file;
@@ -53,11 +55,12 @@ function world({ headSha = SHA, heads, state = 'open', diff = DIFF, files, compa
   const sequence = heads ? [...heads] : null;
   const state_ = { head: headSha };
   const failed = new Set();
-  let nextId = 1000;
+  let nextId = Math.max(1000, ...seed.map(c => c.id + 1));
   const contentFor = (path, ref) => {
     const key = `${path}@${ref === BASE ? 'base' : ref === SHA ? 'head' : ref}`;
     if (key in contents) return contents[key];
-    return path === 'AGENTS.md' && ref === BASE ? 'Trusted base guidance.' : null;
+    if (ref === BASE) return path === 'AGENTS.md' ? 'Trusted base guidance.' : null;
+    return `Complete head content of ${path}.`;
   };
   const fetch = async (url, init = {}) => {
     const u = new URL(url);
@@ -105,6 +108,7 @@ function world({ headSha = SHA, heads, state = 'open', diff = DIFF, files, compa
     if (method === 'GET' && u.pathname === '/repos/o/r/issues/5/comments') return page(comments);
     if (method === 'POST' && u.pathname === '/repos/o/r/issues/5/comments') { const c = { id: nextId++, user: { login: APP_LOGIN }, body: body.body }; comments.push(c); return json(c, 201); }
     const edit = /^\/repos\/o\/r\/issues\/comments\/(\d+)$/.exec(u.pathname);
+    if (method === 'PATCH' && edit && state_.failComments) return json({ message: 'down' }, 500);
     if (method === 'PATCH' && edit) { const c = comments.find(x => x.id === Number(edit[1])); if (!c || c.user.login !== APP_LOGIN) return json({ message: 'not yours' }, 403); c.body = body.body; return json(c); }
     if (method === 'GET' && u.pathname === '/repos/o/r/pulls/5/comments') return page(reviewComments);
     if (method === 'POST' && u.pathname === '/repos/o/r/pulls/5/reviews') { reviews.push(body); for (const c of body.comments ?? []) reviewComments.push({ id: nextId++, user: { login: APP_LOGIN }, ...c }); return json({ id: nextId++ }, 200); }
@@ -303,20 +307,19 @@ test('repeated runs edit the same comment in place and never duplicate inline co
   assert.match(finalCheck(w).output.summary, /inline findings already posted/);
 });
 
-test('a new commit supersedes the old verdict: the comment is rebound to the new SHA and fresh findings are posted', async () => {
+test('a new commit gets its own comment; the older SHA\'s comment is collapsed to a neutral notice and fresh findings are posted', async () => {
   const NEW = 'c'.repeat(40);
   const w = world({ diff: HUNK_DIFF, model: failing([finding()]) });
   await run(w);
-  const before = ours(w)[0].body;
-  assert.ok(before.includes(`head:${SHA}`));
+  assert.ok(ours(w)[0].body.includes(`head:${SHA}`));
   const w2 = world({ diff: HUNK_DIFF, model: failing([finding()]), headSha: NEW, seed: w.comments });
   await runReview({ ...config, expectedSha: NEW, fetch: w2.fetch });
-  assert.equal(ours(w2).length, 1);
-  assert.ok(ours(w2)[0].body.includes(`head:${NEW}`));
-  assert.ok(!ours(w2)[0].body.includes(`head:${SHA}`));
-  const editedRunning = w2.calls.find(c => c.method === 'PATCH' && c.path.startsWith('/repos/o/r/issues/comments/'));
-  assert.match(editedRunning.body.body, /superseded/);
-  assert.match(editedRunning.body.body, /`aaaaaaa`/);
+  assert.equal(ours(w2).length, 2);
+  const forNew = ours(w2).find(c => c.body.includes(`head:${NEW}`));
+  const forOld = ours(w2).find(c => c.body.includes(`head:${SHA}`));
+  assert.match(forNew.body, /Requires changes\*\* for \`ccccccc\`/);
+  assert.match(forOld.body, /\*\*Superseded\*\*: the head is now \`ccccccc\`/);
+  assert.doesNotMatch(forOld.body, /Bug here|Requires changes/);
   assert.equal(w2.reviews[0].commit_id, NEW);
 });
 
@@ -502,7 +505,7 @@ test('P1 unreviewable content: binary, omitted, mode-only and unlisted files fai
     'diff text file missing from the file list': { diff: DIFF + OTHER_DIFF, files: filesFromDiff(DIFF), expect: /Other\.tsx.*not in the file list/ },
     'file list says no patch while the diff has hunks': { diff: DIFF, files: filesFromDiff(DIFF).map(({ patch, ...file }) => file), expect: /Guide\.tsx.*no patch in the file list/ },
     'zero-change file list entry without a patch while the diff has hunks': { diff: DIFF, files: filesFromDiff(DIFF).map(({ patch, ...file }) => ({ ...file, changes: 0 })), expect: /Guide\.tsx.*no patch in the file list/ },
-    'file list claims a patch for a mode-only change': { diff: MODE_ONLY, files: [{ filename: 'run.sh', status: 'modified', changes: 0, patch: '@@ -0,0 +0,0 @@' }], expect: /run\.sh.*no patch/ },
+    'file list claims a patch for a mode-only change': { diff: MODE_ONLY, files: [{ filename: 'run.sh', status: 'modified', changes: 0, patch: '@@ -0,0 +0,0 @@' }], expect: /run\.sh.*(no patch|mode change)/ },
     'binary marker only in the diff text': { diff: DIFF + BINARY, files: [...filesFromDiff(DIFF), { filename: 'logo.png', status: 'added', changes: 1, patch: '@@ -0,0 +1 @@\n+x' }], expect: /logo\.png.*binary file/ },
   };
   for (const [name, { expect, ...options }] of Object.entries(cases)) {
@@ -512,7 +515,7 @@ test('P1 unreviewable content: binary, omitted, mode-only and unlisted files fai
     assert.equal(modelCalls(w).length, 0, name);
     assert.match(finalCheck(w).output.title, /Unreviewable changes/, name);
     assert.match(finalCheck(w).output.summary, expect, name);
-    assert.match(finalCheck(w).output.summary, /Guide\.tsx|reviewable/i, name);
+    assert.match(finalCheck(w).output.summary, /Guide\.tsx|assessed/i, name);
   }
 });
 
@@ -600,19 +603,7 @@ test('P1 context: a missing required guidance file or any unreadable context fai
   assert.equal((await run(optionalMissing)).conclusion, 'success');
 });
 
-test('P1 context: sizes are bounded, omissions are disclosed to the model and in the check, and the prompt demands a finding when unjudgeable', async () => {
-  const section = name => `diff --git a/${name} b/${name}\n--- a/${name}\n+++ b/${name}\n@@ -1 +1 @@\n-a\n+b\n`;
-  const names = ['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts'];
-  const contents = { 'AGENTS.md@base': 'G'.repeat(50_000), 'GLOSSARY.md@base': 'H'.repeat(50_000), ...Object.fromEntries(names.map(n => [`${n}@head`, 'x'.repeat(40_000)])) };
-  const w = world({ diff: names.map(section).join(''), contents });
-  await run(w);
-  assert.match(systemPrompt(w), /\[truncated at 30000 characters\]/);
-  assert.ok(systemPrompt(w).length < SYSTEM_PROMPT.length + 70_000);
-  assert.ok(!systemPrompt(w).includes('H'.repeat(30_001)));
-  assert.match(userMessage(w), /\[truncated at/);
-  assert.match(userMessage(w), /\[not provided: the context budget was used up\]/);
-  assert.ok(userMessage(w).length < 100_000 + 40_000);
-  assert.match(finalCheck(w).output.summary, /Full file context was not available for 1 file: e\.ts/);
+test('P1 context: the prompt demands a finding when a change cannot be judged from what it was given', () => {
   assert.match(SYSTEM_PROMPT, /cannot be judged|cannot be assessed/);
 });
 
@@ -714,18 +705,6 @@ test('P2 stale writes: the publish write (first edit after the create) is guarde
   assert.match(finalCheck(w).output.summary, /marked superseded because the head moved while publishing/);
 });
 
-test('P2 stale writes: a repair never touches a comment that a newer run already rebound to its own SHA', async () => {
-  const newerBody = `${COMMENT_MARKER}\n<!-- head:${SHA_B} -->\n## Independent review\n\n**Passed** for the newer head`;
-  const w = world({ diff: HUNK_DIFF, seed: [olderComment('c'.repeat(40))], traps: [{
-    on: 'PATCH /repos/o/r/issues/comments/',
-    before: api => { api.state.head = SHA_B; },
-    after: api => { api.comments[0].body = newerBody; },
-  }] });
-  await run(w);
-  assert.equal(w.comments[0].body, newerBody);
-  assert.equal(github(w, /^PATCH \/repos\/o\/r\/issues\/comments/).length, 1);
-});
-
 test('P2 stale writes: inline comments are not posted if the head moved after the summary was written', async () => {
   const heads = [SHA, SHA, SHA, SHA, SHA, SHA_B];
   const w = world({ diff: HUNK_DIFF, model: failing([finding()]), heads });
@@ -734,6 +713,257 @@ test('P2 stale writes: inline comments are not posted if the head moved after th
   assert.equal(result.conclusion, 'failure');
   assert.match(finalCheck(w).output.summary, /inline comments not posted: the pull request moved/);
   assert.match(ours(w)[0].body, /Requires changes/);
+});
+
+// ---- Codex #52 regression tests ----
+const section = (name, ...hunks) => `diff --git a/${name} b/${name}\n--- a/${name}\n+++ b/${name}\n${hunks.join('')}`;
+const HUNK_1 = '@@ -1,3 +1,3 @@\n a\n-b\n+B\n d\n';
+const HUNK_2 = '@@ -10,3 +10,3 @@\n x\n-y\n+Y\n z\n';
+const TWO_HUNKS = section('client/Guide.tsx', HUNK_1, HUNK_2);
+const ONE_HUNK = section('client/Guide.tsx', HUNK_1);
+
+test('P1 patch completeness: a diff cut between two complete hunks fails closed, even though what remains is well formed', async () => {
+  const full = filesFromDiff(TWO_HUNKS);
+  const cases = {
+    'model diff omits the second hunk': { diff: ONE_HUNK, files: full },
+    'file list patch is also cut but GitHub counts show the full change': { diff: ONE_HUNK, files: filesFromDiff(ONE_HUNK).map(f => ({ ...f, additions: 2, deletions: 2, changes: 4 })) },
+    'same counts but different text': { diff: TWO_HUNKS.replace('+Y', '+Z'), files: full },
+    'extra hunk not in the file list patch': { diff: TWO_HUNKS, files: filesFromDiff(ONE_HUNK).map(f => ({ ...f, additions: 2, deletions: 2, changes: 4 })) },
+    'counts missing from the file list': { diff: TWO_HUNKS, files: full.map(({ additions, deletions, ...f }) => f) },
+    'a change without a patch claims added lines': { diff: RENAME, files: [{ filename: 'new-name.ts', previous_filename: 'old-name.ts', status: 'renamed', additions: 3, deletions: 0, changes: 3 }] },
+  };
+  for (const [name, options] of Object.entries(cases)) {
+    const w = world(options);
+    const result = await run(w);
+    assert.equal(result.conclusion, 'failure', name);
+    assert.equal(modelCalls(w).length, 0, name);
+    assert.match(finalCheck(w).output.title, /Unreviewable changes/, name);
+    assert.match(finalCheck(w).output.summary, /does not match the patch|no patch in the file list/, name);
+  }
+  const complete = world({ diff: TWO_HUNKS });
+  assert.equal((await run(complete)).conclusion, 'success');
+  assert.match(userMessage(complete), /@@ -10,3 \+10,3 @@/);
+});
+
+test('P1 patch completeness: each listed count is checked on its own, and non-numeric counts are rejected', async () => {
+  const [good] = filesFromDiff(TWO_HUNKS);
+  const bad = {
+    'additions only': { ...good, additions: good.additions + 1, changes: good.changes + 1 },
+    'deletions only': { ...good, deletions: good.deletions + 1, changes: good.changes + 1 },
+    'additions up and deletions down, same total': { ...good, additions: good.additions + 1, deletions: good.deletions - 1 },
+    'deletions up and additions down, same total': { ...good, additions: good.additions - 1, deletions: good.deletions + 1 },
+    'changes only': { ...good, changes: good.changes + 1 },
+    'additions as text': { ...good, additions: String(good.additions) },
+    'deletions missing': { ...good, deletions: undefined },
+  };
+  for (const [name, file] of Object.entries(bad)) assert.equal(assessChange(TWO_HUNKS, [file]).problems.length, 1, name);
+  assert.deepEqual(assessChange(TWO_HUNKS, [good]).problems, []);
+  const noPatch = { filename: 'new-name.ts', previous_filename: 'old-name.ts', status: 'renamed', additions: 0, deletions: 0, changes: 0 };
+  assert.deepEqual(assessChange(RENAME, [noPatch]).problems, []);
+  for (const [name, extra] of Object.entries({ additions: { additions: 2 }, deletions: { deletions: 2 }, changes: { changes: 2 } })) {
+    assert.equal(assessChange(RENAME, [{ ...noPatch, ...extra }]).problems.length, 1, name);
+  }
+});
+
+test('P1 patch completeness: no-newline markers and renamed files with edits still match their listed patch', async () => {
+  const noNewline = section('a.txt', '@@ -1 +1 @@\n-a\n\\ No newline at end of file\n+b\n\\ No newline at end of file\n');
+  assert.deepEqual(assessChange(noNewline, filesFromDiff(noNewline)).problems, []);
+  const edited = 'diff --git a/a.ts b/b.ts\nsimilarity index 80%\nrename from a.ts\nrename to b.ts\n--- a/a.ts\n+++ b/b.ts\n' + HUNK_1;
+  assert.deepEqual(assessChange(edited, filesFromDiff(edited)).problems, []);
+  assert.equal(assessChange(edited.replace('+B', '+C'), filesFromDiff(edited)).problems.length, 1);
+});
+
+test('P2 mode changes: a 100% rename that also changes the file mode is not a pure rename and is not approved', async () => {
+  const renameMode = 'diff --git a/run.sh b/bin/run.sh\nold mode 100644\nnew mode 100755\nsimilarity index 100%\nrename from run.sh\nrename to bin/run.sh\n';
+  assert.deepEqual(assessChange(RENAME, filesFromDiff(RENAME)).renames, [{ from: 'old-name.ts', to: 'new-name.ts' }]);
+  const assessed = assessChange(renameMode, filesFromDiff(renameMode));
+  assert.deepEqual(assessed.renames, []);
+  assert.match(assessed.problems[0].reason, /file mode change \(100644 -> 100755\)/);
+  const withHunks = 'diff --git a/run.sh b/run.sh\nold mode 100644\nnew mode 100755\nindex 1..2\n--- a/run.sh\n+++ b/run.sh\n' + HUNK_1;
+  const cases = { 'rename with mode change': renameMode, 'edit with mode change': withHunks, 'mode change next to a reviewable file': DIFF + renameMode };
+  for (const [name, diff] of Object.entries(cases)) {
+    const w = world({ diff });
+    assert.equal((await run(w)).conclusion, 'failure', name);
+    assert.equal(modelCalls(w).length, 0, name);
+    assert.match(finalCheck(w).output.summary, /file mode change \(100644 -> 100755\) is not assessed/, name);
+  }
+  const created = 'diff --git a/tool.sh b/tool.sh\nnew file mode 100755\nindex 0000000..1111111\n--- /dev/null\n+++ b/tool.sh\n@@ -0,0 +1 @@\n+echo\n';
+  const w = world({ diff: created, files: filesFromDiff(created) });
+  assert.equal((await run(w)).conclusion, 'success');
+  assert.match(userMessage(w), /new file mode 100755/);
+});
+
+const AUTH_DIFF = section('server/auth.ts', '@@ -1 +1 @@\n-a\n+b\n');
+const authContents = text => ({ 'server/auth.ts@head': text });
+
+test('P1 context sufficiency: a modified file clipped before its authorization logic is never approved, whatever the model says', async () => {
+  const hidden = 'x'.repeat(60_000) + '\nexport const allow = user => user.isAdmin || true; // authorization lives here\n';
+  const w = world({ diff: AUTH_DIFF, contents: authContents(hidden), model: verdict() });
+  const result = await run(w);
+  assert.equal(result.conclusion, 'failure');
+  assert.equal(modelCalls(w).length, 0);
+  assert.match(finalCheck(w).output.title, /Insufficient context/);
+  assert.match(finalCheck(w).output.summary, /server\/auth\.ts \(full file at head\): longer than the limit and cut off/);
+  assert.match(ours(w)[0].body, /Insufficient context|complete head version/);
+  assert.doesNotMatch(ours(w)[0].body, /Passed/);
+});
+
+test('P1 context sufficiency: a file exactly at the limit is provided whole; the model sees every character', async () => {
+  const exact = 'y'.repeat(59_990) + '\nauthorize()';
+  const w = world({ diff: AUTH_DIFF, contents: authContents(exact.slice(0, 60_000)) });
+  assert.equal((await run(w)).conclusion, 'success');
+  assert.ok(userMessage(w).includes(exact.slice(0, 60_000)));
+  assert.doesNotMatch(userMessage(w), /\[truncated at/);
+  assert.match(finalCheck(w).output.summary, /Full head content was provided for 1 modified file/);
+});
+
+test('P1 context sufficiency: when the total context budget runs out the later files are not silently dropped', async () => {
+  const names = ['a.ts', 'b.ts', 'c.ts', 'd.ts'];
+  const contents = Object.fromEntries(names.map(n => [n + '@head', 'z'.repeat(50_000)]));
+  const diffOf = list => list.map(n => section(n, '@@ -1 +1 @@\n-a\n+b\n')).join('');
+  const four = world({ diff: diffOf(names), contents });
+  assert.equal((await run(four)).conclusion, 'failure');
+  assert.equal(modelCalls(four).length, 0);
+  assert.match(finalCheck(four).output.summary, /d\.ts \(full file at head\): not provided, the context budget was used up/);
+  const three = world({ diff: diffOf(names.slice(0, 3)), contents });
+  assert.equal((await run(three)).conclusion, 'success');
+  const clipped = world({ diff: diffOf(names.slice(0, 3)), contents: { ...contents, 'c.ts@head': 'z'.repeat(59_000) } });
+  assert.equal((await run(clipped)).conclusion, 'failure');
+  assert.match(finalCheck(clipped).output.summary, /c\.ts \(full file at head\): longer than the limit and cut off/);
+});
+
+test('P1 context sufficiency: clipped or budgeted-out repository guidance fails closed instead of reaching the model partially', async () => {
+  const cases = {
+    'required guidance too long': { 'AGENTS.md@base': 'G'.repeat(30_001) },
+    'optional guidance too long': { 'GLOSSARY.md@base': 'H'.repeat(30_001) },
+    'guidance budget used up': { 'AGENTS.md@base': 'G'.repeat(30_000), 'CONTEXT.md@base': 'C'.repeat(30_000), 'GLOSSARY.md@base': 'H'.repeat(100) },
+  };
+  for (const [name, contents] of Object.entries(cases)) {
+    const w = world({ diff: HUNK_DIFF, contents });
+    assert.equal((await run(w)).conclusion, 'failure', name);
+    assert.equal(modelCalls(w).length, 0, name);
+    assert.match(finalCheck(w).output.title, /Insufficient context/, name);
+    assert.match(finalCheck(w).output.summary, /\(repository guidance\)/, name);
+  }
+  const whole = world({ diff: HUNK_DIFF, contents: { 'AGENTS.md@base': 'G'.repeat(30_000), 'CONTEXT.md@base': 'C'.repeat(30_000) } });
+  assert.equal((await run(whole)).conclusion, 'success');
+});
+
+test('P1 context sufficiency: the failure lists the files, escaped, and the check says what was not provided', async () => {
+  const name = 'evil [x](http://a.example) @team.ts';
+  const w = world({ diff: section(name, '@@ -1 +1 @@\n-a\n+b\n'), contents: { [name + '@head']: 'q'.repeat(60_001) } });
+  await run(w);
+  const summary = finalCheck(w).output.summary;
+  assert.ok(!summary.includes('[x](http'), summary);
+  assert.ok(!summary.includes(' @team'), summary);
+  assert.match(summary, /Nothing was approved/);
+});
+
+const verifyReads = 9; // matching GETs of /pulls/5 in a passing run (the trap prefix also counts the inline-comment listing): start, announce (2), pre-publish verify, publish (2), inline guard and listing, final verify
+const summaryOf = w => ours(w).map(c => c.body).join('\n---\n');
+
+test('P2 final decision: a Passed summary is never published unless the head was verified first, and a failed pre-publish check never says Passed', async () => {
+  const moved = world({ diff: HUNK_DIFF, heads: [SHA, SHA, SHA, SHA_B] });
+  const result = await run(moved);
+  assert.equal(result.conclusion, 'failure');
+  assert.doesNotMatch(summaryOf(moved), /Passed/);
+  assert.equal(writes(moved).some(c => /Passed/.test(JSON.stringify(c.body))), false);
+
+  const unreadable = world({ diff: HUNK_DIFF, traps: [{ on: 'GET /repos/o/r/pulls/5', nth: 4, before: api => { api.state.pullFails = true; }, after: api => { api.state.pullFails = false; } }] });
+  assert.equal((await run(unreadable)).conclusion, 'failure');
+  assert.doesNotMatch(summaryOf(unreadable), /Passed/);
+  assert.match(summaryOf(unreadable), /could not be confirmed/);
+  assert.equal(writes(unreadable).some(c => /Passed/.test(JSON.stringify(c.body))), false);
+});
+
+test('P2 final decision: if the final head verification fails after publishing, the summary is reconciled and never stays Passed', async () => {
+  const unreadable = world({ diff: HUNK_DIFF, traps: [{ on: 'GET /repos/o/r/pulls/5', nth: verifyReads, before: api => { api.state.pullFails = true; }, after: api => { api.state.pullFails = false; } }] });
+  const result = await run(unreadable);
+  assert.equal(result.conclusion, 'failure');
+  assert.equal(finalCheck(unreadable).conclusion, 'failure');
+  assert.equal(ours(unreadable).length, 1);
+  assert.doesNotMatch(summaryOf(unreadable), /Passed/);
+  assert.match(summaryOf(unreadable), /could not be confirmed/);
+  assert.match(finalCheck(unreadable).output.summary, /summary comment reconciled with the final decision/);
+
+  const movedAway = world({ diff: HUNK_DIFF, heads: [SHA, SHA, SHA, SHA, SHA, SHA, SHA, SHA_B] });
+  assert.equal((await run(movedAway)).conclusion, 'failure');
+  assert.match(summaryOf(movedAway), /\*\*Superseded\*\*: the head is now `bbbbbbb`/);
+  assert.doesNotMatch(summaryOf(movedAway), /Passed/);
+});
+
+test('P2 final decision: if the summary cannot be reconciled the check says so honestly and stays the verdict', async () => {
+  const w = world({ diff: HUNK_DIFF, traps: [{ on: 'GET /repos/o/r/pulls/5', nth: verifyReads, before: api => { api.state.pullFails = true; api.state.failComments = true; } }] });
+  const result = await run(w);
+  assert.equal(result.conclusion, 'failure');
+  assert.equal(finalCheck(w).conclusion, 'failure');
+  assert.match(finalCheck(w).output.summary, /could not be reconciled .*may still say Passed, but this check is the verdict/);
+  assert.ok(!JSON.stringify(finalCheck(w)).includes(TOKEN));
+});
+
+test('P2 final decision: a passing run with a stable head still publishes Passed and is not reconciled', async () => {
+  const w = world({ diff: HUNK_DIFF });
+  assert.equal((await run(w)).conclusion, 'success');
+  assert.match(summaryOf(w), /\*\*Passed\*\*/);
+  assert.doesNotMatch(finalCheck(w).output.summary, /reconciled/);
+});
+
+const forB = text => ({ id: 5000, user: { login: APP_LOGIN }, body: `${COMMENT_MARKER}\n<!-- head:${SHA_B} -->\n## Independent review\n\n**${text}** for the newer head` });
+
+test('P2 comment race: an older run that read the comments before a newer run wrote its verdict cannot overwrite it', async () => {
+  const newer = forB('Passed');
+  const before = newer.body;
+  const w = world({ diff: HUNK_DIFF, model: failing([finding()]), traps: [{
+    on: 'PATCH /repos/o/r/issues/comments/',
+    nth: 1,
+    before: api => { api.state.head = SHA_B; api.comments.push(newer); },
+  }] });
+  await run(w);
+  assert.equal(newer.body, before);
+  assert.equal(w.calls.filter(c => c.method === 'PATCH' && c.path.endsWith('/5000')).length, 0);
+  const mine = ours(w).find(c => c.body.includes('head:' + SHA));
+  assert.match(mine.body, /\*\*Superseded\*\*/);
+  assert.doesNotMatch(mine.body, /Bug here/);
+});
+
+test('P2 comment race: the repair edits only the comment this run owns, by id, so a newer run racing the repair is never overwritten', async () => {
+  const newer = forB('Passed');
+  const before = newer.body;
+  const w = world({ diff: HUNK_DIFF, traps: [
+    { on: 'GET /repos/o/r/issues/5/comments', nth: 2, before: api => { api.state.head = SHA_B; } },
+    { on: 'PATCH /repos/o/r/issues/comments/', nth: 1, after: api => { api.comments.push(newer); } },
+  ] });
+  await run(w);
+  assert.equal(newer.body, before);
+  assert.ok(w.calls.filter(c => c.method === 'PATCH' && /issues\/comments\//.test(c.path)).every(c => !c.path.endsWith('/5000')));
+});
+
+test('P2 comment race: a run collapses older SHAs\' comments only when the head it re-read is its own; superseded and foreign comments are left alone', async () => {
+  const old1 = olderComment('c'.repeat(40), 'Passed');
+  const old2 = { ...olderComment('e'.repeat(40), 'Superseded'), id: 8 };
+  const foreign = { id: 9, user: { login: 'someone' }, body: olderComment('f'.repeat(40), 'Passed').body };
+  const w = world({ diff: HUNK_DIFF, seed: [old1, old2, foreign] });
+  const superseded = old2.body;
+  const foreignBody = foreign.body;
+  await run(w);
+  assert.match(old1.body, /\*\*Superseded\*\*: the head is now `aaaaaaa`/);
+  assert.equal(old2.body, superseded);
+  assert.equal(foreign.body, foreignBody);
+  assert.ok(w.calls.filter(c => c.method === 'PATCH').every(c => !/comments\/(8|9)$/.test(c.path)));
+
+  const moved = world({ diff: HUNK_DIFF, seed: [olderComment('c'.repeat(40), 'Passed')], traps: [{ on: 'POST /repos/o/r/issues/5/comments', after: api => { api.state.head = SHA_B; } }] });
+  const keep = moved.comments[0].body;
+  await run(moved);
+  assert.equal(moved.comments[0].body, keep);
+});
+
+test('P2 comment race: duplicate comments for the same SHA are kept consistent', async () => {
+  const dup = olderComment(SHA, 'Reviewing');
+  const dup2 = { ...olderComment(SHA, 'Reviewing'), id: 8 };
+  const w = world({ diff: HUNK_DIFF, seed: [dup, dup2] });
+  await run(w);
+  assert.match(dup.body, /Passed/);
+  assert.equal(dup2.body, dup.body);
 });
 
 const workflow = readFileSync(new URL('../../.github/workflows/independent-review.yml', import.meta.url), 'utf8');

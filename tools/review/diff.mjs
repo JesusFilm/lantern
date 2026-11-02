@@ -7,6 +7,9 @@ function parseSection(text) {
   const meta = [];
   const rightLines = new Set();
   let hasHunks = false;
+  const hunkLines = [];
+  let additions = 0;
+  let deletions = 0;
   let complete = true;
   let binary = false;
   for (let i = 1; i < lines.length; i++) {
@@ -17,25 +20,31 @@ function parseSection(text) {
       continue;
     }
     hasHunks = true;
+    hunkLines.push(lines[i]);
     let oldLeft = hunk[1] === undefined ? 1 : Number(hunk[1]);
     let newLeft = hunk[3] === undefined ? 1 : Number(hunk[3]);
     let newLine = Number(hunk[2]);
     while (oldLeft > 0 || newLeft > 0) {
       i++;
       if (i >= lines.length) { complete = false; break; }
-      if (lines[i].startsWith('\\')) continue;
+      if (lines[i].startsWith('\\')) { hunkLines.push(lines[i]); continue; }
       const kind = lines[i][0] ?? ' ';
       if (kind === ' ') { oldLeft--; newLeft--; rightLines.add(newLine++); }
-      else if (kind === '-') oldLeft--;
-      else if (kind === '+') { newLeft--; rightLines.add(newLine++); }
+      else if (kind === '-') { oldLeft--; deletions++; }
+      else if (kind === '+') { newLeft--; additions++; rightLines.add(newLine++); }
       else { complete = false; i--; break; }
+      hunkLines.push(lines[i]);
       if (oldLeft < 0 || newLeft < 0) { complete = false; break; }
     }
+    while (complete && lines[i + 1]?.startsWith('\\')) hunkLines.push(lines[++i]);
   }
   const info = meta.join('\n');
   const path = /^\+\+\+ b\/(.+)$/m.exec(info)?.[1] ?? /^rename to (.+)$/m.exec(info)?.[1] ?? header?.[2];
   const oldPath = /^--- a\/(.+)$/m.exec(info)?.[1] ?? /^rename from (.+)$/m.exec(info)?.[1] ?? header?.[1];
-  const pureRename = !hasHunks && !binary && /^similarity index 100%$/m.test(info) && /^rename from /m.test(info);
+  const modeChange = /^old mode (\d+)$/m.exec(info) && /^new mode (\d+)$/m.exec(info)
+    ? `${/^old mode (\d+)$/m.exec(info)[1]} -> ${/^new mode (\d+)$/m.exec(info)[1]}`
+    : /^(old|new) mode /m.test(info) ? 'unreadable mode change' : null;
+  const pureRename = !hasHunks && !binary && !modeChange && /^similarity index 100%$/m.test(info) && /^rename from /m.test(info);
   const emptyFile = !hasHunks && !binary
     && ((/^new file mode/m.test(info) && new RegExp(`^index 0+\\.\\.${EMPTY_BLOB}`, 'm').test(info))
       || (/^deleted file mode/m.test(info) && new RegExp(`^index ${EMPTY_BLOB}[0-9a-f]*\\.\\.0+`, 'm').test(info)));
@@ -44,8 +53,9 @@ function parseSection(text) {
   if (!path) reason = 'unreadable file header';
   else if (binary) reason = 'binary file';
   else if (!complete) reason = 'incomplete patch';
+  else if (modeChange) reason = `file mode change (${modeChange}) is not assessed`;
   else if (!hasHunks && !pureRename && !emptyFile) reason = 'no patch (mode-only change or omitted content)';
-  return { path, oldPath, rightLines, hasHunks, deleted, pureRename, emptyFile, reviewable: reason === null, reason };
+  return { path, oldPath, rightLines, hasHunks, deleted, pureRename, emptyFile, patch: hunkLines.join('\n'), additions, deletions, reviewable: reason === null, reason };
 }
 
 export function parseDiff(diff) {
@@ -68,6 +78,15 @@ export function protectedPathsIn(diff) {
   return [...hit];
 }
 
+const normalizePatch = text => String(text).replace(/\r?\n$/, '');
+
+// Compare the hunks sent to the model with GitHub's separately returned patch and counts, so a diff cut between complete hunks cannot pass.
+function matchesListedPatch(section, file) {
+  return file.additions === section.additions && file.deletions === section.deletions
+    && file.changes === section.additions + section.deletions
+    && normalizePatch(file.patch) === normalizePatch(section.patch);
+}
+
 export function assessChange(diff, files) {
   const sections = parseDiff(diff);
   const listed = new Map(files.map(file => [file.filename, file]));
@@ -80,8 +99,9 @@ export function assessChange(diff, files) {
     const file = listed.get(section.path);
     if (!file) problems.push({ path: section.path, reason: 'in the diff but not in the file list for this comparison' });
     else if (!section.reviewable) problems.push({ path: section.path, reason: section.reason });
+    else if (file.patch && !matchesListedPatch(section, file)) problems.push({ path: section.path, reason: 'the diff does not match the patch and change counts GitHub lists for this file (truncated or altered)' });
     else if (!file.patch && !(section.pureRename || section.emptyFile)) problems.push({ path: section.path, reason: 'no patch in the file list' });
-    else if (!file.patch && file.changes !== 0) problems.push({ path: section.path, reason: 'no patch in the file list' });
+    else if (!file.patch && (file.changes !== 0 || file.additions !== 0 || file.deletions !== 0)) problems.push({ path: section.path, reason: 'no patch in the file list' });
     else if (section.pureRename) renames.push({ from: section.oldPath, to: section.path });
   }
   for (const file of files) {

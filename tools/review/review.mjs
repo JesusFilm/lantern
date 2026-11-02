@@ -1,5 +1,5 @@
 import { installationToken } from './app-auth.mjs';
-import { loadFileContext, loadGuidance } from './context.mjs';
+import { CONTEXT_FILE_MAX, CONTEXT_TOTAL_MAX, loadFileContext, loadGuidance } from './context.mjs';
 import { MAX_FILES, assessChange, diffFiles, diffRightLines, protectedPathsIn } from './diff.mjs';
 import { createFeedback, escapeText } from './feedback.mjs';
 import { api } from './github.mjs';
@@ -57,9 +57,12 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
   } catch (error) {
     result = failure('Review could not complete', `The review failed closed: ${escapeText(error.message, 300)}`);
   }
-  const note = await feedback.publish({ conclusion: result.conclusion, verdict: result.verdict, failureSummary: result.output.summary, protectedFiles: result.protectedFiles, diff: result.diff });
+  const moved = () => failure('Head moved or could not be verified', `The pull request head could not be confirmed as \`${expectedSha.slice(0, 7)}\` after the review, so the verdict was discarded and the check fails closed. A new run reviews the new head.`);
+  if (result.conclusion === 'success' && !(await headStillCurrent())) result = moved();
+  let note = await feedback.publish({ conclusion: result.conclusion, verdict: result.verdict, failureSummary: result.output.summary, protectedFiles: result.protectedFiles, diff: result.diff });
   if (result.conclusion === 'success' && !(await headStillCurrent())) {
-    result = failure('Head moved or could not be verified', `The pull request head could not be confirmed as \`${expectedSha.slice(0, 7)}\` after the review, so the verdict was discarded and the check fails closed. A new run reviews the new head.`);
+    result = moved();
+    note += ` ${await feedback.reconcile({ failureSummary: result.output.summary })}`;
   }
   const summary = `${result.output.summary}\n\nPull request feedback: ${note}`.slice(0, 60_000);
   const { annotations = [], ...rest } = result.output;
@@ -101,12 +104,18 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
     if (problems.length) {
       const listed = problems.slice(0, MAX_LISTED_PROBLEMS).map(p => `- ${escapeText(p.path, 200)}: ${p.reason}`).join('\n');
       const more = problems.length > MAX_LISTED_PROBLEMS ? `\n- and ${problems.length - MAX_LISTED_PROBLEMS} more` : '';
-      return failure('Unreviewable changes', `Some changes have no reviewable patch (binary files, omitted content or mode-only changes), so the change was not approved. Only pure renames without content changes are allowed.\n\n${listed}${more}`);
+      return failure('Unreviewable changes', `Some changes could not be fully assessed (binary files, omitted or mismatched patches, or file mode changes), so the change was not approved. Only pure renames and empty files are allowed without a patch.\n\n${listed}${more}`);
     }
 
     const paths = files.flatMap(file => [file.filename, file.previous_filename].filter(Boolean));
     const guidance = await loadGuidance({ fetch, token, repository, baseSha, paths });
     const context = await loadFileContext({ fetch, token, repository, headSha: expectedSha, files });
+    const insufficient = [...guidance.map(file => ({ ...file, kind: 'repository guidance' })), ...context.map(file => ({ ...file, kind: 'full file at head' }))].filter(file => file.omitted || file.clipped);
+    if (insufficient.length) {
+      const listed = insufficient.slice(0, MAX_LISTED_PROBLEMS).map(file => `- ${escapeText(file.path, 200)} (${file.kind}): ${file.omitted ? `not provided, ${file.omitted}` : `longer than the limit and cut off`}`).join('\n');
+      const more = insufficient.length > MAX_LISTED_PROBLEMS ? `\n- and ${insufficient.length - MAX_LISTED_PROBLEMS} more` : '';
+      return failure('Insufficient context', `The review needs the complete repository guidance and the complete head version of every modified file (up to ${CONTEXT_FILE_MAX} characters per file and ${CONTEXT_TOTAL_MAX} in total), because a change cannot be judged against a file it cannot fully see. Nothing was approved. Split the change or reduce the files it touches.\n\n${listed}${more}`);
+    }
     const text = await callModel({
       fetch, baseUrl: gatewayBaseUrl, apiKey: gatewayApiKey, model,
       system: buildSystem({ guidance, baseSha, nonce }),
@@ -116,8 +125,7 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
     const { conclusion } = decide(verdict);
     const protectedFiles = protectedPathsIn(diff);
     const notes = [`Reviewed ${baseSha.slice(0, 7)}...${expectedSha.slice(0, 7)} with ${guidance.length} trusted guidance file${guidance.length === 1 ? '' : 's'} from the base commit.`];
-    const omitted = context.filter(file => file.omitted);
-    if (omitted.length) notes.push(`Full file context was not available for ${omitted.length} file${omitted.length === 1 ? '' : 's'}: ${omitted.slice(0, 10).map(file => escapeText(file.path, 120)).join(', ')}.`);
+    notes.push(`Full head content was provided for ${context.length} modified file${context.length === 1 ? '' : 's'}; files the change depends on but does not modify were not provided.`);
     return { conclusion, verdict, diff, protectedFiles, output: render({ verdict, conclusion, rightLines: diffRightLines(diff), protectedFiles, notes }) };
   }
 }

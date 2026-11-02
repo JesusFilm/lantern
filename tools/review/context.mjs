@@ -3,8 +3,8 @@ import { isProtectedPath } from './diff.mjs';
 
 const GUIDANCE_FILE_MAX = 30_000;
 const GUIDANCE_TOTAL_MAX = 60_000;
-const CONTEXT_FILE_MAX = 30_000;
-const CONTEXT_TOTAL_MAX = 100_000;
+export const CONTEXT_FILE_MAX = 60_000;
+export const CONTEXT_TOTAL_MAX = 150_000;
 
 const clip = (text, max) => (text.length > max ? `${text.slice(0, max)}\n[truncated at ${max} characters]` : text);
 
@@ -34,12 +34,9 @@ export async function loadGuidance({ fetch, token, repository, baseSha, paths })
       continue;
     }
     const room = Math.min(GUIDANCE_FILE_MAX, GUIDANCE_TOTAL_MAX - total);
-    if (room <= 0) {
-      if (required) throw new Error(`required repository guidance ${path} does not fit the guidance budget`);
-      continue;
-    }
+    if (room <= 0) { guidance.push({ path, omitted: 'the guidance budget was used up' }); continue; }
     const clipped = clip(text, room);
-    guidance.push({ path, text: clipped });
+    guidance.push({ path, text: clipped, ...(text.length > room ? { clipped: true } : {}) });
     total += clipped.length;
   }
   return guidance;
@@ -55,7 +52,7 @@ export async function loadFileContext({ fetch, token, repository, headSha, files
     const room = Math.min(CONTEXT_FILE_MAX, CONTEXT_TOTAL_MAX - total);
     if (room <= 0) { context.push({ path: file.filename, omitted: 'the context budget was used up' }); continue; }
     const clipped = clip(text, room);
-    context.push({ path: file.filename, text: clipped });
+    context.push({ path: file.filename, text: clipped, ...(text.length > room ? { clipped: true } : {}) });
     total += clipped.length;
   }
   return context;
