@@ -11,7 +11,7 @@ const HEAD = /<!-- head:([0-9a-f]{40}) -->/;
 
 export function escapeText(value, max = 2000) {
   return String(value ?? '')
-    .replace(/[\u0000-\u0008\u000b-\u001f\u007f‪-‮⁦-⁩]/g, '')
+    .replace(/[\u0000-\u0008\u000b-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, max)
@@ -31,10 +31,10 @@ const where = f => (f.file ? ` ${escapeText(f.file, 300)}${f.line ? `:${f.line}`
 const shortSha = sha => sha.slice(0, 7);
 const findingKey = (sha, f) => createHash('sha256').update([sha, f.file, f.line, f.message].join('\0')).digest('hex').slice(0, 16);
 
-export function summaryComment({ state, sha, currentSha, checkUrl, checksUrl, verdict, failureSummary, protectedFiles = [] }) {
+export function summaryComment({ state, sha, checkUrl, verdict, failureSummary, protectedFiles = [] }) {
   const head = `${COMMENT_MARKER}\n<!-- head:${sha} -->\n## Independent review\n\n`;
   const link = `[Open the check](${checkUrl})`;
-  if (state === 'superseded') return `${head}**Superseded**: the head is now \`${shortSha(currentSha)}\`, so this comment no longer describes it. See the [checks](${checksUrl}) for its verdict.`;
+  if (state === 'incomplete') return `${head}**Not completed** for \`${shortSha(sha)}\`\n\nThe check run could not be completed (${escapeText(failureSummary, 200)}), so no verdict is recorded for this commit. Run the review again.\n\n${link}`;
   if (state === 'running') {
     return `${head}**Reviewing** \`${shortSha(sha)}\`.\n\n${link}`;
   }
@@ -51,12 +51,11 @@ export function summaryComment({ state, sha, currentSha, checkUrl, checksUrl, ve
     body += `${escapeText(failureSummary, 600)}\n\n`;
   }
   if (protectedFiles.length) body += `This change touches protected paths (${protectedFiles.map(file => escapeText(file, 200)).join(', ')}); it needs independent inspection and the owner's authorization before merge.\n\n`;
-  return `${body}${link}\n\nAutomated advisory review of \`${shortSha(sha)}\` only; a new push supersedes it. The **Independent review** check is the gate. This is not a formal pull request approval or change request.`;
+  return `${body}${link}\n\nAutomated advisory review of \`${shortSha(sha)}\` only. Each push gets its own comment and an older comment is never rewritten, so confirm the pull request head is \`${shortSha(sha)}\` before relying on this. The **Independent review** check is the gate. This is not a formal pull request approval or change request.`;
 }
 
 export function createFeedback({ fetch, token, repository, prNumber, sha, checkUrl }) {
   const commentsPath = `/repos/${repository}/issues/${prNumber}/comments`;
-  const checksUrl = `https://github.com/${repository}/pull/${prNumber}/checks`;
 
   async function readPull() {
     const response = await api(fetch, token, 'GET', `/repos/${repository}/pulls/${prNumber}`);
@@ -66,7 +65,6 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, checkU
 
   const isCurrent = pull => pull.state === 'open' && pull.head.sha === sha;
   const boundTo = comment => HEAD.exec(comment.body)?.[1];
-  const isSuperseded = comment => comment.body.includes('**Superseded**');
 
   async function ownComments() {
     const comments = await listAll(fetch, token, commentsPath);
@@ -81,24 +79,15 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, checkU
     return { how: existing ? 'updated' : 'created', id: existing?.id ?? (await response.json()).id };
   }
 
-  // One comment per head SHA. A run only ever rewrites the comment bound to its own SHA, so a delayed run can never
-  // overwrite a newer run's verdict. Older SHAs' comments are collapsed to a neutral notice only when the head, read
-  // after our write, is still ours; a head that moved is left for the newer run to collapse.
+  // One comment per head SHA. A run only ever rewrites comments bound to its own SHA and never edits another commit's
+  // comment: without compare-and-swap, any cross-run overwrite (a collapse or a repair) can land on a newer verdict, for
+  // example after a head is restored to an earlier commit.
   async function guardedUpsert(build) {
     if (!isCurrent(await readPull())) return { written: false };
-    const all = await ownComments();
-    const mine = all.filter(c => boundTo(c) === sha);
-    const body = build(mine[0]);
-    const { how, id } = await write(body, mine[0]);
-    const after = await readPull();
-    if (after.head.sha !== sha) {
-      await write(summaryComment({ state: 'superseded', sha, currentSha: after.head.sha, checksUrl }), { id });
-      return { written: true, how, repaired: true };
-    }
+    const mine = (await ownComments()).filter(c => boundTo(c) === sha);
+    const body = build();
+    const { how } = await write(body, mine[0]);
     for (const duplicate of mine.slice(1)) await write(body, duplicate);
-    for (const older of all.filter(c => boundTo(c) !== sha && !isSuperseded(c))) {
-      if (boundTo(older)) await write(summaryComment({ state: 'superseded', sha: boundTo(older), currentSha: sha, checksUrl }), older);
-    }
     return { written: true, how };
   }
 
@@ -127,21 +116,12 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, checkU
       } catch { /* the final publication reports any problem */ }
     },
 
-    // The verdict flipped to failure after the summary was written: never leave "Passed" standing for this SHA.
-    async reconcile({ failureSummary }) {
+    // The check run could not be completed: a comment still saying "Reviewing" must say so rather than imply a verdict.
+    async markIncomplete({ reason }) {
       try {
-        let current = null;
-        try { current = (await readPull()).head.sha; } catch { /* treat as unverifiable */ }
-        const mine = (await ownComments()).filter(c => boundTo(c) === sha && !isSuperseded(c));
-        if (!mine.length) return 'no summary comment to reconcile.';
-        const body = current && current !== sha
-          ? summaryComment({ state: 'superseded', sha, currentSha: current, checksUrl })
-          : summaryComment({ state: 'failure', sha, checkUrl, failureSummary });
-        for (const comment of mine) await write(body, comment);
-        return 'summary comment reconciled with the final decision.';
-      } catch (error) {
-        return `the summary comment could not be reconciled (${error.message}); it may still say Passed, but this check is the verdict.`;
-      }
+        const mine = (await ownComments()).filter(c => boundTo(c) === sha);
+        for (const comment of mine) await write(summaryComment({ state: 'incomplete', sha, checkUrl, failureSummary: reason }), comment);
+      } catch { /* the run already fails and the check stays unfinished */ }
     },
 
     async publish({ conclusion, verdict, failureSummary, protectedFiles, diff }) {
@@ -149,8 +129,7 @@ export function createFeedback({ fetch, token, repository, prNumber, sha, checkU
       try {
         const result = await guardedUpsert(() => summaryComment({ state: conclusion, sha, checkUrl, verdict, failureSummary, protectedFiles }));
         if (!result.written) return 'not published: the pull request moved to a newer commit or closed.';
-        notes.push(`summary comment ${result.how}${result.repaired ? ', then marked superseded because the head moved while publishing' : ''}`);
-        if (result.repaired) return `${notes.join('; ')}.`;
+        notes.push(`summary comment ${result.how}`);
       } catch (error) {
         return `could not be published (summary comment: ${error.message}). The verdict above is unaffected.`;
       }

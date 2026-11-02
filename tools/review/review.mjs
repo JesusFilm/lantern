@@ -59,19 +59,21 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
   }
   const moved = () => failure('Head moved or could not be verified', `The pull request head could not be confirmed as \`${expectedSha.slice(0, 7)}\` after the review, so the verdict was discarded and the check fails closed. A new run reviews the new head.`);
   if (result.conclusion === 'success' && !(await headStillCurrent())) result = moved();
-  let note = await feedback.publish({ conclusion: result.conclusion, verdict: result.verdict, failureSummary: result.output.summary, protectedFiles: result.protectedFiles, diff: result.diff });
-  if (result.conclusion === 'success' && !(await headStillCurrent())) {
-    result = moved();
-    note += ` ${await feedback.reconcile({ failureSummary: result.output.summary })}`;
-  }
-  const summary = `${result.output.summary}\n\nPull request feedback: ${note}`.slice(0, 60_000);
   const { annotations = [], ...rest } = result.output;
   const complete = output => api(fetch, token, 'PATCH', `/repos/${repository}/check-runs/${id}`, { body: { status: 'completed', conclusion: result.conclusion, output } });
+  let summary = result.output.summary.slice(0, 60_000);
   let done = await complete({ ...rest, summary, ...(annotations.length ? { annotations } : {}) });
   if (!done.ok && annotations.length) {
-    done = await complete({ ...rest, summary: `${summary}\n\nAnnotations could not be attached (status ${done.status}); the findings are listed in the details.`.slice(0, 60_000) });
+    summary = `${summary}\n\nAnnotations could not be attached (status ${done.status}); the findings are listed in the details.`.slice(0, 60_000);
+    done = await complete({ ...rest, summary });
   }
-  if (!done.ok) throw new Error(`Could not complete check run (status ${done.status})`);
+  if (!done.ok) {
+    await feedback.markIncomplete({ reason: `GitHub rejected the completion with status ${done.status}` });
+    throw new Error(`Could not complete check run (status ${done.status})`);
+  }
+  // The comment is published only after GitHub accepted the check's final state, so it can never say Passed for an unfinished check.
+  const note = await feedback.publish({ conclusion: result.conclusion, verdict: result.verdict, failureSummary: result.output.summary, protectedFiles: result.protectedFiles, diff: result.diff });
+  await complete({ ...rest, summary: `${summary}\n\nPull request feedback: ${note}`.slice(0, 60_000) }).catch(() => {});
   return { conclusion: result.conclusion };
 
   async function headStillCurrent() {

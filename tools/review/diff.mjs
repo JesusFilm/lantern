@@ -44,7 +44,7 @@ function parseSection(text) {
   const modeChange = /^old mode (\d+)$/m.exec(info) && /^new mode (\d+)$/m.exec(info)
     ? `${/^old mode (\d+)$/m.exec(info)[1]} -> ${/^new mode (\d+)$/m.exec(info)[1]}`
     : /^(old|new) mode /m.test(info) ? 'unreadable mode change' : null;
-  const pureRename = !hasHunks && !binary && !modeChange && /^similarity index 100%$/m.test(info) && /^rename from /m.test(info);
+  const pureRename = !hasHunks && !binary && /^similarity index 100%$/m.test(info) && /^rename from /m.test(info);
   const emptyFile = !hasHunks && !binary
     && ((/^new file mode/m.test(info) && new RegExp(`^index 0+\\.\\.${EMPTY_BLOB}`, 'm').test(info))
       || (/^deleted file mode/m.test(info) && new RegExp(`^index ${EMPTY_BLOB}[0-9a-f]*\\.\\.0+`, 'm').test(info)));
@@ -78,13 +78,27 @@ export function protectedPathsIn(diff) {
   return [...hit];
 }
 
-const normalizePatch = text => String(text).replace(/\r?\n$/, '');
+const patchLines = text => String(text).replace(/\r?\n$/, '').split('\n');
+// Format, control and unassigned characters and U+FFFD are the ones the two GitHub representations of a patch can render differently.
+const fold = text => text.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Co}\p{Cn}\uFFFD]/gu, '');
+const hunkHeader = line => /^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@/.exec(line)?.[0];
 
 // Compare the hunks sent to the model with GitHub's separately returned patch and counts, so a diff cut between complete hunks cannot pass.
-function matchesListedPatch(section, file) {
-  return file.additions === section.additions && file.deletions === section.deletions
-    && file.changes === section.additions + section.deletions
-    && normalizePatch(file.patch) === normalizePatch(section.patch);
+// Structure (counts, line count, line kinds, hunk headers) must be identical; the text of a line is compared after folding invisible characters.
+function patchMismatch(section, file) {
+  if (file.additions !== section.additions || file.deletions !== section.deletions || file.changes !== section.additions + section.deletions) {
+    return 'its additions, deletions and total do not match the counts GitHub lists';
+  }
+  const sent = patchLines(section.patch);
+  const listed = patchLines(file.patch);
+  if (sent.length !== listed.length) return `the diff has ${sent.length} patch lines but GitHub lists ${listed.length}`;
+  for (let i = 0; i < sent.length; i++) {
+    const [x, y] = [sent[i], listed[i]];
+    const header = hunkHeader(x);
+    if (x[0] !== y[0] || (header !== undefined && header !== hunkHeader(y))) return `patch line ${i + 1} differs in structure`;
+    if (header === undefined && fold(x) !== fold(y)) return `patch line ${i + 1} differs in text`;
+  }
+  return null;
 }
 
 export function assessChange(diff, files) {
@@ -99,7 +113,7 @@ export function assessChange(diff, files) {
     const file = listed.get(section.path);
     if (!file) problems.push({ path: section.path, reason: 'in the diff but not in the file list for this comparison' });
     else if (!section.reviewable) problems.push({ path: section.path, reason: section.reason });
-    else if (file.patch && !matchesListedPatch(section, file)) problems.push({ path: section.path, reason: 'the diff does not match the patch and change counts GitHub lists for this file (truncated or altered)' });
+    else if (file.patch && patchMismatch(section, file)) problems.push({ path: section.path, reason: `the diff does not match the patch GitHub lists for this file (truncated or altered): ${patchMismatch(section, file)}` });
     else if (!file.patch && !(section.pureRename || section.emptyFile)) problems.push({ path: section.path, reason: 'no patch in the file list' });
     else if (!file.patch && (file.changes !== 0 || file.additions !== 0 || file.deletions !== 0)) problems.push({ path: section.path, reason: 'no patch in the file list' });
     else if (section.pureRename) renames.push({ from: section.oldPath, to: section.path });
