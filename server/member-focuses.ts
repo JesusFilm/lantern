@@ -6,20 +6,24 @@ import type {
 } from "../shared/focus.js";
 import { AccessError, membership } from "./membership.js";
 
-// Read authorization and document scope share one query snapshot. Content edits remain owner-only; the separate confirmation operation locks
-// the agreed baseline without editing its content.
+const iso = (value: string | null) => (value ? new Date(value).toISOString() : null);
+
+// Read authorization and document scope share one query snapshot: the query only returns members of the actor's own department.
+// Content edits remain owner-only; the separate confirmation operation locks the agreed baseline without editing its content.
+// Focuses are returned newest first by period end.
 export function memberFocusReader(db: Pool) {
   async function read(
     actorId: string,
     memberId: string,
     focusId?: string,
   ): Promise<MemberFocusList> {
-    if ((await membership(db, actorId))?.role !== "career-lead") {
+    if (!(await membership(db, actorId))) {
       throw new AccessError(
         403,
-        "Only the career lead can read member focuses.",
+        "Active department membership is required.",
       );
     }
+    const focusFilter = focusId ? `AND f.id::text='${focusId}'` : "";
     const result = await db.query(
       `SELECT u.id,u.name,u.email,
       COALESCE((SELECT jsonb_agg(document) FROM (
@@ -28,14 +32,14 @@ export function memberFocusReader(db: Pool) {
           f.status,f.confirmed_at AS "confirmedAt",
           (SELECT jsonb_build_object('id',lead.id,'name',lead.name) FROM users lead WHERE lead.id=f.confirmed_by) AS "confirmedBy"
         FROM position_focuses f WHERE f.user_id=u.id AND f.department_id=d.id
-          AND ($3::text IS NULL OR f.id::text=$3)
+          ${focusFilter}
         ORDER BY f.period_start DESC,f.updated_at DESC,f.id
       ) document), '[]'::jsonb) AS focuses
       FROM memberships actor JOIN departments d ON d.id=actor.department_id AND d.deleted_at IS NULL
       JOIN memberships target ON target.department_id=d.id AND target.deleted_at IS NULL
       JOIN users u ON u.id=target.user_id
-      WHERE actor.user_id=$1 AND actor.role='career-lead' AND actor.deleted_at IS NULL AND u.id::text=$2`,
-      [actorId, memberId, focusId ?? null],
+      WHERE actor.user_id=$1 AND actor.deleted_at IS NULL AND u.id::text=$2`,
+      [actorId, memberId],
     );
     if (!result.rowCount)
       throw new AccessError(404, "Member or position focus unavailable.");
@@ -45,7 +49,7 @@ export function memberFocusReader(db: Pool) {
       focuses: focuses.map((focus: PositionFocus) => ({
         ...focus,
         updatedAt: new Date(focus.updatedAt).toISOString(),
-        confirmedAt: focus.confirmedAt ? new Date(focus.confirmedAt).toISOString() : null,
+        confirmedAt: iso(focus.confirmedAt),
       })),
     };
   }

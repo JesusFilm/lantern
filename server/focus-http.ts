@@ -11,7 +11,7 @@ export function focusRoutes(
 ) {
   const router = Router();
   const focuses = focusStore(db);
-  async function focusOwner(req: Request) {
+  async function activeMember(req: Request) {
     const user = await requireUser(req);
     const department = await membership(db, user.id);
     if (!department)
@@ -19,15 +19,15 @@ export function focusRoutes(
     return { user, department };
   }
   router.get("/api/focuses", async (req, res) => {
-    const { user, department } = await focusOwner(req);
-    res.json(await focuses.list(user.id, department.id));
+    const { user, department } = await activeMember(req);
+    res.json(focuses.list(user.id, department.id));
   });
   router.get("/api/focuses/:id", async (req, res) => {
-    const { user, department } = await focusOwner(req);
+    const { user, department } = await activeMember(req);
     res.json(await focuses.get(user.id, department.id, String(req.params.id)));
   });
   router.post("/api/focuses", async (req, res) => {
-    const { user, department } = await focusOwner(req);
+    const { user, department } = await activeMember(req);
     res
       .status(201)
       .json(
@@ -35,13 +35,13 @@ export function focusRoutes(
       );
   });
   router.put("/api/focuses/:id", async (req, res) => {
-    const { user, department } = await focusOwner(req);
+    const { user, department } = await activeMember(req);
     res.json(
       await focuses.update(
         user.id,
         department.id,
         String(req.params.id),
-        validateFocus(req.body, true),
+        validateFocus(req.body),
         req.body.version,
       ),
     );
@@ -51,7 +51,7 @@ export function focusRoutes(
     const body = req.body;
     if (!body || typeof body !== "object" || Array.isArray(body) ||
         Object.keys(body).some(key => key !== "version") ||
-        !Number.isSafeInteger(body.version) || body.version < 1)
+        !Number.isSafeInteger(body.version) || body.version < 0)
       throw new AccessError(400, "Supply the current focus version to confirm it.");
     res.json(await focuses.confirm(user.id, String(req.params.memberId), String(req.params.id), body.version));
   });
@@ -67,8 +67,8 @@ export function focusRoutes(
       res.json(
         await members.get(
           user.id,
-          String(req.params.memberId),
           String(req.params.id),
+          String(req.params.memberId),
         ),
       );
     },
