@@ -19,7 +19,7 @@ jobs:
   run-review:
     if: github.event.pull_request.base.ref == 'main' && github.event.pull_request.draft == false && (github.event.action != 'edited' || github.event.changes.base.ref.from != null)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     environment: ai-review
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

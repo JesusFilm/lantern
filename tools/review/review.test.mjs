@@ -87,7 +87,7 @@ test('a passing review opens an in-progress check then completes success on the 
 
 test('every failure path completes the check as failure, never neutral, and leaks no secrets', async () => {
   const cases = {
-    'diff too large': world({ diff: DIFF + 'x'.repeat(300_000) }),
+    'diff too large': world({ diff: DIFF + 'x'.repeat(2_000_000) }),
     'diff unavailable': world({ diffStatus: 406 }),
     'empty diff': world({ diff: '' }),
     'gateway error': world({ modelStatus: 502 }),

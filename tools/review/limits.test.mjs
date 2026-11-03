@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { test } from 'node:test';
+import { planPackets } from './packets.mjs';
 import { CONTEXT_FILE_MAX, CONTEXT_TOTAL_MAX, guidancePaths, loadFileContext, loadGuidance } from './context.mjs';
 
 const root = new URL('../../', import.meta.url);
@@ -33,12 +34,12 @@ test('context limits: every file of the gate keeps headroom under the per-file l
   }
 });
 
-test('context limits: a change touching every file of the gate at once still fits the total budget with headroom', async () => {
-  const total = GATE_FILES.reduce((sum, path) => sum + read(path).length, 0);
-  assert.ok(total <= CONTEXT_TOTAL_MAX * 0.9, `the gate files total ${total} characters against a ${CONTEXT_TOTAL_MAX} budget`);
-  const entries = await load(GATE_FILES.map(modified));
-  assert.equal(entries.length, GATE_FILES.length);
+test('context limits: a change touching every gate file is assigned completely without clipping', async () => {
+  const entries = (await Promise.all(GATE_FILES.map(path => load([modified(path)])))).flat();
   assert.deepEqual(entries.filter(e => e.omitted || e.clipped).map(e => e.path), []);
+  const packets = planPackets({ sections: GATE_FILES.map(path => ({ path, text: read(path) })), context: entries, guidanceBytes: 60_000 });
+  assert.deepEqual(packets.flatMap(p => p.paths), GATE_FILES);
+  assert.deepEqual(packets.flatMap(p => p.files), entries);
 });
 
 test('context limits: the real trusted guidance fits whole, for every path class that adds a guidance file', async () => {
