@@ -1,6 +1,6 @@
 # Releasing Lantern
 
-Read before merging, releasing, changing schema/delivery switches or recovering a release. [Testing](../development/testing.md) explains what the checks do. [README setup](../../README.md#delivery) covers first provisioning and credentials.
+Read before merging, releasing, changing schema/delivery switches or recovering a release. Follow [change review](review-gate.md) for inspection and merge authority. [Testing](../development/testing.md) explains what the checks do. [README setup](../../README.md#delivery) covers first provisioning and credentials.
 
 ## Normal automatic release
 
