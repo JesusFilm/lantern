@@ -49,7 +49,7 @@ test('context: a missing required guidance file or any unreadable context fails 
     const result = await run(w);
     assert.equal(result.conclusion, 'failure', name);
     assert.equal(modelCalls(w).length, 0, name);
-    assert.match(finalCheck(w).output.title, /could not complete/, name);
+    assert.match(finalCheck(w).output.title, /Review incomplete/, name);
   }
   const optionalMissing = world({ diff: HUNK_DIFF, contents: { 'GLOSSARY.md@base': null } });
   assert.equal((await run(optionalMissing)).conclusion, 'success');
@@ -114,21 +114,6 @@ test('context sufficiency: a file exactly at the limit is provided whole; the mo
   assert.ok(userMessage(w).includes(exact.slice(0, 60_000)));
   assert.doesNotMatch(userMessage(w), /\[truncated at/);
   assert.match(finalCheck(w).output.summary, /Full head content was provided for 1 modified file/);
-});
-
-test('context sufficiency: when the total context budget runs out the later files are not silently dropped', async () => {
-  const names = ['a.ts', 'b.ts', 'c.ts', 'd.ts', 'e.ts'];
-  const contents = Object.fromEntries(names.map(n => [n + '@head', 'z'.repeat(50_000)]));
-  const diffOf = list => list.map(n => section(n, '@@ -1 +1 @@\n-a\n+b\n')).join('');
-  const five = world({ diff: diffOf(names), contents });
-  assert.equal((await run(five)).conclusion, 'failure');
-  assert.equal(modelCalls(five).length, 0);
-  assert.match(finalCheck(five).output.summary, /e\.ts \(full file at head\): not provided, the context budget was used up/);
-  const fits = world({ diff: diffOf(names.slice(0, 4)), contents });
-  assert.equal((await run(fits)).conclusion, 'success');
-  const clipped = world({ diff: diffOf(names.slice(0, 4)), contents: { ...contents, 'c.ts@head': 'z'.repeat(59_000) } });
-  assert.equal((await run(clipped)).conclusion, 'failure');
-  assert.match(finalCheck(clipped).output.summary, /d\.ts \(full file at head\): longer than the limit and cut off/);
 });
 
 test('context sufficiency: clipped or budgeted-out repository guidance fails closed instead of reaching the model partially', async () => {

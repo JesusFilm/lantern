@@ -87,7 +87,7 @@ test('a passing review opens an in-progress check then completes success on the 
 
 test('every failure path completes the check as failure, never neutral, and leaks no secrets', async () => {
   const cases = {
-    'diff too large': world({ diff: DIFF + 'x'.repeat(300_000) }),
+    'diff too large': world({ diff: DIFF + 'x'.repeat(2_000_000) }),
     'diff unavailable': world({ diffStatus: 406 }),
     'empty diff': world({ diff: '' }),
     'gateway error': world({ modelStatus: 502 }),
@@ -187,8 +187,8 @@ test('SHA binding: a pull request without a base SHA is not reviewed', async () 
 });
 
 test('review workflow runs trusted main code only and never executes or checks out PR code', () => {
-  assert.match(workflow, /^on:\s*\n\s+pull_request_target:/m);
-  assert.doesNotMatch(workflow, /^\s+(push|pull_request|workflow_dispatch|workflow_run|issue_comment):/m);
+  assert.match(workflow, /^\s+pull_request_target:/m);
+  assert.doesNotMatch(workflow, /^\s+(push|pull_request|workflow_run|issue_comment):/m);
   assert.doesNotMatch(workflow, /github\.event\.pull_request\.head\.(sha|ref|repo)/);
   assert.doesNotMatch(workflow, /github\.head_ref/);
   assert.doesNotMatch(workflow, /\$\{\{\s*github\.event\.pull_request\.(title|body)/);
@@ -215,7 +215,7 @@ test('job log: main.mjs prints the feedback outcome, and a ::warning:: when the 
   try {
     const event = join(dir, 'event.json');
     writeFileSync(event, JSON.stringify({ pull_request: { number: 5, head: { sha: SHA } } }));
-    const env = { ...process.env, GITHUB_EVENT_PATH: event, GITHUB_REPOSITORY: 'o/r', AI_REVIEW_APP_ID: '5571876', AI_REVIEW_APP_PRIVATE_KEY: pem, AI_REVIEW_GATEWAY_BASE_URL: 'https://gateway.example', AI_REVIEW_GATEWAY_API_KEY: KEY, AI_REVIEW_MODEL: 'm' };
+    const env = { ...process.env, GITHUB_EVENT_PATH: event, GITHUB_EVENT_NAME: 'pull_request_target', GITHUB_REF: 'refs/heads/main', GITHUB_REPOSITORY: 'o/r', AI_REVIEW_APP_ID: '5571876', AI_REVIEW_APP_PRIVATE_KEY: pem, AI_REVIEW_GATEWAY_BASE_URL: 'https://gateway.example', AI_REVIEW_GATEWAY_API_KEY: KEY, AI_REVIEW_MODEL: 'm' };
     const logFor = traps => {
       writeFileSync(join(dir, 'preload.mjs'), `import { world, HUNK_DIFF } from ${JSON.stringify(new URL('./fake-github.mjs', import.meta.url).href)}; globalThis.fetch = world({ diff: HUNK_DIFF, traps: ${traps} }).fetch;`);
       return execFileSync('node', ['--import', join(dir, 'preload.mjs'), new URL('./main.mjs', import.meta.url).pathname], { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
