@@ -8,6 +8,7 @@ import { hash } from "./access.js";
 
 export async function coachingFixture(
   coach?: import("./coach-provider.js").CoachProvider,
+  access: Partial<import("./access.js").AccessConfig> = {},
 ) {
   const fixture = await privilegeFixture();
   await migrate(fixture.migration, fixture.roles);
@@ -48,7 +49,7 @@ export async function coachingFixture(
   const a = server.address();
   assert.ok(a && typeof a !== "string");
   const origin = `http://127.0.0.1:${a.port}`;
-  const app = createApp(fixture.runtime, { origin, coach });
+  const app = createApp(fixture.runtime, { origin, coach, ...access });
   server.on("request", app);
   const request = (
     role: string,

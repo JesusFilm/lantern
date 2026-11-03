@@ -164,3 +164,9 @@ are rejected. This script is manual; it is not run on deployment.
 ### Goal coaching
 
 Configure the Qwen primary and OpenRouter fallback using [coaching operations](docs/operations/coaching.md). `COACH_ENABLED=1` requires both dedicated server-side credentials. With inference disabled, manual editing and review requests remain available.
+
+The server-only `AI_MEMBER_MANAGER_EMAILS` variable controls the staging-only
+[experimental AI-member pilot](docs/operations/ai-members.md). Missing/empty disables
+it; preserve production's empty value. It grants neither human admission nor
+membership. Human QA and the generated manual exclude this experiment. Schema 10
+requires the ordinary separately authorized schema-release procedure.

@@ -1,3 +1,4 @@
+import { createCoachAdmission, type CoachAdmission } from './coach-admission.js';
 import { Router } from "express";
 import type { Request } from "express";
 import type { Pool } from "pg";
@@ -17,6 +18,7 @@ export function coachRoutes(
   db: Pool,
   requireUser: (req: Request) => Promise<{ id: string }>,
   provider?: CoachProvider,
+  admit: CoachAdmission = createCoachAdmission(),
 ) {
   const router = Router(),
     store = coachStore(db);
@@ -173,8 +175,6 @@ export function coachRoutes(
     await focusStore(db).confirm(actor, access.owner, id, req.body.version);
     res.json(await store.record(actor, id));
   });
-  const active = new Set<string>(),
-    usage = new Map<string, { at: number; count: number }>();
   router.post("/api/coach/suggest", async (req, res) => {
     const actor = (await requireUser(req)).id,
       department = await membership(db, actor);
@@ -213,15 +213,7 @@ export function coachRoutes(
           "This focus changed. Reopen your saved draft before coaching.",
         );
     }
-    const now = Date.now();
-    for (const [id, bucket] of usage)
-      if (now - bucket.at >= 60000) usage.delete(id);
-    const bucket = usage.get(actor) ?? { at: now, count: 0 };
-    if (active.has(actor) || active.size >= 4 || bucket.count >= 20)
-      throw new AccessError(429, "The coach is busy. Try again shortly.");
-    bucket.count++;
-    usage.set(actor, bucket);
-    active.add(actor);
+    const release = admit(actor);
     const abort = new AbortController(),
       closed = () => {
         if (!res.writableEnded) abort.abort();
@@ -262,7 +254,7 @@ export function coachRoutes(
       if (error instanceof AccessError) throw error;
       throw new AccessError(503, new CoachUnavailable().message);
     } finally {
-      active.delete(actor);
+      release();
       res.off("close", closed);
     }
   });

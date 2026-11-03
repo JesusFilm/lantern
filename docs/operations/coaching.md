@@ -36,9 +36,11 @@ Provider settings must be HTTPS and must not embed credentials.
 Create model-scoped LiteLLM keys for `coding`. Set separate rate/spend limits for
 both environments at each provider; use an appropriate funded OpenRouter key.
 Set OpenRouter's permitted models/provider data policy for the organization's
-requirements before real personnel data is used. The application sends current
+requirements before real personnel data is used. Human coaching sends current
 member coaching fields, department mission/active initiatives and the writing
-Guide to either provider. It does not send review notes, other members' documents,
+Guide to either provider. The [experimental AI-member coach](ai-members.md) instead
+sends only its purpose and pending objective/goals, through the same providers and
+shared admission limits. It does not send review notes, other members' documents,
 images, account email addresses or external project context. Provider-side logging
 and retention are controlled in the provider account, not by Lantern.
 
@@ -54,7 +56,8 @@ complete set.
 1. Run the normal typecheck, production build and complete local suite. Provider
    tests use real HTTP fixture servers and exercise success, failure, timeout,
    bad output, fallback, cancellation and credential isolation without paid calls.
-2. Follow [Releasing](releasing.md) for schema 9. This is an additive migration;
+2. Follow [Releasing](releasing.md) for the current schema, including schema 9
+   coaching/review storage. This is an additive migration;
    apply it before replacing the app. The database confirmation guard also protects
    older instances during rollout. Do not reverse the migration or drop review data.
 3. On staging, check both dedicated credentials with synthetic work. Exercise a

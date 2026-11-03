@@ -48,3 +48,12 @@ A production smoke failure happens **after deployment**; a migration may already
 For auth/OAuth/admission-policy changes, disable automatic promotion before the merge and cancel pending admissions. Complete real Google sign-in on staging before releasing that SHA. Restore automatic promotion with release authorization; rerun the current-main push CI run if a fresh automatic event is needed (CI has no manual-dispatch trigger). First activation or a changed gate needs the [activation procedure](activating-delivery.md).
 
 Schema 9 adds coaching checkpoints and review records. Follow [coaching provider setup and rollout](coaching.md) before enabling inference. The additive database guard prevents an older application instance from confirming an outdated request during replacement. Keep the migration on rollback; disabling model calls does not remove saved review data.
+
+Schema 10 adds private experimental AI-member profiles, current focuses and
+hash-only named tokens, with explicit runtime grants. Migrate before app replacement;
+an older schema-9 app can continue serving supported workflows against the additive
+schema. Keep the schema on rollback. Follow the separately authorized
+[staging operator handoff](ai-members.md); preserve the reported staging allowlist
+and production's empty value. This experiment is excluded from human QA/manuals,
+not from automated security/regression checks. Local tests do not establish hosted
+configuration or rollout.

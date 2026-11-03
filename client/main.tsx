@@ -1,3 +1,4 @@
+import { AiMembers } from './ai-members/AiMembers.js';
 import {CoachWorkspace} from "./coach/CoachWorkspace.js";
 import { Fragment, StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -15,7 +16,7 @@ history.replaceState(
 );
 function currentPage() {
   const page = new URLSearchParams(location.search).get("page");
-  return page === "department" || page === "guide" || page === "account" || page === "reviews"
+  return page === "ai-members" || page === "department" || page === "guide" || page === "account" || page === "reviews"
     ? page
     : "focuses";
 }
@@ -90,6 +91,7 @@ function App() {
             ...(session?.user
               ? [["focuses", "Position focuses"], ...(session.department?.role === "career-lead" ? [["reviews", "Review requests"]] : []), ["guide", "Guide"]]
               : []),
+            ...(session?.canManageAiMembers ? [["ai-members", "AI members — Experimental"]] : []),
             ["account", "Account"],
             ...(session?.department?.role === "career-lead" &&
             !session.localAccess
@@ -157,7 +159,9 @@ function App() {
                   Sign out
                 </button>
               )}
-              {page === "reviews" ? (
+              {page === "ai-members" ? (
+                session.canManageAiMembers ? <AiMembers coachAvailable={!!session.coachAvailable} /> : <p>AI member management is unavailable.</p>
+              ) : page === "reviews" ? (
                 <CoachWorkspace key={page} session={session} lead={page === "reviews"}/>
               ) : page === "account" ? (
                 <Account

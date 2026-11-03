@@ -355,3 +355,14 @@ test('an interrupted runner leaves an atomic unknown phase snapshot for the alwa
   }
  }));
 });
+
+test('acceptance cleanup refuses unexpected experimental AI members rather than erasing private data', async () => {
+ await isolated(async db => {
+  let memberId;
+  await assert.rejects(withAcceptanceFixture(db, async f => {
+   memberId=randomUUID();
+   await db.query("INSERT INTO ai_members(id,owner_user_id,name) VALUES($1,$2,'Unexpected experiment')",[memberId,f.actors.member.userId]);
+  }), error => error.code === 'ACCEPTANCE_FIXTURE_UNSAFE');
+  assert.equal((await db.query('SELECT count(*) AS n FROM ai_members WHERE id=$1',[memberId])).rows[0].n,'1');
+ });
+});

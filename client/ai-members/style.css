@@ -1,0 +1,26 @@
+.ai-member-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,300px),1fr)); gap: 16px; }
+.ai-member-card, .ai-coach, .ai-secret { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 20px; min-width: 0; }
+.ai-member-card h2 button { font-size: inherit; text-align: left; }
+.ai-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ai-plain-text { white-space: pre-wrap; }
+.ai-focus-editor { max-width: var(--editor-width); margin-inline: auto; }
+.ai-focus-editor textarea, .ai-tokens input { box-sizing: border-box; width: 100%; min-width: 0; }
+.ai-goal { border-top: 1px solid var(--border); padding-block: 16px; }
+.ai-focus-actions { position: sticky; bottom: 0; background: var(--canvas); padding-block: 16px; justify-content: flex-end; }
+.ai-coach, .ai-tokens { margin-block: 24px; }
+.ai-tokens { border-block: 1px solid var(--border); padding-block: 16px; }
+.ai-tokens p { font-size: 14px; }
+.ai-token-list { list-style: none; padding: 0; }
+.ai-token-list li { padding-block: 16px; border-bottom: 1px solid var(--border); }
+.ai-token-list .ai-actions { margin-top: 8px; }
+.ai-secret, .ai-suggestion { margin-top: 16px; }
+@media(max-width:600px) {
+  .ai-members header { flex-wrap: wrap; gap: 12px; }
+  .ai-member-card, .ai-coach, .ai-secret { padding: 16px; }
+  .ai-members .ai-actions button { max-width: 100%; white-space: normal; }
+}
+
+.ai-member-card .ai-plain-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; margin-top: 16px; }
+.ai-member-card .muted { margin-top: 12px; }
+.ai-purpose { margin-bottom: 20px; }
+.ai-purpose summary { cursor: pointer; min-height: 44px; display: list-item; padding-block: 8px; }

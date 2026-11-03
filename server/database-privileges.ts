@@ -78,6 +78,11 @@ export async function grantApplicationPrivileges(db: Database, roles: DatabaseRo
   await db.query(`GRANT UPDATE, DELETE ON coach_checkpoints TO ${runtime}`);
   await db.query(`GRANT UPDATE (deleted_at) ON focus_review_notes TO ${runtime}`);
   await db.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON coach_checkpoints, focus_review_requests, focus_review_notes, focus_note_reads TO ${admin}`);
+  await db.query(`GRANT SELECT, INSERT, DELETE ON ai_members, ai_member_focuses, ai_member_tokens TO ${runtime}`);
+  await db.query(`GRANT UPDATE (name,purpose,profile_revision,updated_at,last_retrieved_at,last_retrieved_version) ON ai_members TO ${runtime}`);
+  await db.query(`GRANT UPDATE (objective,goals,version,updated_at) ON ai_member_focuses TO ${runtime}`);
+  await db.query(`GRANT UPDATE (verifier_hash,suffix,credential_revision,rotated_at) ON ai_member_tokens TO ${runtime}`);
+  await db.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON ai_members, ai_member_focuses, ai_member_tokens TO ${admin}`);
   await db.query(`GRANT EXECUTE ON FUNCTION enroll_member(uuid,text) TO ${runtime}, ${admin}`);
   await db.query(`GRANT INSERT, UPDATE, DELETE ON approved_emails, users, departments, memberships, position_focuses, sessions, login_attempts TO ${admin}`);
 }
@@ -117,6 +122,13 @@ export async function assertRuntimePrivileges(db: Database) {
       WHERE has_any_column_privilege(name, 'INSERT') OR has_any_column_privilege(name, 'UPDATE')
         OR has_table_privilege(name, 'DELETE') OR has_table_privilege(name, 'TRUNCATE') OR has_table_privilege(name, 'TRIGGER'))
     OR has_column_privilege('users','google_sub','UPDATE') OR has_column_privilege('users','id','UPDATE')
+    OR EXISTS(SELECT 1 FROM (VALUES
+      ('ai_members','id'),('ai_members','owner_user_id'),('ai_members','created_at'),
+      ('ai_member_focuses','ai_member_id'),('ai_member_tokens','id'),('ai_member_tokens','ai_member_id'),
+      ('ai_member_tokens','name'),('ai_member_tokens','created_at')
+    ) AS immutable(t,c) WHERE has_column_privilege(t,c,'UPDATE'))
+    OR EXISTS(SELECT 1 FROM unnest(ARRAY['ai_members','ai_member_focuses','ai_member_tokens']) AS t(name)
+      WHERE has_table_privilege(name,'TRUNCATE') OR has_table_privilege(name,'TRIGGER'))
     AS forbidden FROM pg_roles r WHERE rolname=current_user`);
   if (result.rows[0]?.forbidden !== false) throw new Error('Runtime database privileges exceed the application scope.');
 }

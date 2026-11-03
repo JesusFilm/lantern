@@ -55,7 +55,7 @@ jobs:
       - uses: actions/setup-node@v7
         with: { node-version: '26.13.0', cache: npm }
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm run build
       - run: npm test
   build:
@@ -88,7 +88,7 @@ jobs:
       RELEASE_SHA: ${{ github.sha }}
       APP_ORIGIN: ${{ vars.APP_ORIGIN }}
       RELEASE_TARGET: stage
-      EXPECTED_SCHEMA_VERSION: '9'
+      EXPECTED_SCHEMA_VERSION: '10'
       RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT }}
       RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
       RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}

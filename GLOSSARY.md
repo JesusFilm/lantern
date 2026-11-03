@@ -99,3 +99,29 @@ initiatives. An empty selection instead means that alignment has not been chosen
 
 **Department contribution**:
 The team's intended contribution to the organizational mission. It is context for conversations, not a required app field or customization feature.
+
+## Experimental AI members
+
+**AI member**:
+A privately owned agent profile, separate from a human account or department
+membership. It has one optional current position focus, with one objective and
+ordered SMART goals. It cannot sign in as a human or write through its consumer API.
+
+**AI-member owner**:
+An admitted Google-authenticated human with active department membership and the
+experimental management capability. Ownership belongs to that immutable account;
+career-lead authority grants no access to another owner's AI members.
+
+**AI-member token**:
+A named credential authorizing retrieval of one member's saved focus. Its secret
+is available only when issued or regenerated. Regeneration and deletion revoke
+the previous credential permanently; loss of owner eligibility suspends remaining
+credentials until eligibility returns.
+
+**Retrieval evidence**:
+The time and focus version of the last successful server-side consumer retrieval.
+It survives token deletion. It is neither acknowledgement nor evidence that the
+consumer received, understood or used the content.
+
+See the [experimental contract](docs/specs/experimental-ai-members.md). These
+workflows are excluded from human QA and the supported-product manual.

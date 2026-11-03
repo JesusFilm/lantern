@@ -20,6 +20,8 @@ export async function resetQaDepartment(db: Pool, options: { participants: strin
     for (const name of names) if (users.filter((u) => u.email === name.toLowerCase()).length > 1)
       throw new Error("A participant name is ambiguous.");
     if (users.length < 2) throw new Error("At least two approved QA participants must register before provisioning.");
+    const experiments = await client.query('SELECT id FROM ai_members WHERE owner_user_id=ANY($1::uuid[]) FOR UPDATE', [users.map(u => u.id)]);
+    if (experiments.rowCount) throw new Error('Experimental AI-member data prevents QA reset.');
     const departments = (await client.query("SELECT id,name,deleted_at FROM departments WHERE name=$1 OR id=$2 FOR UPDATE", ["Lantern QA", qaDepartmentId])).rows as { id: string; name: string; deleted_at: Date | null }[];
     if (departments.length > 1 || departments.some((row) => row.id !== qaDepartmentId || row.name !== "Lantern QA" || row.deleted_at))
       throw new Error("QA department ownership conflicts with an unrelated department.");

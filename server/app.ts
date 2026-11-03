@@ -1,3 +1,4 @@
+import { aiMemberConsumer } from './ai-member-consumer.js';
 import express from 'express';
 import type {Request,Response,NextFunction} from 'express';
 import { accessRoutes } from './access.js';
@@ -18,7 +19,7 @@ export function createApp(database: Pool, config: AccessConfig = { origin: 'http
       else await database.query('SELECT 1');
       if (runtime?.revision) response.set('X-Lantern-Revision', runtime.revision);
       if (runtime?.deployment) response.set('X-Lantern-Deployment', runtime.deployment);
-      if (runtime) response.set('X-Lantern-Schema', '9');
+      if (runtime) response.set('X-Lantern-Schema', '10');
       response.status(200).json({ status: 'ok', database: 'ok' } satisfies HealthResponse);
     } catch {
       response.status(503).json({
@@ -28,6 +29,7 @@ export function createApp(database: Pool, config: AccessConfig = { origin: 'http
     }
   });
 
+  app.use(aiMemberConsumer(database, config.localUserId || config.hostingOnly ? new Set() : config.aiMemberManagerEmails ?? new Set()));
   app.use(express.json({ limit: '1mb' }));
   app.use(accessRoutes(database, config));
   app.use('/api', (_request, response) => { response.status(404).json({ error: 'Not found.' }); });

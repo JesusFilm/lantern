@@ -150,3 +150,13 @@ for (const reference of ["note", "read receipt"] as const) test(`reset preserves
     await f.close();
   }
 });
+
+test('QA reset refuses experimental AI-member relationships without deleting private data', async () => {
+  const f = await coachingFixture();
+  try {
+    const id = randomUUID();
+    await f.admin.query("INSERT INTO ai_members(id,owner_user_id,name) VALUES($1,$2,'Private experiment')", [id, f.ids.member]);
+    await assert.rejects(resetQaDepartment(f.admin, { participants: ['member@example.test', 'peer@example.test', 'outsider@example.test'], lead: 'member@example.test' }), /experimental/i);
+    assert.equal((await f.admin.query('SELECT count(*) AS n FROM ai_members WHERE id=$1', [id])).rows[0].n, '1');
+  } finally { await f.close(); }
+});

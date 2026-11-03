@@ -1,7 +1,7 @@
 import type { Pool } from 'pg';
 import { assertDatabaseTarget, assertRuntimePrivileges, identifier, type DatabaseRoles } from './database-privileges.js';
 import { assertSchemaReady } from './schema.js';
-const applicationTables = ['department_direction','approved_emails','departments','login_attempts','memberships','position_focuses','schema_migrations','sessions','users'];
+const applicationTables = ['ai_members','ai_member_focuses','ai_member_tokens','coach_checkpoints','focus_review_requests','focus_review_notes','focus_note_reads','department_direction','approved_emails','departments','login_attempts','memberships','position_focuses','schema_migrations','sessions','users'];
 
 export async function verifyDatabase(db: Pool, config: DatabaseRoles & {expectedDatabase:string;schema:string}, scope: keyof DatabaseRoles, expectEmpty = false) {
   const client = await db.connect();
@@ -21,9 +21,15 @@ export async function verifyDatabase(db: Pool, config: DatabaseRoles & {expected
         AND has_table_privilege('position_focuses','INSERT')
         AND has_table_privilege('department_direction','SELECT')
         AND has_table_privilege('department_direction','INSERT')
+        AND NOT EXISTS(SELECT 1 FROM unnest(ARRAY['ai_members','ai_member_focuses','ai_member_tokens']) AS t(name)
+          WHERE NOT (has_table_privilege(name,'SELECT') AND has_table_privilege(name,'INSERT') AND has_table_privilege(name,'DELETE')))
         AND has_function_privilege('enroll_member(uuid,text)','EXECUTE')
         AND NOT EXISTS (
           SELECT 1 FROM (VALUES
+            ('ai_members','name'),('ai_members','purpose'),('ai_members','profile_revision'),('ai_members','updated_at'),
+            ('ai_members','last_retrieved_at'),('ai_members','last_retrieved_version'),
+            ('ai_member_focuses','objective'),('ai_member_focuses','goals'),('ai_member_focuses','version'),('ai_member_focuses','updated_at'),
+            ('ai_member_tokens','verifier_hash'),('ai_member_tokens','suffix'),('ai_member_tokens','credential_revision'),('ai_member_tokens','rotated_at'),
             ('department_direction','mission'), ('department_direction','initiatives'), ('department_direction','version'),
             ('users','name'), ('users','email'),
             ('position_focuses','title'), ('position_focuses','period_start'),

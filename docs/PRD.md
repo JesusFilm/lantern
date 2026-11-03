@@ -34,6 +34,29 @@ Lantern helps team members prepare a position focus and agree it with their care
 
 - With `LANTERN_ENV=local`, synthetic local access and a loopback database, startup fills the synthetic account’s active department with the four known initiatives, their approved descriptions and staging appearances. Repeated startup preserves IDs, order, archive status, existing appearances, mission, extra initiatives and saved focuses. It fills missing appearances and absent description fields but does not reset local edits, restore removed membership or seed hosted environments.
 
+## Experimental AI members
+
+Eligible admitted Google members can privately manage multiple AI-member profiles,
+each with a current single-objective focus and ordered SMART goals. Profile and
+focus edits have independent optimistic revisions. Named tokens allow only that
+member's saved-focus retrieval; token actions take effect separately from profile
+Save/Cancel. Coaching changes pending text only through explicit Apply and Save.
+Owner eligibility is checked on management and every consumer request.
+
+The navigation reads **AI members — Experimental** and the page displays
+**Experimental · excluded from QA**. These workflows are excluded from generated
+manuals, slides, screenshots, exercises, manual cases and human QA sign-off.
+Human QA accounts remain ineligible; manual fixtures explicitly disable the
+feature independently of the developer environment. Automated implementation,
+security and regression checks remain required. Later inclusion requires an
+explicit owner decision.
+
+See the [agreed contract](specs/experimental-ai-members.md),
+[domain terms](../GLOSSARY.md#experimental-ai-members) and
+[operating/API instructions](operations/ai-members.md). Implemented locally;
+hosted rollout remains a separately authorized staging operation. Production
+must retain an empty feature allowlist during the pilot.
+
 ## Desktop and mobile support
 
 Lantern supports desktop and mobile browsers. Preserve the desktop composition;

@@ -137,6 +137,37 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
         INSERT INTO schema_migrations(version) VALUES(9);
       `);
     }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=10')).rowCount) {
+      await client.query(`
+        CREATE TABLE ai_members (
+          id uuid PRIMARY KEY, owner_user_id uuid NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+          name text NOT NULL CHECK(length(btrim(name)) BETWEEN 1 AND 100),
+          purpose text NOT NULL DEFAULT '' CHECK(length(purpose)<=4000),
+          profile_revision integer NOT NULL DEFAULT 1 CHECK(profile_revision>0),
+          created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+          last_retrieved_at timestamptz, last_retrieved_version integer CHECK(last_retrieved_version>0),
+          CHECK((last_retrieved_at IS NULL)=(last_retrieved_version IS NULL))
+        );
+        CREATE INDEX ai_members_owner ON ai_members(owner_user_id);
+        CREATE TABLE ai_member_focuses (
+          ai_member_id uuid PRIMARY KEY REFERENCES ai_members(id) ON DELETE CASCADE,
+          objective text NOT NULL CHECK(length(btrim(objective)) BETWEEN 1 AND 10000),
+          goals jsonb NOT NULL CHECK(jsonb_typeof(goals)='array' AND jsonb_array_length(goals) BETWEEN 1 AND 100
+            AND NOT jsonb_path_exists(goals, '$[*] ? (@.type() != "string" || @ like_regex "^[[:space:]]*$")')),
+          version integer NOT NULL CHECK(version>0), updated_at timestamptz NOT NULL DEFAULT now()
+        );
+        CREATE TABLE ai_member_tokens (
+          id uuid PRIMARY KEY, ai_member_id uuid NOT NULL REFERENCES ai_members(id) ON DELETE CASCADE,
+          name text NOT NULL CHECK(length(btrim(name)) BETWEEN 1 AND 100),
+          verifier_hash text UNIQUE NOT NULL CHECK(verifier_hash ~ '^[a-f0-9]{64}$'),
+          suffix text NOT NULL CHECK(length(suffix)=6),
+          credential_revision integer NOT NULL DEFAULT 1 CHECK(credential_revision>0),
+          created_at timestamptz NOT NULL DEFAULT now(), rotated_at timestamptz NOT NULL DEFAULT now()
+        );
+        CREATE INDEX ai_member_tokens_member ON ai_member_tokens(ai_member_id);
+        INSERT INTO schema_migrations(version) VALUES(10);
+      `);
+    }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
@@ -146,10 +177,11 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9)');
-  if (result.rowCount !== 9) throw new Error('Required migration is missing.');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10)');
+  if (result.rowCount !== 10) throw new Error('Required migration is missing.');
   await database.query('SELECT department_id,mission,mission_image,initiatives,version FROM department_direction LIMIT 0');
   await database.query('SELECT c.document,r.version,n.body,x.user_id FROM coach_checkpoints c,focus_review_requests r,focus_review_notes n,focus_note_reads x LIMIT 0');
+  await database.query('SELECT m.owner_user_id,m.profile_revision,m.last_retrieved_at,m.last_retrieved_version,f.objective,f.goals,f.version,t.verifier_hash,t.credential_revision FROM ai_members m,ai_member_focuses f,ai_member_tokens t LIMIT 0');
   const legacy = await database.query(`SELECT to_regclass('allowed_domains') IS NOT NULL
     OR to_regprocedure('enroll_member(uuid,text,boolean)') IS NOT NULL
     OR EXISTS (SELECT 1 FROM information_schema.columns

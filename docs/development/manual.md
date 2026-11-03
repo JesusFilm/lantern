@@ -6,6 +6,15 @@ QA can always open the latest edition at <https://github.com/JesusFilm/lantern/r
 
 For human testers' accounts and resetting staging examples, see [QA staging](../operations/qa-staging.md). The fictional screenshot identities are local fixtures, not staging logins.
 
+## Experimental exclusion
+
+[Experimental AI members](../specs/experimental-ai-members.md) are excluded from
+this manual and human QA: no slides, screenshots, exercises, manual cases or
+sign-off. Human QA accounts remain ineligible. `startWorld` explicitly supplies
+an empty feature allowlist, regardless of developer environment variables.
+Continue regenerating the supported-product manual and preserving freshness
+checks when shared source changes. Inclusion requires a later owner decision.
+
 ## Regenerate after changing the product
 
 The agent or developer making the change owns the manual update. Before finishing

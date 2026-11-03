@@ -42,26 +42,11 @@ Local browser tests largely use Vite/HTTP. Release integration tests additionall
 
 ## Deployed staging journey
 
-The main CI stage job validates configuration, applies migrations and deploys the selected revision, then verifies readiness (below). With acceptance enabled, a private runner seeds four synthetic accounts: member, peer, career lead and an outsider in another department. It supplies ordinary 15-minute sessions, then uses the deployed browser and HTTP interfaces. This starts **after Google identity verification**; there is no public test-login endpoint.
-
-The [browser runner](../../tools/release/acceptance-browser.mjs) records these twelve checkpoints in order:
-
-| Checkpoint | What it actually does |
-| --- | --- |
-| `authenticated-identities` | Verify four distinct authenticated identities, their roles and department boundaries. |
-| `department-direction` | Lead saves a mission and initiative; reload verifies persistence and the member sees the mission. |
-| `mission-image` | Upload a synthetic PNG through the browser; save/reload and verify the converted WebP renders for lead and member. |
-| `focus-authoring-persistence` | Create a focus, edit title, add/edit an initiative-aligned objective and SMART goal; reload and check browser plus API persistence. |
-| `authorization-isolation` | Reject another person's direct focus reads/writes and cross-department lead access; allow the scoped lead view; reject member confirmation. |
-| `stale-and-forged-writes` | Reject an old version, forged ownership and foreign Origin; verify the document is unchanged. |
-| `review-requests-and-notes` | Member requests review of a saved focus; lead adds a note; member reads it; verify snapshot persistence, read acknowledgments and participant isolation. No live model is called. |
-| `lead-confirmation-lock` | Lead confirms; both views show the locked document without editing controls and an API edit is rejected. |
-| `coaching-disabled-manual` / `coaching-enabled-journey` | A second synthetic member creates, saves, reopens and submits a draft. With coaching off, verify inference returns 503 and manual authoring works. With coaching on, use the deployed providers for contribution questions, objective/action suggestions and a member-edited date; verify generated content persists and is submitted. |
-| `account-and-guide` | Edit/reload the member's display name; open the guide and example. |
-| `browser-errors` | Require no page JavaScript errors during the journey. |
-| `session-revocation` | Sign out supplied sessions and verify replay cannot access focuses, including after a journey failure. |
-
-The [fixture lifecycle](../../tools/release/acceptance-fixture.mjs) holds a database lock, recovers exactly marked abandoned fixtures, and removes only its verified synthetic graph. Unexpected relationships fail cleanup. Both journey and cleanup must pass; the [acceptance runner](../../tools/release/acceptance.mjs) checks live release identity again before writing evidence. Cancellation can leave fixtures for the next run to recover. The Actions summary reports journey and cleanup separately; it never substitutes for passing evidence.
+Staging acceptance uses four synthetic accounts and ordinary expiring sessions
+against the deployed browser/HTTP interfaces, starting after Google verification.
+The [checkpoint reference](staging-journey.md) describes the twelve checkpoints,
+fixture ownership/cleanup and evidence boundaries. Journey and cleanup must both
+pass; these synthetic sessions do not establish real Google login.
 
 ## Readiness and coverage limits
 
@@ -101,3 +86,20 @@ responsive regression suite or automatic visual approval.
 Coaching provider tests use local HTTP fixtures for Qwen-first routing, OpenRouter fallback, cooldown, timeout, malformed output, cancellation and safe errors. Coaching HTTP/browser tests use restricted PostgreSQL roles for atomic save/resume, review snapshots, notes, access isolation and multi-objective preservation. These tests do not evaluate model quality or establish hosted provider connectivity. See [coaching rollout](../operations/coaching.md).
 
 Objective authoring browser journeys cover explicit manual/AI-guided methods, a single objective save with nested goals, editable types, sibling preservation, method switching, cancellation, failure recovery, legacy working-note preservation and member inline review alongside lead snapshot review. The same authenticated acceptance runner now enters assistance through Position focuses. Provider fixtures verify workflow contracts, not the usefulness of generated wording.
+
+## Experimental AI members
+
+The [experiment](../specs/experimental-ai-members.md) is excluded from human QA,
+generated manuals, slides, screenshots, exercises, manual cases and sign-off.
+Human QA accounts remain ineligible; inclusion requires a later owner decision.
+[Manual fixtures](../../tools/manual/world.ts) explicitly inject an empty allowlist,
+independently of developer configuration. Preserve source freshness and regenerate
+the supported manual with the feature disabled.
+
+`server/ai-member*.test.ts` checks owner/consumer HTTP and browser workflows against
+isolated restricted PostgreSQL, including eligibility, revisions, credential
+lifecycle, retrieval telemetry, concurrent operations, SQL authority and coaching
+boundaries/shared admission. Required automated checks still apply. Providers are
+injected fakes. Chromium/WebKit emulation covers narrow, landscape, tablet and
+desktop views; hosted configuration, real Google login, native devices and live
+provider behavior require later authorized staging evidence.

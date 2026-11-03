@@ -59,6 +59,8 @@ async function cleanup(client,runId) {
    owned.set(user.id,{actor,departmentId:departmentByTeam[actor==='outsider'?'outsider':'main'],role:actor==='lead'?'career-lead':'member'});
   }
   const users=[...owned.keys()],departments=departmentRows.map(row=>row.id);
+  const experiments=await client.query('SELECT id FROM ai_members WHERE owner_user_id=ANY($1::uuid[]) FOR UPDATE',[users]);
+  requireOwned(experiments.rowCount===0);
   const memberships=(await client.query('SELECT user_id,department_id,role FROM memberships WHERE user_id=ANY($1::uuid[]) OR department_id=ANY($2::uuid[]) FOR UPDATE',[users,departments])).rows;
   requireOwned(memberships.length===actorNames.length && memberships.every(row=>{
    const member=owned.get(row.user_id);return member && row.department_id===member.departmentId && row.role===member.role;
