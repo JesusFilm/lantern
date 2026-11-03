@@ -9,6 +9,7 @@ import { buildSystem, buildUserMessage, newNonce } from './prompt.mjs';
 import { decide, parseVerdict } from './verdict.mjs';
 import { planPackets, reviewPool } from './packets.mjs';
 import { createContextReader } from './retrieval.mjs';
+import { equivalentPatches } from './equivalent-patches.mjs';
 
 export { diffFiles, protectedPathsIn };
 export const CHECK_NAME = 'Independent review';
@@ -152,14 +153,17 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
 
     const listResponse = await api(fetch, token, 'GET', `${compare}?per_page=100`);
     if (!listResponse.ok) return failure('File list unavailable', `GitHub could not list the changed files (status ${listResponse.status}), so completeness could not be checked and the change was not reviewed.`);
-    const files = (await listResponse.json()).files;
+    const comparison = await listResponse.json();
+    const files = comparison.files;
     if (!Array.isArray(files)) return failure('File list unavailable', 'GitHub returned no file list, so completeness could not be checked and the change was not reviewed.');
     if (files.length >= MAX_FILES) return failure('Too many files', `The change lists ${MAX_FILES} or more files, which may be truncated, so it was not reviewed. Split the change.`);
 
     let artifacts;
     try { artifacts = await manualArtifacts({ fetch, token, repository, headSha: expectedSha, diff, files }); }
     catch (error) { return failure('Unreviewable manual artifact', escapeText(error.message, 500)); }
-    const { problems, renames } = assessChange(diff, files, new Set(artifacts));
+    const initial = assessChange(diff, files, new Set(artifacts));
+    const verifiedPatches = await equivalentPatches({ fetch, token, repository, mergeBaseSha: comparison.merge_base_commit?.sha, headSha: expectedSha, diff, files, problems: initial.problems });
+    const { problems, renames } = assessChange(diff, files, new Set(artifacts), verifiedPatches);
     if (problems.length) {
       const listed = problems.slice(0, MAX_LISTED_PROBLEMS).map(p => `- ${escapeText(p.path, 200)}: ${p.reason}`).join('\n');
       const more = problems.length > MAX_LISTED_PROBLEMS ? `\n- and ${problems.length - MAX_LISTED_PROBLEMS} more` : '';
@@ -219,6 +223,7 @@ export async function runReview({ repository, prNumber, expectedSha, appId, priv
     const notes = [`Reviewed ${baseSha.slice(0, 7)}...${expectedSha.slice(0, 7)} with ${guidance.length} trusted guidance file${guidance.length === 1 ? '' : 's'} from the base commit.`];
     notes.push(`${sections.length} text files accounted for in ${packets.length} chunk reviews${packets.length > 1 ? ' plus an integration review' : ''}; all required reviews completed.`);
     notes.push(`Full head content was provided for ${context.length} modified file${context.length === 1 ? '' : 's'}; ${retrievedPaths.size} additional repository files were retrieved on request at the pinned head. Other unmodified dependencies were not provided.`);
+    if (verifiedPatches.size) notes.push(`${verifiedPatches.size} differing patch layouts were independently verified against complete merge-base and head contents.`);
     if (artifacts.length) notes.push(`Not assessed by the model: ${artifacts.map(path => escapeText(path, 200)).join(', ')}. File signatures and SHA-256 matched the editable head manifest; this does not verify generation or visual correctness.`);
     return { conclusion, verdict, diff, protectedFiles, output: render({ verdict, conclusion, rightLines: diffRightLines(diff), protectedFiles, notes }) };
   }
