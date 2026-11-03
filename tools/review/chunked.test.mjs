@@ -67,3 +67,28 @@ test('a late rejection explanation survives verbose approving summaries', async 
   assert.match(finalCheck(w).output.summary, /Integration: Required contract is inconsistent/);
   assert.match(finalCheck(w).output.summary, /summaries truncated/);
 });
+
+test('integration and browser tests in server and protected paths stay worker-assessed only', async () => {
+  const tests = [
+    'server/accounts.integration.test.ts',
+    'server/accounts.browser.test.ts',
+    'server/accounts.integration.test.mjs',
+    'tools/release/acceptance-fixture.integration.test.mjs',
+    'tools/review/contract.integration.test.mjs',
+    'tools/review/fixtures/example.mjs',
+  ];
+  const names = ['server/caller.ts', 'shared/contract.ts', ...tests];
+  const contents = Object.fromEntries(names.map(p => [`${p}@head`, `// RAW ${p}\n${'x'.repeat(40000)}`]));
+  const w = world({ diff: names.map(change).join(''), contents });
+  assert.equal((await run(w)).conclusion, 'success');
+  const calls = modelCalls(w);
+  const integration = calls.at(-1).body.messages[0].content;
+  assert.match(integration, /integration review/);
+  for (const path of tests) {
+    assert.ok(integration.includes(path), 'inventory still accounts for ' + path);
+    assert.ok(!integration.includes(`// RAW ${path}`), 'integration excludes raw test/fixture: ' + path);
+    assert.ok(!integration.includes(`diff --git a/${path}`), 'integration excludes test/fixture patch: ' + path);
+    assert.equal(calls.slice(0, -1).filter(c => c.body.messages[0].content.includes(contents[`${path}@head`])).length, 1, 'complete test/fixture reaches exactly one worker: ' + path);
+  }
+  for (const path of names.slice(0, 2)) assert.ok(integration.includes(contents[`${path}@head`]), 'integration retains raw implementation: ' + path);
+});
