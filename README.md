@@ -2,21 +2,11 @@
 
 Lantern helps members write objectives and SMART goals, discuss their position focus with a career lead, and confirm the agreed document. Google sign-in, department membership and server-enforced ownership control access.
 
-[Product scope](docs/PRD.md) · [Roadmap](docs/ROADMAP.md) · [Architecture decisions](docs/adrs/AGENTS.md)
+[Product scope](docs/PRD.md) · [Roadmap](docs/ROADMAP.md) · [Architecture decisions](docs/adrs/AGENTS.md) · [Glossary](GLOSSARY.md)
 
 ## Development
 
 For test setup, focused/full commands, coverage and limits, read [Testing](docs/development/testing.md). Test fixtures use an isolated local owner connection; application setup below uses restricted runtime/migration/admin connections. Preserve existing private environment files and database volumes.
-
-The independent-review harness can be tested without PostgreSQL, browser setup or
-live model calls:
-
-```sh
-node --test tools/review/*.test.mjs
-```
-
-These tests use simulated GitHub and model responses. See the
-[review-gate guide](docs/operations/review-gate.md) for live-review behavior and limits.
 
 For a fresh local application database:
 
