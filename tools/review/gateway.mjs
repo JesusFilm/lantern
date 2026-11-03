@@ -11,7 +11,7 @@ export async function callModel({ timeoutMs = 60_000, ...options }) {
   } finally { clearTimeout(timer); }
 }
 
-async function requestModel({ fetch, baseUrl, apiKey, model, system, user, maxTokens = 4000, signal }) {
+async function requestModel({ fetch, baseUrl, apiKey, model, system, user, maxTokens = 4000, signal, onResponse = () => {} }) {
   if (!baseUrl.startsWith('https://')) throw new Error('Gateway base URL must use https');
   const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/v1/messages`, {
     method: 'POST', signal,
@@ -23,6 +23,11 @@ async function requestModel({ fetch, baseUrl, apiKey, model, system, user, maxTo
   if (Buffer.byteLength(raw) > MAX_RESPONSE_BYTES) throw new Error('Review gateway response too large');
   let body;
   try { body = JSON.parse(raw); } catch { throw new Error('Review gateway returned invalid JSON'); }
+  onResponse({
+    stopReason: ['end_turn', 'max_tokens', 'stop_sequence', 'tool_use', 'pause_turn', 'refusal'].includes(body.stop_reason) ? body.stop_reason : 'other',
+    textBlocks: Array.isArray(body.content) ? body.content.filter(part => part.type === 'text').length : 0,
+    ...(Number.isSafeInteger(body.usage?.output_tokens) && body.usage.output_tokens >= 0 ? { outputTokens: body.usage.output_tokens } : {}),
+  });
   if (body.stop_reason === 'max_tokens') throw new Error('Review gateway response was truncated');
   const text = (body.content ?? []).filter(part => part.type === 'text').map(part => part.text).join('');
   if (!text.trim()) throw new Error('Review gateway returned no text');

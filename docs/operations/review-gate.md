@@ -25,6 +25,18 @@ Reviewers may return `{"request_context":["path"]}` instead of a verdict. The ha
 
 Use Actions → Independent review → Run workflow on `main`, supplying `pr_number`, to review the current head without a new commit. Only open, non-draft PRs targeting `main` are eligible. Manual and automatic runs share PR concurrency; final head verification still applies. Pushes continue to trigger reviews. Replying to or resolving a thread does not trigger review or clear a check. Resolve verified findings after replying with evidence; retain uncertain findings. The CLI exits unsuccessfully after publishing a failed App verdict; the App check remains authoritative.
 
+## Response diagnostics
+
+Actions logs include `[review-response]` records identifying each chunk or integration
+review and its one-based retrieval round. Records include the outcome, allowlisted
+gateway stop reason, text-block count, output-token count when supplied, response
+byte count and a bounded structural sketch after the parser’s supported thinking
+blocks and code fences are removed. Words and string values are omitted;
+raw responses, prompts and credentials are never logged. An unclosed string or extra
+text can therefore be distinguished without publishing model output. These records
+are diagnostic evidence only: parsing and approval rules remain unchanged. If a
+failure remains ambiguous, do not infer its cause from the sketch.
+
 ## Pull request feedback
 
 Each run publishes its own SHA-bound summary after completing its App check, plus bounded inline findings. Comments do not gate merging. See [feedback lifecycle and limits](review-feedback.md) for publication, retry, omission and isolation rules.

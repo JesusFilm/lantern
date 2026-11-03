@@ -220,9 +220,13 @@ test('job log: main.mjs prints the feedback outcome, and a ::warning:: when the 
       writeFileSync(join(dir, 'preload.mjs'), `import { world, HUNK_DIFF } from ${JSON.stringify(new URL('./fake-github.mjs', import.meta.url).href)}; globalThis.fetch = world({ diff: HUNK_DIFF, traps: ${traps} }).fetch;`);
       return execFileSync('node', ['--import', join(dir, 'preload.mjs'), new URL('./main.mjs', import.meta.url).pathname], { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
     };
-    assert.equal(logFor('[]'), 'Review completed: success. Pull request feedback: summary comment created; no inline findings.\n');
+    const output = logFor('[]');
+    const [diagnostic, ...summary] = output.split('\n');
+    assert.match(diagnostic, /^\[review-response\] /);
+    assert.equal(JSON.parse(diagnostic.slice('[review-response] '.length)).outcome, 'verdict');
+    assert.equal(summary.join('\n'), 'Review completed: success. Pull request feedback: summary comment created; no inline findings.\n');
     const warned = logFor("[{ on: 'POST /repos/o/r/issues/5/comments', after: api => { api.state.failCheckPatch = true; } }]");
-    assert.match(warned, /^Review completed: success\..*\n::warning::.*\(status 502\)/);
+    assert.match(warned, /(?:^|\n)Review completed: success\..*\n::warning::.*\(status 502\)/);
     assert.ok(!warned.includes(KEY) && !warned.includes(TOKEN));
   } finally {
     rmSync(dir, { recursive: true });

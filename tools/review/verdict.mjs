@@ -1,9 +1,11 @@
 const MAX_BYTES = 128_000;
 const SEVERITIES = ['blocker', 'major', 'minor'];
 
+export const normalizeVerdictText = text => text.replace(/<think>[\s\S]*?<\/think>/g, '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+
 export function parseVerdict(text) {
   if (typeof text !== 'string' || Buffer.byteLength(text) > MAX_BYTES) throw new Error('Invalid verdict: missing or oversized response');
-  const cleaned = text.replace(/<think>[\s\S]*?<\/think>/g, '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  const cleaned = normalizeVerdictText(text);
   let value;
   try { value = JSON.parse(cleaned); } catch { throw new Error('Invalid verdict: response is not a single JSON object'); }
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid verdict: expected an object');
