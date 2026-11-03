@@ -20,6 +20,7 @@ export async function main({ env = process.env, readEvent = readFileSync, review
     gatewayApiKey: need('AI_REVIEW_GATEWAY_API_KEY'),
     model: need('AI_REVIEW_MODEL'),
     fetch,
+    diagnostic: event => log(`[review-response] ${JSON.stringify(event)}`),
   });
   log(describeResult(result));
   if (result.conclusion === 'failure') processState.exitCode = 1;
