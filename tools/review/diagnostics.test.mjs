@@ -79,3 +79,13 @@ test('diagnostic structure is bounded, hides escaped string content and unknown 
   assert.ok(events[0].structure.length <= 240);
   assert.ok(!JSON.stringify(events).includes('SECRET'));
 });
+
+test('long supported thinking wrappers cannot hide the verdict structure that failed parsing', async () => {
+  const w = world({ model: '<think>' + 'PRIVATE_REASONING '.repeat(100) + '</think>\n' + verdict() + ' EXTRA_PRIVATE_PROSE' });
+  const events = [];
+  assert.equal((await run(w, { diagnostic: event => events.push(event) })).conclusion, 'failure');
+  assert.equal(events[0].start, 'think');
+  assert.equal(events[0].structure, '{"…":"…","…":"…","…":[]}<value>');
+  assert.equal(events[0].structureClipped, false);
+  assert.ok(!JSON.stringify(events).includes('PRIVATE'));
+});

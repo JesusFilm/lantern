@@ -30,7 +30,8 @@ Use Actions → Independent review → Run workflow on `main`, supplying `pr_num
 Actions logs include `[review-response]` records identifying each chunk or integration
 review and its one-based retrieval round. Records include the outcome, allowlisted
 gateway stop reason, text-block count, output-token count when supplied, response
-byte count and a bounded structural sketch. Words and string values are omitted;
+byte count and a bounded structural sketch after the parser’s supported thinking
+blocks and code fences are removed. Words and string values are omitted;
 raw responses, prompts and credentials are never logged. An unclosed string or extra
 text can therefore be distinguished without publishing model output. These records
 are diagnostic evidence only: parsing and approval rules remain unchanged. If a
