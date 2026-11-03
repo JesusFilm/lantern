@@ -7,19 +7,25 @@ on:
   pull_request_target:
     # edited fires for title, body and base-branch edits; only a base-branch edit (a retarget) starts a review.
     types: [opened, synchronize, reopened, ready_for_review, edited]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to review at its current head
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ (github.event.action == 'edited' && github.event.changes.base.ref.from == null) && format('ignored-edit-{0}', github.run_id) || format('independent-review-{0}', github.event.pull_request.number) }}
+  group: ${{ (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && format('independent-review-{0}', github.event.inputs.pr_number)) || (github.event_name == 'pull_request_target' && (github.event.action != 'edited' || github.event.changes.base.ref.from != null) && format('independent-review-{0}', github.event.pull_request.number)) || format('ignored-edit-{0}', github.run_id) }}
   cancel-in-progress: true
 
 jobs:
   run-review:
-    if: github.event.pull_request.base.ref == 'main' && github.event.pull_request.draft == false && (github.event.action != 'edited' || github.event.changes.base.ref.from != null)
+    if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request_target' && github.event.pull_request.base.ref == 'main' && github.event.pull_request.draft == false && (github.event.action != 'edited' || github.event.changes.base.ref.from != null))
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     environment: ai-review
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

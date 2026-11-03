@@ -1,22 +1,28 @@
 import { readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 import { describeResult, runReview } from './review.mjs';
+import { reviewTarget } from './entry.mjs';
 
-const need = name => {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing ${name}`);
-  return value;
-};
+export async function main({ env = process.env, readEvent = readFileSync, review = runReview, log = console.log, processState = process } = {}) {
+  const need = name => {
+    const value = env[name];
+    if (!value) throw new Error(`Missing ${name}`);
+    return value;
+  };
+  const event = JSON.parse(readEvent(need('GITHUB_EVENT_PATH'), 'utf8'));
+  const target = reviewTarget({ eventName: need('GITHUB_EVENT_NAME'), ref: need('GITHUB_REF'), event });
+  const result = await review({
+    repository: need('GITHUB_REPOSITORY'),
+    ...target,
+    appId: need('AI_REVIEW_APP_ID'),
+    privateKey: need('AI_REVIEW_APP_PRIVATE_KEY'),
+    gatewayBaseUrl: need('AI_REVIEW_GATEWAY_BASE_URL'),
+    gatewayApiKey: need('AI_REVIEW_GATEWAY_API_KEY'),
+    model: need('AI_REVIEW_MODEL'),
+    fetch,
+  });
+  log(describeResult(result));
+  if (result.conclusion === 'failure') processState.exitCode = 1;
+}
 
-const event = JSON.parse(readFileSync(need('GITHUB_EVENT_PATH'), 'utf8'));
-const result = await runReview({
-  repository: need('GITHUB_REPOSITORY'),
-  prNumber: event.pull_request.number,
-  expectedSha: event.pull_request.head.sha,
-  appId: need('AI_REVIEW_APP_ID'),
-  privateKey: need('AI_REVIEW_APP_PRIVATE_KEY'),
-  gatewayBaseUrl: need('AI_REVIEW_GATEWAY_BASE_URL'),
-  gatewayApiKey: need('AI_REVIEW_GATEWAY_API_KEY'),
-  model: need('AI_REVIEW_MODEL'),
-  fetch,
-});
-console.log(describeResult(result));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

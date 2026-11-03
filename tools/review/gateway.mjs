@@ -1,9 +1,20 @@
 const MAX_RESPONSE_BYTES = 128_000;
 
-export async function callModel({ fetch, baseUrl, apiKey, model, system, user, maxTokens = 4000 }) {
+export async function callModel({ timeoutMs = 60_000, ...options }) {
+  const controller = new AbortController();
+  let timer;
+  try {
+    return await Promise.race([
+      requestModel({ ...options, signal: controller.signal }),
+      new Promise((_, reject) => { timer = setTimeout(() => { controller.abort(); reject(new Error('Review gateway timed out')); }, timeoutMs); }),
+    ]);
+  } finally { clearTimeout(timer); }
+}
+
+async function requestModel({ fetch, baseUrl, apiKey, model, system, user, maxTokens = 4000, signal }) {
   if (!baseUrl.startsWith('https://')) throw new Error('Gateway base URL must use https');
   const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/v1/messages`, {
-    method: 'POST',
+    method: 'POST', signal,
     headers: { Authorization: `Bearer ${apiKey}`, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }),
   });
