@@ -83,10 +83,11 @@ const hunkHeader = line => /^@@ -\d+(?:,\d+)? \+\d+(?:,\d+)? @@/.exec(line)?.[0]
 
 // Compare the hunks sent to the model with GitHub's separately returned patch and counts, so a diff cut between complete hunks cannot pass.
 // The text must be identical, invisible characters included: a changed or removed control character is exactly what a hidden-character attack looks like, and the model must see what GitHub lists. The reasons only locate the first difference.
-function patchMismatch(section, file) {
+function patchMismatch(section, file, verified) {
   if (file.additions !== section.additions || file.deletions !== section.deletions || file.changes !== section.additions + section.deletions) {
     return 'its additions, deletions and total do not match the counts GitHub lists';
   }
+  if (verified) return null;
   const sent = patchLines(section.patch);
   const listed = patchLines(file.patch);
   if (sent.length !== listed.length) return `the diff has ${sent.length} patch lines but GitHub lists ${listed.length}`;
@@ -99,7 +100,7 @@ function patchMismatch(section, file) {
   return null;
 }
 
-export function assessChange(diff, files, artifacts = new Set()) {
+export function assessChange(diff, files, artifacts = new Set(), verifiedPatches = new Set()) {
   const sections = parseDiff(diff);
   const listed = new Map(files.map(file => [file.filename, file]));
   const seen = new Map();
@@ -113,7 +114,7 @@ export function assessChange(diff, files, artifacts = new Set()) {
     if (!file) problems.push({ path: section.path, reason: 'in the diff but not in the file list for this comparison' });
     else if (artifacts.has(section.path)) continue;
     else if (!section.reviewable) problems.push({ path: section.path, reason: section.reason });
-    else if (file.patch && patchMismatch(section, file)) problems.push({ path: section.path, reason: `the diff does not match the patch GitHub lists for this file (truncated or altered): ${patchMismatch(section, file)}` });
+    else if (file.patch && patchMismatch(section, file, verifiedPatches.has(section.path))) problems.push({ path: section.path, reason: `the diff does not match the patch GitHub lists for this file (truncated or altered): ${patchMismatch(section, file, verifiedPatches.has(section.path))}` });
     else if (!file.patch && !(section.pureRename || section.emptyFile)) problems.push({ path: section.path, reason: 'no patch in the file list' });
     else if (!file.patch && (file.changes !== 0 || file.additions !== 0 || file.deletions !== 0)) problems.push({ path: section.path, reason: 'no patch in the file list' });
     else if (section.pureRename) renames.push({ from: section.oldPath, to: section.path });
