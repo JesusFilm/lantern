@@ -53,7 +53,7 @@ function evaluate(source, context) {
 }
 
 const event = ({ action = 'opened', base = 'main', draft = false, changes, number = 7, runId = 1 }) => ({
-  github: { run_id: runId, event: { action, number, pull_request: { number, draft, base: { ref: base } }, ...(changes ? { changes } : {}) } },
+  github: { event_name: 'pull_request_target', ref: 'refs/heads/main', run_id: runId, event: { action, number, pull_request: { number, draft, base: { ref: base } }, ...(changes ? { changes } : {}) } },
 });
 const runs = e => Boolean(evaluate(expression('if'), e));
 const group = e => evaluate(expression('group'), e);
@@ -90,4 +90,26 @@ test('workflow events: the expression evaluator rejects what it cannot evaluate,
   assert.throws(() => evaluate("github.a ~ 'x'", event({})));
   assert.equal(evaluate("github.event.changes.base.ref.from == null", event({})), true);
   assert.equal(evaluate("github.event.action == 'edited' && 'yes' || 'no'", event({ action: 'edited' })), 'yes');
+});
+
+const dispatch = (prNumber = '7', ref = 'refs/heads/main', runId = 80) => ({
+  github: { event_name: 'workflow_dispatch', ref, run_id: runId, event: { inputs: { pr_number: prNumber } } },
+});
+
+test('manual reviews run only from main and serialize with automated reviews of the same PR', () => {
+  assert.equal(runs(dispatch()), true);
+  assert.equal(group(dispatch()), REVIEW_GROUP);
+  assert.equal(group(dispatch('8')), 'independent-review-8');
+  assert.equal(runs(dispatch('7', 'refs/heads/feature')), false);
+  assert.notEqual(group(dispatch('7', 'refs/heads/feature')), REVIEW_GROUP);
+  assert.match(workflow, /workflow_dispatch:\s+inputs:\s+pr_number:\s+description: [^\n]+\s+required: true\s+type: string/);
+  assert.match(workflow, /environment: ai-review/);
+  assert.match(workflow, /timeout-minutes: 30/);
+  assert.match(workflow, /ref: main/);
+  assert.match(workflow, /persist-credentials: false/);
+  assert.match(workflow, /cancel-in-progress: true/);
+  assert.match(workflow, /run: node tools\/review\/main\.mjs/);
+  for (const key of ['AI_REVIEW_APP_PRIVATE_KEY', 'AI_REVIEW_GATEWAY_API_KEY']) {
+    assert.ok(workflow.includes(key + ': $' + '{{ secrets.' + key + ' }}'));
+  }
 });
