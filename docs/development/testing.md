@@ -17,22 +17,6 @@ npm run test:local
 
 Use the synthetic loopback owner connection in `.env.example`. Tests create isolated schemas and disposable databases/roles; application startup uses a separate restricted runtime connection. Preserve existing private environment files and database volumes. If a local database already uses different credentials or the port is occupied, resolve that fixture configuration first rather than resetting its volume.
 
-### Local PostgreSQL 17 data
-
-Compose runs PostgreSQL 18, the version used by staging and production. It keeps data in the `postgresql` volume, so a PostgreSQL 17 `postgres-data` volume from an earlier checkout is left untouched and the first start creates an empty cluster. Test fixtures need nothing more. To keep a local application database, copy the old cluster. Use the environment file that created it: the commands below use `.env.example`, so replace it in every command if you created the volume with another file. Stop the Compose database first so only one server opens the old volume, and expect only `role ... already exists` and `database ... already exists` errors for the owner and its default database:
-
-```sh
-docker compose --env-file .env.example stop database
-docker run -d --name lantern-pg17 --env-file .env.example -v career-lead_postgres-data:/var/lib/postgresql/data postgres:17
-until docker exec lantern-pg17 pg_isready -q; do sleep 1; done
-docker exec lantern-pg17 sh -c 'pg_dumpall -U "$POSTGRES_USER"' > "${TMPDIR:-/tmp}/lantern-pg17.sql"
-docker rm -f lantern-pg17
-docker compose --env-file .env.example up -d --wait database
-docker compose --env-file .env.example exec -T database sh -c 'psql -U "$POSTGRES_USER" -d postgres' < "${TMPDIR:-/tmp}/lantern-pg17.sql"
-```
-
-Check the copy with `npm run db:verify -- runtime` (and `migration`, `admin`) using your database target settings, then delete the dump file. Remove the old volume (`docker volume rm career-lead_postgres-data`) only when you no longer need it.
-
 `test:local` uses Node's test runner, including tests that launch Playwright; `npx playwright test` is not the suite entry point. Build first: release integration tests import compiled server code and browser assets. A focused run uses the same fixture and runner, for example:
 
 ```sh
