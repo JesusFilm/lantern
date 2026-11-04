@@ -1,3 +1,4 @@
+import type { Appearance } from "./appearance.js";
 import { useState } from "react";
 import type { SessionView } from "../../shared/access.js";
 import { Dialog } from "./Dialog.js";
@@ -5,7 +6,11 @@ import { api } from "./api.js";
 export function Account({
   user,
   onChange,
+  appearance,
+  onAppearanceChange,
 }: {
+  appearance: Appearance;
+  onAppearanceChange: (appearance: Appearance) => void;
   user: NonNullable<SessionView["user"]>;
   onChange: (user: NonNullable<SessionView["user"]>) => void;
 }) {
@@ -35,6 +40,19 @@ export function Account({
             <dd>{user.email}</dd>
           </div>
         </dl>
+      </section>
+      <section className="read-section appearance-card">
+        <h2>Appearance</h2>
+        <p className="muted">Choose how Lantern looks on this browser.</p>
+        <fieldset className="appearance-options">
+          <legend>Style mode</legend>
+          {(["light", "dark", "system"] as const).map((option) => (
+            <label key={option}>
+              <input type="radio" name="appearance" value={option} checked={appearance === option} onChange={() => onAppearanceChange(option)} />
+              {option[0]!.toUpperCase() + option.slice(1)}
+            </label>
+          ))}
+        </fieldset>
       </section>
       {editing && (
         <Dialog

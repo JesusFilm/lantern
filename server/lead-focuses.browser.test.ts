@@ -110,6 +110,13 @@ test(
       await page
         .getByRole("button", { name: "Department", exact: true })
         .click();
+      const people = page.getByRole("table", { name: "People" });
+      await expect(people.getByRole("columnheader")).toHaveText(["Name", "Email", "Role"]);
+      await expect(people.getByRole("row").filter({ hasText: "Alice@example.test" })).toContainText("Member");
+      await page.setViewportSize({ width: 320, height: 700 });
+      assert.ok(await page.evaluate("document.documentElement.scrollWidth <= innerWidth"));
+      await expect(people.getByRole("button", { name: "Alice", exact: true })).toBeVisible();
+      await page.setViewportSize({ width: 1280, height: 900 });
       await page.getByRole("button", { name: "Alice", exact: true }).click();
       await expect(
         page.getByRole("heading", { name: "Alice’s position focuses" }),
@@ -481,6 +488,14 @@ test(
           await page
             .getByRole("button", { name: "Add user", exact: true })
             .click();
+          const registered = page.getByRole("table", { name: "Registered users" });
+          await expect(registered.getByRole("columnheader")).toHaveText(["Email", "Membership", "Availability"]);
+          await expect(registered.getByRole("row").filter({ hasText: "candidate@example.test" })).toContainText("Unassigned");
+          await expect(registered.getByRole("row").filter({ hasText: "Alice@example.test" })).toContainText("Already a member of Team.");
+          await page.setViewportSize({ width: 320, height: 700 });
+          assert.ok(await page.evaluate("document.documentElement.scrollWidth <= innerWidth"));
+          await expect(registered.getByText("candidate@example.test")).toBeVisible();
+          await page.setViewportSize({ width: 1280, height: 900 });
           await page
             .getByLabel("Search by name or email address")
             .fill("candidate");

@@ -1,0 +1,54 @@
+/* The existing palette remains the light theme. Dark surfaces use the same
+   hierarchy, with brighter text and accents on a low-glare blue background. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e4edf5;
+  --muted: #b5c8d8;
+  --accent: #69d2df;
+  --border: #496176;
+  --surface: #1c3041;
+  --canvas: #101f2c;
+  --surface-subtle: #263c4d;
+}
+[data-theme="dark"] aside { background: #091925; }
+[data-theme="dark"] nav button { color: #f1f7fb; }
+[data-theme="dark"] nav button.active, [data-theme="dark"] nav button:hover { background: #29495e; }
+[data-theme="dark"] button:hover, [data-theme="dark"] .link:hover { background: #294b5b; }
+[data-theme="dark"] .primary { background: #00778a; border-color: #00778a; color: white; }
+[data-theme="dark"] .primary:hover { background: #006477; }
+[data-theme="dark"] .link { background: transparent; }
+[data-theme="dark"] :is(.mission-banner, .focus-list, .empty-base, .lesson-card, .guide-navigation, .topic-entry > button, .member-context, .procedure-flow-panel, .initiative-icon-grid button, .objective-pager, .lesson-footer, .cp-coach-wait) { background: var(--surface); color: var(--ink); }
+[data-theme="dark"] :is(.goal, .footer, .notice, .unread, .mission-editor-preview, .area-heading, .lesson-steps, .confirmation-summary, .focus-process, .explanation, .initiative-table th, .initiative-table .archived, .focus-list th, .guided-choices label:has(input:checked)) { background: var(--surface-subtle); color: var(--ink); }
+[data-theme="dark"] :is(.focus-list tbody tr:hover, .topic-entry > button.selected, .topic-group > button.selected, .lesson-steps button[aria-current="step"], .initiative-icon-grid button[aria-pressed="true"]) { background: #294b5b; color: #8fe3eb; }
+[data-theme="dark"] :is(.department-tabs, .tabs, .tabs button, .lesson-steps button) { background: transparent; }
+[data-theme="dark"] :is(.mission-banner h2, .process-forward, .process-forward > svg) { color: #69d2df; }
+[data-theme="dark"] .process-return { stroke: #69d2df; }
+[data-theme="dark"] :is(.empty, .mission-empty-preview, .focus-list th, .focus-list .period, .example-label, .why, .profile-card dt, .area-heading, .comparison-heading, .initiative-palette legend, .initiative-preview-title, .confirmation-summary h3, .confirmation-summary dt, .objective-pager span, .process-agreed, .process-refine-label, .lesson-chooser .gesture-hint, .objective-chooser label span, .lesson-chooser > span, .members th, .procedure-header-copy, .procedure-year-key, .procedure-timing, .procedure-role, .procedure-milestones li > span, .cp-wait-detail, .cp-wait-time) { color: var(--muted); }
+[data-theme="dark"] :is(.focus-list .link, .why strong, .initiative-identity, .procedure-milestones strong, .explanation h3) { color: var(--ink); }
+[data-theme="dark"] :is(.process-stages > li, .procedure-milestones li) { background: #1c3041; color: var(--ink); border-color: var(--border); }
+[data-theme="dark"] .procedure-flow-icon { background: #294b5b; color: #8fe3eb; }
+[data-theme="dark"] .procedure-proposed { background: #514426; color: #ffdf95; }
+[data-theme="dark"] .badge, [data-theme="dark"] .focus-draft, [data-theme="dark"] .member-initials { background: #314b5a; color: #e4edf5; }
+[data-theme="dark"] .initiative-chip { background: #29434b; }
+[data-theme="dark"] .initiative-chip.has-appearance { background: color-mix(in srgb, var(--initiative-color) 22%, #1c3041); }
+[data-theme="dark"] .initiative-mark { background: color-mix(in srgb, var(--initiative-color) 25%, #1c3041); color: #e4edf5; }
+[data-theme="dark"] .initiative-chip .initiative-mark { background: transparent; }
+[data-theme="dark"] .initiative-mark:empty { background: var(--initiative-color); }
+[data-theme="dark"] .lesson-steps.initiative-guide-steps button .initiative-mark { background: color-mix(in srgb, var(--initiative-color) 25%, #1c3041); color: #e4edf5; }
+[data-theme="dark"] :is(.example-pair > div.weak-example, [role="alert"]) { background: #512e32; color: #ffd8d4; }
+[data-theme="dark"] :is(.weak-example .example-title, .danger, .cp-notes .cp-delete) { color: #ffb2aa; }
+[data-theme="dark"] .weak-example .example-icon { background: #713e42; }
+[data-theme="dark"] .example-pair > div.strong-example { background: #1c4739; }
+[data-theme="dark"] .strong-example .example-title { color: #a9e8c6; }
+[data-theme="dark"] .strong-example .example-icon { background: #2d6951; }
+[data-theme="dark"] :is(.confirmation-warning, .cp-error, .cp-warning, .review-status--unsent-changes) { background: #514426; color: #ffdf95; }
+[data-theme="dark"] .confirmation-warning > .lock-icon { color: #ffcf70; }
+[data-theme="dark"] .cp-changes ins, [data-theme="dark"] .review-status--confirmed { background: #225440; color: #b6f4d1; }
+[data-theme="dark"] .cp-changes del { background: #663b42; color: #ffd3da; }
+[data-theme="dark"] .review-status--new-notes { background: #24515b; color: #c1f4fa; }
+[data-theme="dark"] .lesson-steps button span { background: #3b586a; }
+[data-theme="dark"] .lesson-steps button[aria-current="step"] span { background: #00778a; color: white; }
+[data-theme="dark"] .mission-art-slot img { border-radius: 4px; }
+[data-theme="dark"] .profile-card dl > div, [data-theme="dark"] .members th, [data-theme="dark"] .members td { border-color: var(--border); }
+/* Quarter labels sit on the light-colored segments of the year diagram. */
+[data-theme="dark"] .procedure-circle text { fill: #304c5e; }

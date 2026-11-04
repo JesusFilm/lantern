@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
@@ -66,6 +67,66 @@ test("private browser state follows the current server session", { timeout: 6000
     }
     const focusA = await createFocus(memberA, "Private member A focus");
     await createFocus(memberB, "Private member B focus");
+
+    await t.test("appearance is visible before the application bundle loads", async () => {
+      for (const scenario of [
+        { stored: "dark", system: "light", expected: "dark" },
+        { stored: "system", system: "dark", expected: "dark" },
+        { stored: null, system: "dark", expected: "dark" },
+        { stored: "light", system: "dark", expected: "light" },
+        { stored: "invalid", system: "light", expected: "light" },
+        { stored: null, system: "dark", expected: "dark", denied: true },
+      ] as const) {
+        const initial = await browser!.newContext({ colorScheme: scenario.system });
+        let release!: () => void;
+        const held = new Promise<void>(resolve => { release = resolve; });
+        try {
+          await initial.addInitScript(({ stored, denied }) => {
+            if (stored !== null) localStorage.setItem("lantern-appearance", stored);
+            if (denied) Storage.prototype.getItem = () => { throw new Error("Storage unavailable"); };
+          }, { stored: scenario.stored, denied: "denied" in scenario });
+          const firstPage = await initial.newPage();
+          await firstPage.route("**/client/main.tsx", async route => {
+            await held;
+            await route.continue().catch(() => {});
+          });
+          await firstPage.goto(origin, { waitUntil: "commit" });
+          await expect(firstPage.locator("html")).toHaveAttribute("data-theme", scenario.expected);
+          await expect(firstPage.locator("html")).toHaveCSS("color-scheme", scenario.expected);
+          await expect(firstPage.locator("#root")).toBeEmpty();
+          const { data } = await sharp(await firstPage.screenshot()).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+          if (scenario.expected === "dark") assert.ok(Math.max(data[0]!, data[1]!, data[2]!) < 64, "The waiting page should paint dark.");
+          else assert.ok(Math.min(data[0]!, data[1]!, data[2]!) > 200, "The waiting page should paint light.");
+        } finally {
+          release();
+          await initial.close();
+        }
+      }
+    });
+
+    await t.test("appearance follows system and remembers a choice across reloads", async () => {
+      await signIn(memberA);
+      await page.emulateMedia({ colorScheme: "dark" });
+      await page.goto(`${origin}/?page=account`);
+      await expect(page.getByRole("radio", { name: "System" })).toBeChecked();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+      await page.getByRole("radio", { name: "Light", exact: true }).check();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+      await expect(page.locator("html")).toHaveCSS("color-scheme", "light");
+      await page.reload();
+      await expect(page.getByRole("radio", { name: "Light", exact: true })).toBeChecked();
+      await page.getByRole("radio", { name: "Dark", exact: true }).check();
+      await page.reload();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+      await page.evaluate(() => localStorage.clear());
+      await page.emulateMedia({ colorScheme: "light" });
+      await page.reload();
+      await expect(page.getByRole("radio", { name: "System" })).toBeChecked();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+      await page.emulateMedia({ colorScheme: "dark" });
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+      await expect(page.locator("html")).toHaveCSS("color-scheme", "dark");
+    });
 
     await t.test("switching accounts in another tab clears the previous member's focus", async () => {
       await signIn(memberA);

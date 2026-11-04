@@ -119,6 +119,15 @@ export const chapters: Chapter[] = [
           { id: "account-edit-name", persona: "member", path: "/?page=account", act: click("Edit name"), ready: (p) => p.getByLabel("Display name").first(), caption: "Editing the display name" },
         ],
       },
+      {
+        kind: "feature",
+        title: "Appearance",
+        roles: ["Member", "Career lead"],
+        summary: "Choose Light, Dark or System in Account. System follows your device's color setting.",
+        tryIt: ["Open **Account**.", "Choose ① **Light**, **Dark** or **System** under Appearance.", "Reload the page."],
+        check: ["The chosen mode is remembered in this browser.", "System follows changes to the device setting.", "Clearing browser storage resets the choice to System."],
+        shots: [{ id: "account-appearance", persona: "member", path: "/?page=account", ready: heading("Appearance", 2), highlight: ['role=group[name="Style mode"]'], caption: "Appearance settings" }],
+      },
     ],
   },
   {
@@ -336,7 +345,7 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "People and their focuses",
         roles: ["Career lead"],
-        summary: "Department → People lists current members. Choosing a person shows their focuses, read-only.",
+        summary: "Department → People lists current members in Name, Email and Role columns. Choosing a person shows their focuses, read-only.",
         tryIt: ["Open **Department**.", "Choose a member's ① name.", "Open one of their focuses."],
         check: [
           "Only current members of your department are listed.",
@@ -352,7 +361,7 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Add a registered user",
         roles: ["Career lead"],
-        summary: "People sign in first; the career lead then adds them from the list of registered users. Roles cannot be chosen here.",
+        summary: "People sign in first; the career lead then adds them from registered users, listed by email, membership and availability. Roles cannot be chosen here.",
         tryIt: ["Ask the new person to sign in once.", "Choose **Add user** and find them.", "Add them to the department."],
         check: [
           "The person appears under People and can open Position focuses.",

@@ -47,6 +47,10 @@ Product source means `client/`, `shared/`, `server/`, `public/`, `index.html`, `
 
 When two branches both regenerate, the manual files conflict. Resolve the conflict by merging the source changes, then running `npm run manual` again; never merge the generated files by hand.
 
+## Appearance coverage
+
+The manual documents the Light, Dark and System setting, but its application screenshots are generated in light mode only. A separate dark-mode manual is deliberately excluded: dark mode changes presentation, not the workflows the manual describes. Review dark appearance separately when styles change.
+
 ## Write or change a slide
 
 Slides live in [content.ts](../../tools/manual/content.ts), together with the scenes that photograph them. A scene names a synthetic person, a device and a path. It lists the interactions that reach the state, a `ready` locator that must be visible, and a capture mode. Numbered `highlight` targets draw callouts. Reference them in the slide text as ①, ②, and so on. Generation fails when slide text does not fit, so keep Try it and Check lists to about four short lines each.
