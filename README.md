@@ -6,7 +6,7 @@ Lantern helps members write objectives and SMART goals, discuss their position f
 
 ## Development
 
-For test setup, focused/full commands, coverage and limits, read [Testing](docs/development/testing.md). Test fixtures use an isolated local owner connection; application setup below uses restricted runtime/migration/admin connections. Preserve existing private environment files and database volumes.
+For test setup, focused/full commands, coverage and limits, read [Testing](docs/development/testing.md). Test fixtures use an isolated local owner connection; application setup below uses restricted runtime/migration/admin connections. Keep your private environment files, which hold settings. The local database is disposable and can be reset at any time.
 
 For a fresh local application database:
 
