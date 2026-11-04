@@ -1,7 +1,7 @@
 name: career-lead
 services:
   database:
-    image: postgres:17
+    image: postgres:18
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?Copy .env.example to .env first}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env first}
