@@ -19,7 +19,7 @@ Use the synthetic loopback owner connection in `.env.example`. Tests create isol
 
 ### Local PostgreSQL 17 data
 
-Compose runs PostgreSQL 18, the version used by staging and production. It keeps data in the `postgresql` volume, so a PostgreSQL 17 `postgres-data` volume from an earlier checkout is left untouched and the first start creates an empty cluster. Test fixtures need nothing more. To keep a local application database, copy the old cluster. Use the environment file that created it, stop the Compose database first so only one server opens the old volume, and expect only `role ... already exists` and `database ... already exists` errors for the owner and its default database:
+Compose runs PostgreSQL 18, the version used by staging and production. It keeps data in the `postgresql` volume, so a PostgreSQL 17 `postgres-data` volume from an earlier checkout is left untouched and the first start creates an empty cluster. Test fixtures need nothing more. To keep a local application database, copy the old cluster. Use the environment file that created it: the commands below use `.env.example`, so replace it in every command if you created the volume with another file. Stop the Compose database first so only one server opens the old volume, and expect only `role ... already exists` and `database ... already exists` errors for the owner and its default database:
 
 ```sh
 docker compose --env-file .env.example stop database
