@@ -15,7 +15,9 @@ npm run typecheck
 npm run test:local
 ```
 
-Use the synthetic loopback owner connection in `.env.example`. Tests create isolated schemas and disposable databases/roles; application startup uses a separate restricted runtime connection. Preserve existing private environment files and database volumes. If a local database already uses different credentials or the port is occupied, resolve that fixture configuration first rather than resetting its volume.
+Use the synthetic loopback owner connection in `.env.example`. Tests create isolated schemas and disposable databases/roles; application startup uses a separate restricted runtime connection.
+
+The local database is disposable. Tests build their own data, and local startup adds the Engineering initiatives. When the database gets in the way (other credentials, an old version or leftover data), reset it with `docker compose --env-file .env.example down -v`, then run the `up` command above. Keep your private `.env` files, which hold settings rather than data. If another server already uses the port, stop it first.
 
 `test:local` uses Node's test runner, including tests that launch Playwright; `npx playwright test` is not the suite entry point. Build first: release integration tests import compiled server code and browser assets. A focused run uses the same fixture and runner, for example:
 
