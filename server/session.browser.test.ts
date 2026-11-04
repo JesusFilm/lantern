@@ -67,6 +67,28 @@ test("private browser state follows the current server session", { timeout: 6000
     const focusA = await createFocus(memberA, "Private member A focus");
     await createFocus(memberB, "Private member B focus");
 
+    await t.test("appearance follows system and remembers a choice across reloads", async () => {
+      await signIn(memberA);
+      await page.emulateMedia({ colorScheme: "dark" });
+      await page.goto(`${origin}/?page=account`);
+      await expect(page.getByRole("radio", { name: "System" })).toBeChecked();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+      await page.getByRole("radio", { name: "Light", exact: true }).check();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+      await page.reload();
+      await expect(page.getByRole("radio", { name: "Light", exact: true })).toBeChecked();
+      await page.getByRole("radio", { name: "Dark", exact: true }).check();
+      await page.reload();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+      await page.evaluate(() => localStorage.clear());
+      await page.emulateMedia({ colorScheme: "light" });
+      await page.reload();
+      await expect(page.getByRole("radio", { name: "System" })).toBeChecked();
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+      await page.emulateMedia({ colorScheme: "dark" });
+      await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    });
+
     await t.test("switching accounts in another tab clears the previous member's focus", async () => {
       await signIn(memberA);
       await page.goto(`${origin}/?focus=${focusA.id}`);

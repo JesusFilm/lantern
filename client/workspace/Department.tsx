@@ -161,19 +161,16 @@ export function Department({
         <button type="button" className={tab === "direction" ? "active" : ""} aria-pressed={tab === "direction"} onClick={() => selectTab("direction")}>Mission & initiatives</button>
       </div>
       {tab === "direction" ? <TeamDirection /> : <>
-      <ul className="members">
-        {members.map((member) => (
-          <li key={member.id}>
-            <button className="link" onClick={() => navigate(member.id)}>
-              {member.name}
-            </button>
-            <span>{member.email}</span>
-            <small>
-              {member.role === "career-lead" ? "Career lead" : "Member"}
-            </small>
-          </li>
-        ))}
-      </ul>
+      <table className="members" aria-label="People">
+        <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Role</th></tr></thead>
+        <tbody>{members.map((member) => (
+          <tr key={member.id}>
+            <td><button className="link" onClick={() => navigate(member.id)}>{member.name}</button></td>
+            <td>{member.email}</td>
+            <td>{member.role === "career-lead" ? "Career lead" : "Member"}</td>
+          </tr>
+        ))}</tbody>
+      </table>
       {session.department.role === "career-lead" && (
         <>
 
@@ -222,22 +219,24 @@ export function Department({
                   </option>
                 ))}
               </select>
-              <ul className="choices">
-                {visible.map((user) => (
-                  <li key={user.id}>
-                    {user.email}{" "}
-                    <span
-                      className="tag"
-                      title={user.department ?? "No department"}
-                    >
-                      {user.status === "available"
-                        ? "Unassigned"
-                        : `${user.status === "former" ? "Former member" : "✓ Member"} · ${user.department}`}
-                    </span>
-                    <small>{explanation(user)}</small>
-                  </li>
-                ))}
-              </ul>
+              {visible.length > 0 && (
+                <table className="registered-users" aria-label="Registered users">
+                  <thead><tr><th scope="col">Email</th><th scope="col">Membership</th><th scope="col">Availability</th></tr></thead>
+                  <tbody>{visible.map((user) => (
+                    <tr key={user.id}>
+                      <td data-label="Email">{user.email}</td>
+                      <td data-label="Membership">
+                        <span title={user.department ?? "No department"}>
+                          {user.status === "available"
+                            ? "Unassigned"
+                            : `${user.status === "former" ? "Former member" : "✓ Member"} · ${user.department}`}
+                        </span>
+                      </td>
+                      <td data-label="Availability">{explanation(user)}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              )}
               {!visible.length && <p>No registered users match your search.</p>}
               <button
                 className="primary"

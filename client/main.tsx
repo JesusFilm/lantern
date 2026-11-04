@@ -1,3 +1,4 @@
+import { useAppearance } from "./workspace/appearance.js";
 import {CoachWorkspace} from "./coach/CoachWorkspace.js";
 import { Fragment, StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -8,6 +9,7 @@ import { LearningGuide } from "./workspace/LearningGuide.js";
 import { Account } from "./workspace/Account.js";
 import { Department } from "./workspace/Department.js";
 import "./workspace/style.css";
+import "./workspace/dark.css";
 import { workspaceHistoryIndex } from "./workspace/useDraftFocusWorkflow.js";
 history.replaceState(
   { ...history.state, lanternHistoryIndex: workspaceHistoryIndex() },
@@ -34,6 +36,7 @@ function navigatePage(page: string) {
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 function App() {
+  const { appearance, choose } = useAppearance();
   const [session, setSession] = useState<SessionView>(),
     [error, setError] = useState(""),
     [page, setPage] = useState(currentPage);
@@ -161,6 +164,8 @@ function App() {
                 <CoachWorkspace key={page} session={session} lead={page === "reviews"}/>
               ) : page === "account" ? (
                 <Account
+                  appearance={appearance}
+                  onAppearanceChange={choose}
                   user={session.user}
                   onChange={(user) =>
                     setSession((current) =>

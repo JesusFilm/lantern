@@ -187,6 +187,22 @@ test(
         },
       );
 
+      await t.test("the default mission artwork has a transparent background in both appearances", async () => {
+        const response = await memberContext.request.get(origin + "/mission-jesus-geometric.png");
+        assert.equal(response.status(), 200);
+        const { data, info } = await sharp(await response.body()).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+        const alpha = (x: number, y: number) => data[(y * info.width + x) * 4 + 3];
+        assert.equal(alpha(0, 0), 0);
+        assert.equal(alpha(info.width - 1, 0), 0);
+        assert.ok(alpha(Math.floor(info.width / 2), Math.floor(info.height / 2))! >= 240);
+        for (const colorScheme of ["light", "dark"] as const) {
+          await memberPage.emulateMedia({ colorScheme });
+          await expect(memberPage.locator("html")).toHaveAttribute("data-theme", colorScheme);
+          await expect(memberPage.getByRole("region", { name: "Our mission" }).locator(".mission-art-slot")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+        }
+        await memberPage.emulateMedia({ colorScheme: "light" });
+      });
+
       await t.test(
         "preview-first image chooser saves, cancels, removes and restores artwork",
         async () => {
