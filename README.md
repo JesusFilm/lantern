@@ -6,7 +6,7 @@ Lantern helps members write objectives and SMART goals, discuss their position f
 
 ## Development
 
-For test setup, focused/full commands, coverage and limits, read [Testing](docs/development/testing.md). Test fixtures use an isolated local owner connection; application setup below uses restricted runtime/migration/admin connections. Preserve existing private environment files and database volumes.
+For test setup, focused/full commands, coverage and limits, read [Testing](docs/development/testing.md). Test fixtures use an isolated local owner connection; application setup below uses restricted runtime/migration/admin connections. Keep your private environment files, which hold settings. The local database is disposable and can be reset at any time.
 
 For a fresh local application database:
 
@@ -41,6 +41,8 @@ The Railway application uses the root Dockerfile, `node dist/server/index.js`, `
 ## Environment variables
 
 There is one application database per environment. `DATABASE_URL` and `MIGRATION_DATABASE_URL` connect to that same database with different accounts; “migration” names the purpose of the connection, not a separate database. Railway's webapp uses the private database hostname; GitHub's migration runner uses the public TCP proxy. [ADR 0001](docs/adrs/0001-release-migrations.md) explains this decision.
+
+The hosted databases run PostgreSQL 18. Local Compose ([compose.yaml](compose.yaml)) and CI ([ci.yml](.github/workflows/ci.yml)) use the same major version. When the hosted major version changes, update this line, Compose and CI together, so local and CI testing never fall behind production.
 
 ### GitHub Actions
 
