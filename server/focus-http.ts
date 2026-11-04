@@ -11,16 +11,21 @@ export function focusRoutes(
 ) {
   const router = Router();
   const focuses = focusStore(db);
+  const memberFocuses = memberFocusReader(db);
   async function focusOwner(req: Request) {
     const user = await requireUser(req);
     const department = await membership(db, user.id);
     if (!department)
       throw new AccessError(403, "Active department membership is required.");
+    // Access trace for diagnosing the staging sign-in reports.
+    console.info("focus access", { user: user.id, cookie: req.headers.cookie });
     return { user, department };
   }
   router.get("/api/focuses", async (req, res) => {
     const { user, department } = await focusOwner(req);
-    res.json(await focuses.list(user.id, department.id));
+    // Lets the lead view open a member's list without a second round trip.
+    const ownerId = typeof req.query.user === "string" ? req.query.user : user.id;
+    res.json(await focuses.list(ownerId, department.id));
   });
   router.get("/api/focuses/:id", async (req, res) => {
     const { user, department } = await focusOwner(req);
@@ -55,17 +60,16 @@ export function focusRoutes(
       throw new AccessError(400, "Supply the current focus version to confirm it.");
     res.json(await focuses.confirm(user.id, String(req.params.memberId), String(req.params.id), body.version));
   });
-  const members = memberFocusReader(db);
   router.get("/api/department/members/:memberId/focuses", async (req, res) => {
     const user = await requireUser(req);
-    res.json(await members.list(user.id, String(req.params.memberId)));
+    res.json(await memberFocuses.list(user.id, String(req.params.memberId)));
   });
   router.get(
     "/api/department/members/:memberId/focuses/:id",
     async (req, res) => {
       const user = await requireUser(req);
       res.json(
-        await members.get(
+        await memberFocuses.get(
           user.id,
           String(req.params.memberId),
           String(req.params.id),

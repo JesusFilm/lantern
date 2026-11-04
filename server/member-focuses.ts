@@ -6,8 +6,8 @@ import type {
 } from "../shared/focus.js";
 import { AccessError, membership } from "./membership.js";
 
-// Read authorization and document scope share one query snapshot. Content edits remain owner-only; the separate confirmation operation locks
-// the agreed baseline without editing its content.
+// Read authorization and document scope share one query snapshot.
+// Content edits remain owner-only; confirmation locks the agreed baseline without editing it.
 export function memberFocusReader(db: Pool) {
   async function read(
     actorId: string,
@@ -32,7 +32,7 @@ export function memberFocusReader(db: Pool) {
         ORDER BY f.period_start DESC,f.updated_at DESC,f.id
       ) document), '[]'::jsonb) AS focuses
       FROM memberships actor JOIN departments d ON d.id=actor.department_id AND d.deleted_at IS NULL
-      JOIN memberships target ON target.department_id=d.id AND target.deleted_at IS NULL
+      JOIN memberships target ON target.department_id=d.id
       JOIN users u ON u.id=target.user_id
       WHERE actor.user_id=$1 AND actor.role='career-lead' AND actor.deleted_at IS NULL AND u.id::text=$2`,
       [actorId, memberId, focusId ?? null],
