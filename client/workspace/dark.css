@@ -26,7 +26,6 @@
 [data-theme="dark"] :is(.empty, .mission-empty-preview, .focus-list th, .focus-list .period, .example-label, .why, .profile-card dt, .area-heading, .comparison-heading, .initiative-palette legend, .initiative-preview-title, .confirmation-summary h3, .confirmation-summary dt, .objective-pager span, .process-agreed, .process-refine-label, .lesson-chooser .gesture-hint, .objective-chooser label span, .lesson-chooser > span, .members th, .procedure-header-copy, .procedure-year-key, .procedure-timing, .procedure-role, .procedure-milestones li > span, .cp-wait-detail, .cp-wait-time) { color: var(--muted); }
 [data-theme="dark"] :is(.focus-list .link, .why strong, .initiative-identity, .procedure-milestones strong, .explanation h3) { color: var(--ink); }
 [data-theme="dark"] :is(.process-stages > li, .procedure-milestones li) { background: #1c3041; color: var(--ink); border-color: var(--border); }
-[data-theme="dark"] .procedure-circle text { fill: #b5c8d8; }
 [data-theme="dark"] .procedure-flow-icon { background: #294b5b; color: #8fe3eb; }
 [data-theme="dark"] .procedure-proposed { background: #514426; color: #ffdf95; }
 [data-theme="dark"] .badge, [data-theme="dark"] .focus-draft, [data-theme="dark"] .member-initials { background: #314b5a; color: #e4edf5; }

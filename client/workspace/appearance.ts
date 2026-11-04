@@ -12,7 +12,11 @@ export function useAppearance() {
   const [appearance, setAppearance] = useState<Appearance>(read);
   useLayoutEffect(() => {
     const system = matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => { document.documentElement.dataset.theme = appearance === "system" ? (system.matches ? "dark" : "light") : appearance; };
+    const apply = () => {
+      const theme = appearance === "system" ? (system.matches ? "dark" : "light") : appearance;
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.style.colorScheme = theme;
+    };
     apply();
     system.addEventListener("change", apply);
     return () => system.removeEventListener("change", apply);
