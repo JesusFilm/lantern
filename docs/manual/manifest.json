@@ -1,9 +1,9 @@
 {
-  "edition": 16,
-  "editionDate": "2026-11-05",
-  "deck": "41a6e33db372ca26360331004675347b06799896219541cfee90ee862f7dc78a",
+  "edition": 17,
+  "editionDate": "2026-11-06",
+  "deck": "cf2327f930248e807d05e2a34f6b4c194be94672201e9f9f049a4c3a6546e329",
   "sources": {
-    "fingerprint": "d2f622edbb1bac8db62722437790618921404130f26cb9b735788e5c7eac2d13",
+    "fingerprint": "99856c470c93d7b8e46f45953a39904cb07b2561acadbecd5ff4690a3bddd869",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -74,7 +74,7 @@
       "server/direction.ts": "0b02d010a8764cc27e559b332b84cf47b6af384110c795c096c5434173366f16",
       "server/enrollment-migration.ts": "2f29897529e447f9e0d6b3130854f8354a42bae5e2039932c3e9fb1a33f906cf",
       "server/focus-http.ts": "c0bf6a7666ad6984d30f27b9f7bcf8c8b01519ec25d7917441c04b8125362d10",
-      "server/focus.ts": "05552d7b05496a4d84176ea1087d919d3418a8f8bb6b90ca6dac00302503a554",
+      "server/focus.ts": "fcfe3945e9d3b427f6b6ed139761cefdb028525384103267d3374e5c1f7420f6",
       "server/google.ts": "d1cf188a15d20cf5fa866fdab847f83ed4c1769b8dbf24feae8bef678d8e2bb6",
       "server/guide-content.ts": "0ba689c7f3315954dca57a24691b8f48ce13be60ee4ed909d64b97d057275496",
       "server/index.ts": "0836852399261e358bdb7e9691590199c101c45ed7bb0f512f1a499b2c6a72de",
@@ -171,5 +171,5 @@
       }
     }
   },
-  "pdf": "11520fad8c3f3b2e8237309d2aaa41c64c09b5c8105c908f89737075b3df29b9"
+  "pdf": "743d0f25599addb8a08f3e375bbbdaa9c46358e6acf27dc147966f224edb073a"
 }

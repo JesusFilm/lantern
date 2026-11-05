@@ -261,6 +261,8 @@ export function validateFocus(
       !section.goals.every((g: unknown) => text(g, 10000))
     )
       return fail();
+    // A section may not list the same goal twice.
+    if (new Set(section.goals).size !== section.goals.length) return fail();
     if (section.alignment !== undefined) {
       const alignment = section.alignment;
       if (
@@ -315,6 +317,7 @@ export function validateFocus(
     title: draft.title.trim(),
     sections: draft.sections.map((section) => ({
       ...section,
+      objective: section.objective.trim(),
       ...(section.alignment
         ? {
             alignment: {
