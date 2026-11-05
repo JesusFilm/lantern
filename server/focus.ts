@@ -261,8 +261,15 @@ export function validateFocus(
       !section.goals.every((g: unknown) => text(g, 10000))
     )
       return fail();
-    // A section may not list the same goal twice.
-    if (new Set(section.goals).size !== section.goals.length) return fail();
+    // A section may not list the same goal twice, ignoring case and whitespace.
+    if (
+      new Set(section.goals.map((g: string) => g.trim().toLowerCase()))
+        .size !== section.goals.length
+    )
+      throw new AccessError(
+        400,
+        "Remove the repeated goal in this objective.",
+      );
     if (section.alignment !== undefined) {
       const alignment = section.alignment;
       if (
@@ -318,6 +325,7 @@ export function validateFocus(
     sections: draft.sections.map((section) => ({
       ...section,
       objective: section.objective.trim(),
+      goals: section.goals.map((g) => g.trim()),
       ...(section.alignment
         ? {
             alignment: {

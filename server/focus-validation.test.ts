@@ -17,5 +17,21 @@ test("focus text is tidied before saving", () => {
 
 test("a section cannot repeat a goal", () => {
   const repeated = { ...focus, sections: [{ kind: "normal", objective: "Grow", goals: ["Hire two leads", "Hire two leads"] }] };
-  assert.throws(() => validateFocus(repeated), /Enter a title/);
+  assert.throws(() => validateFocus(repeated), /repeated goal/);
+});
+
+test("a goal is saved trimmed", () => {
+  const padded = { ...focus, sections: [{ kind: "normal", objective: "Grow the team", goals: ["  Hire two leads  "] }] };
+  const saved = validateFocus(padded);
+  assert.deepEqual(saved.sections[0]!.goals, ["Hire two leads"]);
+});
+
+test("repeats are rejected ignoring case", () => {
+  const caseRepeat = { ...focus, sections: [{ kind: "normal", objective: "Grow", goals: ["Hire two leads", "hire two leads"] }] };
+  assert.throws(() => validateFocus(caseRepeat), /repeated goal/);
+});
+
+test("repeats are rejected ignoring whitespace", () => {
+  const whitespaceRepeat = { ...focus, sections: [{ kind: "normal", objective: "Grow", goals: ["Hire two leads", "Hire two leads "] }] };
+  assert.throws(() => validateFocus(whitespaceRepeat), /repeated goal/);
 });
