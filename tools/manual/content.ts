@@ -321,6 +321,7 @@ export const chapters: Chapter[] = [
           "The member sees Confirmed by the lead, with the date.",
           "No edit, add or remove actions remain for either person.",
           "Confirming an older version than the latest request is refused.",
+          "A focus saved with a repeated goal before this check existed still confirms.",
         ],
         shots: [
           {

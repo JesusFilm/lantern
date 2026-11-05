@@ -35,3 +35,13 @@ test("repeats are rejected ignoring whitespace", () => {
   const whitespaceRepeat = { ...focus, sections: [{ kind: "normal", objective: "Grow", goals: ["Hire two leads", "Hire two leads "] }] };
   assert.throws(() => validateFocus(whitespaceRepeat), /repeated goal/);
 });
+
+test("confirming a stored focus skips the repeat rule", () => {
+  const stored = {
+    ...focus,
+    sections: [{ kind: "normal", objective: "Grow the team", goals: ["Hire two leads", "hire two leads"] }],
+  };
+  assert.doesNotThrow(() => validateFocus(stored, false, true));
+  assert.throws(() => validateFocus(stored, true, false), /repeated goal/);
+  assert.throws(() => validateFocus(stored), /repeated goal/);
+});

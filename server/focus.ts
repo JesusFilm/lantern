@@ -117,12 +117,18 @@ export function focusStore(db: Pool) {
             409,
             "Ask the member to send their latest saved changes before confirming.",
           );
-        validateFocus({
-          title: focus.title,
-          start: focus.start,
-          end: focus.end,
-          sections: focus.sections,
-        });
+        // Stored data may repeat a goal before the repeat rule existed, so
+        // confirm re-checks shape and content but skips the write-time rule.
+        validateFocus(
+          {
+            title: focus.title,
+            start: focus.start,
+            end: focus.end,
+            sections: focus.sections,
+          },
+          false,
+          true,
+        );
         if (
           !focus.sections.some(
             (section) => section.kind === "normal" && section.goals.length > 0,
@@ -203,7 +209,8 @@ export function focusStore(db: Pool) {
 
 export function validateFocus(
   value: unknown,
-  updating = false,
+  editing = false,
+  skipRepeatCheck = false,
 ): FocusDraft & { version?: number } {
   const fail = (): never => {
     throw new AccessError(
@@ -222,7 +229,7 @@ export function validateFocus(
           "start",
           "end",
           "sections",
-          ...(updating ? ["version"] : []),
+          ...(editing ? ["version"] : []),
         ].includes(k),
     )
   )
@@ -262,7 +269,10 @@ export function validateFocus(
     )
       return fail();
     // A section may not list the same goal twice, ignoring case and whitespace.
+    // Only for new saves and edits: confirm re-validates stored data, which may
+    // predate the rule, so confirm passes skipRepeatCheck.
     if (
+      !skipRepeatCheck &&
       new Set(section.goals.map((g: string) => g.trim().toLowerCase()))
         .size !== section.goals.length
     )
@@ -312,7 +322,7 @@ export function validateFocus(
     }
   }
   if (
-    updating &&
+    editing &&
     (!Number.isSafeInteger(data.version) || Number(data.version) < 1)
   )
     return fail();

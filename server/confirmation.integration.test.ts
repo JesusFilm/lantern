@@ -145,6 +145,25 @@ test('confirmation requires the active lead and same-team current member; denial
   } finally {await f.close();}
 });
 
+test('a focus stored with a repeated goal before the repeat rule still confirms',async()=>{
+  const f=await fixture();
+  try {
+    const focus=await f.create(f.member,{...draft,sections:[{kind:'normal',objective:'Support onboarding',goals:['Publish a guide by June']}]});
+    // Reconstruct pre-repeat-rule stored data: the API now rejects repeats on write,
+    // so store it directly and bump the version as the saved change would.
+    await f.admin.query("UPDATE position_focuses SET sections=$1::jsonb,version=version+1 WHERE id::text=$2",[
+      JSON.stringify([{kind:'normal',objective:'Support onboarding',goals:['Publish a guide by June','publish a guide by June']}]),
+      focus.id,
+    ]);
+    assert.equal((await f.request(f.member,`/api/focuses/${focus.id}`,'PUT',{...draft,version:focus.version})).status,409);
+    const response=await f.confirm(focus.id,2);
+    assert.equal(response.status,200);
+    const confirmed=await response.json() as PositionFocus;
+    assert.equal(confirmed.status,'confirmed');
+    assert.deepEqual(confirmed.sections[0]!.goals,['Publish a guide by June','publish a guide by June']);
+  } finally {await f.close();}
+});
+
 test('migration upgrades existing drafts without data loss and confirmed state survives a fresh app instance',async()=>{
   const f=await fixture();
   try {

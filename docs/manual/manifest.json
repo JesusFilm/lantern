@@ -1,9 +1,9 @@
 {
-  "edition": 18,
+  "edition": 19,
   "editionDate": "2026-11-06",
-  "deck": "d6aa15f4a384bbb834a86ed841a14f11586cdb850aa930cc9594f6d8e8bb7575",
+  "deck": "9aa82ca5c8a76494b4d7c4b6e3cfafd8553a2dce0d0abaaefd16736fe22aa59e",
   "sources": {
-    "fingerprint": "bdf46852ca97a3b78377478eb100f6417d65fe2902067434da2c99974d8b4cc7",
+    "fingerprint": "eed012393747ea32996c5370141c8fcd4404c51749229127469351a4956fa0d2",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -74,7 +74,7 @@
       "server/direction.ts": "0b02d010a8764cc27e559b332b84cf47b6af384110c795c096c5434173366f16",
       "server/enrollment-migration.ts": "2f29897529e447f9e0d6b3130854f8354a42bae5e2039932c3e9fb1a33f906cf",
       "server/focus-http.ts": "c0bf6a7666ad6984d30f27b9f7bcf8c8b01519ec25d7917441c04b8125362d10",
-      "server/focus.ts": "8e37dbef0398d936cfb8fd392416edec69405c3d5dd29f97915a9b8718fc1815",
+      "server/focus.ts": "21f93696ff3e2f2118546b51839a04d648b524fe89059ebd75f898bef2cabf60",
       "server/google.ts": "d1cf188a15d20cf5fa866fdab847f83ed4c1769b8dbf24feae8bef678d8e2bb6",
       "server/guide-content.ts": "0ba689c7f3315954dca57a24691b8f48ce13be60ee4ed909d64b97d057275496",
       "server/index.ts": "0836852399261e358bdb7e9691590199c101c45ed7bb0f512f1a499b2c6a72de",
@@ -100,7 +100,7 @@
       "shared/mission-image.ts": "578da384bea0ebf3e60fc460387b19933c05e441d651c57603578e6641573ba9",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
       "tools/manual/check.ts": "74a86ee33518d7d5c4ceb22680cbb5ef587340a7d22c235c7e76fd4c42e38f35",
-      "tools/manual/content.ts": "90816887b463ab1ad17a35943452a1d60016632e02ef5a5f5777c69f5206f437",
+      "tools/manual/content.ts": "bc34fc408e1489fe2f462a654b394d0662d8948258b584b6aaa0d122eb41b633",
       "tools/manual/freshness.ts": "af50e310bc2661ece832e973cf0a6943fd4925ff77dd8b18f2c2f200349037ba",
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
@@ -171,5 +171,5 @@
       }
     }
   },
-  "pdf": "2054413e34e7f251053dd689ff8f7e18b1359b292c584520d6fe883090f94072"
+  "pdf": "ff3eefeadaaa001af0d6f6553b22f5dbb0c88f4802323253f32635dc319cdb5a"
 }
