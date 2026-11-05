@@ -208,6 +208,7 @@ export const chapters: Chapter[] = [
         check: [
           "Saving without an initiative or Other shows “Select an initiative or Other”.",
           "Choosing Other clears the named initiatives.",
+          "Extra spaces are trimmed and a goal repeated with different casing or spaces cannot be saved.",
           "Other objectives in the focus are unchanged after saving.",
           "Leaving with unsaved changes asks for confirmation.",
         ],
