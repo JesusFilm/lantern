@@ -1,9 +1,9 @@
 {
-  "edition": 17,
+  "edition": 18,
   "editionDate": "2026-11-06",
-  "deck": "633841f35806718a08ee7727ddf2d7ab8c821cc029ccea5cf6bff2592cf3eac9",
+  "deck": "0f74ade9fc3ffcc83232762c812abf1b92de1797ed4765ca639b4a8ffe01e80f",
   "sources": {
-    "fingerprint": "35f31465e5d62b3c879400c539a2f7c5a81ffc503846665b3982096663083a1a",
+    "fingerprint": "4c716b7be19fa563ebf1d47a29b28ab9c50b8628ae7a7cf580d20762f8a2a4c9",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -51,7 +51,7 @@
       "client/workspace/useSwipeNavigation.ts": "3afbeefed498f713fc7e42e6d8fcc313dba7d8dd20a2f3aca59631d23820d420",
       "docs/PRD.md": "1ff2245684f2c2a780acfbfba2ac8f4fe3b29cecefa30e138b2cb076e3730835",
       "index.html": "aa59d7718b36dc5ee536466e8fbbbb1e7c188bcfc4c6ee351bebe23286ed8fd9",
-      "package-lock.json": "7f6ffe4c219a446e465d1d3f85a1233ac03999ed51ac7a4c6bf254c956f0897a",
+      "package-lock.json": "fa0e9a9465c90a4f716a68b8ca54346fb157bc10bb7c1b0ce8a665b715066046",
       "package.json": "a438a17485ba2f9eec2bad1307f4ba9759b7127a7faac6039ea693de953630b1",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/google-sign-in.png": "e048546f162b43a5f3809796f88df02a8e13f07ca1280a9c1635018956e05c05",
@@ -171,5 +171,5 @@
       }
     }
   },
-  "pdf": "5dc1cec6f7e37e7725db340e2ac8278fb85169dd5e6c51a4278f5b73b35f35cd"
+  "pdf": "99664595ba0a62cf0e642aac9ffce4ac180b871eeccbf3a1139588fc052d8c4e"
 }
