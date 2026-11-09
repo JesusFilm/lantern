@@ -1,9 +1,9 @@
 {
-  "edition": 20,
+  "edition": 21,
   "editionDate": "2026-11-09",
-  "deck": "55ce0b75134af76d656fbc8519e233168a206b00f7638db7ab641a5fbb81f08e",
+  "deck": "bc040b2d991dd6068100be3d914182376cb3920380da557a085f761fd5f71b91",
   "sources": {
-    "fingerprint": "3095cf40c17690f0572f299953c9b117d996290b5cf638afdd762d28c218e64c",
+    "fingerprint": "e3f3ad5cdb9b8542e16ad90e1159f287bb7170e953bbfdda0a695ab34042b751",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -87,8 +87,8 @@
       "server/mission-image.ts": "63cb697089da48061b572f3fec05e710bcc2f46725bd60af283df13f758a129d",
       "server/operations.ts": "1f73680d0bed216d6875ed4a99915d781dcdd27555c1514a66bc6fcfcfa5510b",
       "server/operator-target.ts": "5e991e5c5f1a97cb715f7fd974ffc5d09af5f252760808bd25d715c458993653",
-      "server/progress-http.ts": "6c9e7a6c6eda6bdb453937f691f6dd88d6e07b7725a8e542a6ec0e74ed122681",
-      "server/progress.ts": "69e5b3f58981dab37b5743cd5b2a1b9e4ebd041e9a8a14dc9069f4a97c6d99f2",
+      "server/progress-http.ts": "3f4394209e7c5a0f5ff17d2d418b38e26e4390364e1c65d861dd30071e3a5cbc",
+      "server/progress.ts": "f2ce92b120382c8c3f17c86fcb3921d2809603646ab9e1b7e7afa9e6fada175e",
       "server/runtime.ts": "1a2ab7885219abe4982045d4f3c4fba54f04a1b15c53fd099e8ac64fb203d102",
       "server/schema.ts": "7abf87150d5bde9dc2f4f2677563d244f18fa18cca8466da9182b89afe5f5d2e",
       "server/transition-database.ts": "b8e8eb9b982853b0225f71253841ba562a73049c737ad511e0836cd00a6bfff8",
@@ -113,7 +113,7 @@
       "tools/manual/qa-stage.ts": "4bfe24391240bbe32a293622db8b8bfc6cb51c2f45a626fc278a66019fc04e8c",
       "tools/manual/render.ts": "eedd830fcf3ccbdd403a8b3563b487be2edda4041ed4f6a724795dbaba2dda0c",
       "tools/manual/tsconfig.json": "b2c53bf7e0a9203acae2292d0215afb5abb1d3e90311ace1b9e8a11ec37ef1ac",
-      "tools/manual/world.ts": "8a6e15ef730cff606dd5584a2da34351f2ba86c44044d8adc49cf9f23cf5f8f1",
+      "tools/manual/world.ts": "ea586f54e1bff33b33a7225cd4fc1dcf2cb0d05782543848ae7836be5e2cf874",
       "vite.config.ts": "6eec20fcf3181935b3df826547144a178de631cf0a6c650a681ad41914e22a02"
     }
   },
@@ -178,5 +178,5 @@
       }
     }
   },
-  "pdf": "c39431135aa45c8381a1f6577f119dbe60be9f5005cbd40f2d3b936ca036b710"
+  "pdf": "faf05ed6803e25e3477c0d70f92a88b27e56d201a4fbcd1668060d8daaa59758"
 }

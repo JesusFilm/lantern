@@ -54,12 +54,5 @@ export function progressStore(db:Pool) {
         return {status:{section,goal,status,revision:next},note:note.rows[0]};
       });
     },
-    async add(actor:string,id:string,section:number,goal:number|null,body:string) {
-      return membershipWrite(db,async client=>{
-        const sections=await ownedFocus(client,actor,id);
-        if(!sections[section] || (goal!==null && !sections[section].goals[goal])) throw new AccessError(400,'Objective or goal not found.');
-        return (await client.query(`INSERT INTO focus_progress_notes(id,focus_id,section_index,goal_index,author_id,body) VALUES($1,$2,$3,$4,$5,$6) RETURNING section_index AS section,goal_index AS goal,body,created_at AS "createdAt",id AS revision`,[randomUUID(),id,section,goal,actor,body])).rows[0];
-      });
-    },
   };
 }

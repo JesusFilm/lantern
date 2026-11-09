@@ -25,10 +25,5 @@ export function progressRoutes(db: Pool, requireUser: (req: Request) => Promise<
     if (!value || typeof value!=='object' || Array.isArray(value) || Object.keys(value).some(k=>!['section','goal','status','body','revision','noteRevision'].includes(k)) || !Number.isSafeInteger(value.section) || value.section<0 || (value.goal!==null && (!Number.isSafeInteger(value.goal)||value.goal<0)) || ![null,'in-progress','achieved','needs-attention'].includes(value.status) || typeof value.body!=='string' || value.body.length>4000 || !validRevision(value.revision) || !validRevision(value.noteRevision)) throw new AccessError(400,'Choose an objective or goal, a valid status, and a note of up to 4000 characters.');
     res.json(await store.saveEntry(user.id,String(req.params.id),value.section,value.goal,value.status,value.body.trim(),value.revision,value.noteRevision));
   });
-  router.post('/api/focuses/:id/progress', async (req,res)=>{
-    const user=await requireUser(req), value=req.body;
-    if (!value || typeof value!=='object' || Array.isArray(value) || Object.keys(value).some(k=>!['section','goal','body'].includes(k)) || !Number.isSafeInteger(value.section) || value.section<0 || (value.goal!==null && (!Number.isSafeInteger(value.goal)||value.goal<0)) || typeof value.body!=='string' || !value.body.trim() || value.body.length>4000) throw new AccessError(400,'Choose an objective or goal and enter a note of up to 4000 characters.');
-    res.status(201).json(await store.add(user.id,String(req.params.id),value.section,value.goal,value.body.trim()));
-  });
   return router;
 }
