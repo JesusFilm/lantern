@@ -151,6 +151,8 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     await call("lead", confirmedPath + "/notes", "POST", { version: confirmed.version, body: "This reads well. The release goal is clear and measurable." });
     await call("member", confirmedPath + "/notes", "POST", { version: confirmed.version, body: "Thanks — I'll share the runbook draft next week." });
     await call("lead", confirmedPath + "/confirm", "POST", { version: confirmed.version });
+    await call("member", `/api/focuses/${confirmed.id}/progress`, "PUT", {section:0,goal:0,status:"in-progress",revision:null});
+    await call("member", `/api/focuses/${confirmed.id}/progress`, "POST", {section:0,goal:0,body:"The runbook draft is ready for the team's feedback."});
 
     const draft = (await call("member", "/api/focuses", "POST", {
       title: "First half 2027",
@@ -255,6 +257,7 @@ async function pinTimestamps(pool: import("pg").Pool) {
        FROM (SELECT id, row_number() OVER (ORDER BY updated_at, id) AS n FROM lantern.position_focuses) o WHERE o.id = f.id`,
       [base],
     );
+    await owner.query("UPDATE lantern.focus_progress_notes SET created_at = '2026-10-29T15:30:00+13:00'");
     await owner.query("UPDATE lantern.position_focuses SET confirmed_at = '2026-10-29T15:30:00+13:00' WHERE confirmed_at IS NOT NULL");
   } finally {
     await owner.query("SET session_replication_role = DEFAULT");

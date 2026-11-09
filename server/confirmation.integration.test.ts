@@ -159,7 +159,7 @@ test('migration upgrades existing drafts without data loss and confirmed state s
     try {
       assert.equal((await fetch(health)).status,503);
       await migrate(f.migration,f.roles);
-      const ready=await fetch(health);assert.equal(ready.status,200);assert.equal(ready.headers.get('x-lantern-schema'),'9');
+      const ready=await fetch(health);assert.equal(ready.status,200);assert.equal(ready.headers.get('x-lantern-schema'),'10');
     } finally {healthServer.closeAllConnections();await new Promise<void>(r=>healthServer.close(()=>r()));}
     assert.deepEqual(await (await f.request(f.member,`/api/focuses/${existing.id}`)).json(),existing);
     const confirmed=await (await f.confirm(existing.id,1)).json();
@@ -169,4 +169,104 @@ test('migration upgrades existing drafts without data loss and confirmed state s
     assert.deepEqual(await (await f.request(f.member,`/api/focuses/${existing.id}`)).json(),confirmed);
     assert.equal((await f.request(f.member,`/api/focuses/${existing.id}`,'PUT',{...draft,version:2})).status,409);
   } finally {await f.close();}
+});
+
+test('a member records progress for a confirmed goal and can read it after reload', async () => {
+  const f=await fixture();
+  try {
+    const focus=await f.create();
+    assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    const path=`/api/focuses/${focus.id}/progress`;
+    assert.equal((await f.request(f.member,path,'POST',{section:0,goal:0,body:'Published the guide.'})).status,201);
+    const response=await f.request(f.member,path);
+    assert.equal(response.status,200);
+    const data=await response.json() as {notes:{section:number;goal:number|null;body:string}[]};
+    assert.deepEqual(data.notes.map(({section,goal,body})=>({section,goal,body})),[{section:0,goal:0,body:'Published the guide.'}]);
+  } finally {await f.close();}
+});
+
+test('progress statuses and notes stay scoped to the confirmed focus and its participants', async () => {
+  const f=await fixture();
+  try {
+    const focus=await f.create(), path=`/api/focuses/${focus.id}/progress`;
+    assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:null,status:'achieved',revision:null})).status,409);
+    assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:null,status:'achieved',revision:null})).status,200);
+    assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:0,status:'in-progress',revision:null})).status,200);
+    assert.equal((await f.request(f.member,path,'POST',{section:0,goal:null,body:'Objective finding'})).status,201);
+    assert.equal((await f.request(f.member,path,'POST',{section:0,goal:0,body:'Goal finding'})).status,201);
+    const own=await (await f.request(f.member,path)).json() as {statuses:{section:number;goal:number|null;status:string}[];notes:{body:string}[]};
+    assert.deepEqual(own.statuses.map(({section,goal,status})=>({section,goal,status})),[{section:0,goal:null,status:'achieved'},{section:0,goal:0,status:'in-progress'}]);
+    assert.deepEqual(own.notes.map(n=>n.body),['Objective finding','Goal finding']);
+    const leadPath=`/api/department/members/${f.member}/focuses/${focus.id}/progress`;
+    assert.deepEqual(await (await f.request(f.lead,leadPath)).json(),own);
+    for(const actor of [f.peer,f.outsider]) assert.notEqual((await f.request(actor,leadPath)).status,200);
+    assert.notEqual((await f.request(f.peer,path)).status,200);
+    assert.notEqual((await f.request(f.lead,path,'POST',{section:0,goal:0,body:'Not mine'})).status,201);
+    for(const payload of [{section:2,goal:null,status:'achieved',revision:null},{section:0,goal:1,status:'achieved',revision:null},{section:0,goal:0,status:'invalid',revision:null},{section:0,goal:0,status:'achieved',userId:f.peer}]) assert.equal((await f.request(f.member,path,'PUT',payload)).status,400);
+    for(const payload of [{section:2,goal:null,body:'bad'},{section:0,goal:0,body:' '},{section:0,goal:0,body:'x'.repeat(4001)}]) assert.equal((await f.request(f.member,path,'POST',payload)).status,400);
+    await f.migration.query("ALTER TABLE focus_progress_notes ADD CONSTRAINT synthetic_failure CHECK (body <> 'fail storage')");
+    assert.equal((await f.request(f.member,path,'POST',{section:0,goal:0,body:'fail storage'})).status,503);
+    await f.migration.query('ALTER TABLE focus_progress_notes DROP CONSTRAINT synthetic_failure');
+    assert.deepEqual(await (await f.request(f.member,path)).json(),own);
+    await f.admin.query('UPDATE memberships SET deleted_at=now() WHERE user_id=$1',[f.member]);
+    assert.notEqual((await f.request(f.member,path)).status,200);
+    assert.notEqual((await f.request(f.lead,leadPath)).status,200);
+    await f.admin.query('UPDATE memberships SET deleted_at=NULL WHERE user_id=$1',[f.member]);
+    assert.deepEqual(await (await f.request(f.member,path)).json(),own);
+  } finally {await f.close();}
+});
+
+test('stale progress status changes do not overwrite a newer update', async () => {
+ const f=await fixture();
+ try {
+  const focus=await f.create();assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+  const path=`/api/focuses/${focus.id}/progress`;
+  const first=await f.request(f.member,path,'PUT',{section:0,goal:0,status:'achieved',revision:null});assert.equal(first.status,200);
+  const saved=await first.json() as {revision:string};assert.ok(saved.revision);
+  assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:0,status:'needs-attention',revision:null})).status,409);
+  const second=await f.request(f.member,path,'PUT',{section:0,goal:0,status:'in-progress',revision:saved.revision});assert.equal(second.status,200);
+  assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:0,status:null,revision:saved.revision})).status,409);
+  const newer=await second.json() as {revision:string};
+  assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:0,status:null,revision:newer.revision})).status,200);
+  assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:0,status:'achieved',revision:null})).status,409);
+ } finally {await f.close();}
+});
+
+test('one progress edit saves status and current note together, detects stale edits, and clears both', async () => {
+ const f=await fixture();
+ try {
+  const focus=await f.create();assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+  const path=`/api/focuses/${focus.id}/progress-entry`;
+  const initial={section:0,goal:0,status:'in-progress',body:'Draft is ready',revision:null,noteRevision:null};
+  const saved=await f.request(f.member,path,'PUT',initial);assert.equal(saved.status,200);
+  const entry=await saved.json() as {status:{revision:string};note:{revision:string}};
+  assert.ok(entry.status.revision);assert.ok(entry.note.revision);
+  assert.equal((await f.request(f.member,path,'PUT',initial)).status,409);
+  const edit={...initial,status:'achieved',body:'Published',revision:entry.status.revision,noteRevision:entry.note.revision};
+  const updated=await f.request(f.member,path,'PUT',edit);assert.equal(updated.status,200);
+  const current=await updated.json() as {status:{revision:string};note:{revision:string}};
+  const record=await (await f.request(f.member,`/api/focuses/${focus.id}/progress`)).json() as {notes:{body:string}[]};
+  assert.deepEqual(record.notes.map(n=>n.body),['Published']);
+  await f.migration.query("ALTER TABLE focus_progress_notes ADD CONSTRAINT combined_failure CHECK (body <> 'force failure')");
+  assert.equal((await f.request(f.member,path,'PUT',{...edit,status:'needs-attention',body:'force failure',revision:current.status.revision,noteRevision:current.note.revision})).status,503);
+  const afterFailure=await (await f.request(f.member,`/api/focuses/${focus.id}/progress`)).json() as {statuses:{status:string}[];notes:{body:string}[]};
+  assert.equal(afterFailure.statuses[0]!.status,'achieved');assert.equal(afterFailure.notes[0]!.body,'Published');
+  await f.migration.query('ALTER TABLE focus_progress_notes DROP CONSTRAINT combined_failure');
+  const cleared=await f.request(f.member,path,'PUT',{...edit,status:null,body:'',revision:current.status.revision,noteRevision:current.note.revision});assert.equal(cleared.status,200);
+  const afterClear=await (await f.request(f.member,`/api/focuses/${focus.id}/progress`)).json() as {statuses:{status:null}[];notes:{body:string}[]};
+  assert.equal(afterClear.statuses[0]!.status,null);assert.equal(afterClear.notes[0]!.body,'');
+  assert.notEqual((await f.request(f.peer,path,'PUT',initial)).status,200);
+ } finally {await f.close();}
+});
+
+test('changing only the progress status preserves the current note and its date', async () => {
+ const f=await fixture();
+ try {
+  const focus=await f.create();assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+  const path=`/api/focuses/${focus.id}/progress-entry`;
+  const first=await (await f.request(f.member,path,'PUT',{section:0,goal:0,status:null,body:'A useful finding',revision:null,noteRevision:null})).json() as {status:{revision:string};note:{revision:string;createdAt:string}};
+  const changed=await f.request(f.member,path,'PUT',{section:0,goal:0,status:'in-progress',body:'A useful finding',revision:first.status.revision,noteRevision:first.note.revision});assert.equal(changed.status,200);
+  const result=await changed.json() as {note:{revision:string;createdAt:string}};assert.equal(result.note.revision,first.note.revision);assert.equal(result.note.createdAt,first.note.createdAt);
+ } finally {await f.close();}
 });

@@ -9,6 +9,7 @@ import {
 } from "./useDraftFocusWorkflow.js";
 import { ObjectiveEditor, type AuthoringMethod } from "./ObjectiveEditor.js";
 import { ObjectiveType } from "./ObjectiveType.js";
+import { FocusProgress } from "./FocusProgress.js";
 import { FocusHeading } from "./FocusHeading.js";
 import { FocusObjectives } from "./FocusObjectives.js";
 import { Dialog } from "./Dialog.js";
@@ -155,17 +156,18 @@ export function FocusWorkspace({
             </p>
           )}
           {reviewing && focus.status === "draft" && <CoachWorkspace session={session} focusId={focus.id} displayedVersion={focus.version} onChanged={() => void refreshRecord()} />}
-          <FocusObjectives
+          {focus.status === "confirmed" ? <FocusProgress key={focus.id} focus={focus}><FocusObjectives focus={focus} />
+            {record && (record.requests.length ?
+              <CoachWorkspace key={focus.id} session={session} focusId={focus.id} confirmedView onChanged={() => void refreshRecord()} /> :
+              <section className="cp-notes"><h2>Notes</h2><p className="cp-muted">No notes yet.</p></section>)}
+          </FocusProgress> : <FocusObjectives
             key={"reader-" + focus.id}
             focus={focus}
             onEdit={reviewing ? undefined : (target) => start(target)}
             onCoach={
               !reviewing && coachAvailable ? (target) => start(target, "guided") : undefined
             }
-          />
-          {focus.status === "confirmed" && record && (record.requests.length ?
-            <CoachWorkspace key={focus.id} session={session} focusId={focus.id} confirmedView onChanged={() => void refreshRecord()} /> :
-            <section className="cp-notes"><h2>Notes</h2><p className="cp-muted">No notes yet.</p></section>)}
+          />}
         </>
       ) : (
         <div className="focus-overview">

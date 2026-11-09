@@ -1,3 +1,4 @@
+import { progressRoutes } from "./progress-http.js";
 import { memberFocusReader } from "./member-focuses.js";
 import { Router } from "express";
 import type { Request } from "express";
@@ -10,6 +11,7 @@ export function focusRoutes(
   requireUser: (req: Request) => Promise<{ id: string }>,
 ) {
   const router = Router();
+  router.use(progressRoutes(db, requireUser));
   const focuses = focusStore(db);
   async function focusOwner(req: Request) {
     const user = await requireUser(req);

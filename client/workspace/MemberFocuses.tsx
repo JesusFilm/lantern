@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { MemberFocusList, MemberFocusDetail } from "../../shared/focus.js";
 import { FocusConfirmation } from "./FocusConfirmation.js";
 import { api } from "./api.js";
+import { FocusProgress } from "./FocusProgress.js";
 import { FocusDocument } from "./FocusDocument.js";
 import { formatFocusDate as date } from "./focusDate.js";
 
@@ -86,7 +87,7 @@ export function MemberFocuses({
                 member={data.member}
                 onConfirmed={(focus) => setData({ member: data.member, focus })}
               />
-              <FocusDocument focus={data.focus} showPeriod={false} />
+              {data.focus.status === "confirmed" ? <FocusProgress key={data.focus.id} focus={data.focus} memberId={memberId}><FocusDocument focus={data.focus} showPeriod={false} /></FocusProgress> : <FocusDocument focus={data.focus} showPeriod={false} />}
             </>
           ) : (
             <>

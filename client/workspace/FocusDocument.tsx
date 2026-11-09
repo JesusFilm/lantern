@@ -1,6 +1,7 @@
 import { useId, type Ref } from "react";
 import type { PositionFocus } from "../../shared/focus.js";
 import type { EditTarget } from "./useDraftFocusWorkflow.js";
+import { FocusStatus } from "./FocusProgress.js";
 import { AlignmentSummary } from "./InitiativeChoices.js";
 import { ObjectiveType } from "./ObjectiveType.js";
 import { formatFocusDate } from "./focusDate.js";
@@ -37,6 +38,7 @@ export function FocusObjective({
               Objective {index + 1}
             </h2>
             <ObjectiveType kind={section.kind} />
+            <FocusStatus section={index} goal={null} />
           </div>
           {editable && (
             <div className="section-tools">
@@ -81,7 +83,7 @@ export function FocusObjective({
                 <span className="goal-number" aria-hidden="true">
                   {goalIndex + 1}
                 </span>
-                <p className="read-text">{goal}</p>
+                <p className="read-text">{goal} <FocusStatus section={index} goal={goalIndex} /></p>
                 {editable && (
                   <div className="goal-tools">
                     <button
