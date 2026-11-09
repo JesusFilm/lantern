@@ -43,7 +43,11 @@ Commit everything under `docs/manual`. `npm run manual` builds the client into a
 - a screenshot, supplied capture or the PDF differs from the manifest;
 - a screenshot is missing or not recorded.
 
-Product source means `client/`, `shared/`, `server/`, `public/`, `index.html`, `vite.config.ts`, Node and dependency configuration, [PRD.md](../PRD.md) and the manual tooling. Tests and test support files are excluded. [isProductSource](../../tools/manual/freshness.ts) defines the exact rule.
+Product source means `client/`, `shared/`, `server/`, `public/`, `index.html`, `vite.config.ts`, Node and dependency configuration, [PRD.md](../PRD.md) and the manual tooling. Tests and test support files are excluded, except `server/privilege-test-support.ts`, which the manual world imports. The rendering fixture configuration (`.env.example`, Compose and TypeScript configuration) is included. [isProductSource](../../tools/manual/freshness.ts) defines the exact rule.
+
+Dependency inputs are normalized JSON. Only the explicit type-only development packages `@types/node`, `@types/express`, `@types/pg`, `@types/react` and `@types/react-dom` are omitted when their lock entries are development-only, have no install script and are not runtime/optional/peer dependencies of the root. `undici-types` is omitted only when no retained package or root depends on it. Package scripts, install scripts, Node, runtime dependencies, Vite and its React plugin, Playwright, Sharp, TypeScript, TSX and unknown packages remain relevant. Malformed or unsupported lockfiles retain byte-level detection; the whole lockfile is never excluded.
+
+The manifest separates `sources` (the normalized freshness inputs) from `verification` (the raw input hashes and time of the last successful full generation). An irrelevant type-only update can pass without generation: the recorded `verification.generatedAt` and raw hashes intentionally remain unchanged. A full successful capture updates provenance; it preserves the PDF and edition when content and images are unchanged. The freshness check never claims or records that generation occurred.
 
 When two branches both regenerate, the manual files conflict. Resolve the conflict by merging the source changes, then running `npm run manual` again; never merge the generated files by hand.
 
@@ -127,7 +131,7 @@ node fonts-probe.mjs; rm fonts-probe.mjs
 
 Expect `NotoSans-Regular`, `LiberationSerif`, `DejaVuSansMono` and `NotoSans-Bold`.
 
-**Acceptance test.** On an unmodified checkout of `main`, `npm run manual` must report `0 screenshot(s) changed of 44` and `The deck is unchanged`. If it rewrites screenshots or fails the slide-fit check, the environment is wrong. Do not commit the output. Fix the fonts first (the probe above shows what Chromium chose) and repeat. When screenshots change after a product change, inspect each changed image and the matching PDF page and confirm the difference is intended before committing. A change to the product source alone also issues a new edition, because the source fingerprint is printed on the cover.
+**Acceptance test.** On an unmodified checkout of `main`, `npm run manual` must report `0 screenshot(s) changed of 44` and `The deck is unchanged`. If it rewrites screenshots or fails the slide-fit check, the environment is wrong. Do not commit the output. Fix the fonts first (the probe above shows what Chromium chose) and repeat. When screenshots change after a product change, inspect each changed image and the matching PDF page and confirm the difference is intended before committing. A product source change requires successful generation, but only changed deck content issues a new edition. The cover does not contain the source fingerprint.
 
 ## Supplied captures
 

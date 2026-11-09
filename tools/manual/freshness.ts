@@ -32,6 +32,8 @@ export interface Manifest {
   /** Hash of the rendered deck content, used to decide whether a new edition is needed. */
   deck: string;
   sources: { fingerprint: string; files: Record<string, string> };
+  /** Written only after successful full generation; raw inputs remain auditable. */
+  verification?: { generatedAt: string; policy: string; rawSources: Record<string, string> };
   screenshots: Record<string, string>;
   supplied: Record<string, SuppliedRecord>;
   pdf: string | null;
@@ -42,11 +44,13 @@ export interface Manifest {
  * documents and the manual's own output are deliberately excluded.
  */
 export function isProductSource(path: string) {
+  if (path === "server/privilege-test-support.ts") return true; // Imported by the capture world.
   if (/\.test\.(ts|tsx|mjs)$/.test(path) || /test-support\.ts$/.test(path)) return false;
   if (path.startsWith("tools/manual/")) return !/\/(README\.md|_[^/]*)$/.test(path);
   return (
     ["client/", "shared/", "server/", "public/"].some((prefix) => path.startsWith(prefix)) ||
-    ["index.html", "vite.config.ts", "package.json", "package-lock.json", ".nvmrc", "docs/PRD.md"].includes(path)
+    ["index.html", "vite.config.ts", "package.json", "package-lock.json", ".nvmrc", ".env.example", "compose.yaml", "docker-compose.yml", "docs/PRD.md"].includes(path) ||
+    /^tsconfig[^/]*\.json$/.test(path)
   );
 }
 
@@ -84,10 +88,58 @@ async function listFiles(root: string) {
   }
 }
 
+/** Explicit type-only development packages; unknown packages stay conservative. */
+const typeOnly = new Set(["@types/node", "@types/express", "@types/pg", "@types/react", "@types/react-dom"]);
+const canonical = (value: unknown): string => JSON.stringify(value, (_key, item: unknown) =>
+  item && typeof item === "object" && !Array.isArray(item)
+    ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item);
+
+async function dependencyInputs(root: string): Promise<Record<string, string>> {
+  try {
+    const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+    const lock = JSON.parse(await readFile(join(root, "package-lock.json"), "utf8"));
+    if (![2, 3].includes(lock.lockfileVersion) || !lock.packages?.[""]) return {};
+    const entries = lock.packages as Record<string, Record<string, unknown>>;
+    const name = (path: string) => path.split("node_modules/").at(-1)!;
+    const runtime = new Set([...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.optionalDependencies ?? {}), ...Object.keys(pkg.peerDependencies ?? {})]);
+    const ignored = new Set(Object.keys(entries).filter((path) => typeOnly.has(name(path)) && !runtime.has(name(path)) &&
+      entries[path]!.dev === true && !entries[path]!.hasInstallScript && !entries[path]!.link));
+    // @types/node's type-only child is ignored only when no retained package or root depends on it.
+    for (const path of Object.keys(entries).filter((path) => name(path) === "undici-types")) {
+      const entry = entries[path]!;
+      const usedByRetained = Object.entries(entries).some(([parent, value]) => !ignored.has(parent) &&
+        ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"].some((field) =>
+          Object.hasOwn((value[field] ?? {}) as object, "undici-types")));
+      if (entry.dev === true && !entry.hasInstallScript && !entry.link && !usedByRetained) ignored.add(path);
+    }
+    const ignoredNames = new Set([...ignored].map(name));
+    for (const config of [pkg, entries[""]!]) {
+      if (config.devDependencies) config.devDependencies = Object.fromEntries(
+        Object.entries(config.devDependencies).filter(([dep]) => !ignoredNames.has(dep)));
+    }
+    for (const path of ignored) delete entries[path];
+    return { "package.json": canonical(pkg), "package-lock.json": canonical(lock) };
+  } catch {
+    // Missing, malformed and unsupported lockfiles retain byte-level detection.
+    return {};
+  }
+}
+
+async function sourceFiles(root: string) {
+  return (await listFiles(root)).filter(isProductSource).sort();
+}
+
 export async function productSources(root: string) {
   const files: Record<string, string> = {};
-  for (const path of (await listFiles(root)).filter(isProductSource).sort()) files[path] = (await hashFile(join(root, path)))!;
+  const dependencies = await dependencyInputs(root);
+  for (const path of await sourceFiles(root)) files[path] = path in dependencies ? sha(dependencies[path]!) : (await hashFile(join(root, path)))!;
   return { fingerprint: sha(JSON.stringify(files)), files };
+}
+
+async function verification(root: string) {
+  const rawSources: Record<string, string> = {};
+  for (const path of await sourceFiles(root)) rawSources[path] = (await hashFile(join(root, path)))!;
+  return { generatedAt: new Date().toISOString(), policy: "manual-inputs/2", rawSources };
 }
 
 async function screenshotHashes(root: string) {
@@ -152,6 +204,8 @@ export async function currentManifest(
 /** Records the current state as the generated manual. */
 export async function recordManifest(layout: ManualLayout, edition: Parameters<typeof currentManifest>[1]) {
   const manifest = await currentManifest(layout, edition);
+  // Only a successful full capture/render path records this evidence; checking never refreshes it.
+  manifest.verification = await verification(layout.root);
   await mkdir(join(layout.root, manualDirectory), { recursive: true });
   await writeFile(join(layout.root, manualDirectory, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   return manifest;

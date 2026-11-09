@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { checkManual, recordManifest, type ManualLayout } from "./freshness.js";
+import { checkManual, recordManifest, readManifest, productSources, type ManualLayout } from "./freshness.js";
 
 async function project(t: import("node:test").TestContext) {
   const root = await mkdtemp(join(tmpdir(), "manual-freshness-"));
@@ -93,3 +93,59 @@ test("replacing a supplied capture without regenerating fails the check", async 
   assert.match((await checkManual(layout)).errors.join("\n"), /google-consent.png.*changed.*npm run manual/);
 });
 
+
+
+test("type-only dependency metadata does not require recapturing the manual", async (t) => {
+  const { layout, write } = await project(t);
+  await write("package.json", JSON.stringify({ devDependencies: { "@types/node": "^26.0.0", vite: "^8.3.4" } }));
+  const lock = { lockfileVersion: 3, packages: { "": { devDependencies: { "@types/node": "^26.0.0", vite: "^8.3.4" } },
+    "node_modules/@types/node": { version: "26.6.6", dev: true }, "node_modules/vite": { version: "8.3.4", dev: true } } };
+  await write("package-lock.json", JSON.stringify(lock));
+  await recordManifest(layout, { edition: 1, editionDate: "2026-11-10", deck: "d1" });
+  await write("package.json", JSON.stringify({ devDependencies: { "@types/node": "^26.6.6", vite: "^8.3.4" } }));
+  lock.packages[""].devDependencies["@types/node"] = "^26.6.6";
+  lock.packages["node_modules/@types/node"].version = "26.6.7";
+  await write("package-lock.json", JSON.stringify(lock));
+  assert.deepEqual((await checkManual(layout)).errors, []);
+});
+
+
+test("runtime, build, browser, unknown and install-script dependency changes stay relevant", async (t) => {
+  for (const [name, dev, extra] of [["react", false, {}], ["vite", true, {}], ["@vitejs/plugin-react", true, {}], ["@playwright/test", true, {}], ["unknown-tool", true, {}], ["@types/node", true, { hasInstallScript: true }]] as const) {
+    await t.test(name, async (t) => {
+      const { layout, write } = await project(t);
+      const field = dev ? "devDependencies" : "dependencies";
+      const config = { [field]: { [name]: "^1.0.0" } };
+      const lock = { lockfileVersion: 3, packages: { "": config, ["node_modules/" + name]: { version: "1.0.0", dev, ...extra } } };
+      await write("package.json", JSON.stringify(config));
+      await write("package-lock.json", JSON.stringify(lock));
+      await recordManifest(layout, { edition: 1, editionDate: "2026-11-10", deck: "d1" });
+      lock.packages["node_modules/" + name] = { version: "1.0.1", dev, ...extra };
+      await write("package-lock.json", JSON.stringify(lock));
+      assert.match((await checkManual(layout)).errors.join("\n"), /changed: package-lock.json/);
+    });
+  }
+});
+
+test("capture fixture, rendering environment and build configuration changes require verification", async (t) => {
+  for (const path of ["server/privilege-test-support.ts", ".env.example", "compose.yaml", "tsconfig.json", "tools/manual/render.ts", "public/icon.svg"]) {
+    const { layout, write } = await project(t);
+    await write(path, "before");
+    await recordManifest(layout, { edition: 1, editionDate: "2026-11-10", deck: "d1" });
+    await write(path, "after");
+    assert.ok((await checkManual(layout)).errors.some((error) => error.includes(path)), path);
+  }
+});
+
+test("ignored dependency changes do not rewrite generation provenance", async (t) => {
+  const { layout, write } = await project(t);
+  const lock = { lockfileVersion: 3, packages: { "": { devDependencies: { "@types/node": "^1" } }, "node_modules/@types/node": { dev: true, version: "1" } } };
+  await write("package.json", JSON.stringify({ devDependencies: { "@types/node": "^1" } }));
+  await write("package-lock.json", JSON.stringify(lock));
+  const generated = await recordManifest(layout, { edition: 1, editionDate: "2026-11-10", deck: "d1" });
+  lock.packages["node_modules/@types/node"].version = "2";
+  await write("package-lock.json", JSON.stringify(lock));
+  assert.deepEqual((await checkManual(layout)).errors, []);
+  assert.deepEqual((await readManifest(layout.root))?.verification, generated.verification);
+  assert.equal((await readManifest(layout.root))?.edition, 1);
+});
