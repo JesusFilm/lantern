@@ -1,9 +1,9 @@
 {
-  "edition": 21,
+  "edition": 22,
   "editionDate": "2026-11-09",
-  "deck": "bc040b2d991dd6068100be3d914182376cb3920380da557a085f761fd5f71b91",
+  "deck": "0269a0841bfc67f1cee11eb4d4f235b3d99bf59c3f6d837fe0125923b3484a94",
   "sources": {
-    "fingerprint": "e3f3ad5cdb9b8542e16ad90e1159f287bb7170e953bbfdda0a695ab34042b751",
+    "fingerprint": "a07df8cf449026d7fba7dc9cc9c1126d1584d284275d26e5275a68d0138889b9",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -25,7 +25,7 @@
       "client/workspace/FocusHeading.tsx": "5cec14537742a3c2971da137f208c9a10be726cc8b696b165f87eeb091edb811",
       "client/workspace/FocusObjectives.tsx": "130d549fcaf96c5403c36a3993e0c8670876d6086d3f0bf2997857341a4aba31",
       "client/workspace/FocusProcess.tsx": "f0db6123ec67fc954c2ef58454a1d54317e7a4c1aff21b015751862211abf51e",
-      "client/workspace/FocusProgress.tsx": "aae87ea207d3a05dc47ddbbc51e8b4ee52fe8abddbc04c5dd776ef52fd67ef12",
+      "client/workspace/FocusProgress.tsx": "ea7c39b2d6328954cb11d0bea52f5217b0d25cf236c7e24bc757cc408f637226",
       "client/workspace/FocusWorkspace.tsx": "bf990203ba776d02ecdb0e743c91ffa651c47586f279a2c27ab735c3b7dc645a",
       "client/workspace/InitiativeChoices.tsx": "16c6fe9415415978e2bca1abcea22d61e6535e8b2a13b351fddd90aa959a8d82",
       "client/workspace/InitiativeDialog.tsx": "e0e1ee635e4d1b0f9a4131e6deccd428673840542ba75da5896c76dd9326c5c9",
@@ -178,5 +178,5 @@
       }
     }
   },
-  "pdf": "faf05ed6803e25e3477c0d70f92a88b27e56d201a4fbcd1668060d8daaa59758"
+  "pdf": "6586feaf943e22d046f890e667e623d70a07f2762659d82cf9ecce293071003c"
 }

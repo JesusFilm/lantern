@@ -26,7 +26,12 @@ test('member records status and goal note; lead reads progress after reload', {t
   await mc.addCookies([{name:'lantern-session',value:member,url:origin}]);await lc.addCookies([{name:'lantern-session',value:lead,url:origin}]);
   const created=await mc.request.post(origin+'/api/focuses',{headers:{Origin:origin},data:{title:'Annual focus',start:'2026-01-01',end:'2026-12-31',sections:[{kind:'normal',objective:'Help onboarding',goals:['Publish a guide']}]}});const focus=await created.json();
   assert.equal((await lc.request.post(`${origin}/api/department/members/${member}/focuses/${focus.id}/confirm`,{headers:{Origin:origin},data:{version:1}})).status(),200);
-  const page=await mc.newPage();await page.goto(`${origin}/?page=focuses&focus=${focus.id}`);await page.getByRole('button',{name:'Progress & notes'}).click();
+  const page=await mc.newPage();await page.goto(`${origin}/?page=focuses&focus=${focus.id}`);
+  await expect(page.getByRole('button',{name:'Focus',exact:true})).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByRole('button',{name:'Progress & notes'})).toHaveAttribute('aria-pressed','false');
+  await page.getByRole('button',{name:'Progress & notes'}).click();
+  await expect(page.getByRole('button',{name:'Progress & notes'})).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByRole('button',{name:'Focus',exact:true})).toHaveAttribute('aria-pressed','false');
   await expect(page.getByText('Track progress and add notes to each objective or SMART goal.')).toBeVisible();
   await expect(page.getByRole('heading',{name:'Notes',exact:true})).toHaveCount(0);
   const goal=page.getByRole('region',{name:'Objective 1'}).getByRole('region',{name:'SMART goal 1'});
