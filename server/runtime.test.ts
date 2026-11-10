@@ -18,6 +18,12 @@ test('environment identity defaults restrictively and validates hosted configura
   assert.equal(resolveRuntime({ DATABASE_URL: 'postgresql://unused', LANTERN_ENV: 'local', LOCAL_ACCESS: '1' }).localAccess, true);
 });
 
+test('feature settings are checked at startup, before connecting', () => {
+  assert.deepEqual(resolveRuntime({ ...hosted, LANTERN_FEATURES: 'retired-feature=on' }).features.unknown, ['retired-feature']);
+  assert.throws(() => resolveRuntime({ ...hosted, LANTERN_FEATURES: 'retired-feature=maybe' }));
+  assert.throws(() => resolveRuntime({ ...hosted, LANTERN_PREVIEW_EMAILS: 'not-an-email' }));
+});
+
 test('application deployment never runs the privileged migration command', async () => {
   const { readFile } = await import('node:fs/promises');
   const config = JSON.parse(await readFile('railway.json','utf8'));

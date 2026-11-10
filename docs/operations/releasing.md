@@ -17,6 +17,8 @@ Automatic promotion requires a successful trusted main push run and its exact SH
 
 Implementation: [CI](../../.github/workflows/ci.yml), [production workflow](../../.github/workflows/promote.yml), [verifier](../../tools/release/verify-promotion.mjs). Use these for exact step order and current configuration.
 
+New behavior can reach production hidden behind a feature flag. Making it visible is a separate step the owner takes in the webapp's Railway variables after the release; see [feature flags](../development/feature-flags.md).
+
 ## Manual release and schema changes
 
 1. Review compatibility with the application still serving: migrations run **before** app replacement. Check expected schema settings in both workflows when adding a migration. Destructive changes may need a compatibility release first and a production backup; for installations still before schema 6, use the [legacy domain-removal procedure](remove-hosted-domain.md). Staging cannot prove a production backfill is safe.

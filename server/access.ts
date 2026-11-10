@@ -12,15 +12,19 @@ import { directionRoutes } from './direction-http.js';
 import { guideContent } from './guide-content.js';
 import { AccessError, addMember, membership } from './membership.js';
 import type { RegisteredUser } from '../shared/access.js';
+import { enabledFeatures, resolveFeatureConfig } from './features.js';
+import type { FeatureConfig } from './features.js';
 
 export const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const random = () => randomBytes(32).toString('base64url');
 function cookie(request: Request, name: string) {
   return request.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1);
 }
-export interface AccessConfig { origin: string; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean; coach?: CoachProvider }
+export interface AccessConfig { origin: string; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean; coach?: CoachProvider; features?: FeatureConfig }
 export function accessRoutes(db: Pool, config: AccessConfig) {
   const router = Router();
+  // Without explicit settings every registered feature is hidden, as production starts.
+  const features = config.features ?? resolveFeatureConfig({}, 'production');
   const secure = config.origin.startsWith('https:');
   const sessionCookie = secure ? '__Host-lantern-session' : 'lantern-session';
   const loginCookie = secure ? '__Host-lantern-login' : 'lantern-login';
@@ -81,7 +85,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
   });
   router.get('/api/session', async (req, res) => {
     const user = await currentUser(req);
-    res.json({ coachAvailable: !!config.coach, user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !config.hostingOnly && !!config.provider, localAccess: !!config.localUserId });
+    res.json({ coachAvailable: !!config.coach, features: enabledFeatures(features, user?.email), user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !config.hostingOnly && !!config.provider, localAccess: !!config.localUserId });
   });
   router.use(coachRoutes(db, requireUser, config.coach));
   router.use(focusRoutes(db, requireUser));

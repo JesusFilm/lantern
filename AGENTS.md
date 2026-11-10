@@ -16,6 +16,7 @@ Load the relevant guide when its task applies; follow its source links only for 
 | Merge, release, change schema or delivery switches, or recover a failed release | [Releasing](docs/operations/releasing.md): automatic/manual paths, evidence and recovery |
 | Review a change or modify workflows, release tooling or agent instructions | [Change review](docs/operations/review-gate.md): independent inspection, protected changes and owner authority |
 | Change product or data-model behavior | [PRD](docs/PRD.md), [domain terms](GLOSSARY.md), [priorities](docs/ROADMAP.md) |
+| Add behavior users would notice, or release or remove a flagged feature | [Feature flags](docs/development/feature-flags.md): when to flag, guarding routes, testing both states, release and removal |
 | Change product source or prepare a QA hand-off | [QA manual](docs/development/manual.md): check coverage and wording, update affected slides and screenshots, then regenerate |
 | Choose/change an architectural approach or record a decision | [ADR instructions](docs/adrs/AGENTS.md) |
 
