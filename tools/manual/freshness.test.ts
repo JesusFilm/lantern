@@ -149,3 +149,18 @@ test("ignored dependency changes do not rewrite generation provenance", async (t
   assert.deepEqual((await readManifest(layout.root))?.verification, generated.verification);
   assert.equal((await readManifest(layout.root))?.edition, 1);
 });
+
+test("a changed deck must not reuse an edition main has already published", async (t) => {
+  const { layout, write } = await project(t);
+  // The base is main's manifest, the deck the branch's edition must move past.
+  const base = () => ({ edition: 7, deck: "deck-main" });
+  // The branch generated edition 8 from a changed deck: the lineage is fine.
+  const generated = await recordManifest(layout, { edition: 8, editionDate: "2026-11-10", deck: "deck-branch" });
+  assert.deepEqual((await checkManual(layout, base)).errors, []);
+  // The buggy merge instead kept main's edition 7 while recording the branch's
+  // different deck, so edition 7 would be published again with different content.
+  await write("docs/manual/manifest.json", JSON.stringify({ ...generated, edition: 7, editionDate: "2026-11-10" }));
+  const result = await checkManual(layout, base);
+  assert.match(result.errors.join("\n"), /edition did not move forward from 7/);
+  assert.match(result.errors.join("\n"), /npm run manual/);
+});

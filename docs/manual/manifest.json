@@ -1,9 +1,9 @@
 {
-  "edition": 22,
-  "editionDate": "2026-11-10",
+  "edition": 23,
+  "editionDate": "2026-11-11",
   "deck": "09265cc7f4b2c60f1d40c990a20186f52a9e4d48ca67d796a50910744eb172b3",
   "sources": {
-    "fingerprint": "84c185285c7cf0b70a83b8eac3bafde9eda3c261bed9e36b3de81eab4e691640",
+    "fingerprint": "87d7b4f2337f8773143ed985934a91011e03e5cb893c4a8a10e4c22720a1627c",
     "files": {
       ".env.example": "843bd63585029e24a944f70fbbe1d99734e6f68545a84bbb4c3376ab9aa8a438",
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
@@ -104,7 +104,7 @@
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
       "tools/manual/check.ts": "74a86ee33518d7d5c4ceb22680cbb5ef587340a7d22c235c7e76fd4c42e38f35",
       "tools/manual/content.ts": "c7787d9348792768ecabbcc1fd5b3d5d0cac0969a542e654dd6237560038429a",
-      "tools/manual/freshness.ts": "29057cdd2c3f134e13f1af7ce1c799cd6d4e11d33bdd24859af3dcff27d6d557",
+      "tools/manual/freshness.ts": "54ff90365e72f02539ed8c89173c82061f29ad062e73e6c4f294ab8ca9936169",
       "tools/manual/generate.ts": "8ab36f932fcb6bc859c92e908005dc5ae477bc80e89a39a6a17e9a1ae60f7038",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",
@@ -177,9 +177,9 @@
       }
     }
   },
-  "pdf": "5d6c0169106c4185d1f927310dd554470729c10b1e5600f9eb1b0360105bc509",
+  "pdf": "eb657d005db6ffd05fa727498181ac455e01b8bf6d4d17629e7fbe1a5e5553f1",
   "verification": {
-    "generatedAt": "2026-11-10T20:22:08.187Z",
+    "generatedAt": "2026-11-10T21:32:30.947Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "843bd63585029e24a944f70fbbe1d99734e6f68545a84bbb4c3376ab9aa8a438",
@@ -281,7 +281,7 @@
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
       "tools/manual/check.ts": "74a86ee33518d7d5c4ceb22680cbb5ef587340a7d22c235c7e76fd4c42e38f35",
       "tools/manual/content.ts": "c7787d9348792768ecabbcc1fd5b3d5d0cac0969a542e654dd6237560038429a",
-      "tools/manual/freshness.ts": "29057cdd2c3f134e13f1af7ce1c799cd6d4e11d33bdd24859af3dcff27d6d557",
+      "tools/manual/freshness.ts": "54ff90365e72f02539ed8c89173c82061f29ad062e73e6c4f294ab8ca9936169",
       "tools/manual/generate.ts": "8ab36f932fcb6bc859c92e908005dc5ae477bc80e89a39a6a17e9a1ae60f7038",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",

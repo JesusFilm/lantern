@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile, readdir, stat, writeFile, mkdir } from "node:fs/promises";
 import { join, relative } from "node:path";
@@ -164,6 +164,26 @@ export async function readManifest(root: string): Promise<Manifest | undefined> 
   }
 }
 
+/**
+ * The manifest the committed one must have moved the edition forward from:
+ * origin/main (main at merge time), then main, then the parent commit's
+ * manifest. The parent is the base every `npm run manual` on this branch last
+ * compared against, so a deck change that kept its edition number is caught
+ * even in a checkout with no other history.
+ */
+export function editionBase(root: string): { edition: number; deck: string } | undefined {
+  const read = (ref: string) => {
+    try {
+      const text = execFileSync("git", ["show", `${ref}:docs/manual/manifest.json`], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+      const manifest = JSON.parse(text);
+      return typeof manifest.edition === "number" && typeof manifest.deck === "string" ? manifest : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  return read("origin/main") ?? read("main") ?? read("HEAD^");
+}
+
 /** Supplied captures whose sources changed after a person last supplied or confirmed them. */
 export async function outdatedSupplied(layout: ManualLayout, manifest: Manifest | undefined) {
   const outdated: Record<string, string[]> = {};
@@ -211,12 +231,26 @@ export async function recordManifest(layout: ManualLayout, edition: Parameters<t
   return manifest;
 }
 
-/** Fast check, without a browser or database, that the committed manual matches the source. */
-export async function checkManual(layout: ManualLayout) {
+/**
+ * Fast check, without a browser or database, that the committed manual matches
+ * the source. `base` is the manifest the committed one must have moved the
+ * edition forward from; it resolves from Git by default.
+ */
+export async function checkManual(layout: ManualLayout, base: () => { edition: number; deck: string } | undefined = () => editionBase(layout.root)) {
   const errors: string[] = [];
   const warnings: string[] = [];
   const manifest = await readManifest(layout.root);
   if (!manifest) return { errors: [`The manual has not been generated. ${regenerate}`], warnings };
+
+  // Edition lineage: the release workflow tags `manual-<edition>` and never
+  // republishes a tag, so a changed deck must never keep the edition number of
+  // the manifest it was generated from. `npm run manual` compares against the
+  // manifest the branch last had; after a merge with main that base is main's,
+  // so the edition moves forward from main's.
+  const editionBase_ = base();
+  if (editionBase_ && editionBase_.deck !== manifest.deck && manifest.edition <= editionBase_.edition) {
+    errors.push(`The manual's deck changed but the edition did not move forward from ${editionBase_.edition}. Start from main's docs/manual, then ${regenerate}`);
+  }
 
   const current = await productSources(layout.root);
   if (current.fingerprint !== manifest.sources.fingerprint) {
