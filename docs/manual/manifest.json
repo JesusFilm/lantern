@@ -1,5 +1,5 @@
 {
-  "edition": 24,
+  "edition": 23,
   "editionDate": "2026-11-11",
   "deck": "f6a6d90f02480dd74e6f33b89a9aac3e080e5648b04c564d975f590085aa97eb",
   "sources": {
@@ -173,5 +173,5 @@
       }
     }
   },
-  "pdf": "3a2c2606e23400ff1374df246ce4d0b229ddecedc56e385972b87ab4770b97b5"
+  "pdf": "d883c5cd98dd516da33542bc9c260612d91be5f6869bb1085d9766575b776b8f"
 }
