@@ -5,6 +5,44 @@ import { coachingFixture } from "../../server/coach-test-support.js";
 import { hash } from "../../server/access.js";
 import { resetQaDepartment } from "./qa-fixture.js";
 
+test("QA reset persists the mission and initiatives without changing another department", async () => {
+  const f = await coachingFixture();
+  try {
+    const ids = [randomUUID(), randomUUID()];
+    for (const [i, id] of ids.entries()) {
+      const email = `directionqa${i}@example.test`;
+      await f.admin.query("INSERT INTO users(id,google_sub,email,name) VALUES($1,$2,$3,'QA')", [id, `directionqa-${i}`, email]);
+      await f.admin.query("INSERT INTO approved_emails VALUES($1)", [email]);
+    }
+    const otherBefore = await (await f.request("lead", "/api/department/direction")).json();
+    const options = { participants: ["directionqa0@example.test", "directionqa1@example.test", "directionqa2@example.test"], lead: "directionqa0@example.test" };
+    await resetQaDepartment(f.migration, options);
+    await f.admin.query("INSERT INTO sessions VALUES($1,$2,now()+interval '1 hour')", [hash("direction-qa"), ids[0]]);
+    const read = async () => {
+      const response = await fetch(f.origin + "/api/department/direction", { headers: { Cookie: "lantern-session=direction-qa" } });
+      assert.equal(response.status, 200);
+      return response.json() as Promise<{ mission: string; initiatives: { id: string; name: string; description: string; appearance: { icon: string }; archived: boolean }[]; version: number }>;
+    };
+    const initial = await read();
+    assert.equal(initial.mission, "We partner with the Body of Christ through heart language media, so everyone, everywhere can encounter Jesus.");
+    assert.deepEqual(initial.initiatives.map(({ name, appearance, archived }) => [name, appearance.icon, archived]), [
+      ["Love What We Build", "heart", false], ["Rethink How We Build", "lightbulb", false],
+      ["Role Clarity And Growth", "sprout", false], ["Team Connectedness", "users", false],
+    ]);
+    assert.ok(initial.initiatives.every((item) => item.id && item.description));
+    const extraId = randomUUID();
+    await f.admin.query(`UPDATE department_direction SET initiatives=initiatives || $2::jsonb
+      WHERE department_id=(SELECT department_id FROM memberships WHERE user_id=$1)`,
+      [ids[0], JSON.stringify([{ id: extraId, name: "QA additional initiative", archived: true }])]);
+    await resetQaDepartment(f.migration, options);
+    const again = await read();
+    assert.equal(again.mission, initial.mission);
+    assert.deepEqual(again.initiatives.slice(0, 4), initial.initiatives);
+    assert.equal(again.initiatives[4]?.id, extraId);
+    assert.deepEqual(await (await f.request("lead", "/api/department/direction")).json(), otherBefore);
+  } finally { await f.close(); }
+});
+
 test("QA reset leaves active CI acceptance accounts and sessions untouched", async () => {
   // @ts-expect-error The release fixture is a JavaScript module.
   const { withAcceptanceFixture } = await import("../release/acceptance-fixture.mjs");
