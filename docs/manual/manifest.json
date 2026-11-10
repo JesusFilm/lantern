@@ -1,9 +1,9 @@
 {
-  "edition": 20,
+  "edition": 22,
   "editionDate": "2026-11-10",
-  "deck": "8f0332c8d661dd289723a24c6652513cf32ce9aa0bdeae8c8d724db7e212eb57",
+  "deck": "5d6302ded13160c1e4bf08e4f030151ae06124448b15511d6498e191d4ef2e06",
   "sources": {
-    "fingerprint": "26c98ba3a29d5322002c18720f30c6cde9d20219b01384319c3b9b792f9d1346",
+    "fingerprint": "c9bb7543311c61d58bfca4c769e58c886cd0470ac8989644093aa56ee53d026b",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -51,7 +51,7 @@
       "client/workspace/useSwipeNavigation.ts": "3afbeefed498f713fc7e42e6d8fcc313dba7d8dd20a2f3aca59631d23820d420",
       "docs/PRD.md": "1ff2245684f2c2a780acfbfba2ac8f4fe3b29cecefa30e138b2cb076e3730835",
       "index.html": "aa59d7718b36dc5ee536466e8fbbbb1e7c188bcfc4c6ee351bebe23286ed8fd9",
-      "package-lock.json": "fb621a8790e35addc8e36d82133498ff30f2a7201320d7a2bd5f3d4a2163b1db",
+      "package-lock.json": "016f407ddb8a7dcbe5b3a67a0819e3b94e949c820994e927be3ad90ebb0f92fb",
       "package.json": "a438a17485ba2f9eec2bad1307f4ba9759b7127a7faac6039ea693de953630b1",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/google-sign-in.png": "e048546f162b43a5f3809796f88df02a8e13f07ca1280a9c1635018956e05c05",
@@ -105,7 +105,7 @@
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",
-      "tools/manual/qa-fixture.ts": "358a59ef6a9eb633ffe445ad6bb1457f334ab1e08f31ec112aba34449e779de0",
+      "tools/manual/qa-fixture.ts": "0d72447b96bd5a529f935c09b90cfc20de0de98988cc27acaefa4d96e10c8861",
       "tools/manual/qa-stage.ts": "4bfe24391240bbe32a293622db8b8bfc6cb51c2f45a626fc278a66019fc04e8c",
       "tools/manual/render.ts": "eedd830fcf3ccbdd403a8b3563b487be2edda4041ed4f6a724795dbaba2dda0c",
       "tools/manual/tsconfig.json": "b2c53bf7e0a9203acae2292d0215afb5abb1d3e90311ace1b9e8a11ec37ef1ac",
@@ -171,5 +171,5 @@
       }
     }
   },
-  "pdf": "f9e979423b498bb9004027e9907315045670ed6cbc1104e79caffa133737f5a1"
+  "pdf": "bb8c97af679adc066e369e177fa9662f360bfcb5f47e53d5afbca3aa2434adea"
 }

@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
+import { guideContent } from "../../server/guide-content.js";
+import { initiativeDefaults } from "../../server/local-initiatives.js";
+import type { StrategicInitiative } from "../../shared/direction.js";
 
 const qaDepartmentId = "e2a42cf2-e1ba-4e71-992d-61c080d1e8d0";
 /** Reset a QA-only department inside a transaction. Participants are matched by
@@ -47,6 +50,17 @@ export async function resetQaDepartment(db: Pool, options: { participants: strin
     const foreignReads = await client.query(`SELECT x.user_id FROM focus_note_reads x JOIN focus_review_notes n ON n.id=x.note_id JOIN focus_review_requests r ON r.id=n.request_id JOIN position_focuses f ON f.id=r.focus_id WHERE f.department_id=$1 AND NOT (x.user_id=ANY($2::uuid[])) FOR UPDATE OF x`, [id, users.map((u) => u.id)]);
     if (foreignReads.rowCount) throw new Error("Unexpected note reader prevents QA reset.");
     await client.query("DELETE FROM position_focuses WHERE department_id=$1 AND user_id=ANY($2::uuid[])", [id, users.map((u) => u.id)]);
+    const previous = await client.query("SELECT initiatives FROM department_direction WHERE department_id=$1 FOR UPDATE", [id]);
+    const existing: StrategicInitiative[] = previous.rows[0]?.initiatives ?? [];
+    const initiatives = initiativeDefaults.map((preset) => {
+      const matches = existing.filter((item) => item.name.trim().toLowerCase() === preset.name.toLowerCase());
+      return { ...preset, id: (matches.find((item) => !item.archived) ?? matches[0])?.id ?? randomUUID(), archived: false };
+    });
+    const extraInitiatives = existing.filter((item) => !initiatives.some((preset) => item.id === preset.id));
+    if (initiatives.length + extraInitiatives.length > 100) throw new Error("QA initiative defaults exceed the department limit.");
+    await client.query(`INSERT INTO department_direction(department_id,mission,initiatives) VALUES($1,$2,$3)
+      ON CONFLICT(department_id) DO UPDATE SET mission=EXCLUDED.mission,initiatives=EXCLUDED.initiatives,version=department_direction.version+1`,
+      [id, guideContent.context.mission, JSON.stringify([...initiatives, ...extraInitiatives])]);
     await client.query("UPDATE memberships SET role='member' WHERE department_id=$1 AND role='career-lead'", [id]);
     for (const user of users)
       await client.query("INSERT INTO memberships(user_id,department_id,role) VALUES($1,$2,$3) ON CONFLICT(user_id) DO UPDATE SET department_id=EXCLUDED.department_id,role=EXCLUDED.role", [user.id, id, user.id === lead.id ? "career-lead" : "member"]);
