@@ -1,9 +1,9 @@
 {
-  "edition": 22,
-  "editionDate": "2026-11-10",
-  "deck": "5d6302ded13160c1e4bf08e4f030151ae06124448b15511d6498e191d4ef2e06",
+  "edition": 23,
+  "editionDate": "2026-11-11",
+  "deck": "3b99cb59cf2a92b1fbbf8e72e337caeaab9ff6b6601faccfffe9dfadf85ef9af",
   "sources": {
-    "fingerprint": "c9bb7543311c61d58bfca4c769e58c886cd0470ac8989644093aa56ee53d026b",
+    "fingerprint": "8ad21c4cc8612f773b36cbb4531898535173761e353ae352a328d22cf77c1c93",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -35,7 +35,7 @@
       "client/workspace/MissionImageDialog.tsx": "27adf5505b6ed72ba704e63ff324bf3f4db9bdd957cb861c6a56b8b6e2bdcc3e",
       "client/workspace/ObjectiveEditor.tsx": "87a74981b729b59c0315765acb2a8ca97e0589f67f5cdcfd5e422fad0bcefab1",
       "client/workspace/ObjectiveType.tsx": "bd84d8608f07f41cd22d5a53d9b6b7ce7102e77d410afc1eb2432fc1603bad79",
-      "client/workspace/ProceduresGuide.tsx": "bfd6d4bc216f8da998cff3286d071c2b8567f71dc009f2ecf9a6acc08e48d14f",
+      "client/workspace/ProceduresGuide.tsx": "82b945777ea39af4ae703c5dec4567a3e99230a4e43e008b098431c1e6d0f16b",
       "client/workspace/TeamDirection.tsx": "8e8a413df63e272dc1993dd17a04dcfbef290aa19d2a53718ffce4b216808278",
       "client/workspace/api.ts": "d2dd55e7f2af3d7c05d3039d67c7083bf4286558e14e1f05c4ea0f1425d4724f",
       "client/workspace/appearance.ts": "6f4247a8c1623311c9d91bd7ea1fdacbfe7c645f54a252da5da2bd756ba838c9",
@@ -100,7 +100,7 @@
       "shared/mission-image.ts": "578da384bea0ebf3e60fc460387b19933c05e441d651c57603578e6641573ba9",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
       "tools/manual/check.ts": "74a86ee33518d7d5c4ceb22680cbb5ef587340a7d22c235c7e76fd4c42e38f35",
-      "tools/manual/content.ts": "c7787d9348792768ecabbcc1fd5b3d5d0cac0969a542e654dd6237560038429a",
+      "tools/manual/content.ts": "f1b3376468f84dc359b83b4f0d2071e00ab72693c619629dd7418f61cf4519dc",
       "tools/manual/freshness.ts": "af50e310bc2661ece832e973cf0a6943fd4925ff77dd8b18f2c2f200349037ba",
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
@@ -134,7 +134,7 @@
     "guide-example.png": "8bafd764f148683e7c77d2cf1d16d1f0e211a6a3f746c96db9b57b9550c6bad2",
     "guide-initiatives.png": "a725b2822db2ed80ca5d9210eaf4ddebef3d1b358e4af6f39728a0252d3a4902",
     "guide-objectives.png": "08888070d0aafa5ecd3d49b83128ebd0e0b6e742f3932dd9a50738fe43ad0494",
-    "guide-procedures.png": "bafeda016056a20dc099cad9020120019a97fe0fb828d6ec76929c0335024980",
+    "guide-procedures.png": "5b5fcf3133f97070d493a63209ff091178ef57061210f73b3087fd8abe86d3e5",
     "guide-start.png": "25fd97ce64cdd7164c7649fbca6679383a638dde07745d71838a489384e5a48f",
     "guided-check.png": "323129597019eef1f9bc6b15eabff943aa1149f5fb47d9674302ae0f634a3acc",
     "guided-goals.png": "adae71d1d5e7a2f0079f721f771cdee0382753afec0f709ce9ef24146747b61d",
@@ -171,5 +171,5 @@
       }
     }
   },
-  "pdf": "bb8c97af679adc066e369e177fa9662f360bfcb5f47e53d5afbca3aa2434adea"
+  "pdf": "25bf2714306357c89b3f89f2d520997eedbf60000ee33147fe90834e5e04c2f0"
 }

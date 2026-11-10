@@ -9,7 +9,7 @@ import { migrate } from "./schema.js";
 import { createApp } from "./app.js";
 import { hash } from "./access.js";
 
-test("Guide Procedures uses the existing topic accordion and keeps visual guidance concise", { timeout: 90000 }, async () => {
+test("Guide Procedures distinguishes unavailable revisions from current confirmation locking", { timeout: 90000 }, async () => {
   const f = await privilegeFixture(), server = createServer(), browser = await chromium.launch();
   let vite: Awaited<ReturnType<typeof createViteServer>> | undefined;
   try {
@@ -52,7 +52,9 @@ test("Guide Procedures uses the existing topic accordion and keeps visual guidan
     await expect(memberPage.getByRole('list', {name:'Agree a focus'}).getByRole('listitem')).toHaveCount(4);
     await expect(memberPage.getByText('One agreed focus for the next six months.', {exact:true})).toHaveCount(0);
     await navigation.getByRole('button', {name:'Make a change',exact:true}).click();
-    await expect(memberPage.getByRole('heading', {name:'Priorities change. Your focus can too.'})).toBeFocused();
+    await expect(memberPage.getByRole('heading', {name:'Confirmed focuses stay locked.'})).toBeFocused();
+    await expect(memberPage.getByText('Confirmed focuses can’t be edited or unlocked, even by a career lead.', {exact:true})).toBeVisible();
+    await expect(memberPage.getByText('Proposed revision flow · Not available yet', {exact:true})).toBeVisible();
     await expect(memberPage.getByRole('list', {name:'Make a change'})).toContainText('Unlock revisionCareer lead');
     await expect(memberPage.getByText('Keep the agreed version until the revision is confirmed.', {exact:true})).toHaveCount(0);
     await expect(memberPage.getByRole('button', {name:'Next layout'})).toHaveCount(0);
@@ -84,6 +86,8 @@ test("Guide Procedures uses the existing topic accordion and keeps visual guidan
     await phoneNavigation.getByRole('button',{name:'Agree a focus',exact:true}).click();
     await expect(phone.getByText('Draft',{exact:true})).toBeInViewport();
     await phoneNavigation.getByRole('button',{name:'Make a change',exact:true}).click();
+    await expect(phone.getByText('Confirmed focuses can’t be edited or unlocked, even by a career lead.', {exact:true})).toBeInViewport();
+    await expect(phone.getByText('Proposed revision flow · Not available yet', {exact:true})).toBeInViewport();
     await expect(phone.getByText('Unlock revision',{exact:true})).toBeInViewport();
     await phoneNavigation.getByRole('button',{name:'The year',exact:true}).click();
     await expect(phone.getByRole('img',{name:'Position Focus annual cycle'})).toBeInViewport();
@@ -98,6 +102,9 @@ test("Guide Procedures uses the existing topic accordion and keeps visual guidan
     await leadPage.goto(origin + '/?page=guide');
     await leadPage.getByRole('button',{name:'Procedures',exact:true}).click();
     await expect(leadPage.getByRole('img',{name:'Position Focus annual cycle'})).toBeVisible();
+    await leadPage.getByLabel('Steps within Procedures').getByRole('button',{name:'Make a change',exact:true}).click();
+    await expect(leadPage.getByText('Confirmed focuses can’t be edited or unlocked, even by a career lead.', {exact:true})).toBeVisible();
+    await expect(leadPage.getByText('Proposed revision flow · Not available yet', {exact:true})).toBeVisible();
 
   } finally {
     await browser.close(); await vite?.close(); server.closeAllConnections();
