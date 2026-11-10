@@ -8,6 +8,8 @@ import { api } from "./api.js";
 import { FocusObjective } from "./FocusDocument.js";
 import { Dialog } from "./Dialog.js";
 
+const alignmentError = "Select an initiative or Other before saving this objective.";
+
 export type AuthoringMethod = "choose" | "manual" | "guided";
 type Stage =
   | "work"
@@ -185,10 +187,12 @@ export function ObjectiveEditor({
       if (requestId === epoch.current) setPreparing(null);
     }
   }
+  const missingAlignment = edit.initiatives.status === "ready" &&
+    !edit.alignment.other && !edit.alignment.initiatives.length;
   async function save() {
     setError("");
-    if (edit.initiatives.status === "ready" && !edit.alignment.other && !edit.alignment.initiatives.length) {
-      setError("Select an initiative or Other before saving this objective.");
+    if (missingAlignment) {
+      setError(alignmentError);
       if (method === "guided") setStage("objective");
       return;
     }
@@ -299,8 +303,13 @@ export function ObjectiveEditor({
         setAnswer(cached?.answer ?? "");
         setStage("question");
       }
-    } else if (stage === "objective") setStage("goals");
-    else if (stage === "goals") {
+    } else if (stage === "objective") {
+      if (missingAlignment) {
+        setError(alignmentError);
+        return;
+      }
+      setStage("goals");
+    } else if (stage === "goals") {
       if (edit.goals.some((g) => !g.trim())) {
         setError("Write or remove the empty SMART goal before continuing.");
         return;
@@ -412,10 +421,14 @@ export function ObjectiveEditor({
         selection={edit.alignment}
         readiness={edit.initiatives}
         recommended={method === "guided" ? recommendedInitiatives : []}
-        onInitiative={(id, checked) =>
-          onChange({ type: "initiative", id, checked })
-        }
-        onOther={(checked) => onChange({ type: "other", checked })}
+        onInitiative={(id, checked) => {
+          onChange({ type: "initiative", id, checked });
+          if (checked && error === alignmentError) setError("");
+        }}
+        onOther={(checked) => {
+          onChange({ type: "other", checked });
+          if (checked && error === alignmentError) setError("");
+        }}
         onRetry={onRetryInitiatives}
       />
     </>

@@ -33,7 +33,9 @@ const guided = async (page: Page) => {
 };
 const planGoal = async (page: Page) => {
   await guided(page);
-  await click("Next", "Next", "Add SMART goal")(page);
+  await click("Next")(page);
+  await page.getByRole("checkbox", { name: "Other — none of these apply", exact: true }).check();
+  await click("Next", "Add SMART goal")(page);
   await page.getByRole("radio", { name: "Publish runbooks for the three most common causes" }).check();
 };
 
@@ -230,16 +232,16 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Guide with AI: from your work to an objective",
         roles: ["Member"],
-        summary: "Guided writing moves through **Your work → Objective → SMART goals → Check objective**. The member describes their work; the AI proposes wording and initiatives to accept or change.",
-        tryIt: ["Choose **+ Add objective**, then **Guide with AI**.", "Describe your work in a sentence or two.", "Choose **Next** and review the suggestion."],
+        summary: "Move through **Your work → Objective → SMART goals → Check objective**. AI suggests wording and initiatives; you choose what fits.",
+        tryIt: ["Choose **+ Add objective**, then **Guide with AI**.", "Describe your work in a sentence or two.", "Review the suggestion; choose an initiative or Other."],
         check: [
-          "AI recommendations are labelled and never selected for you.",
-          "Back returns to earlier stages with your text intact.",
-          "A slow reply shows a loading overlay you can cancel.",
+          "AI recommendations are labelled, not selected.",
+          "Next requires an initiative or Other; choosing either clears the error.",
+          "Back keeps text and goals. Slow replies can be cancelled.",
         ],
         shots: [
           { id: "guided-work", persona: "member", path: draft, act: guided, ready: (p) => p.getByLabel("Your work", { exact: true }), caption: "Your work" },
-          { id: "guided-objective", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next")(page); }, ready: (p) => p.getByText("AI recommended").first(), mode: longPage, caption: "Suggested objective" },
+          { id: "guided-objective", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Next")(page); }, ready: (p) => p.getByRole("alert"), mode: longPage, caption: "Choose an initiative or Other" },
         ],
       },
       {

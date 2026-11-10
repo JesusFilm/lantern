@@ -28,6 +28,84 @@ async function browserFixture(coach?: Parameters<typeof coachingFixture>[0]) {
     },
   };
 }
+for (const choice of ["Other — none of these apply", "Build confidence"]) {
+  test(`guided Objective Next requires alignment and clears the error on choosing ${choice}`, async () => {
+    const f = await browserFixture({
+      async suggest(_system, input, validate) {
+        const { context } = JSON.parse(input);
+        return validate(context.answers.length
+          ? { ready: true, objective: "Help engineers diagnose failures", initiativeIds: [] }
+          : { ready: false, question: "Who benefits?", options: ["Engineers", "Support"] });
+      },
+    });
+    try {
+      await f.request("lead", "/api/department/direction", "PUT", {
+        mission: "", version: 0, initiatives: [{ name: "Build confidence", archived: false }],
+      });
+      const saved = await (await f.request("member", "/api/focuses", "POST", draft)).json();
+      await f.page.goto(f.origin + "/?focus=" + saved.id, { timeout: 15000 });
+      await f.page.getByRole("button", { name: "+ Add objective", exact: true }).click();
+      await f.page.getByRole("button", { name: "Guide with AI", exact: true }).click();
+      await f.page.getByLabel("Your work", { exact: true }).fill("I maintain build diagnostics for engineers.");
+      await f.page.getByRole("button", { name: "Next", exact: true }).click();
+      await expect(f.page.getByRole("dialog")).toBeHidden();
+      await f.page.getByLabel("Your answer", { exact: true }).fill("Engineers investigating failed builds");
+      await f.page.getByRole("button", { name: "Next", exact: true }).click();
+      await expect(f.page.getByRole("dialog")).toBeHidden();
+      const objective = f.page.getByLabel("Objective", { exact: true });
+      await objective.fill("Help engineers diagnose build failures confidently");
+      await f.page.getByRole("radio", { name: "Leadership", exact: true }).check();
+      await f.page.getByRole("button", { name: "Next", exact: true }).click();
+      await expect(f.page.getByRole("alert")).toHaveText("Select an initiative or Other before saving this objective.");
+      await expect(objective).toHaveValue("Help engineers diagnose build failures confidently");
+      assert.deepEqual(await (await f.request("member", "/api/focuses/" + saved.id)).json(), saved);
+      const selection = f.page.getByRole("checkbox", { name: choice, exact: true });
+      await selection.check();
+      await expect(f.page.getByRole("alert")).toHaveCount(0);
+      await selection.uncheck();
+      await f.page.getByRole("button", { name: "Next", exact: true }).click();
+      await expect(f.page.getByRole("alert")).toContainText("Select an initiative or Other");
+      await selection.check();
+      await expect(f.page.getByRole("alert")).toHaveCount(0);
+      await f.page.getByRole("button", { name: "Back", exact: true }).click();
+      await expect(f.page.getByLabel("Your answer", { exact: true })).toHaveValue("Engineers investigating failed builds");
+      await f.page.getByRole("button", { name: "Back", exact: true }).click();
+      await expect(f.page.getByLabel("Your work", { exact: true })).toHaveValue("I maintain build diagnostics for engineers.");
+      await f.page.getByRole("button", { name: "Next", exact: true }).click();
+      await f.page.getByRole("button", { name: "Next", exact: true }).click();
+      await expect(objective).toHaveValue("Help engineers diagnose build failures confidently");
+      await expect(f.page.getByRole("radio", { name: "Leadership", exact: true })).toBeChecked();
+      await f.page.getByRole("button", { name: "Next", exact: true }).click();
+      await f.page.getByRole("button", { name: "Write myself", exact: true }).click();
+      await f.page.getByRole("button", { name: "Add SMART goal", exact: true }).click();
+      await f.page.getByLabel("SMART goal 1", { exact: true }).fill("Review two failed builds by 30 November 2026.");
+      await f.page.getByRole("button", { name: "Guide with AI", exact: true }).click();
+      await f.page.getByRole("button", { name: "Back", exact: true }).click();
+      await selection.uncheck();
+      await f.page.getByRole("button", { name: "Next", exact: true }).click();
+      await expect(f.page.getByRole("alert")).toContainText("Select an initiative or Other");
+      await selection.check();
+      await expect(f.page.getByRole("alert")).toHaveCount(0);
+      await f.page.getByRole("button", { name: "Next", exact: true }).click();
+      await expect(f.page.getByText("Review two failed builds by 30 November 2026.", { exact: true })).toBeVisible();
+      await f.page.getByRole("button", { name: "Next", exact: true }).click();
+      await f.page.getByRole("button", { name: "Save objective", exact: true }).click();
+      await expect(f.page.getByRole("heading", { name: draft.title, exact: true })).toBeVisible();
+      await f.page.reload();
+      await expect(f.page.getByText("Review two failed builds by 30 November 2026.", { exact: true })).toBeVisible();
+      const actual = await (await f.request("member", "/api/focuses/" + saved.id)).json();
+      assert.equal(actual.version, saved.version + 1);
+      assert.deepEqual(actual.sections[0], saved.sections[0]);
+      assert.equal(actual.sections[1].objective, "Help engineers diagnose build failures confidently");
+      assert.equal(actual.sections[1].kind, "leadership");
+      assert.deepEqual(actual.sections[1].goals, ["Review two failed builds by 30 November 2026."]);
+      assert.equal(actual.sections[1].alignment.other, choice.startsWith("Other"));
+      assert.deepEqual(actual.sections[1].alignment.initiatives.map((i: { name: string }) => i.name), choice.startsWith("Other") ? [] : [choice]);
+      assert.equal((await f.request("peer", "/api/focuses/" + saved.id)).status, 404);
+      assert.equal((await f.request("outsider", "/api/focuses/" + saved.id)).status, 404);
+    } finally { await f.close(); }
+  });
+}
 test("manual editing requires an initiative or Other only for the edited objective", async () => {
   const f = await browserFixture();
   try {
