@@ -6,7 +6,7 @@ import { chromium, expect, type Browser } from "@playwright/test";
 import { build } from "vite";
 import { capture, CaptureError, contextOptions, launchOptions, watchPage, type CaptureFrame } from "./capture.js";
 import { chapters, supplied } from "./content.js";
-import { currentManifest, manualDirectory, outdatedSupplied, pdfName, readManifest, recordManifest } from "./freshness.js";
+import { currentManifest, manualDirectory, outdatedSupplied, pdfName, readManifest, recordManifest, verification } from "./freshness.js";
 import { allShots, isSupplied, type Shot } from "./manual.js";
 import { deckHtml, printPdf, type Assets } from "./render.js";
 import { manualNow, startWorld, type ManualWorld } from "./world.js";
@@ -133,7 +133,15 @@ try {
       await writeFile(pdfPath, pdf);
       log(`Rendered edition ${edition} (${(pdf.length / 1048576).toFixed(1)} MB): ${resolve(pdfPath)}`);
     } else log(`The deck is unchanged; edition ${edition} remains current.`);
-    await recordManifest(layout, { edition, editionDate, deck, confirm });
+    // When neither content nor the PDF changed, record the manifest without
+    // rewriting the verification provenance; a real render records it as usual.
+    if (deck === previous?.deck && pdfMatches && previous?.verification) {
+      const manifest = await currentManifest(layout, { edition, editionDate, deck, confirm });
+      manifest.verification = previous.verification;
+      await writeFile(join(output, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+    } else {
+      await recordManifest(layout, { edition, editionDate, deck, confirm });
+    }
     for (const item of supplied) if (!assets.supplied[item.id]) log(`Pending supplied capture: ${item.id} → docs/manual/supplied/${item.file}`);
     for (const [id, paths] of Object.entries(outdated)) log(`Supplied capture ${id} may be outdated (${paths.join(", ")}).`);
   }

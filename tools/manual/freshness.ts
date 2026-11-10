@@ -136,7 +136,7 @@ export async function productSources(root: string) {
   return { fingerprint: sha(JSON.stringify(files)), files };
 }
 
-async function verification(root: string) {
+export async function verification(root: string) {
   const rawSources: Record<string, string> = {};
   for (const path of await sourceFiles(root)) rawSources[path] = (await hashFile(join(root, path)))!;
   return { generatedAt: new Date().toISOString(), policy: "manual-inputs/2", rawSources };

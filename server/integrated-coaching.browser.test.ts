@@ -65,7 +65,9 @@ test("member can change objective type without changing content; type is visible
     await page
       .getByRole("button", { name: "Save objective", exact: true })
       .click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("region", { name: "Edit objective", exact: true }),
+    ).toHaveCount(0);
     const result = await (
       await f.request("member", "/api/focuses/" + saved.id)
     ).json();
