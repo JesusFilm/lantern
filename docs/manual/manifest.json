@@ -1,9 +1,9 @@
 {
-  "edition": 23,
+  "edition": 24,
   "editionDate": "2026-11-11",
-  "deck": "3b99cb59cf2a92b1fbbf8e72e337caeaab9ff6b6601faccfffe9dfadf85ef9af",
+  "deck": "4c086d6050450fed6d646f3ee1e9061c29634275126eb3077f64d372fe581ab8",
   "sources": {
-    "fingerprint": "8ad21c4cc8612f773b36cbb4531898535173761e353ae352a328d22cf77c1c93",
+    "fingerprint": "c9058935cbf4ed0857fb2da499055d99411ec6187baa1e53d0171fc77a67d5c6",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -100,7 +100,7 @@
       "shared/mission-image.ts": "578da384bea0ebf3e60fc460387b19933c05e441d651c57603578e6641573ba9",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
       "tools/manual/check.ts": "74a86ee33518d7d5c4ceb22680cbb5ef587340a7d22c235c7e76fd4c42e38f35",
-      "tools/manual/content.ts": "f1b3376468f84dc359b83b4f0d2071e00ab72693c619629dd7418f61cf4519dc",
+      "tools/manual/content.ts": "c5eeca1eb22dc47f482a9f532c9766a7a9ce62a2c5913a7c5d8917db0fc86836",
       "tools/manual/freshness.ts": "af50e310bc2661ece832e973cf0a6943fd4925ff77dd8b18f2c2f200349037ba",
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
@@ -171,5 +171,5 @@
       }
     }
   },
-  "pdf": "25bf2714306357c89b3f89f2d520997eedbf60000ee33147fe90834e5e04c2f0"
+  "pdf": "584e7fe35502a31c83d691a90e74bfdc54e35491a1dba2c13f23451f2f974fd3"
 }
