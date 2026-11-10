@@ -26,8 +26,11 @@ as a member. The workflow does not create users or approve email addresses.
 Each reset deletes the QA department's focuses and their associated review
 records, then creates examples: a draft for each person and a review request
 with a lead note and a confirmed example for each member. QA's Google users and
-sessions remain intact. The workflow does not reset the department's mission or
-initiatives.
+sessions remain intact. The reset also restores the shared mission statement and
+the four default initiatives, including their descriptions and appearances, in
+the QA department. It replaces QA changes to the mission and matching defaults;
+matching initiative IDs, additional initiatives and the mission image are retained.
+Other departments are not changed.
 
 For safety it refuses ambiguous or unapproved identities, an existing career
 lead from another department, a conflicting QA department, unexpected memberships,
