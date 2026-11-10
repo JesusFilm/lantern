@@ -3,7 +3,7 @@
   "editionDate": "2026-11-10",
   "deck": "09265cc7f4b2c60f1d40c990a20186f52a9e4d48ca67d796a50910744eb172b3",
   "sources": {
-    "fingerprint": "a16c3659fd7f1dff2e8047a81819a187939279e30466a2e2b334017bc8d47842",
+    "fingerprint": "84c185285c7cf0b70a83b8eac3bafde9eda3c261bed9e36b3de81eab4e691640",
     "files": {
       ".env.example": "843bd63585029e24a944f70fbbe1d99734e6f68545a84bbb4c3376ab9aa8a438",
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
@@ -53,7 +53,7 @@
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
       "docs/PRD.md": "1ff2245684f2c2a780acfbfba2ac8f4fe3b29cecefa30e138b2cb076e3730835",
       "index.html": "aa59d7718b36dc5ee536466e8fbbbb1e7c188bcfc4c6ee351bebe23286ed8fd9",
-      "package-lock.json": "9427a2c6a6f1437b6895911070e338a8ae30891427fca9b47a6925f520451af1",
+      "package-lock.json": "9becc165a354106a9b10065246999a70b1d5dcfeeddf1d87b963964fb06ad77b",
       "package.json": "43caaef03f2632ab900698c3e16eb2dc0127bc4823988da7236eeb1759513be5",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/google-sign-in.png": "e048546f162b43a5f3809796f88df02a8e13f07ca1280a9c1635018956e05c05",
@@ -179,7 +179,7 @@
   },
   "pdf": "5d6c0169106c4185d1f927310dd554470729c10b1e5600f9eb1b0360105bc509",
   "verification": {
-    "generatedAt": "2026-11-10T04:07:00.869Z",
+    "generatedAt": "2026-11-10T20:22:08.187Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "843bd63585029e24a944f70fbbe1d99734e6f68545a84bbb4c3376ab9aa8a438",
@@ -230,7 +230,7 @@
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
       "docs/PRD.md": "1ff2245684f2c2a780acfbfba2ac8f4fe3b29cecefa30e138b2cb076e3730835",
       "index.html": "aa59d7718b36dc5ee536466e8fbbbb1e7c188bcfc4c6ee351bebe23286ed8fd9",
-      "package-lock.json": "492c83580de8e4dd24c3d73dd83cf9fb39290af1d58002cf671d18b13c0939aa",
+      "package-lock.json": "016f407ddb8a7dcbe5b3a67a0819e3b94e949c820994e927be3ad90ebb0f92fb",
       "package.json": "a438a17485ba2f9eec2bad1307f4ba9759b7127a7faac6039ea693de953630b1",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/google-sign-in.png": "e048546f162b43a5f3809796f88df02a8e13f07ca1280a9c1635018956e05c05",
