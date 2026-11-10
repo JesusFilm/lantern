@@ -20,7 +20,7 @@ A flagged feature that needs a schema change must keep the migration compatible 
 2. On the server, call `requireFeature(features, name, user.email)` in every route of the feature, after resolving the signed-in user. A hidden feature then answers 404, like a route that does not exist. Pass only the server-resolved email; never accept a feature list or a preview claim from the client.
 3. In the client, show the feature's entry points only when `session.features` includes the name.
 4. Test both states through the public interfaces. With the feature shown, it works. With it hidden, its routes answer 404, its entry points are absent and existing behavior is unchanged. Build the setting for a test with `resolveFeatureConfig` and pass it to `createApp` as `features`. An application created without `features` hides every registered feature.
-5. Update the [QA manual](manual.md) when the feature is released to everyone, since the manual documents what members can see.
+5. Add the feature's slides to the [QA manual](manual.md) in this same change, as [manual.md](manual.md) requires for every user-visible change. The feature shows on stage by default, so testers will see it there while production still hides it; each slide must state the flag name and that the feature is hidden in production until it is released. The flag-removal change then drops that note, keeping the slide itself.
 
 ## States and settings
 
@@ -33,6 +33,10 @@ A flagged feature that needs a schema change must keep the migration compatible 
 Set states in the webapp's `LANTERN_FEATURES` variable, for example `focus-notes=preview,team-calendar=on`. A registered feature with no setting is off in production and on in stage and local environments. To hide a feature on stage or locally, set it to `off` there.
 
 The application refuses to start when either variable is malformed, names a state other than these three, repeats a feature, or puts a feature in preview with no preview accounts. It logs and ignores a setting for a name the release does not have.
+
+## Change a feature's state
+
+Changing a stage or production variable redeploys the webapp with a new deployment ID. In stage, that replaces the deployment a passing acceptance recorded, so any automatic promotion waiting on that deployment fails its "stage still serves the accepted deployment" check, and a failed acceptance stays failed until the current-main CI push run is rerun. Make stage feature changes when no promotion is pending; afterwards, rerun the current-main CI push run for fresh acceptance evidence (see [releasing](../operations/releasing.md)).
 
 ## Release a flagged feature
 
