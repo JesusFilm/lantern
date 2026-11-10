@@ -192,6 +192,7 @@ function App() {
                 session.department.role === "career-lead" ? (
                 <Department
                   accessRevision={accessRevision}
+                  viewerId={session.user.id}
                   session={{ ...session, department: session.department }}
                 />
               ) : (

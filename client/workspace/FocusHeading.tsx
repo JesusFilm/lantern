@@ -17,7 +17,7 @@ export function FocusHeading({ focus, member, onBack, onMetadata, onConfirmed }:
   const [details, setDetails] = useState(false);
   const period = <p className="muted">{date(focus.start)} – {date(focus.end)}</p>;
   const edit = focus.status === "draft" && onMetadata && <button onClick={onMetadata}>Edit title & dates</button>;
-  const confirmation = <FocusConfirmation focus={focus} member={member} onConfirmed={onConfirmed} />;
+  const confirmation = <FocusConfirmation focus={focus} member={member} viewerId={member.id} onConfirmed={onConfirmed} />;
   return phone ? <div className="phone-focus-heading">
     <div className="focus-context-row">
       <button className="link back" onClick={onBack}>← Position focuses</button>

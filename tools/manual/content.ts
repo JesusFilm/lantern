@@ -335,6 +335,48 @@ export const chapters: Chapter[] = [
           { id: "focus-confirmed", persona: "member", path: confirmed, ready: heading("Second half 2026"), mode: longPage, caption: "Confirmed, as the member sees it" },
         ],
       },
+      {
+        kind: "feature",
+        title: "Confirm from a position focus",
+        roles: ["Career lead"],
+        summary: "The confirmation dialog identifies whose focus will lock and reminds you who to discuss it with.",
+        tryIt: ["Open a member's draft from Department.", "Choose **Confirm and lock**, then **Cancel**.", "Repeat with your own draft in Position focuses."],
+        check: [
+          "Another member's dialog names that member.",
+          "Your own says **your senior or manager**.",
+          "The summary still names the focus owner.",
+          "Cancel leaves the focus editable.",
+        ],
+        shots: [
+          {
+            id: "member-confirm-dialog",
+            persona: "lead",
+            path: (ids) => `/?page=department&member=${ids.member}&memberFocus=${ids.draftFocus}`,
+            act: click("Confirm and lock"),
+            ready: (p) => p.getByRole("dialog"),
+            mode: { kind: "viewport", ...dialog },
+            caption: "Another member's focus",
+          },
+          {
+            id: "own-confirm-dialog",
+            persona: "lead",
+            act: async (page) => {
+              const origin = new URL(page.url()).origin;
+              const response = await page.request.post(origin + "/api/focuses", {
+                headers: { Origin: origin },
+                data: { title: "Leadership focus 2027", start: "2027-01-01", end: "2027-12-31", sections: [{ kind: "normal", objective: "Support the team's development", goals: ["Hold a development conversation with each member by March."] }] },
+              });
+              if (response.status() !== 201) throw new Error("Could not create the lead's synthetic focus");
+              await page.goto(origin + "/?focus=" + (await response.json()).id);
+              await click("Confirm and lock")(page);
+            },
+            ready: (p) => p.getByRole("dialog"),
+            mode: { kind: "viewport", ...dialog },
+            caption: "Your own focus",
+            mutates: true,
+          },
+        ],
+      },
     ],
   },
   {
