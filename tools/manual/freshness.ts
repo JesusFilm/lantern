@@ -259,7 +259,7 @@ export async function recordManifest(layout: ManualLayout, edition: Parameters<t
  * the source. `base` is the manifest the committed one must have moved the
  * edition forward from; it resolves from Git by default.
  */
-export async function checkManual(layout: ManualLayout, base: (() => EditionLineage | undefined) | undefined = undefined, options: {requireBase?: boolean; push?: boolean} = {}) {
+export async function checkManual(layout: ManualLayout, base: (() => EditionLineage | undefined) | undefined = undefined, options: {requireBase?: boolean; push?: boolean; pushBase?: string} = {}) {
   const errors: string[] = [];
   const warnings: string[] = [];
   const manifest = await readManifest(layout.root);
@@ -267,12 +267,19 @@ export async function checkManual(layout: ManualLayout, base: (() => EditionLine
 
   // A changed deck needs a fresh edition. An unchanged branch that merely
   // predates main should not be forced to regenerate until it merges main.
-  const editionBase_ = base ? base() : editionBase(layout.root, {requireRemote: options.requireBase});
+  let editionBase_ = base ? base() : editionBase(layout.root, {requireRemote: options.requireBase});
   if (options.push) {
     try {
       const git = (...args: string[]) => execFileSync("git", args, {cwd:layout.root, encoding:"utf8", stdio:["ignore", "pipe", "ignore"]}).trim();
       if (git("rev-parse", "HEAD") !== git("rev-parse", "origin/main")) errors.push("The push is not current main; refusing a stale manual release.");
     } catch { errors.push("Cannot compare the push with current main."); }
+    try {
+      if (!options.pushBase || !/^[0-9a-f]{40}$/i.test(options.pushBase) || /^0{40}$/.test(options.pushBase)) throw new Error("missing push base");
+      execFileSync("git", ["merge-base", "--is-ancestor", options.pushBase, "HEAD"], {cwd:layout.root, stdio:"ignore"});
+      const prior = JSON.parse(execFileSync("git", ["show", `${options.pushBase}:docs/manual/manifest.json`], {cwd:layout.root,encoding:"utf8",stdio:["ignore","pipe","ignore"]}));
+      if (typeof prior.edition !== "number" || typeof prior.deck !== "string") throw new Error("invalid push base");
+      editionBase_ = {edition:prior.edition, deck:prior.deck};
+    } catch { errors.push("Cannot compare the manual edition with the revision before this push."); }
   }
   if (!editionBase_ && options.requireBase) {
     errors.push("Cannot compare the manual edition with main; fetch main and its history.");

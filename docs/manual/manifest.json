@@ -1,9 +1,9 @@
 {
   "edition": 39,
   "editionDate": "2026-11-12",
-  "deck": "e505990fc15100b4a0f3ee2fd9cb46f16a018f162b783f4d0f099ea9134d4679",
+  "deck": "3225f2e9563bf5a3c4a6f6897239a1f41754e6df872d711f52808fd3e53d054f",
   "sources": {
-    "fingerprint": "d9b33e062ae4a871ee5b0f0efb0d4e02dddc2a2e2ca9eefcf214f11cd90e751b",
+    "fingerprint": "632ba9e3b6e3c71fd44e2c23e54c8d9eccbb849898ed857566d411e69ecc3e3a",
     "files": {
       ".env.example": "e7ae073637769c75bd3221996f7209e06606e4e2f33a5e68a5af82ff2b1c9a56",
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
@@ -108,10 +108,10 @@
       "shared/initiative-appearance.ts": "8c98cc22edff22e9215dc5f60aee17456a658f5778a4d5a3aa05c395c16c0d26",
       "shared/mission-image.ts": "578da384bea0ebf3e60fc460387b19933c05e441d651c57603578e6641573ba9",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
-      "tools/manual/check.ts": "b4f2928d5dbd9a6512829e6b07cb49943f1ae6a720215614ff6f05a8d4d5946f",
+      "tools/manual/check.ts": "c55570e91934a21ba6b71afffb3ad81182524e766f476379ef9c2a249cc04331",
       "tools/manual/content.ts": "d6211be53bee76d067182678796c480249b4a1bad0b7115f637bfe9a07a1c7d1",
       "tools/manual/finalize.ts": "36517029e491fc3b2d158dd5c64d9cacd1083e092d181ecc9bdbb78a66218c42",
-      "tools/manual/freshness.ts": "0b4d1aa6365a37c12ec113e4488485007afdca95ce70d9a1b220193539f0c407",
+      "tools/manual/freshness.ts": "b65e196bc27ffba22e5e5cc8b0f5363f8d019f7e7a75a97fc44b4ddf99d77131",
       "tools/manual/generate.ts": "d8dee24ae0db8c35195c598c254d1a3e73791b85df16e31a400259cdc041e39a",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",
@@ -165,7 +165,7 @@
     "objective-choice.png": "25dc3f4f23d52ae4e8b884749969b12f4d0ff68a8b0fd679a64d3d6621e613d6",
     "objective-manual-1.png": "2457176db78259341e1a5538da2d816e3a73935c7b437b8d08b21ab343c06d1b",
     "objective-manual-2.png": "d6c53c465406a4967b43ec7b3c648278f28050b7c3408ea83b4f105ccb17edbf",
-    "own-confirm-dialog.png": "92c0ef176a01c5f01016ac7ce858f5115f7cc2fa0842be28743bcc40bb43c5f8",
+    "own-confirm-dialog.png": "d66cd48db0df60c413dd83f05df30e9bd783dcb70c236a284b9c2304bc794ac5",
     "phone-focus-1.png": "10a9b50bf31faed0c60b8cc360532a0362849fb0c29b599286bd27c49178e875",
     "phone-focus-2.png": "4eb7f8ccc6bd1e0bde3e4891e27e36ba6ac8b69b650aee5e8465ed2581f16ec5",
     "phone-objective-1.png": "2300e8342b4fdf3bdbfd8ea8f4f64bbef3624c43f90d702480cca5ba6d366757",
@@ -188,9 +188,9 @@
       }
     }
   },
-  "pdf": "7d8daddb2965a5628c0af8a98cc6e5542815484cb1abd0821004744fccee6e70",
+  "pdf": "45d611e79f11de468c18cd22bcab972f86815eb592f594847f436c869623d03a",
   "verification": {
-    "generatedAt": "2026-11-11T20:19:23.850Z",
+    "generatedAt": "2026-11-11T20:35:01.813Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "e7ae073637769c75bd3221996f7209e06606e4e2f33a5e68a5af82ff2b1c9a56",
@@ -296,10 +296,10 @@
       "shared/initiative-appearance.ts": "8c98cc22edff22e9215dc5f60aee17456a658f5778a4d5a3aa05c395c16c0d26",
       "shared/mission-image.ts": "578da384bea0ebf3e60fc460387b19933c05e441d651c57603578e6641573ba9",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
-      "tools/manual/check.ts": "b4f2928d5dbd9a6512829e6b07cb49943f1ae6a720215614ff6f05a8d4d5946f",
+      "tools/manual/check.ts": "c55570e91934a21ba6b71afffb3ad81182524e766f476379ef9c2a249cc04331",
       "tools/manual/content.ts": "d6211be53bee76d067182678796c480249b4a1bad0b7115f637bfe9a07a1c7d1",
       "tools/manual/finalize.ts": "36517029e491fc3b2d158dd5c64d9cacd1083e092d181ecc9bdbb78a66218c42",
-      "tools/manual/freshness.ts": "0b4d1aa6365a37c12ec113e4488485007afdca95ce70d9a1b220193539f0c407",
+      "tools/manual/freshness.ts": "b65e196bc27ffba22e5e5cc8b0f5363f8d019f7e7a75a97fc44b4ddf99d77131",
       "tools/manual/generate.ts": "d8dee24ae0db8c35195c598c254d1a3e73791b85df16e31a400259cdc041e39a",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",

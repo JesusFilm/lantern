@@ -98,3 +98,10 @@ test("a newer main blocks publishing an older manual as latest", async (t) => {
   await assert.rejects(fixture.run(), /no longer current main/);
   assert.deepEqual((await fixture.state()).calls, []);
 });
+
+test("every main push can publish a pending manual edition", async () => {
+  const workflow = await readFile(new URL("../../.github/workflows/manual.yml", import.meta.url), "utf8");
+  const trigger = workflow.split("\npermissions:")[0]!;
+  assert.match(trigger, /push:\s*\n\s*branches:\s*\[main\]/);
+  assert.doesNotMatch(trigger, /\n\s*paths(?:-ignore)?:/, "an unrelated newer main push must still retry publication");
+});

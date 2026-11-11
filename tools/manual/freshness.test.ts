@@ -211,8 +211,14 @@ test("edition comparison reads current main and the real common ancestor", async
   git("add", "."); git("commit", "-m", "old branch manual"); git("checkout", "main");
   assert.deepEqual(editionBase(root), {edition:5, deck:"old-branch-deck"});
   assert.deepEqual((await checkManual(layout, undefined, {requireBase:true})).errors, []);
+  const beforePush = git("rev-parse", "HEAD");
+  assert.match((await checkManual(layout, undefined, {requireBase:true, push:true})).errors.join("\n"), /revision before this push/);
   await recordManifest(layout, {edition:7, editionDate:"2026-11-11", deck:"modified-working-deck"});
   assert.match((await checkManual(layout)).errors.join("\n"), /edition did not move forward from 7/);
+  git("add", "."); git("commit", "-m", "bad edition");
+  await writeFile(join(root, "README.md"), "later unrelated commit"); git("add", "."); git("commit", "-m", "unrelated");
+  git("update-ref", "refs/remotes/origin/main", "HEAD");
+  assert.match((await checkManual(layout, undefined, {requireBase:true, push:true, pushBase:beforePush})).errors.join("\n"), /edition did not move forward from 7/);
   await writeFile(join(root, "docs/manual/manifest.json"), "malformed");
   git("add", "."); git("commit", "-m", "broken remote"); git("update-ref", "refs/remotes/origin/main", "HEAD"); git("checkout", "old-branch");
   assert.equal(editionBase(root, {requireRemote:true}), undefined);
