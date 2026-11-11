@@ -7,10 +7,12 @@ import { formatFocusDate as date } from "./focusDate.js";
 
 export function MemberFocuses({
   memberId,
+  viewerId,
   focusId,
   navigate,
 }: {
   memberId: string;
+  viewerId: string;
   focusId: string | null;
   navigate: (member?: string, focus?: string) => void;
 }) {
@@ -84,6 +86,7 @@ export function MemberFocuses({
                 key={data.focus.id}
                 focus={data.focus}
                 member={data.member}
+                viewerId={viewerId}
                 onConfirmed={(focus) => setData({ member: data.member, focus })}
               />
               <FocusDocument focus={data.focus} showPeriod={false} />

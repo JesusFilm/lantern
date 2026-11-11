@@ -1,9 +1,9 @@
 {
-  "edition": 35,
+  "edition": 36,
   "editionDate": "2026-11-11",
-  "deck": "38df7e395d7c4def64ec535988fe3d4957b141b4429136e65277e9c8760cb755",
+  "deck": "e0d273135c2aeef0aec80668fe063acc68e17be0ed7ea8bcbac0b96d161e79e3",
   "sources": {
-    "fingerprint": "bc9ff871faeffceb2558fa77f0963ac8ce4af1b439a4f5e65d5438f97499719f",
+    "fingerprint": "fd705f0f3954526ba361391dcf7c457a850866a45b2ddefebe1630909fe1eead",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -14,15 +14,15 @@
       "client/coach/status-badge.css": "9f57090f86c8fa1fbec58b9e25d8fdf3e5a15a1af040adfaf5c268106484a0a1",
       "client/coach/useFocusRecord.ts": "affc509d95c2fc420b850618e31a7f19af1764a7b079f8a22261ce4091ef248c",
       "client/guide.css": "edf26307fb3cfafaa9477b3b6437b4a83e30ba2dd0ca7ecc19646984022e8e64",
-      "client/main.tsx": "a6df1db09405254ac2c2a5c5dc9279c65916020e89a47c8fbbe45e34eae62b9d",
+      "client/main.tsx": "6352a0449fcd71811d28823534ab5cc430a0c8aac1d8654fd97d513fef293a09",
       "client/style.css": "cf9c9dbcfc34cf5f143cd5366c2db06538eb4359fb8d8905a49bbbff2631ef92",
       "client/workspace/Account.tsx": "536badbace7fd902a5d885b8672f6d7bd02a235b6c5419b4337d885132fa0113",
-      "client/workspace/Department.tsx": "9bf4046ee92dd12a7c7c99f9fec59febc76b2a91bed6f4b6343852b42080c8f9",
+      "client/workspace/Department.tsx": "6bb98bff598c04a4da9dabf1b5f0adf06f994e8c8460a7a8fcb84ea967f42e99",
       "client/workspace/Dialog.tsx": "ea96e8a314ef6ddef4c822bf90bd60808ab97166d89091edaa4cf2ccfe66ce60",
-      "client/workspace/FocusConfirmation.tsx": "29725ee6814f860b676402f07ba3e9dbc4dc6a0e7ce9c23773905e20923244db",
+      "client/workspace/FocusConfirmation.tsx": "2f67de9514ca40e77d5e25b3a20e9a410894484d1c00efd56b1d9cd3d10a3e13",
       "client/workspace/FocusDocument.tsx": "2da94934b463b1e24757272701ba10b59a14f746913cd2dad3e2e7d63df9f73d",
       "client/workspace/FocusExample.tsx": "9f977c2cae6803dc50d037b662d25eebd0a7cfe9bae376516c0ce7bfc4dcb2e0",
-      "client/workspace/FocusHeading.tsx": "5cec14537742a3c2971da137f208c9a10be726cc8b696b165f87eeb091edb811",
+      "client/workspace/FocusHeading.tsx": "f654871b28631093184a3d2e24e1dd3eb0075833a78d3a5f9c843f85214bdac7",
       "client/workspace/FocusObjectives.tsx": "130d549fcaf96c5403c36a3993e0c8670876d6086d3f0bf2997857341a4aba31",
       "client/workspace/FocusProcess.tsx": "f0db6123ec67fc954c2ef58454a1d54317e7a4c1aff21b015751862211abf51e",
       "client/workspace/FocusWorkspace.tsx": "560e280ef9dfb031e4884d3c695f135ca96a90ee14adad7caaa7e07c56893a59",
@@ -30,7 +30,7 @@
       "client/workspace/InitiativeDialog.tsx": "e0e1ee635e4d1b0f9a4131e6deccd428673840542ba75da5896c76dd9326c5c9",
       "client/workspace/InitiativeIdentity.tsx": "3861767ee293f5f14ad09f13ad803e32400bd3f0353e89beac98716d5fa6ad78",
       "client/workspace/LearningGuide.tsx": "b4bd3cf5c0ce9c7178e0441b0ac45252ce16c0cde01c8e91e005fe4ca0567d55",
-      "client/workspace/MemberFocuses.tsx": "f521633b2c726ea2fe48dfeb4f3ee5c2d94bda63b081d0f11ff2ed53867ad63f",
+      "client/workspace/MemberFocuses.tsx": "c5cdfc6502c96bb0cf1d1a583c8eede00d07088d3193d53216cd7365e3b587e7",
       "client/workspace/MissionBanner.tsx": "317c8886f63b10c398e69ccccf4ce77234383b99910a2a92d7fd8db3e9389b6a",
       "client/workspace/MissionImageDialog.tsx": "27adf5505b6ed72ba704e63ff324bf3f4db9bdd957cb861c6a56b8b6e2bdcc3e",
       "client/workspace/ObjectiveEditor.tsx": "87a74981b729b59c0315765acb2a8ca97e0589f67f5cdcfd5e422fad0bcefab1",
@@ -106,7 +106,7 @@
       "shared/mission-image.ts": "578da384bea0ebf3e60fc460387b19933c05e441d651c57603578e6641573ba9",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
       "tools/manual/check.ts": "74a86ee33518d7d5c4ceb22680cbb5ef587340a7d22c235c7e76fd4c42e38f35",
-      "tools/manual/content.ts": "3d4e20c199037845c95641e287ca185c909a45c6fbe6c48a9db9d07e77fb13cd",
+      "tools/manual/content.ts": "f59f9c255a977f7c3eefe2af9f3ec5cbdf4f87b70246aa20d0980fd90283beb7",
       "tools/manual/freshness.ts": "af50e310bc2661ece832e973cf0a6943fd4925ff77dd8b18f2c2f200349037ba",
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
@@ -153,10 +153,12 @@
     "lead-review-1.png": "0f06159cbfc6c931d5184a563900822ddc58718a98b3430ee1e2dbb30627842f",
     "lead-review-2.png": "d5ed96747d4656515905bd6a4dea50ff2643ba449c76121bfaff1ad8221787f4",
     "lead-reviews.png": "4328f52e6793c3cd682ae11bdaf1dd140d37f79404b7f8f3e450fa6e058faf60",
+    "member-confirm-dialog.png": "05f1cebfd6d82a6380612d8c0fc68bf7d51f61bcdb14d62fd239087771a598de",
     "mission-image.png": "bb3a2eefb5de50cb8cb7ab767abe7e84661e7a0e3fe44700ba57c4c4495d6e6a",
     "objective-choice.png": "25dc3f4f23d52ae4e8b884749969b12f4d0ff68a8b0fd679a64d3d6621e613d6",
     "objective-manual-1.png": "2457176db78259341e1a5538da2d816e3a73935c7b437b8d08b21ab343c06d1b",
     "objective-manual-2.png": "d6c53c465406a4967b43ec7b3c648278f28050b7c3408ea83b4f105ccb17edbf",
+    "own-confirm-dialog.png": "92c0ef176a01c5f01016ac7ce858f5115f7cc2fa0842be28743bcc40bb43c5f8",
     "phone-focus-1.png": "10a9b50bf31faed0c60b8cc360532a0362849fb0c29b599286bd27c49178e875",
     "phone-focus-2.png": "4eb7f8ccc6bd1e0bde3e4891e27e36ba6ac8b69b650aee5e8465ed2581f16ec5",
     "phone-objective-1.png": "2300e8342b4fdf3bdbfd8ea8f4f64bbef3624c43f90d702480cca5ba6d366757",
@@ -179,5 +181,5 @@
       }
     }
   },
-  "pdf": "06555ff0881e2b442b634fe80c3443040c314f68d2b5c049a6a7494195276d93"
+  "pdf": "6dbdc3160d1587d9fd560b3672330e618fa5d6ffe3740b4ffda33d58783d4b3b"
 }
