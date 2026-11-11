@@ -35,6 +35,16 @@ if (args[1] === 'view') {
 fs.writeFileSync('state.json', JSON.stringify(state));
 process.exit(status);
 `, { mode: 0o755 });
+  await writeFile(join(root, "git"), `#!${process.execPath}
+const fs = require('node:fs');
+const args = process.argv.slice(2);
+if (args[0] === 'fetch') process.exit(0);
+if (args[0] === 'rev-parse') {
+  console.log(args[1] === 'HEAD' || !fs.existsSync('main-moved') ? 'a'.repeat(40) : 'b'.repeat(40));
+  process.exit(0);
+}
+process.exit(1);
+`, { mode: 0o755 });
   const workflow = await readFile(new URL("../../.github/workflows/manual.yml", import.meta.url), "utf8");
   const script = workflow.split("        run: |\n")[1]!.replace(/^          /gm, "");
   return {
@@ -80,4 +90,11 @@ test("a new edition is created with its PDF", async (t) => {
   assert.equal(state.draft, false);
   assert.equal(state.uploaded, true);
   assert.ok(state.calls[1]!.includes("docs/manual/lantern-manual.pdf"));
+});
+
+test("a newer main blocks publishing an older manual as latest", async (t) => {
+  const fixture = await releaseFixture(t, null);
+  await writeFile(join(fixture.root, "main-moved"), "");
+  await assert.rejects(fixture.run(), /no longer current main/);
+  assert.deepEqual((await fixture.state()).calls, []);
 });

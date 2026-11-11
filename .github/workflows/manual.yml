@@ -27,6 +27,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse refs/remotes/origin/main)" ]; then
+            echo "The manual release is no longer current main; refusing to publish a stale latest release." >&2
+            exit 1
+          fi
           edition=$(node -p "require('./docs/manual/manifest.json').edition")
           date=$(node -p "require('./docs/manual/manifest.json').editionDate")
           tag="manual-$edition"

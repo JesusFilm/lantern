@@ -205,11 +205,17 @@ test("edition comparison reads current main and the real common ancestor", async
   git("add", "."); git("commit", "-m", "new manual"); git("update-ref", "refs/remotes/origin/main", "HEAD"); git("checkout", "old-branch");
   assert.deepEqual(editionBase(root), {edition:7, deck:"current-main-deck", ancestor:{edition:5, deck:"old-branch-deck"}});
   assert.deepEqual((await checkManual(layout)).errors, []);
+  assert.match((await checkManual(layout, undefined, {requireBase:true, push:true})).errors.join("\n"), /push.*current main/i);
   await recordManifest(layout, {edition:6, editionDate:"2026-11-11", deck:"new-branch-deck"});
   assert.match((await checkManual(layout)).errors.join("\n"), /edition did not move forward from 7/);
   git("add", "."); git("commit", "-m", "old branch manual"); git("checkout", "main");
   assert.deepEqual(editionBase(root), {edition:5, deck:"old-branch-deck"});
   assert.deepEqual((await checkManual(layout, undefined, {requireBase:true})).errors, []);
+  await recordManifest(layout, {edition:7, editionDate:"2026-11-11", deck:"modified-working-deck"});
+  assert.match((await checkManual(layout)).errors.join("\n"), /edition did not move forward from 7/);
+  await writeFile(join(root, "docs/manual/manifest.json"), "malformed");
+  git("add", "."); git("commit", "-m", "broken remote"); git("update-ref", "refs/remotes/origin/main", "HEAD"); git("checkout", "old-branch");
+  assert.equal(editionBase(root, {requireRemote:true}), undefined);
 });
 
 test('a required edition comparison fails clearly when main is unavailable', async (t) => {
@@ -224,4 +230,15 @@ test("CI requires the edition comparison for common true values", () => {
   assert.equal(requiresEditionBase({CI:"1"}), true);
   assert.equal(requiresEditionBase({CI:"false"}), false);
   assert.equal(requiresEditionBase({}), false);
+});
+
+test("version 2 lockfiles remain conservative for type-only updates", async (t) => {
+  const {layout, write} = await project(t);
+  const lock = {lockfileVersion:2, packages:{"":{devDependencies:{"@types/node":"^1"}}, "node_modules/@types/node":{dev:true,version:"1"}}, dependencies:{"@types/node":{version:"1",dev:true}}};
+  await write("package.json", JSON.stringify({devDependencies:{"@types/node":"^1"}}));
+  await write("package-lock.json", JSON.stringify(lock));
+  await recordManifest(layout, {edition:1,editionDate:"2026-11-10",deck:"d1"});
+  lock.packages["node_modules/@types/node"].version="2"; lock.dependencies["@types/node"].version="2";
+  await write("package-lock.json", JSON.stringify(lock));
+  assert.match((await checkManual(layout)).errors.join("\n"), /changed: package-lock.json/);
 });

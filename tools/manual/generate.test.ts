@@ -1,15 +1,27 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { finalizeGeneration } from "./finalize.js";
+import { readManifest } from "./freshness.js";
 
-/**
- * A full successful generation always records fresh verification provenance
- * (manual.md, ADR 0012). The "deck and PDF unchanged" path must not copy the
- * previous manifest's verification, because the recorded raw sources would
- * then describe the earlier generation, not the one that just succeeded.
- */
-test("a full generation with an unchanged deck still records fresh verification", async (t) => {
-  const source = await readFile(join(import.meta.dirname, "generate.ts"), "utf8");
-  assert.doesNotMatch(source, /previous\?\.verification/, "generate.ts must not carry over the previous manifest's verification");
+test("successful unchanged-deck generation refreshes provenance without changing the PDF or edition", async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "manual-generation-"));
+  t.after(() => rm(root, {recursive:true,force:true}));
+  await mkdir(join(root,"client"), {recursive:true});
+  await mkdir(join(root,"docs/manual"), {recursive:true});
+  await writeFile(join(root,"client/source.ts"), "first");
+  const layout = {root, supplied:[]};
+  let renders = 0;
+  const render = async () => { renders++; return Buffer.from("the rendered manual"); };
+  await finalizeGeneration(layout, "same deck", render);
+  const first = await readManifest(root); const pdf = await readFile(join(root,"docs/manual/lantern-manual.pdf"));
+  await writeFile(join(root,"client/source.ts"), "second");
+  await finalizeGeneration(layout, "same deck", render);
+  const second = await readManifest(root);
+  assert.equal(renders, 1);
+  assert.equal(second?.edition, first?.edition);
+  assert.deepEqual(await readFile(join(root,"docs/manual/lantern-manual.pdf")), pdf);
+  assert.notEqual(second?.verification?.rawSources["client/source.ts"], first?.verification?.rawSources["client/source.ts"]);
 });

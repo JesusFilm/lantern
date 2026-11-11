@@ -1,4 +1,5 @@
 import { execFile, execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { readFile, readdir, stat, writeFile, mkdir } from "node:fs/promises";
 import { join, relative } from "node:path";
@@ -98,7 +99,7 @@ async function dependencyInputs(root: string): Promise<Record<string, string>> {
   try {
     const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
     const lock = JSON.parse(await readFile(join(root, "package-lock.json"), "utf8"));
-    if (![2, 3].includes(lock.lockfileVersion) || !lock.packages?.[""]) return {};
+    if (lock.lockfileVersion !== 3 || !lock.packages?.[""]) return {};
     const entries = lock.packages as Record<string, Record<string, unknown>>;
     const name = (path: string) => path.split("node_modules/").at(-1)!;
     const runtime = new Set([...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.optionalDependencies ?? {}), ...Object.keys(pkg.peerDependencies ?? {})]);
@@ -175,7 +176,7 @@ export function requiresEditionBase(env: NodeJS.ProcessEnv) {
 
 type EditionLineage = { edition: number; deck: string; ancestor?: { edition: number; deck: string } };
 
-export function editionBase(root: string): EditionLineage | undefined {
+export function editionBase(root: string, options: {requireRemote?: boolean} = {}): EditionLineage | undefined {
   const read = (ref: string) => {
     try {
       const text = execFileSync("git", ["show", `${ref}:docs/manual/manifest.json`], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
@@ -185,12 +186,20 @@ export function editionBase(root: string): EditionLineage | undefined {
       return undefined;
     }
   };
-  for (const ref of ["origin/main", "main"]) {
+  for (const ref of options.requireRemote ? ["origin/main"] : ["origin/main", "main"]) {
     const current = read(ref);
-    if (!current) continue;
+    if (!current) {
+      if (ref === "origin/main") {
+        try { execFileSync("git", ["rev-parse", "--verify", ref], {cwd: root, stdio: "ignore"}); return undefined; } catch { /* ref absent */ }
+      }
+      continue;
+    }
     try {
       const git = (...args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-      if (git("rev-parse", "HEAD") === git("rev-parse", ref)) return read("HEAD^");
+      if (git("rev-parse", "HEAD") === git("rev-parse", ref)) {
+        const working = JSON.parse(readFileSync(join(root, manualDirectory, "manifest.json"), "utf8"));
+        return working.edition === current.edition && working.deck === current.deck ? read("HEAD^") : current;
+      }
       const ancestor = git("merge-base", "HEAD", ref);
       return { ...current, ancestor: read(ancestor) };
     } catch { return undefined; }
@@ -250,7 +259,7 @@ export async function recordManifest(layout: ManualLayout, edition: Parameters<t
  * the source. `base` is the manifest the committed one must have moved the
  * edition forward from; it resolves from Git by default.
  */
-export async function checkManual(layout: ManualLayout, base: () => EditionLineage | undefined = () => editionBase(layout.root), options: {requireBase?: boolean} = {}) {
+export async function checkManual(layout: ManualLayout, base: (() => EditionLineage | undefined) | undefined = undefined, options: {requireBase?: boolean; push?: boolean} = {}) {
   const errors: string[] = [];
   const warnings: string[] = [];
   const manifest = await readManifest(layout.root);
@@ -258,7 +267,13 @@ export async function checkManual(layout: ManualLayout, base: () => EditionLinea
 
   // A changed deck needs a fresh edition. An unchanged branch that merely
   // predates main should not be forced to regenerate until it merges main.
-  const editionBase_ = base();
+  const editionBase_ = base ? base() : editionBase(layout.root, {requireRemote: options.requireBase});
+  if (options.push) {
+    try {
+      const git = (...args: string[]) => execFileSync("git", args, {cwd:layout.root, encoding:"utf8", stdio:["ignore", "pipe", "ignore"]}).trim();
+      if (git("rev-parse", "HEAD") !== git("rev-parse", "origin/main")) errors.push("The push is not current main; refusing a stale manual release.");
+    } catch { errors.push("Cannot compare the push with current main."); }
+  }
   if (!editionBase_ && options.requireBase) {
     errors.push("Cannot compare the manual edition with main; fetch main and its history.");
   }

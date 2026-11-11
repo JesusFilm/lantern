@@ -3,7 +3,7 @@
   "editionDate": "2026-11-12",
   "deck": "e505990fc15100b4a0f3ee2fd9cb46f16a018f162b783f4d0f099ea9134d4679",
   "sources": {
-    "fingerprint": "86c01ba2a668f501bac7d58697baf55c04572df0a31eb612e49e82a0d687a9ce",
+    "fingerprint": "d9b33e062ae4a871ee5b0f0efb0d4e02dddc2a2e2ca9eefcf214f11cd90e751b",
     "files": {
       ".env.example": "e7ae073637769c75bd3221996f7209e06606e4e2f33a5e68a5af82ff2b1c9a56",
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
@@ -108,10 +108,11 @@
       "shared/initiative-appearance.ts": "8c98cc22edff22e9215dc5f60aee17456a658f5778a4d5a3aa05c395c16c0d26",
       "shared/mission-image.ts": "578da384bea0ebf3e60fc460387b19933c05e441d651c57603578e6641573ba9",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
-      "tools/manual/check.ts": "03511f64ecc92809127508feef68bc652e8fabb7f13fcefdc226fed6da96b68e",
+      "tools/manual/check.ts": "b4f2928d5dbd9a6512829e6b07cb49943f1ae6a720215614ff6f05a8d4d5946f",
       "tools/manual/content.ts": "d6211be53bee76d067182678796c480249b4a1bad0b7115f637bfe9a07a1c7d1",
-      "tools/manual/freshness.ts": "d7f06e8af1c464cb1488f948fce0f6e2465d709f186684b563a9b39dbc6b8780",
-      "tools/manual/generate.ts": "8ab36f932fcb6bc859c92e908005dc5ae477bc80e89a39a6a17e9a1ae60f7038",
+      "tools/manual/finalize.ts": "36517029e491fc3b2d158dd5c64d9cacd1083e092d181ecc9bdbb78a66218c42",
+      "tools/manual/freshness.ts": "0b4d1aa6365a37c12ec113e4488485007afdca95ce70d9a1b220193539f0c407",
+      "tools/manual/generate.ts": "d8dee24ae0db8c35195c598c254d1a3e73791b85df16e31a400259cdc041e39a",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",
       "tools/manual/qa-fixture.ts": "0d72447b96bd5a529f935c09b90cfc20de0de98988cc27acaefa4d96e10c8861",
@@ -187,9 +188,9 @@
       }
     }
   },
-  "pdf": "d1a81775862f0eb49cfe2cc7032782073be4b7dd325d378fcb6cdbad6557b361",
+  "pdf": "7d8daddb2965a5628c0af8a98cc6e5542815484cb1abd0821004744fccee6e70",
   "verification": {
-    "generatedAt": "2026-11-11T20:03:42.676Z",
+    "generatedAt": "2026-11-11T20:19:23.850Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "e7ae073637769c75bd3221996f7209e06606e4e2f33a5e68a5af82ff2b1c9a56",
@@ -295,10 +296,11 @@
       "shared/initiative-appearance.ts": "8c98cc22edff22e9215dc5f60aee17456a658f5778a4d5a3aa05c395c16c0d26",
       "shared/mission-image.ts": "578da384bea0ebf3e60fc460387b19933c05e441d651c57603578e6641573ba9",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
-      "tools/manual/check.ts": "03511f64ecc92809127508feef68bc652e8fabb7f13fcefdc226fed6da96b68e",
+      "tools/manual/check.ts": "b4f2928d5dbd9a6512829e6b07cb49943f1ae6a720215614ff6f05a8d4d5946f",
       "tools/manual/content.ts": "d6211be53bee76d067182678796c480249b4a1bad0b7115f637bfe9a07a1c7d1",
-      "tools/manual/freshness.ts": "d7f06e8af1c464cb1488f948fce0f6e2465d709f186684b563a9b39dbc6b8780",
-      "tools/manual/generate.ts": "8ab36f932fcb6bc859c92e908005dc5ae477bc80e89a39a6a17e9a1ae60f7038",
+      "tools/manual/finalize.ts": "36517029e491fc3b2d158dd5c64d9cacd1083e092d181ecc9bdbb78a66218c42",
+      "tools/manual/freshness.ts": "0b4d1aa6365a37c12ec113e4488485007afdca95ce70d9a1b220193539f0c407",
+      "tools/manual/generate.ts": "d8dee24ae0db8c35195c598c254d1a3e73791b85df16e31a400259cdc041e39a",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",
       "tools/manual/qa-fixture.ts": "0d72447b96bd5a529f935c09b90cfc20de0de98988cc27acaefa4d96e10c8861",
