@@ -143,10 +143,26 @@ test("ignored dependency changes do not rewrite generation provenance", async (t
   await write("package.json", JSON.stringify({ devDependencies: { "@types/node": "^1" } }));
   await write("package-lock.json", JSON.stringify(lock));
   const generated = await recordManifest(layout, { edition: 1, editionDate: "2026-11-10", deck: "d1" });
+  assert.ok(generated.verification, "a full generation records verification provenance");
   lock.packages["node_modules/@types/node"].version = "2";
   await write("package-lock.json", JSON.stringify(lock));
   assert.deepEqual((await checkManual(layout)).errors, []);
   assert.deepEqual((await readManifest(layout.root))?.verification, generated.verification);
+  assert.equal((await readManifest(layout.root))?.edition, 1);
+});
+
+test("a full generation records the raw input hashes of the generation that succeeded", async (t) => {
+  const { layout, write } = await project(t);
+  const generated = await recordManifest(layout, { edition: 1, editionDate: "2026-11-10", deck: "d1" });
+  assert.ok(generated.verification, "a full generation records verification provenance");
+  // A byte-only change to a product source: the raw hash must move on rerun.
+  await write("docs/PRD.md", "# Lantern\n");
+  const rerun = await recordManifest(layout, { edition: 1, editionDate: "2026-11-10", deck: "d1" });
+  assert.ok(rerun.verification);
+  assert.equal(rerun.verification.policy, "manual-inputs/2");
+  assert.ok(rerun.verification.generatedAt);
+  assert.notEqual(rerun.verification.rawSources["docs/PRD.md"], generated.verification!.rawSources["docs/PRD.md"]);
+  assert.deepEqual((await readManifest(layout.root))?.verification, rerun.verification);
   assert.equal((await readManifest(layout.root))?.edition, 1);
 });
 
