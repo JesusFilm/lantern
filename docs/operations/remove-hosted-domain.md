@@ -1,8 +1,8 @@
 # Remove legacy domain restrictions from an existing production database
 
-This change replaces domain admission with exact normalized email approval in every environment. `approved_emails` remains authoritative; membership and career-lead authority remain separate. Google still verifies identity and email ownership. No account, approval, membership, session or position-focus record is intentionally removed.
+This change replaces domain admission with exact normalized email approval in every environment. `approved_emails` remains authoritative; membership and career-lead authority remain separate. Jesus Film Auth verifies identity and email ownership. No account, approval, membership, session or position-focus record is intentionally removed.
 
-The historical storage is `users.hosted_domain` and the `allowed_domains` table. Migration 6 drops both, including their values, and the old three-argument `enroll_member` function. The current application neither reads Google's `hd` claim nor stores it. References in old migrations, the legacy schema importer and migration tests describe historical input only.
+The historical storage is `users.hosted_domain` and the `allowed_domains` table. Migration 6 drops both, including their values, and the old three-argument `enroll_member` function. The application does not use the historical Google `hd` claim. References in old migrations, the legacy schema importer and migration tests describe historical input only.
 
 ## Required release order
 
@@ -30,7 +30,7 @@ Perform these steps on your Mac with your existing GitHub production permissions
    ```
 
 5. Wait for that run's success. Its `production-evidence-<removal_sha>` artifact must report the selected SHA, `readiness: passed`, `schemaVersion: 6` and deployment ID. Check `/health` independently for that revision and schema `6`. Health checks the migration ledger and the absence of both legacy storage objects and the old function. The workflow's own main SHA may differ from the selected app SHA; use the artifact and health headers.
-6. With approved accounts you control, verify Google sign-in for a personal account and, if available, a work account from a different domain. Confirm an unapproved address is denied, a registered account without membership sees no department data, and normal member/lead workflows still work. Removing exact-email approval must deny the existing session on its next request. These authenticated checks require normal Google sign-in; release readiness does not perform them.
+6. With approved accounts you control, verify Jesus Film sign-in for a personal account and, if available, a work account from a different domain. Confirm an unapproved address is denied, a registered account without membership sees no department data, and normal member/lead workflows still work. Removing exact-email approval must deny the existing session on its next request. These authenticated checks require normal Jesus Film sign-in; release readiness does not perform them.
 
 For optional direct structural confirmation, run [verify-domain-removal.sql](../../tools/database/verify-domain-removal.sql) using your private production administrative connection. It prints only structural status, not account data. All four results must be true. Do not run the migration SQL separately from the SHA-pinned release workflow.
 

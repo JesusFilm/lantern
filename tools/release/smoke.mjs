@@ -44,10 +44,10 @@ try {
  checkpoint = 'browser-navigation';
  await page.goto(origin);
  checkpoint = 'browser-login-control';
- await page.getByRole('button', { name: /sign in with google/i }).or(page.getByRole('link', { name: /sign in with google/i })).waitFor();
+ await page.getByRole('button', { name: /sign in with jesus film/i }).or(page.getByRole('link', { name: /sign in with jesus film/i })).waitFor();
  checkpoint = 'browser-js-errors';
  assert.equal(errors.length, 0, 'Login shell failed.');
- // Stage cookies come from normal, manually completed Google login. Never mint sessions or bypass authentication.
+ // Stage cookies come from normal, manually completed Jesus Film login. Never mint sessions or bypass authentication.
  if (env.RELEASE_TARGET === 'stage' && mode === 'authenticated') {
   checkpoint = 'authenticated-stage';
   const cookies = [env.QA_MEMBER_A_SESSION, env.QA_MEMBER_B_SESSION];

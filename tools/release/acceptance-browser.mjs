@@ -511,7 +511,7 @@ export async function runAcceptanceBrowser(
     await memberPage.getByLabel("Display name", { exact: true }).fill(name);
     await saveDialog(memberPage);
     await memberPage.reload();
-    await expect(memberPage.getByText(name, { exact: true })).toBeVisible();
+    await expect(memberPage.getByRole("main").getByText(name, { exact: true })).toBeVisible();
     await memberPage
       .getByRole("button", { name: "Guide", exact: true })
       .click();

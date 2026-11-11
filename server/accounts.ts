@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Pool } from 'pg';
 import { isAdmitted, normalizeEmail } from './admission.js';
-import type { Identity } from './google.js';
+import type { Identity } from './identity.js';
 
 // Provider-verified identity is the only account input. Approval creates neither
 // membership nor authority. Roll back the profile too if session persistence fails.
