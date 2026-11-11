@@ -6,6 +6,7 @@ import type { SessionView } from "../shared/access.js";
 import { api } from "./workspace/api.js";
 import { FocusWorkspace } from "./workspace/FocusWorkspace.js";
 import { LearningGuide } from "./workspace/LearningGuide.js";
+import { Sidebar } from "./workspace/Sidebar.js";
 import { Account } from "./workspace/Account.js";
 import { Department } from "./workspace/Department.js";
 import "./workspace/style.css";
@@ -86,35 +87,7 @@ function App() {
   const activePage = session?.user ? page : "account";
   return (
     <>
-      <aside>
-        <div className="brand">Lantern</div>
-        <nav aria-label="Main navigation">
-          {[
-            ...(session?.user
-              ? [["focuses", "Position focuses"], ...(session.department?.role === "career-lead" ? [["reviews", "Review requests"]] : []), ["guide", "Guide"]]
-              : []),
-            ["account", "Account"],
-            ...(session?.department?.role === "career-lead" &&
-            !session.localAccess
-              ? [["department", "Department"]]
-              : []),
-          ].map(([id, label]) => (
-            <button
-              key={id}
-              aria-current={activePage === id ? "page" : undefined}
-              className={activePage === id ? "active" : ""}
-              onClick={() => navigatePage(id!)}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-        <div className="aside-foot">
-          {session?.department?.name}
-          <br />
-          {session?.user?.name}
-        </div>
-      </aside>
+      <Sidebar session={session} activePage={activePage} onNavigate={navigatePage} />
       <main className="main">
         <div className="workspace">
           {error && (
@@ -137,8 +110,9 @@ function App() {
                 </p>
               )}
               {session.signInAvailable ? (
-                <a className="google-sign-in" href="/auth/google">
-                  <img src="/google-sign-in.png" alt="Sign in with Google" width="180" height="40" />
+                <a className="identity-sign-in" href="/auth/jesusfilm">
+                  <img src="/lantern.svg" alt="" width="24" height="24" />
+                  Sign in with Jesus Film
                 </a>
               ) : (
                 <p>Sign-in is awaiting configuration.</p>

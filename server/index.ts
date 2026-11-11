@@ -6,13 +6,13 @@ import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import express from 'express';
 import { createApp } from './app.js';
-import { googleProvider } from './google.js';
+import { jesusFilmProvider } from './jesusfilm.js';
 import { createDatabase } from './database.js';
 import { assertRuntimePrivileges } from './database-privileges.js';
 
 import { resolveRuntime } from './runtime.js';
 import { assertSchemaReady } from './schema.js';
-const { coach, features, environment, connectionString, port, host, localAccess, origin, clientId, clientSecret, hosted, hostingOnly } = resolveRuntime();
+const { coach, features, environment, connectionString, port, host, localAccess, origin, clientId, hosted, hostingOnly } = resolveRuntime();
 if (features.unknown.length) console.warn('LANTERN_FEATURES names features this release does not have: ' + features.unknown.join(', ') + '.');
 if (process.env.COACH_ENABLED !== undefined) console.warn('COACH_ENABLED is no longer read. Set coach in LANTERN_FEATURES instead.');
 const database = createDatabase(connectionString);
@@ -31,7 +31,7 @@ try {
 catch (error) { await database.end(); throw error; }
 let revision: string | undefined;
 try { revision = JSON.parse(readFileSync('release.json', 'utf8')).sha; } catch { /* Local builds need no release stamp. */ }
-const app = createApp(database, { coach:coach ? createCoachProvider(coach):undefined, features, origin, hostingOnly, localUserId, provider: clientId && clientSecret ? googleProvider(clientId, clientSecret, origin) : undefined }, hosted ? { revision, deployment: process.env.RAILWAY_DEPLOYMENT_ID } : undefined);
+const app = createApp(database, { coach:coach ? createCoachProvider(coach):undefined, features, origin, hostingOnly, localUserId, provider: clientId ? jesusFilmProvider(clientId, origin) : undefined }, hosted ? { revision, deployment: process.env.RAILWAY_DEPLOYMENT_ID } : undefined);
 const server = createServer(app);
 const production = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 let closeFrontend: (() => Promise<void>) | undefined;
