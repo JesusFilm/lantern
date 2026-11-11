@@ -25,7 +25,7 @@ const jesusFilmSignIn: Supplied = {
   file: "jesusfilm-sign-in.png",
   sources: ["server/jesusfilm.ts", "server/access.ts", "server/admission.ts", "server/accounts.ts"],
   caption: "Jesus Film Auth sign-in",
-  instructions: "On staging, choose Sign in with Jesus Film and capture Jesus Film Auth’s sign-in screen in a 1440 × 900 window.",
+  instructions: "Open staging signed out and capture Jesus Film Auth’s sign-in screen in a 1440 × 900 window.",
 };
 const guided = async (page: Page) => {
   await click("+ Add objective", "Guide with AI")(page);
@@ -77,16 +77,16 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Sign in with Jesus Film",
         roles: ["Signed out"],
-        summary: "Signed-out visitors see only the welcome screen. Only approved Jesus Film accounts can sign in.",
-        tryIt: ["Open the staging address in a private window.", "Choose ① **Sign in with Jesus Film**.", "Sign in to your test Jesus Film account."],
+        summary: "Signed-out visitors go straight to Jesus Film Auth with a fresh login prompt. Only approved accounts can sign in.",
+        tryIt: ["Open the staging address in a private window.", "Lantern sends you straight to Jesus Film Auth.", "Sign in to your test Jesus Film account."],
         check: [
           "You return to Lantern signed in, with your name in the sidebar.",
-          "An account that is not approved returns to the welcome screen with “Sign-in could not be completed”.",
+          "An account that is not approved returns to the retry screen with “Sign-in could not be completed”.",
           "Cancelling at Jesus Film Auth also returns with that message.",
           "Reloading keeps you signed in.",
         ],
         shots: [
-          { id: "sign-in", persona: "anonymous", ready: role("link", "Sign in with Jesus Film"), highlight: ['role=link[name="Sign in with Jesus Film"]'], caption: "Welcome screen" },
+          { id: "sign-in", persona: "anonymous", path: "/?signInError=1", ready: role("link", "Sign in with Jesus Film"), highlight: ['role=link[name="Sign in with Jesus Film"]'], caption: "Retry after failed or cancelled sign-in" },
           jesusFilmSignIn,
         ],
       },
@@ -107,12 +107,12 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Sidebar navigation",
         roles: ["Member", "Career lead"],
-        summary: "The Lantern mark and icons identify the main destinations. Flag: sidebar-collapse; hidden in production until released.",
+        summary: "The Lantern mark and icons identify the main destinations. Navigation flag: sidebar-collapse; hidden in production until released.",
         tryIt: ["Choose **Collapse sidebar** above your profile at the bottom.", "Use an icon to open Guide or Account; hover for its name.", "Reload, then choose ① **Expand sidebar**."],
-        check: ["Desktop keeps a narrow icon rail; phones keep a compact icon row.", "The choice survives navigation and reload in this browser.", "Expanded navigation restores the labels. A fresh browser starts expanded.", "Members see only their permitted destinations; career leads also see reviews and Department."],
+        check: ["Desktop icons stay fixed while labels fade and the rail narrows. Phones use a top-right menu button.", "The choice survives navigation and reload in this browser.", "The phone menu slides in; select a destination or close it with × or Escape.", "Members see only their permitted destinations; career leads also see reviews and Department."],
         shots: [
           { id: "sidebar-collapsed", persona: "lead", act: async (p) => { await click("Collapse sidebar")(p); await p.reload(); }, ready: role("button", "Expand sidebar"), highlight: ['role=button[name="Expand sidebar"]'], caption: "Collapsed desktop navigation" },
-          { id: "phone-sidebar-collapsed", persona: "lead", device: "phone", act: click("Collapse sidebar"), ready: role("button", "Expand sidebar"), highlight: ['role=button[name="Expand sidebar"]'], caption: "Compact phone navigation" },
+          { id: "phone-sidebar-collapsed", persona: "lead", device: "phone", act: click("Open menu"), ready: role("button", "Close menu"), highlight: ['role=button[name="Close menu"]'], caption: "Sliding phone navigation" },
         ],
       },
       {

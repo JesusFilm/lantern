@@ -21,7 +21,7 @@ export function jesusFilmProvider(clientId: string, origin: string, dependencies
   return {
     authorizationUrl(state, nonce, challenge) {
       const url = new URL(`${issuer}/oauth2/authorize`);
-      url.search = new URLSearchParams({ client_id: clientId, redirect_uri: callback, response_type: "code",
+      url.search = new URLSearchParams({ client_id: clientId, redirect_uri: callback, response_type: "code", prompt: "login",
         scope: "openid profile:read email:read", state, nonce, code_challenge: challenge, code_challenge_method: "S256" }).toString();
       return url.href;
     },

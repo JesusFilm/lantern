@@ -42,9 +42,11 @@ try {
  const page = await browser.newPage();
  const errors = []; page.on('pageerror', () => errors.push('browser error'));
  checkpoint = 'browser-navigation';
+ // Stop at Lantern's authentication boundary; readiness does not log into the external provider.
+ await page.route(origin+'/auth/jesusfilm', route => route.fulfill({status:200,contentType:'text/html',body:'<p>Authentication handoff</p>'}));
  await page.goto(origin);
- checkpoint = 'browser-login-control';
- await page.getByRole('button', { name: /sign in with jesus film/i }).or(page.getByRole('link', { name: /sign in with jesus film/i })).waitFor();
+ checkpoint = 'browser-auth-handoff';
+ await page.waitForURL(origin+'/auth/jesusfilm');
  checkpoint = 'browser-js-errors';
  assert.equal(errors.length, 0, 'Login shell failed.');
  // Stage cookies come from normal, manually completed Jesus Film login. Never mint sessions or bypass authentication.
