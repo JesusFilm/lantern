@@ -34,6 +34,12 @@ test("sidebar collapse survives reload and navigation, expands again, and stays 
     await expect.poll(async () => (await sidebar.boundingBox())!.width).toBeLessThan(expanded!.width);
     await expect.poll(async () => (await sidebar.boundingBox())!.width).toBe(76);
     const iconCollapsed = (await icon.boundingBox())!;
+    const rail = (await sidebar.boundingBox())!;
+    const railCenter = rail.x + rail.width / 2;
+    for (const item of [sidebar.locator('.brand img'), ...await sidebar.locator('nav button svg').all(), sidebar.locator('.sidebar-toggle svg'), sidebar.locator('.sidebar-avatar')]) {
+      const box = (await item.boundingBox())!;
+      assert.ok(Math.abs(box.x + box.width / 2 - railCenter) <= 0.5, 'collapsed logo, navigation, toggle and avatar share the rail centre');
+    }
     assert.equal(iconCollapsed.x, iconBefore.x, "navigation icon stays anchored while collapsing");
     assert.equal(iconCollapsed.y, iconBefore.y);
     await page.reload();
