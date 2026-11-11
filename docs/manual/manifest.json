@@ -1,9 +1,9 @@
 {
-  "edition": 41,
+  "edition": 42,
   "editionDate": "2026-11-12",
-  "deck": "599c1aea1b8b46ffb7a3967061f43fa5c9acf6dfe43c71a20d2f7dbf8858e9cf",
+  "deck": "39a658355ba7405e72f22d84dbd9d1547f3539a087dc86697428bae7bf09773c",
   "sources": {
-    "fingerprint": "e490d211147fe0e9354fe7dd6b14422a2ec2782d94133e0cc9971e98987d71c6",
+    "fingerprint": "d0274c1bcf08ff770d6dd7d2c036a383cba04d4184d2675618f78d1f0bb63a0c",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -25,7 +25,7 @@
       "client/workspace/FocusHeading.tsx": "f654871b28631093184a3d2e24e1dd3eb0075833a78d3a5f9c843f85214bdac7",
       "client/workspace/FocusObjectives.tsx": "130d549fcaf96c5403c36a3993e0c8670876d6086d3f0bf2997857341a4aba31",
       "client/workspace/FocusProcess.tsx": "f0db6123ec67fc954c2ef58454a1d54317e7a4c1aff21b015751862211abf51e",
-      "client/workspace/FocusProgress.tsx": "ad7f3f45444d23c2d4133a4a498298e82c203418e7db2f353b2b519b36a7838d",
+      "client/workspace/FocusProgress.tsx": "d535109606095c08f67292a6baca32c7a2be7ccc8efc1ee81a799a473e194fff",
       "client/workspace/FocusWorkspace.tsx": "6f2bfd91e08ff96b4c29cc35d28c698d82df0f0dad1a7c33387a38ddb6d503cd",
       "client/workspace/InitiativeChoices.tsx": "16c6fe9415415978e2bca1abcea22d61e6535e8b2a13b351fddd90aa959a8d82",
       "client/workspace/InitiativeDialog.tsx": "e0e1ee635e4d1b0f9a4131e6deccd428673840542ba75da5896c76dd9326c5c9",
@@ -135,7 +135,7 @@
     "department-member.png": "1740bf8386425f8b6a3603c5266b9db43da4a0ce95f9197cc6936db6ac730822",
     "department-people.png": "48eaac26ab0a32ae352d6e7e1da78d5a4007f4800df57644b893b63169610433",
     "focus-confirmed-1.png": "0acf4b0e51c690fa1bc70f35d220d6549455ed91054c4058261b13fb847767cc",
-    "focus-confirmed-2.png": "7fcd30492a92a4e776b4632257e55a7ecca672944000a8099a01f3a735efccc7",
+    "focus-confirmed-2.png": "223c5f37c700866fc96d0e410b825a89a62978e8bf699e7e9857685c0c5e132a",
     "focus-draft-1.png": "8f3dec8b47392e6e45d255f1d4b00de11b942249bc8b0e6707734e01995c091c",
     "focus-draft-2.png": "848dc13d1e64b46b861e2144fb5ab12c234b438cdf87cba2f33297e2a2627d7f",
     "focus-list.png": "34cf7d1b159537b0cf144f1e104115cb8312cf4ec91091cb60b31350ccae9769",
@@ -162,7 +162,7 @@
     "objective-choice.png": "25dc3f4f23d52ae4e8b884749969b12f4d0ff68a8b0fd679a64d3d6621e613d6",
     "objective-manual-1.png": "2457176db78259341e1a5538da2d816e3a73935c7b437b8d08b21ab343c06d1b",
     "objective-manual-2.png": "d6c53c465406a4967b43ec7b3c648278f28050b7c3408ea83b4f105ccb17edbf",
-    "own-confirm-dialog.png": "d66cd48db0df60c413dd83f05df30e9bd783dcb70c236a284b9c2304bc794ac5",
+    "own-confirm-dialog.png": "92c0ef176a01c5f01016ac7ce858f5115f7cc2fa0842be28743bcc40bb43c5f8",
     "phone-focus-1.png": "10a9b50bf31faed0c60b8cc360532a0362849fb0c29b599286bd27c49178e875",
     "phone-focus-2.png": "4eb7f8ccc6bd1e0bde3e4891e27e36ba6ac8b69b650aee5e8465ed2581f16ec5",
     "phone-objective-1.png": "2300e8342b4fdf3bdbfd8ea8f4f64bbef3624c43f90d702480cca5ba6d366757",
@@ -189,5 +189,5 @@
       }
     }
   },
-  "pdf": "82b88799b6cdfbac927ac20468b900233ae2ebcd312b9bc9448574689d772e9c"
+  "pdf": "a7a13e110b83e2c7b3b055f15b9fe46047fd5fc1aa19ee2d0d808a5ad2f26438"
 }

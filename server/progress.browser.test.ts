@@ -76,7 +76,9 @@ test('member records status and goal note; lead reads progress after reload', {t
   await expect(page.getByRole('alert')).toContainText('changed in another window');
   await expect(page.getByLabel('Progress note')).toHaveValue('My unsaved update');
   await expect(page.getByText('Another window update')).toBeVisible();
-  await page.getByRole('button',{name:'Use latest version'}).click();await page.getByLabel('Progress note').fill('My unsaved update\n'+('Long progress detail\n'.repeat(25)));await page.getByRole('button',{name:'Save progress'}).click();
+  await page.getByRole('button',{name:'Use latest version'}).click();
+  await expect(page.getByLabel('Status',{exact:true})).toHaveValue('needs-attention');
+  await page.getByLabel('Progress note').fill('My unsaved update\n'+('Long progress detail\n'.repeat(25)));await page.getByRole('button',{name:'Save progress'}).click();
   await expect(page.getByText('My unsaved update')).toBeVisible();
   await page.setViewportSize({width:390,height:500});await page.evaluate("window.scrollTo(0,document.body.scrollHeight)");
   const noteBox=await page.getByText('My unsaved update').boundingBox(),pagerBox=await page.getByRole('navigation',{name:'Objective navigation'}).boundingBox();
@@ -86,6 +88,13 @@ test('member records status and goal note; lead reads progress after reload', {t
   const landscapeNote=await page.getByText('My unsaved update').boundingBox(),landscapePager=await page.getByRole('navigation',{name:'Objective navigation'}).boundingBox();
   assert.ok(landscapeNote&&landscapePager&&landscapeNote.y+landscapeNote.height<=landscapePager.y,'landscape pager must not cover the last note');
   await page.setViewportSize({width:390,height:844});
+  const beforeStatusEdit=await (await mc.request.get(`${origin}/api/focuses/${focus.id}/progress`)).json();
+  const currentStatusForEdit=beforeStatusEdit.statuses.find((x:{goal:number|null})=>x.goal===0),currentNoteForEdit=beforeStatusEdit.notes.find((x:{goal:number|null})=>x.goal===0);
+  await goal.getByRole('button',{name:'Edit progress'}).click();await page.getByLabel('Status',{exact:true}).selectOption('achieved');
+  assert.equal((await mc.request.put(`${origin}/api/focuses/${focus.id}/progress-entry`,{headers:{Origin:origin},data:{section:0,goal:0,status:'needs-attention',body:'Latest remote note',revision:currentStatusForEdit.revision,noteRevision:currentNoteForEdit.revision}})).status(),200);
+  await page.getByRole('button',{name:'Save progress'}).click();await expect(page.getByRole('alert')).toContainText('changed in another window');
+  await page.getByRole('button',{name:'Use latest version'}).click();await expect(page.getByLabel('Progress note')).toHaveValue('Latest remote note');await expect(page.getByLabel('Status',{exact:true})).toHaveValue('achieved');
+  await page.getByRole('button',{name:'Save progress'}).click();await expect(goal.getByText('Latest remote note')).toBeVisible();
   const beforeCancel=await (await mc.request.get(`${origin}/api/focuses/${focus.id}/progress`)).json();
   const statusBeforeCancel=beforeCancel.statuses.find((x:{goal:number|null})=>x.goal===0),noteBeforeCancel=beforeCancel.notes.find((x:{goal:number|null})=>x.goal===0);
   await goal.getByRole('button',{name:'Edit progress'}).click();await page.getByLabel('Progress note').fill('Discard this edit');
