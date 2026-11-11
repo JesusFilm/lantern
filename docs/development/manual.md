@@ -35,7 +35,7 @@ npm run manual
 npm run manual:check
 ```
 
-Commit everything under `docs/manual`. `npm run manual` builds the client into a temporary folder and starts a disposable synthetic database. It photographs every scene and rewrites only the screenshots whose pixels changed. It renders a new edition only when the deck content changed. An unchanged rerun reports `0 screenshot(s) changed` and keeps the current edition.
+Commit everything under `docs/manual`. `npm run manual` builds the client into a temporary folder and starts a disposable synthetic database. It photographs every scene and rewrites only the screenshots whose pixels changed. It renders a new edition when the deck content changed or the existing PDF is missing or mismatched. An unchanged rerun with a valid PDF reports `0 screenshot(s) changed` and keeps the current edition.
 
 `npm run manual:check` needs no browser or database. It fails when:
 
@@ -131,7 +131,7 @@ node fonts-probe.mjs; rm fonts-probe.mjs
 
 Expect `NotoSans-Regular`, `LiberationSerif`, `DejaVuSansMono` and `NotoSans-Bold`.
 
-**Acceptance test.** On an unmodified checkout of `main`, `npm run manual` must report `0 screenshot(s) changed of 44` and `The deck is unchanged`. If it rewrites screenshots or fails the slide-fit check, the environment is wrong. Do not commit the output. Fix the fonts first (the probe above shows what Chromium chose) and repeat. When screenshots change after a product change, inspect each changed image and the matching PDF page and confirm the difference is intended before committing. A product source change requires successful generation, but only changed deck content issues a new edition. The cover does not contain the source fingerprint.
+**Acceptance test.** On an unmodified checkout of `main`, `npm run manual` must report `0 screenshot(s) changed of 44` and `The deck is unchanged`. If it rewrites screenshots or fails the slide-fit check, the environment is wrong. Do not commit the output. Fix the fonts first (the probe above shows what Chromium chose) and repeat. When screenshots change after a product change, inspect each changed image and the matching PDF page and confirm the difference is intended before committing. A product source change requires successful generation. A changed deck or a missing or mismatched PDF issues a new edition. The cover does not contain the source fingerprint.
 
 ## Supplied captures
 
