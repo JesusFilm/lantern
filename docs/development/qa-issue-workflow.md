@@ -24,17 +24,21 @@ Refs #123
 
 ## Hand over for testing
 
-After the fix reaches production, confirm that the change is also available to
-the intended testers on staging. Use the release evidence in [Releasing](../operations/releasing.md);
-a merge or a submitted deployment alone does not establish availability. If a
-deployment failed or was superseded, or a needed staging flag or account is
-unavailable or unknown, investigate before marking the issue ready.
+After the fix reaches production, confirm that the change is available to the
+intended testers in the agreed environment: staging or production preview.
+Use the release evidence in [Releasing](../operations/releasing.md); a merge or
+a submitted deployment alone does not establish availability. If a deployment
+failed or was superseded, or a needed flag or account is unavailable or unknown
+in the chosen environment, investigate before marking the issue ready.
 
 When the check can be performed, add `qa: ready` and comment on the issue with
-what changed, the PR, the relevant flag and its verified state if known, and
-the checks to perform. Say when the production flag state is unknown. Contributors can do
-this manually; LanternBot may perform the handoff for work it handles, subject
-to its evidence and safety checks. Do not assume it handles every PR.
+what changed, the PR, the environment, the relevant flag and its verified state
+if known, and the checks to perform. Say when the production flag state is
+unknown. Contributors can do this manually; LanternBot may perform the handoff
+for work it handles, subject to its evidence and safety checks. Its current
+automatic handoff checks staging availability; a production-preview handoff
+can be made manually after a person verifies access. Do not assume it handles
+every PR.
 
 ## Record QA's result
 
@@ -43,7 +47,7 @@ QA controls these statuses and closes the issue after a passing check.
 
 | Label | Meaning |
 | --- | --- |
-| `qa: ready` | The change is available for the agreed staging check and QA has been given the context to test it. |
+| `qa: ready` | The change is available for the agreed check and QA has been given the environment and context to test it. |
 | `qa: in progress` | QA is testing the change. |
 | `qa: passed` | QA verified the change; QA can close the issue. |
 | `qa: failed` | The check failed. QA comments with the result so a follow-up can be made. |
@@ -51,14 +55,16 @@ QA controls these statuses and closes the issue after a passing check.
 
 Use `found-by-qa` independently of the status labels for issues discovered by
 QA. For a failed check, reference the same issue from the follow-up PR. After
-the fix ships and staging availability is confirmed, return the issue to
-`qa: ready` with updated checks. For a blocker, return it to `qa: ready` once
+the fix ships and availability in the agreed environment is confirmed, return
+the issue to `qa: ready` with updated checks. For a blocker, return it to `qa: ready` once
 the blocker is resolved and the check is available. A person may need to make
 these transitions; do not assume automation will replace a QA-owned status.
 
 ## New features
 
 New user-visible features follow the [feature flag policy](feature-flags.md):
-they can ship hidden in production and be tested on staging. QA signs off on
-staging; Jaco normally decides when to enable the feature for production users
-after QA passes. Manual QA is not a gate between staging and production.
+they can ship hidden in production and be tested on staging or by selected
+accounts in production preview. The owner tries the feature in production
+preview before enabling it for everyone. Jaco normally decides when to enable
+it for everyone after QA passes; staging sign-off is not required to deploy to
+production or test there. Manual QA is not a gate between staging and production.

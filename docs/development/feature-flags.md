@@ -4,7 +4,7 @@ Read this before adding behavior that users would notice, and when releasing or 
 
 ## When to use a flag
 
-Put new screens, controls and workflows behind a flag, so they can reach production hidden and be checked on staging before members see them. Manual QA does not gate deployment. Jaco normally enables a new feature for production users after QA passes, retaining the final decision.
+Put new screens, controls and workflows behind a flag, so they can reach production hidden. They can be tested on staging and, using `preview`, by selected accounts in production. Manual staging QA does not gate deployment or production preview. Jaco decides when to enable a feature for everyone, normally after QA passes; the owner tries the feature in production preview before enabling it for everyone.
 
 A flag cannot hide these, so do not add one for them:
 
