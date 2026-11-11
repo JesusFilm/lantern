@@ -4,10 +4,13 @@ import { createServer } from "node:http";
 import { privilegeFixture } from "./privilege-test-support.js";
 import { migrate } from "./schema.js";
 import { createApp } from "./app.js";
+import { resolveFeatureConfig } from "./features.js";
 import { hash } from "./access.js";
 
 export async function coachingFixture(
   coach?: import("./coach-provider.js").CoachProvider,
+  features?: import("./features.js").FeatureConfig,
+  options: { defaultFeatures?: boolean } = {},
 ) {
   const fixture = await privilegeFixture();
   await migrate(fixture.migration, fixture.roles);
@@ -48,7 +51,9 @@ export async function coachingFixture(
   const a = server.address();
   assert.ok(a && typeof a !== "string");
   const origin = `http://127.0.0.1:${a.port}`;
-  const app = createApp(fixture.runtime, { origin, coach });
+  // Coaching tests show the coach unless a test chooses its own feature settings.
+  const shown = features ?? (options.defaultFeatures === false ? undefined : resolveFeatureConfig({}, "local"));
+  const app = createApp(fixture.runtime, { origin, coach, features: shown });
   server.on("request", app);
   const request = (
     role: string,
