@@ -120,6 +120,7 @@ test("manual editing requires an initiative or Other only for the edited objecti
     await expect(f.page.getByRole("alert")).toContainText("Select an initiative or Other");
     assert.deepEqual(await (await f.request("member", "/api/focuses/" + saved.id)).json(), saved);
     await f.page.getByRole("checkbox", { name: "Other — none of these apply" }).check();
+    await expect(f.page.getByRole("alert")).toHaveCount(0);
     await f.page.getByRole("button", { name: "Save objective", exact: true }).click();
     await expect(f.page.getByRole("heading", { name: draft.title, exact: true })).toBeVisible();
     const actual = await (await f.request("member", "/api/focuses/" + saved.id)).json();
