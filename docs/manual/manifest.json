@@ -1,9 +1,9 @@
 {
-  "edition": 35,
+  "edition": 36,
   "editionDate": "2026-11-11",
-  "deck": "2d92a4fcb074eb8f9d278376dc3462779f21ba702e4113d21d5569022469fddc",
+  "deck": "e0d273135c2aeef0aec80668fe063acc68e17be0ed7ea8bcbac0b96d161e79e3",
   "sources": {
-    "fingerprint": "1328e0b2e16a4cd6786c595fb16d095a4eb0e08aa648a7b6c41bf34d65dc265b",
+    "fingerprint": "fd705f0f3954526ba361391dcf7c457a850866a45b2ddefebe1630909fe1eead",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -51,14 +51,14 @@
       "client/workspace/useDraftFocusWorkflow.ts": "e2da1d2d80c856d6cfc1c41891461dc78cc8b71c1b5e5ccacc1bc0e95129806a",
       "client/workspace/usePhoneLayout.ts": "eda4b107cebeca888fbf15d99ada307b256711ae56c4100e5b184b72467447bf",
       "client/workspace/useSwipeNavigation.ts": "3afbeefed498f713fc7e42e6d8fcc313dba7d8dd20a2f3aca59631d23820d420",
-      "docs/PRD.md": "a2780f1ed5fa7df9fbfbfc2374145d9a4ef90a22d67783841714d85edf5e48db",
+      "docs/PRD.md": "109903c2fff61a5f076ae0eb25e07ae1c9525601b5337fb843b209fb946fe92c",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
       "package-lock.json": "059c56461c32b2febbc0ce1f608b1ca02a837c6533063011bb7824bc752b5481",
       "package.json": "1e9b07af6d7d0e9154e972b99a0ec1df4768a6d5e12e3e0f9e66d6f605bc5e60",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/lantern.svg": "3525f31ec77634d4ed9bd979e916ca5b3639199c23cd25578089cb319b1b2d57",
       "public/mission-jesus-geometric.png": "831365bf853db1196611e59f298ba57a8ddae13029adff24fc83ee1172dda410",
-      "server/access.ts": "2b91c1de1de038c18de3ec5e86f68306f02ae5862ad524ddd0ba6bdc3f6ffb09",
+      "server/access.ts": "5e8db1a043a78340c656bc018fc0944488802538c76b5b2942d8b3bf34db6227",
       "server/accounts.ts": "522f0732d570bf3975009341fa1ceb491d508215a93f46b69de1d6c7c306da4d",
       "server/admission.ts": "66f8ed1c7ec91ac98b6f6ebf66d87912985ee180d354eda36a2b1846f86bf316",
       "server/app.ts": "8a6abc5240aa8828d3ad5d047e39a2b424d1b596e038ea251a5b788d5d91ec6c",
@@ -106,7 +106,7 @@
       "shared/mission-image.ts": "578da384bea0ebf3e60fc460387b19933c05e441d651c57603578e6641573ba9",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
       "tools/manual/check.ts": "74a86ee33518d7d5c4ceb22680cbb5ef587340a7d22c235c7e76fd4c42e38f35",
-      "tools/manual/content.ts": "bbddac6e1ab25f49ca1e81a259bb2bededf80dde4f140ab002e97e7a2ea67fb0",
+      "tools/manual/content.ts": "f59f9c255a977f7c3eefe2af9f3ec5cbdf4f87b70246aa20d0980fd90283beb7",
       "tools/manual/freshness.ts": "af50e310bc2661ece832e973cf0a6943fd4925ff77dd8b18f2c2f200349037ba",
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
@@ -181,5 +181,5 @@
       }
     }
   },
-  "pdf": "f68e9359f5cf42fcbc3d74dff7e45d42cc087144243f2ca39e1ba3ce5c59f981"
+  "pdf": "6dbdc3160d1587d9fd560b3672330e618fa5d6ffe3740b4ffda33d58783d4b3b"
 }

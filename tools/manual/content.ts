@@ -77,8 +77,8 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Sign in with Jesus Film",
         roles: ["Signed out"],
-        summary: "Signed-out visitors go straight to Jesus Film Auth with a fresh login prompt. Only approved accounts can sign in.",
-        tryIt: ["Open the staging address in a private window.", "Lantern sends you straight to Jesus Film Auth.", "Sign in to your test Jesus Film account."],
+        summary: "Signed-out visitors go straight to Jesus Film Auth before Lantern loads, with a fresh login prompt. Only approved accounts can sign in.",
+        tryIt: ["Open the staging address in a private window.", "The server sends you straight to Jesus Film Auth, without a Lantern loading screen.", "Sign in to your test Jesus Film account."],
         check: [
           "You return to Lantern signed in, with your name in the sidebar.",
           "An account that is not approved returns to the retry screen with “Sign-in could not be completed”.",
