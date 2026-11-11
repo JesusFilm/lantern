@@ -43,6 +43,18 @@ jobs:
               gh release upload "$tag" docs/manual/lantern-manual.pdf --clobber
               gh release edit "$tag" --draft=false --latest
             else
+              # Do not let a later unrelated push hide an earlier invalid
+              # edition reuse. Compare with the immutable published tag.
+              git fetch origin "refs/tags/$tag:refs/tags/$tag"
+              git show "$tag:docs/manual/manifest.json" | node -e '
+                const fs = require("node:fs");
+                const published = JSON.parse(fs.readFileSync(0, "utf8"));
+                const current = require("./docs/manual/manifest.json");
+                if (published.edition !== current.edition || typeof published.deck !== "string" || published.deck !== current.deck) {
+                  console.error("The published manual edition has different content; generate a new edition.");
+                  process.exit(1);
+                }
+              '
               echo "$tag is already published."
             fi
             exit 0

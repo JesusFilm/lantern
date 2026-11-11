@@ -11,7 +11,8 @@ async function releaseFixture(t: TestContext, draft: boolean | null) {
   const root = await mkdtemp(join(tmpdir(), "manual-release-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(join(root, "docs/manual"), { recursive: true });
-  await writeFile(join(root, "docs/manual/manifest.json"), JSON.stringify({ edition: 7, editionDate: "2026-11-02" }));
+  await writeFile(join(root, "docs/manual/manifest.json"), JSON.stringify({ edition: 7, editionDate: "2026-11-02", deck: "published-deck" }));
+  await writeFile(join(root, "published-manifest.json"), JSON.stringify({ edition: 7, deck: "published-deck" }));
   await writeFile(join(root, "docs/manual/lantern-manual.pdf"), "fixture PDF");
   await writeFile(join(root, "state.json"), JSON.stringify({ exists: draft !== null, draft, uploaded: draft === false, calls: [] }));
   await writeFile(join(root, "gh"), `#!${process.execPath}
@@ -39,6 +40,7 @@ process.exit(status);
 const fs = require('node:fs');
 const args = process.argv.slice(2);
 if (args[0] === 'fetch') process.exit(0);
+if (args[0] === 'show') { console.log(fs.readFileSync('published-manifest.json', 'utf8')); process.exit(0); }
 if (args[0] === 'rev-parse') {
   console.log(args[1] === 'HEAD' || !fs.existsSync('main-moved') ? 'a'.repeat(40) : 'b'.repeat(40));
   process.exit(0);
@@ -81,6 +83,20 @@ test("an already published edition is left unchanged", async (t) => {
   const fixture = await releaseFixture(t, false);
   await fixture.run();
   assert.deepEqual((await fixture.state()).calls.map((args) => args[1]), ["view"]);
+});
+
+test("a reused published edition remains blocked after an unrelated push", async (t) => {
+  const fixture = await releaseFixture(t, false);
+  await writeFile(join(fixture.root, "docs/manual/manifest.json"), JSON.stringify({edition: 7, editionDate: "2026-11-02", deck: "changed-deck"}));
+  await assert.rejects(fixture.run(), /published.*edition|edition.*published/i);
+  await assert.rejects(fixture.run(), /published.*edition|edition.*published/i);
+  assert.deepEqual((await fixture.state()).calls.map((args) => args[1]), ["view", "view"]);
+});
+
+test("a published edition without a verifiable tagged manifest fails closed", async (t) => {
+  const fixture = await releaseFixture(t, false);
+  await writeFile(join(fixture.root, "published-manifest.json"), JSON.stringify({edition: 7}));
+  await assert.rejects(fixture.run(), /published.*edition|edition.*published/i);
 });
 
 test("a new edition is created with its PDF", async (t) => {

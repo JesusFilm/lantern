@@ -141,5 +141,5 @@ To supply or replace a capture, save the PNG named on the slide in [docs/manual/
 
 ## Releases
 
-On every push to main, the [QA manual release workflow](../../.github/workflows/manual.yml) checks that the manual is fresh. It then publishes `manual-<edition>` with the PDF attached, marked as the latest release. An edition that is already published is skipped. If an upload or publication fails and leaves a draft, rerunning the workflow replaces the draft's PDF and publishes it. The stable "latest" link works only while manual editions are the repository's only releases marked latest.
+On every push to main, the [QA manual release workflow](../../.github/workflows/manual.yml) checks that the manual is fresh. It then publishes `manual-<edition>` with the PDF attached, marked as the latest release. An edition that is already published is skipped only after its tagged manifest confirms the deck is unchanged; a reused edition with different content fails even after a later unrelated push. If an upload or publication fails and leaves a draft, rerunning the workflow replaces the draft's PDF and publishes it. The stable "latest" link works only while manual editions are the repository's only releases marked latest.
 
