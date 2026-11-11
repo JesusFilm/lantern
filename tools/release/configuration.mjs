@@ -46,6 +46,8 @@ export function verifyConfiguration(env){
  const features=typeof v.LANTERN_FEATURES==='string' && v.LANTERN_FEATURES.trim() ? v.LANTERN_FEATURES.split(',').map(entry=>entry.trim()) : [];
  requireSetting(features.every(entry=>/^[a-z][a-z0-9-]*=(off|preview|on)$/.test(entry)),'LANTERN_FEATURES');
  requireSetting(new Set(features.map(entry=>entry.split('=')[0])).size===features.length,'LANTERN_FEATURES must not list the same feature more than once');
+ const owner=v.LANTERN_FLAG_OWNER_EMAIL;
+ requireSetting(owner===undefined || owner==='' || (typeof owner==='string' && /^[^\s@*]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(owner.trim().toLowerCase())),'LANTERN_FLAG_OWNER_EMAIL');
  const previewEmails=typeof v.LANTERN_PREVIEW_EMAILS==='string' && v.LANTERN_PREVIEW_EMAILS.trim() ? v.LANTERN_PREVIEW_EMAILS.split(',').map(entry=>entry.trim().toLowerCase()) : [];
  requireSetting(!previewEmails.length || previewEmails.every(email=>/^[^\s@*]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(email)),'LANTERN_PREVIEW_EMAILS must list exact email addresses');
  requireSetting(!features.some(entry=>entry.endsWith('=preview')) || previewEmails.length>0,'LANTERN_PREVIEW_EMAILS');

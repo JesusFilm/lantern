@@ -34,7 +34,7 @@ Use TDD and a focused test while changing behavior; run typecheck, build and the
 | Area | Behavior checked; source entry points |
 | --- | --- |
 | Identity and access | Signed Google-token claims using a mocked exchange, approval/enrollment, membership, session expiry/revocation and browser account switching. `server/google.test.ts`, `server/access.integration.test.ts`, `server/session.browser.test.ts` |
-| Feature flags | Setting validation, environment defaults, and that a session lists a flagged feature only for accounts allowed to see it. `server/features.test.ts`, `server/features.integration.test.ts` |
+| Feature flags | Setting validation, environment defaults, and that a session lists a flagged feature only for accounts allowed to see it. `server/features.test.ts`, `server/features.integration.test.ts`, `server/feature-operations.integration.test.ts` (owner-only flag reporting with active membership and no preview-email disclosure) |
 | Product workflows | Position-focus drafts, objectives/goals, direction and artwork, career-lead views, confirmation/locking, guide, reload persistence and asynchronous editing races. `server/*integration.test.ts`, `server/*browser.test.ts` |
 | Data and permissions | Real PostgreSQL persistence, stale/forged writes, cross-member/department denial, separated runtime/migration/admin roles, migrations, bootstrap and recovery failure paths. `server/database-*.test.ts`, `server/migration.integration.test.ts` |
 | Delivery safeguards | Configuration/target checks, migration failures, evidence identity/freshness, manual override, cleanup/interruption recovery and safe diagnostics. `tools/release/*.test.mjs` |

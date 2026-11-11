@@ -1,9 +1,9 @@
 {
-  "edition": 25,
+  "edition": 26,
   "editionDate": "2026-11-11",
-  "deck": "20beda163a66a9ac12a6b557de102acda572cc85cfa27e094ce7d07ecc74cd6b",
+  "deck": "112f741ccb50288b5e2a70cd9e16c3d08cccee58ac739490bd309c757c308e50",
   "sources": {
-    "fingerprint": "4dcc1b0945db284350dbc4deb3797753dfc0ec716f310012fe6367c75732a7aa",
+    "fingerprint": "433dbf452e3dc11650d8551aeeb12ba000bbfe27afd53dd77bfabe0358f35e30",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -49,14 +49,14 @@
       "client/workspace/useDraftFocusWorkflow.ts": "e2da1d2d80c856d6cfc1c41891461dc78cc8b71c1b5e5ccacc1bc0e95129806a",
       "client/workspace/usePhoneLayout.ts": "eda4b107cebeca888fbf15d99ada307b256711ae56c4100e5b184b72467447bf",
       "client/workspace/useSwipeNavigation.ts": "3afbeefed498f713fc7e42e6d8fcc313dba7d8dd20a2f3aca59631d23820d420",
-      "docs/PRD.md": "1ff2245684f2c2a780acfbfba2ac8f4fe3b29cecefa30e138b2cb076e3730835",
+      "docs/PRD.md": "d662950e42d68f67149868801cb0689a9d42bb267013d612ffe6278fa473203c",
       "index.html": "aa59d7718b36dc5ee536466e8fbbbb1e7c188bcfc4c6ee351bebe23286ed8fd9",
       "package-lock.json": "5c7ed6f8078e46c94caf380e8452e115fea1bcb8b6b2a133afa8d89e3e9eebac",
       "package.json": "a438a17485ba2f9eec2bad1307f4ba9759b7127a7faac6039ea693de953630b1",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/google-sign-in.png": "e048546f162b43a5f3809796f88df02a8e13f07ca1280a9c1635018956e05c05",
       "public/mission-jesus-geometric.png": "831365bf853db1196611e59f298ba57a8ddae13029adff24fc83ee1172dda410",
-      "server/access.ts": "ada14b479560adc28564f58402cbfdad5fcf4d6c0590d35f387e4192c2e970f5",
+      "server/access.ts": "e0e7b83b9f2fd2b3ec78a908eeffa575b44c1abdba879bec55ccf2b79a1c57d3",
       "server/accounts.ts": "4d11039c013c4d1902285aa2b1581cc53ae450abf1e4e911544d8cfcc7994b30",
       "server/admission.ts": "66f8ed1c7ec91ac98b6f6ebf66d87912985ee180d354eda36a2b1846f86bf316",
       "server/app.ts": "8a6abc5240aa8828d3ad5d047e39a2b424d1b596e038ea251a5b788d5d91ec6c",
@@ -78,7 +78,7 @@
       "server/focus.ts": "05552d7b05496a4d84176ea1087d919d3418a8f8bb6b90ca6dac00302503a554",
       "server/google.ts": "d1cf188a15d20cf5fa866fdab847f83ed4c1769b8dbf24feae8bef678d8e2bb6",
       "server/guide-content.ts": "0ba689c7f3315954dca57a24691b8f48ce13be60ee4ed909d64b97d057275496",
-      "server/index.ts": "840ca8b444d1dbca99f84147ec5ce392b641e6fd5d3080f301a87e4879423e57",
+      "server/index.ts": "cd50ccb616557e2ef9ebc56b4d6732ac5cb08883efdda71a5f8f8b02e57426d2",
       "server/local-access.ts": "7112f42f4327d1eab25a3d6d039cc8f20db6cea63da7783732e65384cef5db19",
       "server/local-initiatives.ts": "081a076d3586bd01652cb394af43340a4b972eb76806dc9a1f9597ac402b4910",
       "server/member-focuses.ts": "517441b4b62d9db05c6c197e196d9eb2cc12f21817b3c455277c64363c57335c",
@@ -87,7 +87,7 @@
       "server/mission-image.ts": "63cb697089da48061b572f3fec05e710bcc2f46725bd60af283df13f758a129d",
       "server/operations.ts": "1f73680d0bed216d6875ed4a99915d781dcdd27555c1514a66bc6fcfcfa5510b",
       "server/operator-target.ts": "5e991e5c5f1a97cb715f7fd974ffc5d09af5f252760808bd25d715c458993653",
-      "server/runtime.ts": "5d3459809db2affd74b1ec156a171eb5c8f43dd68df82ed5ca96ccb95f62c3dc",
+      "server/runtime.ts": "ef07868149decc53125c5055676f8c9b9456e92f31981bf8e0820dfb86df5cd3",
       "server/schema.ts": "d92b0f31c834de8a7a248bb3bc0e90fcefc8933f82a627a5da1bec79b1ba34f4",
       "server/transition-database.ts": "b8e8eb9b982853b0225f71253841ba562a73049c737ad511e0836cd00a6bfff8",
       "server/verify-database.ts": "76a01de33a8d998c2a8c7cd6ac8d08679206f26c811fbdedce0b0159152df195",
@@ -102,16 +102,16 @@
       "shared/mission-image.ts": "578da384bea0ebf3e60fc460387b19933c05e441d651c57603578e6641573ba9",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
       "tools/manual/check.ts": "74a86ee33518d7d5c4ceb22680cbb5ef587340a7d22c235c7e76fd4c42e38f35",
-      "tools/manual/content.ts": "c7787d9348792768ecabbcc1fd5b3d5d0cac0969a542e654dd6237560038429a",
+      "tools/manual/content.ts": "ccf2497ece19be17e44b897b4fa707027f183f3f0b61be08fe4330c70636e8fe",
       "tools/manual/freshness.ts": "af50e310bc2661ece832e973cf0a6943fd4925ff77dd8b18f2c2f200349037ba",
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
-      "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",
+      "tools/manual/manual.ts": "f375595102e1191e15c7f904e55e9bd437266b0df346ce794030ab6e5a78572e",
       "tools/manual/qa-fixture.ts": "0d72447b96bd5a529f935c09b90cfc20de0de98988cc27acaefa4d96e10c8861",
       "tools/manual/qa-stage.ts": "4bfe24391240bbe32a293622db8b8bfc6cb51c2f45a626fc278a66019fc04e8c",
       "tools/manual/render.ts": "eedd830fcf3ccbdd403a8b3563b487be2edda4041ed4f6a724795dbaba2dda0c",
       "tools/manual/tsconfig.json": "b2c53bf7e0a9203acae2292d0215afb5abb1d3e90311ace1b9e8a11ec37ef1ac",
-      "tools/manual/world.ts": "f0242eec2fe610aa1ff0d7a4a238b2f5fb9bdbd45190f2bb6d925875388b9e70",
+      "tools/manual/world.ts": "ecf029893abddebb2e045423f25b654246b85d34322817d8f647babae585fbab",
       "vite.config.ts": "6eec20fcf3181935b3df826547144a178de631cf0a6c650a681ad41914e22a02"
     }
   },
@@ -126,6 +126,7 @@
     "department-direction-2.png": "a91e55391c26da93471a60430167380c251415b14f215ca8de8091285cdd5866",
     "department-member.png": "7b6bd55e29b6252fa6a691cdc0955713440131a00bf33adb000a70aa700cf03d",
     "department-people.png": "da1f0b29faf84ab1e126d7362b076a9559a6c82ece7c8d67696308bec34d2f85",
+    "feature-flags-owner.png": "7501c2e0a71e0aa4a32c4275df8e5be7b99369c8bbf38cd5889a9792a460e751",
     "focus-confirmed-1.png": "7dfee92b97d05541adf77bf837165433184ae2992da8df647db113005e668c61",
     "focus-confirmed-2.png": "bc56723cc46d4880caf9fa20bbb071c977e449ebc358f5bda16158e8f855f661",
     "focus-draft-1.png": "b2c01230318ec6d63ba54db44ee633934e99715624222a1eb4f2e96ab24f4510",
@@ -173,5 +174,5 @@
       }
     }
   },
-  "pdf": "2b9b76812b857d66c93427ae91a501100c9dc3ac472b8afd8888627728314ef7"
+  "pdf": "1e9a06798fe2e158f4ae7294582a02b0a0c48e0f3aa7824e358869c826dd754e"
 }

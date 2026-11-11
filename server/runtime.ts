@@ -1,5 +1,6 @@
 import {resolveCoachConfig} from './coach-provider.js';
 import {resolveFeatureConfig} from './features.js';
+import {normalizeEmail} from './admission.js';
 export type LanternEnvironment = 'local' | 'stage' | 'production';
 export function lanternEnvironment(environment: string | undefined): LanternEnvironment {
   if (environment === undefined) return 'production';
@@ -31,5 +32,10 @@ export function resolveRuntime(env: NodeJS.ProcessEnv = process.env) {
   const coach = resolveCoachConfig(env), features = resolveFeatureConfig(env, environment);
   // Asking for the coach explicitly must not leave members without it; an unset coach is simply unavailable without providers.
   if (/(^|,)\s*coach=(preview|on)\s*(,|$)/.test(env.LANTERN_FEATURES ?? '') && !coach) throw new Error('LANTERN_FEATURES sets coach to preview or on, but its providers are not configured.');
-  return { coach, features, environment, hosted, connectionString, port, host, localAccess, origin, clientId, clientSecret, hostingOnly };
+  let flagOwnerEmail: string | undefined;
+  if (env.LANTERN_FLAG_OWNER_EMAIL) {
+    try { flagOwnerEmail = normalizeEmail(env.LANTERN_FLAG_OWNER_EMAIL); }
+    catch { throw new Error('LANTERN_FLAG_OWNER_EMAIL must be one valid email address.'); }
+  }
+  return { coach, features, flagOwnerEmail, environment, hosted, connectionString, port, host, localAccess, origin, clientId, clientSecret, hostingOnly };
 }

@@ -475,6 +475,19 @@ export const chapters: Chapter[] = [
     ],
   },
   {
+    title: "Feature flag operations",
+    summary: "The configured owner can inspect the current environment's flag states after signing in.",
+    slides: [{
+      kind: "feature",
+      title: "Inspect feature flags",
+      roles: ["Configured owner"],
+      summary: "The read-only page lists each registered feature as off, preview or on. Preview email addresses are not shown.",
+      tryIt: ["Sign in as the configured owner with active department membership.", "Open **/ops/feature-flags** in this environment."],
+      check: ["Registered flags show their current states.", "A different member or signed-out visitor cannot open the page.", "Railway remains the place to change a flag."],
+      shots: [{ id: "feature-flags-owner", persona: "lead", path: "/ops/feature-flags", ready: heading("Feature flags"), mode: { kind: "element", target: "main", padding: 16 }, caption: "Owner-only flag states" }],
+    }],
+  },
+  {
     title: "What to test by hand",
     summary: "Automated tests cover the main journeys with synthetic accounts. These areas need a person, a real account or a real device.",
     slides: [

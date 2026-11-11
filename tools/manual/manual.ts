@@ -4,7 +4,7 @@ import type { SuppliedCapture } from "./freshness.js";
 import type { ManualWorld, Persona } from "./world.js";
 
 export type Ids = ManualWorld["ids"];
-export type Role = "Anyone" | "Member" | "Career lead" | "Signed out";
+export type Role = "Anyone" | "Member" | "Career lead" | "Signed out" | "Configured owner";
 
 /** A screenshot taken automatically from the synthetic world. */
 export interface Shot {
