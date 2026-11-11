@@ -212,9 +212,15 @@ test('progress statuses and notes stay scoped to the confirmed focus and its par
   const f=await fixture();
   try {
     const focus=await f.create(), path=`/api/focuses/${focus.id}/progress`;
-    assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:null,status:'achieved',revision:null})).status,404);
-    assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    const leadPath=`/api/department/members/${f.member}/focuses/${focus.id}/progress`;
     const entryPath=`/api/focuses/${focus.id}/progress-entry`;
+    // Progress is unavailable on drafts: the owner's read reaches the draft check and answers
+    // 409 before any progress data is touched, and the entry point refuses to write.
+    // (Non-owner draft reads answer 404: the ownership predicate fails before the draft check.)
+    assert.equal((await f.request(f.member,path)).status,409);
+    assert.equal((await f.request(f.member,entryPath,'PUT',{section:0,goal:null,status:'achieved',body:'',revision:null,noteRevision:null})).status,409);
+    assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    assert.deepEqual(await (await f.request(f.member,path)).json(),{statuses:[],notes:[]});
     assert.equal((await f.request(f.member,entryPath,'PUT',{section:0,goal:null,status:'achieved',body:'',revision:null,noteRevision:null})).status,200);
     const goalStatus=await (await f.request(f.member,entryPath,'PUT',{section:0,goal:0,status:'in-progress',body:'',revision:null,noteRevision:null})).json() as {status:{revision:string}};
     const goalRevision=goalStatus.status.revision;
@@ -225,7 +231,6 @@ test('progress statuses and notes stay scoped to the confirmed focus and its par
     const own=await (await f.request(f.member,path)).json() as {statuses:{section:number;goal:number|null;status:string}[];notes:{body:string}[]};
     assert.deepEqual(own.statuses.map(({section,goal,status})=>({section,goal,status})),[{section:0,goal:null,status:'achieved'},{section:0,goal:0,status:'in-progress'}]);
     assert.deepEqual(own.notes.map(n=>n.body),['Objective finding','Goal finding']);
-    const leadPath=`/api/department/members/${f.member}/focuses/${focus.id}/progress`;
     assert.deepEqual(await (await f.request(f.lead,leadPath)).json(),own);
     for(const actor of [f.peer,f.outsider]) assert.notEqual((await f.request(actor,leadPath)).status,200);
     assert.notEqual((await f.request(f.peer,path)).status,200);
