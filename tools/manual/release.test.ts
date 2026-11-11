@@ -23,7 +23,8 @@ const state = JSON.parse(fs.readFileSync('state.json', 'utf8'));
 state.calls.push(args);
 let status = 0;
 if (args[1] === 'view') {
-  if (!state.exists) status = 1;
+  if (fs.existsSync('gh-unavailable')) { console.error('network unavailable'); status = 1; }
+  else if (!state.exists) { console.error('release not found'); status = 1; }
   else console.log(args.includes('targetCommitish') ? 'a'.repeat(40) : args.includes('--json') ? String(state.draft) : 'QA manual, edition 7');
 } else if (args[1] === 'create') {
   state.exists = true; state.draft = false; state.uploaded = true;
@@ -49,11 +50,10 @@ if (args[0] === 'rev-parse') {
 }
 process.exit(1);
 `, { mode: 0o755 });
-  const workflow = await readFile(new URL("../../.github/workflows/manual.yml", import.meta.url), "utf8");
-  const script = workflow.split("        run: |\n")[1]!.replace(/^          /gm, "");
+  const script = await readFile(new URL("./release.sh", import.meta.url), "utf8");
   return {
     root,
-    run: () => promisify(execFile)("bash", ["-e", "-o", "pipefail", "-c", script], {
+    run: (mode = "--publish") => promisify(execFile)("bash", ["-e", "-o", "pipefail", "-c", script, "release.sh", mode], {
       cwd: root, env: { PATH: root + ":" + process.env.PATH, GITHUB_SHA: "a".repeat(40) },
     }),
     state: async () => JSON.parse(await readFile(join(root, "state.json"), "utf8")) as { draft: boolean; uploaded: boolean; calls: string[][] },
@@ -75,6 +75,14 @@ test("a draft cannot publish a different deck after an unrelated push", async (t
   const fixture = await releaseFixture(t, true);
   await writeFile(join(fixture.root, "docs/manual/manifest.json"), JSON.stringify({edition: 7, editionDate: "2026-11-02", deck: "changed-deck"}));
   await assert.rejects(fixture.run(), /edition.*different content/i);
+  await assert.rejects(fixture.run("--check"), /edition.*different content/i);
+  assert.equal((await fixture.state()).draft, true);
+  assert.deepEqual((await fixture.state()).calls.map((args) => args[1]), ["view", "view", "view", "view"]);
+});
+
+test("CI checks a valid draft without uploading or publishing it", async (t) => {
+  const fixture = await releaseFixture(t, true);
+  await fixture.run("--check");
   assert.equal((await fixture.state()).draft, true);
   assert.deepEqual((await fixture.state()).calls.map((args) => args[1]), ["view", "view"]);
 });
@@ -124,6 +132,21 @@ test("a new edition is created with its PDF", async (t) => {
   assert.equal(state.draft, false);
   assert.equal(state.uploaded, true);
   assert.ok(state.calls[1]!.includes("docs/manual/lantern-manual.pdf"));
+});
+
+test("CI fails closed when the release lookup is unavailable", async (t) => {
+  const fixture = await releaseFixture(t, null);
+  await writeFile(join(fixture.root, 'gh-unavailable'), '');
+  await assert.rejects(fixture.run('--check'), /cannot verify.*release/i);
+  assert.deepEqual((await fixture.state()).calls.map((args) => args[1]), ['view']);
+});
+
+test("a new release cannot reuse an existing tag for different content", async (t) => {
+  const fixture = await releaseFixture(t, null);
+  await writeFile(join(fixture.root, 'existing-tag'), '');
+  await writeFile(join(fixture.root, 'tagged-manifest.json'), JSON.stringify({edition:7,deck:'older-tag-deck'}));
+  await assert.rejects(fixture.run(), /edition.*different content/i);
+  assert.deepEqual((await fixture.state()).calls.map((args) => args[1]), ['view']);
 });
 
 test("a newer main blocks publishing an older manual as latest", async (t) => {

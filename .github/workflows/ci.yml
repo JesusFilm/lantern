@@ -22,6 +22,24 @@ jobs:
         with: { node-version: '26.13.0', cache: npm }
       - run: npm ci
       - run: npm run manual:check
+  manual-release-guard:
+    name: QA manual release content
+    # Draft releases require repository write access to inspect. This job only
+    # runs trusted main pushes and never uploads or publishes an asset.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v7
+        with: { node-version: '26.13.0' }
+      - name: Check existing manual release content
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash tools/manual/release.sh --check
   typecheck:
     name: typecheck
     runs-on: ubuntu-latest
