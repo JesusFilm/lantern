@@ -136,6 +136,13 @@ test("a new edition is created with its PDF", async (t) => {
   assert.ok(state.calls[1]!.includes("docs/manual/lantern-manual.pdf"));
 });
 
+test("a new edition can restore a damaged PDF without changing the deck", async (t) => {
+  const fixture = await releaseFixture(t, null);
+  await writeFile(join(fixture.root, 'before-manifest.json'), JSON.stringify({edition:6,deck:'published-deck'}));
+  await fixture.run();
+  assert.equal((await fixture.state()).uploaded, true);
+});
+
 test("CI fails closed when the release lookup is unavailable", async (t) => {
   const fixture = await releaseFixture(t, null);
   await writeFile(join(fixture.root, 'gh-unavailable'), '');

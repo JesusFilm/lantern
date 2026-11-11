@@ -76,7 +76,7 @@ if [ -z "$remote_tag" ]; then
     const fs = require("node:fs");
     const before = JSON.parse(fs.readFileSync(0, "utf8"));
     const current = require("./docs/manual/manifest.json");
-    if (typeof before.edition !== "number" || typeof before.deck !== "string" || current.edition <= before.edition || current.deck === before.deck) {
+    if (typeof before.edition !== "number" || typeof before.deck !== "string" || current.edition <= before.edition) {
       console.error("Cannot verify the unpublished manual edition after a prior push; recover it or generate a new edition.");
       process.exit(1);
     }
