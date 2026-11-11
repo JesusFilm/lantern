@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { checkManual, recordManifest, readManifest, productSources, editionBase, type ManualLayout } from "./freshness.js";
+import { checkManual, recordManifest, readManifest, productSources, editionBase, requiresEditionBase, type ManualLayout } from "./freshness.js";
 
 async function project(t: import("node:test").TestContext) {
   const root = await mkdtemp(join(tmpdir(), "manual-freshness-"));
@@ -217,4 +217,11 @@ test('a required edition comparison fails clearly when main is unavailable', asy
   await recordManifest(layout, {edition:1, editionDate:'2026-11-10', deck:'deck'});
   const result = await checkManual(layout, () => undefined, {requireBase:true});
   assert.match(result.errors.join('\n'), /cannot compare.*main/i);
+});
+
+test("CI requires the edition comparison for common true values", () => {
+  assert.equal(requiresEditionBase({CI:"true"}), true);
+  assert.equal(requiresEditionBase({CI:"1"}), true);
+  assert.equal(requiresEditionBase({CI:"false"}), false);
+  assert.equal(requiresEditionBase({}), false);
 });

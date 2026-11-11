@@ -169,6 +169,10 @@ export async function readManifest(root: string): Promise<Manifest | undefined> 
  * branch can remain behind. On main itself, compare with its parent. CI fetches
  * the necessary history and requires the comparison to be available.
  */
+export function requiresEditionBase(env: NodeJS.ProcessEnv) {
+  return !!env.CI && env.CI !== "false" && env.CI !== "0";
+}
+
 type EditionLineage = { edition: number; deck: string; ancestor?: { edition: number; deck: string } };
 
 export function editionBase(root: string): EditionLineage | undefined {
