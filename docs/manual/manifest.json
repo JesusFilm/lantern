@@ -1,9 +1,9 @@
 {
-  "edition": 36,
-  "editionDate": "2026-11-11",
-  "deck": "e0d273135c2aeef0aec80668fe063acc68e17be0ed7ea8bcbac0b96d161e79e3",
+  "edition": 37,
+  "editionDate": "2026-11-12",
+  "deck": "615e8b69c25c5bba54c8c21ec0f935253170ff7cc2990ec6269da63ab13a66ec",
   "sources": {
-    "fingerprint": "fd705f0f3954526ba361391dcf7c457a850866a45b2ddefebe1630909fe1eead",
+    "fingerprint": "c5dec782066e9188ba8b2276c9400fe1790f11e9c61d86b830a7016bc69e42fc",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -181,5 +181,5 @@
       }
     }
   },
-  "pdf": "6dbdc3160d1587d9fd560b3672330e618fa5d6ffe3740b4ffda33d58783d4b3b"
+  "pdf": "f1bc80702d2f95fd86c39eadfb40a85113e5c45758e5b2e51809a1c855978428"
 }
