@@ -246,9 +246,12 @@ export async function checkManual(layout: ManualLayout, base: () => { edition: n
   // republishes a tag, so a changed deck must never keep the edition number of
   // the manifest it was generated from. `npm run manual` compares against the
   // manifest the branch last had; after a merge with main that base is main's,
-  // so the edition moves forward from main's.
+  // so the edition moves forward from main's. The guard fires only when the
+  // committed deck still carries the base's edition number: a branch that has
+  // already moved past an older base's edition (or that sits on a checkout
+  // behind main) must not fail here — its manifest merges with main's anyway.
   const editionBase_ = base();
-  if (editionBase_ && editionBase_.deck !== manifest.deck && manifest.edition <= editionBase_.edition) {
+  if (editionBase_ && editionBase_.deck !== manifest.deck && manifest.edition === editionBase_.edition) {
     errors.push(`The manual's deck changed but the edition did not move forward from ${editionBase_.edition}. Start from main's docs/manual, then ${regenerate}`);
   }
 
