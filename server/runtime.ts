@@ -1,4 +1,5 @@
 import {resolveCoachConfig} from './coach-provider.js';
+import {resolveFeatureConfig} from './features.js';
 export type LanternEnvironment = 'local' | 'stage' | 'production';
 export function lanternEnvironment(environment: string | undefined): LanternEnvironment {
   if (environment === undefined) return 'production';
@@ -27,5 +28,8 @@ export function resolveRuntime(env: NodeJS.ProcessEnv = process.env) {
   const hostingOnly = env.LANTERN_HOSTING_ONLY === '1';
   if (hostingOnly && (environment !== 'stage' || clientId || clientSecret)) throw new Error('Hosting-only mode requires stage without identity provider credentials.');
   if ((hosted && !hostingOnly && (!clientId || !clientSecret)) || !!clientId !== !!clientSecret) throw new Error('Set both Google client credentials.');
-  return { coach:resolveCoachConfig(env), environment, hosted, connectionString, port, host, localAccess, origin, clientId, clientSecret, hostingOnly };
+  const coach = resolveCoachConfig(env), features = resolveFeatureConfig(env, environment);
+  // Asking for the coach explicitly must not leave members without it; an unset coach is simply unavailable without providers.
+  if (/(^|,)\s*coach=(preview|on)\s*(,|$)/.test(env.LANTERN_FEATURES ?? '') && !coach) throw new Error('LANTERN_FEATURES sets coach to preview or on, but its providers are not configured.');
+  return { coach, features, environment, hosted, connectionString, port, host, localAccess, origin, clientId, clientSecret, hostingOnly };
 }

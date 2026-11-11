@@ -76,19 +76,23 @@ test("coach uses Qwen first and falls back to OpenRouter after an outage", async
   }
 });
 
-test("enabling coaching requires both independent provider credentials", () => {
+test("the coach's providers need both independent credentials, and the retired switch is ignored", () => {
   assert.equal(resolveCoachConfig({}), undefined);
+  assert.equal(resolveCoachConfig({ COACH_ENABLED: "1", AI_GATEWAY_CHAT_BASE_URL: "https://gateway.example.com" }), undefined);
+  assert.throws(
+    () => resolveCoachConfig({ OPENROUTER_API_KEY: "secret", AI_GATEWAY_CHAT_BASE_URL: "https://gateway.example.com" }),
+    /AI_GATEWAY_CHAT_API_KEY/,
+  );
   assert.throws(
     () =>
       resolveCoachConfig({
-        COACH_ENABLED: "1",
         AI_GATEWAY_CHAT_API_KEY: "secret",
         AI_GATEWAY_CHAT_BASE_URL: "https://gateway.example.com",
       }),
     /OPENROUTER_API_KEY/,
   );
   const config = resolveCoachConfig({
-    COACH_ENABLED: "1",
+    COACH_ENABLED: "0",
     AI_GATEWAY_CHAT_API_KEY: "primary",
     OPENROUTER_API_KEY: "fallback",
     AI_GATEWAY_CHAT_BASE_URL: "https://gateway.example.com/",
@@ -101,7 +105,6 @@ test("enabled coaching requires an explicitly configured gateway endpoint", () =
   for (const endpoint of [undefined, "", "   "]) {
     assert.throws(
       () => resolveCoachConfig({
-        COACH_ENABLED: "1",
         AI_GATEWAY_CHAT_API_KEY: "primary",
         OPENROUTER_API_KEY: "fallback",
         AI_GATEWAY_CHAT_BASE_URL: endpoint,
