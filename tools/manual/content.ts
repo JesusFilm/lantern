@@ -454,10 +454,10 @@ export const chapters: Chapter[] = [
         roles: ["Member", "Career lead"],
         summary: "Strategic initiatives lists the department's active initiatives with their current descriptions. Procedures outlines the yearly rhythm (marked Proposed).",
         tryIt: ["Open **Strategic initiatives** and choose an initiative.", "Open **Procedures** and its three steps."],
-        check: ["Archived initiatives are not listed.", "A missing description shows a clear empty state.", "Procedures screens show the Proposed label."],
+        check: ["Archived initiatives are not listed.", "A missing description shows a clear empty state.", "Procedures screens show the Proposed label.", "Make a change says confirmed focuses cannot be edited or unlocked; revisions are unavailable."],
         shots: [
           { id: "guide-initiatives", persona: "member", path: "/?page=guide", act: click("Strategic initiatives"), ready: role("button", "Strategic initiatives"), caption: "Strategic initiatives" },
-          { id: "guide-procedures", persona: "member", path: "/?page=guide", act: click("Procedures"), ready: role("button", "Procedures"), caption: "Procedures" },
+          { id: "guide-procedures", persona: "member", path: "/?page=guide", act: click("Procedures", "Make a change"), ready: heading("Confirmed focuses stay locked.", 2), caption: "Proposed revisions — not available yet" },
         ],
       },
     ],
