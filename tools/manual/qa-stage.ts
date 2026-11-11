@@ -16,7 +16,8 @@ try {
   assert.equal(env.RAILWAY_PROJECT, "9a445065-bde0-4184-bdb8-4161b033cc8f");
   assert.equal(env.RAILWAY_ENVIRONMENT, "8e19675b-08a2-4bfb-9762-fd6d8561fcfd");
   assert.equal(execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), env.GITHUB_SHA);
-  const emails = [env.QA_SHARON, env.QA_SUSHMA, env.QA_ESTHER];
+  // Judy is a member participant only; she is not offered as career lead.
+  const emails = [env.QA_SHARON, env.QA_SUSHMA, env.QA_ESTHER, env.QA_JUDY];
   assert.ok(emails.every((v) => typeof v === "string" && /^[^\s@]+@[^\s@]+$/.test(v)));
   const choices = { SharonQA: env.QA_SHARON, SushmaQA: env.QA_SUSHMA, EstherQA: env.QA_ESTHER };
   assert.ok(env.QA_LEAD === "keep" || Object.hasOwn(choices, env.QA_LEAD ?? ""));
