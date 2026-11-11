@@ -14,11 +14,6 @@ export function progressRoutes(db: Pool, requireUser: (req: Request) => Promise<
     const user=await requireUser(req);
     res.json(await store.read(user.id,String(req.params.id),String(req.params.memberId)));
   });
-  router.put('/api/focuses/:id/progress', async (req,res)=>{
-    const user=await requireUser(req), value=req.body;
-    if (!value || typeof value!=='object' || Array.isArray(value) || Object.keys(value).some(k=>!['section','goal','status','revision'].includes(k)) || !Number.isSafeInteger(value.section) || value.section<0 || (value.goal!==null && (!Number.isSafeInteger(value.goal)||value.goal<0)) || ![null,'in-progress','achieved','needs-attention'].includes(value.status) || (value.revision !== null && (typeof value.revision !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.revision)))) throw new AccessError(400,'Choose an objective or goal and a valid progress status.');
-    res.json(await store.setStatus(user.id,String(req.params.id),value.section,value.goal,value.status,value.revision));
-  });
   router.put('/api/focuses/:id/progress-entry', async (req,res)=>{
     const user=await requireUser(req), value=req.body;
     const validRevision=(revision:unknown)=>revision===null || typeof revision==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(revision);

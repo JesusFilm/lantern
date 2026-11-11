@@ -151,8 +151,7 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     await call("lead", confirmedPath + "/notes", "POST", { version: confirmed.version, body: "This reads well. The release goal is clear and measurable." });
     await call("member", confirmedPath + "/notes", "POST", { version: confirmed.version, body: "Thanks — I'll share the runbook draft next week." });
     await call("lead", confirmedPath + "/confirm", "POST", { version: confirmed.version });
-    const statusPut = await call("member", `/api/focuses/${confirmed.id}/progress`, "PUT", {section:0,goal:0,status:"in-progress",revision:null});
-    await call("member", `/api/focuses/${confirmed.id}/progress-entry`, "PUT", {section:0,goal:0,status:"in-progress",body:"The runbook draft is ready for the team's feedback.",revision:statusPut.revision,noteRevision:null});
+    await call("member", `/api/focuses/${confirmed.id}/progress-entry`, "PUT", {section:0,goal:0,status:"in-progress",body:"The runbook draft is ready for the team's feedback.",revision:null,noteRevision:null});
 
     const draft = (await call("member", "/api/focuses", "POST", {
       title: "First half 2027",

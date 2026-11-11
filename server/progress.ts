@@ -26,18 +26,6 @@ export function progressStore(db:Pool) {
         return {notes:notes.rows,statuses:statuses.rows};
       });
     },
-    async setStatus(actor:string,id:string,section:number,goal:number|null,status:string|null,revision:string|null) {
-      return membershipWrite(db,async client=>{
-        const sections=await ownedFocus(client,actor,id);
-        if(!sections[section] || (goal!==null && !sections[section].goals[goal])) throw new AccessError(400,'Objective or goal not found.');
-        const existing=await client.query('SELECT revision FROM focus_progress_statuses WHERE focus_id::text=$1 AND section_index=$2 AND goal_index=$3',[id,section,goal??-1]);
-        if((existing.rows[0]?.revision??null)!==revision) throw new AccessError(409,'This status changed in another window. Reload the focus before trying again.');
-        const next=randomUUID();
-        await client.query(`INSERT INTO focus_progress_statuses(focus_id,section_index,goal_index,status,revision) VALUES($1,$2,$3,$4,$5)
-          ON CONFLICT (focus_id,section_index,goal_index) DO UPDATE SET status=excluded.status,revision=excluded.revision,updated_at=now()`,[id,section,goal??-1,status,next]);
-        return {section,goal,status,revision:next};
-      });
-    },
     async saveEntry(actor:string,id:string,section:number,goal:number|null,status:string|null,body:string,revision:string|null,noteRevision:string|null) {
       return membershipWrite(db,async client=>{
         const sections=await ownedFocus(client,actor,id);

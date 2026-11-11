@@ -190,15 +190,16 @@ test('progress statuses and notes stay scoped to the confirmed focus and its par
   const f=await fixture();
   try {
     const focus=await f.create(), path=`/api/focuses/${focus.id}/progress`;
-    assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:null,status:'achieved',revision:null})).status,409);
+    assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:null,status:'achieved',revision:null})).status,404);
     assert.equal((await f.confirm(focus.id,focus.version)).status,200);
-    assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:null,status:'achieved',revision:null})).status,200);
-    const goalStatus=await (await f.request(f.member,path,'PUT',{section:0,goal:0,status:'in-progress',revision:null})).json() as {revision:string};
     const entryPath=`/api/focuses/${focus.id}/progress-entry`;
+    assert.equal((await f.request(f.member,entryPath,'PUT',{section:0,goal:null,status:'achieved',body:'',revision:null,noteRevision:null})).status,200);
+    const goalStatus=await (await f.request(f.member,entryPath,'PUT',{section:0,goal:0,status:'in-progress',body:'',revision:null,noteRevision:null})).json() as {status:{revision:string}};
+    const goalRevision=goalStatus.status.revision;
     const objStatus=await (await f.request(f.member,path)).json() as {statuses:{section:number;goal:number|null;status:string|null;revision?:string}[]};
     const obj=objStatus.statuses.find(s=>s.section===0&&s.goal===null)!;
     assert.equal((await f.request(f.member,entryPath,'PUT',{section:0,goal:null,status:obj.status,body:'Objective finding',revision:obj.revision??null,noteRevision:null})).status,200);
-    assert.equal((await f.request(f.member,entryPath,'PUT',{section:0,goal:0,status:'in-progress',body:'Goal finding',revision:goalStatus.revision,noteRevision:null})).status,200);
+    assert.equal((await f.request(f.member,entryPath,'PUT',{section:0,goal:0,status:'in-progress',body:'Goal finding',revision:goalRevision,noteRevision:null})).status,200);
     const own=await (await f.request(f.member,path)).json() as {statuses:{section:number;goal:number|null;status:string}[];notes:{body:string}[]};
     assert.deepEqual(own.statuses.map(({section,goal,status})=>({section,goal,status})),[{section:0,goal:null,status:'achieved'},{section:0,goal:0,status:'in-progress'}]);
     assert.deepEqual(own.notes.map(n=>n.body),['Objective finding','Goal finding']);
@@ -206,9 +207,9 @@ test('progress statuses and notes stay scoped to the confirmed focus and its par
     assert.deepEqual(await (await f.request(f.lead,leadPath)).json(),own);
     for(const actor of [f.peer,f.outsider]) assert.notEqual((await f.request(actor,leadPath)).status,200);
     assert.notEqual((await f.request(f.peer,path)).status,200);
-    for(const payload of [{section:2,goal:null,status:'achieved',revision:null},{section:0,goal:1,status:'achieved',revision:null},{section:0,goal:0,status:'invalid',revision:null},{section:0,goal:0,status:'achieved',userId:f.peer}]) assert.equal((await f.request(f.member,path,'PUT',payload)).status,400);
+    for(const payload of [{section:2,goal:null,status:'achieved',revision:null},{section:0,goal:1,status:'achieved',revision:null},{section:0,goal:0,status:'invalid',revision:null},{section:0,goal:0,status:'achieved',userId:f.peer}]) assert.equal((await f.request(f.member,path,'PUT',payload)).status,404);
     for(const payload of [{section:2,goal:null,body:'bad',status:null,revision:null,noteRevision:null},{section:0,goal:0,body:'x'.repeat(4001),status:null,revision:null,noteRevision:null}]) assert.equal((await f.request(f.member,entryPath,'PUT',payload)).status,400);
-    for(const actor of [f.lead,f.outsider]) for(const payload of [{section:0,goal:null,status:'in-progress',body:'Lead finding',revision:obj.revision??null,noteRevision:null},{section:0,goal:0,status:'in-progress',body:'Lead finding',revision:goalStatus.revision,noteRevision:null}]) assert.equal((await f.request(actor,entryPath,'PUT',payload)).status,404);
+    for(const actor of [f.lead,f.outsider]) for(const payload of [{section:0,goal:null,status:'in-progress',body:'Lead finding',revision:obj.revision??null,noteRevision:null},{section:0,goal:0,status:'in-progress',body:'Lead finding',revision:goalRevision,noteRevision:null}]) assert.equal((await f.request(actor,entryPath,'PUT',payload)).status,404);
     for(const payload of [{section:0,goal:0,status:null,body:'x',revision:null,noteRevision:null,userId:f.peer}]) assert.equal((await f.request(f.member,entryPath,'PUT',payload)).status,400);
     assert.deepEqual(await (await f.request(f.member,path)).json(),own);
     const beforeFail=await (await f.request(f.member,path)).json() as {statuses:{section:number;goal:number|null;status:string|null;revision?:string}[];notes:{section:number;goal:number|null;revision:string}[]};
@@ -230,15 +231,16 @@ test('stale progress status changes do not overwrite a newer update', async () =
  const f=await fixture();
  try {
   const focus=await f.create();assert.equal((await f.confirm(focus.id,focus.version)).status,200);
-  const path=`/api/focuses/${focus.id}/progress`;
-  const first=await f.request(f.member,path,'PUT',{section:0,goal:0,status:'achieved',revision:null});assert.equal(first.status,200);
-  const saved=await first.json() as {revision:string};assert.ok(saved.revision);
-  assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:0,status:'needs-attention',revision:null})).status,409);
-  const second=await f.request(f.member,path,'PUT',{section:0,goal:0,status:'in-progress',revision:saved.revision});assert.equal(second.status,200);
-  assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:0,status:null,revision:saved.revision})).status,409);
-  const newer=await second.json() as {revision:string};
-  assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:0,status:null,revision:newer.revision})).status,200);
-  assert.equal((await f.request(f.member,path,'PUT',{section:0,goal:0,status:'achieved',revision:null})).status,409);
+  const path=`/api/focuses/${focus.id}/progress-entry`;
+  const base={section:0,goal:0,status:'achieved',body:'Stale status note',revision:null,noteRevision:null};
+  const first=await f.request(f.member,path,'PUT',base);assert.equal(first.status,200);
+  const saved=await first.json() as {status:{revision:string};note:{revision:string}};assert.ok(saved.status.revision);assert.ok(saved.note.revision);
+  assert.equal((await f.request(f.member,path,'PUT',{...base,status:'needs-attention'})).status,409);
+  const second=await f.request(f.member,path,'PUT',{...base,status:'in-progress',revision:saved.status.revision,noteRevision:saved.note.revision});assert.equal(second.status,200);
+  assert.equal((await f.request(f.member,path,'PUT',{...base,status:null,revision:saved.status.revision,noteRevision:saved.note.revision})).status,409);
+  const newer=await second.json() as {status:{revision:string};note:{revision:string}};
+  assert.equal((await f.request(f.member,path,'PUT',{...base,status:null,revision:newer.status.revision,noteRevision:newer.note.revision})).status,200);
+  assert.equal((await f.request(f.member,path,'PUT',{...base,status:'achieved'})).status,409);
  } finally {await f.close();}
 });
 
