@@ -1,9 +1,9 @@
 {
-  "edition": 39,
+  "edition": 40,
   "editionDate": "2026-11-12",
-  "deck": "5fb515ebd0e98e57f8f13e8fed3bdf3de889d95031182a6e34564b15080afacc",
+  "deck": "1b448d4326560bc762c91a45db7fdebb098a885ff502c8bb344dab24a8ec8100",
   "sources": {
-    "fingerprint": "b761279db5ccfcf525e7768863448d6dc49f1d35a339fb9ea78021d3c4fd6ada",
+    "fingerprint": "322bf1739e1b47924c7b6930d856a5d3a2fc21573a5d151e10ae7c0c343a3e8a",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -25,7 +25,7 @@
       "client/workspace/FocusHeading.tsx": "f654871b28631093184a3d2e24e1dd3eb0075833a78d3a5f9c843f85214bdac7",
       "client/workspace/FocusObjectives.tsx": "130d549fcaf96c5403c36a3993e0c8670876d6086d3f0bf2997857341a4aba31",
       "client/workspace/FocusProcess.tsx": "f0db6123ec67fc954c2ef58454a1d54317e7a4c1aff21b015751862211abf51e",
-      "client/workspace/FocusProgress.tsx": "5da6784c757e144f745ffef6ab3c1eaee00c09783d7d85507fa3f13927d0a331",
+      "client/workspace/FocusProgress.tsx": "d7d80b7715ff06f7e8f467530a3f16ecbb7c44a0319d4c65d684b3e7affe4b09",
       "client/workspace/FocusWorkspace.tsx": "6f2bfd91e08ff96b4c29cc35d28c698d82df0f0dad1a7c33387a38ddb6d503cd",
       "client/workspace/InitiativeChoices.tsx": "16c6fe9415415978e2bca1abcea22d61e6535e8b2a13b351fddd90aa959a8d82",
       "client/workspace/InitiativeDialog.tsx": "e0e1ee635e4d1b0f9a4131e6deccd428673840542ba75da5896c76dd9326c5c9",
@@ -39,7 +39,7 @@
       "client/workspace/ProceduresGuide.tsx": "82b945777ea39af4ae703c5dec4567a3e99230a4e43e008b098431c1e6d0f16b",
       "client/workspace/Sidebar.tsx": "debc393525a5714e236ad2553a61110890300bf37a125fcfab55eee8433088a2",
       "client/workspace/TeamDirection.tsx": "8e8a413df63e272dc1993dd17a04dcfbef290aa19d2a53718ffce4b216808278",
-      "client/workspace/api.ts": "d2dd55e7f2af3d7c05d3039d67c7083bf4286558e14e1f05c4ea0f1425d4724f",
+      "client/workspace/api.ts": "603f533823af19fdba3e8521980e926b6aae17b3fe19ee39507bb280b98a4113",
       "client/workspace/appearance.ts": "6f4247a8c1623311c9d91bd7ea1fdacbfe7c645f54a252da5da2bd756ba838c9",
       "client/workspace/authoring.css": "7ee38a81dc0c95df0630a4f1218c357a03ecc29052db6fc96921252daff03cc7",
       "client/workspace/dark.css": "dd4e2c93e9f4c809a24a12ed2e2f5a3e541cf8c3ae4b5728ecb511b32661a647",
@@ -110,7 +110,7 @@
       "shared/progress.ts": "40c546a3765427e1cdd0fea8ab1af4234283109916ee3523d1748317ac1730a6",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
       "tools/manual/check.ts": "74a86ee33518d7d5c4ceb22680cbb5ef587340a7d22c235c7e76fd4c42e38f35",
-      "tools/manual/content.ts": "eb6f21d324e4f3d7f58c2e77215a8e14fe0881d5996e9f8699d962a0fa920062",
+      "tools/manual/content.ts": "88d69c792188bc71b6aa9e46b0815484bbf83dcfd5165cc799ccf0038e2ee6cc",
       "tools/manual/freshness.ts": "af50e310bc2661ece832e973cf0a6943fd4925ff77dd8b18f2c2f200349037ba",
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
@@ -162,12 +162,13 @@
     "objective-choice.png": "25dc3f4f23d52ae4e8b884749969b12f4d0ff68a8b0fd679a64d3d6621e613d6",
     "objective-manual-1.png": "2457176db78259341e1a5538da2d816e3a73935c7b437b8d08b21ab343c06d1b",
     "objective-manual-2.png": "d6c53c465406a4967b43ec7b3c648278f28050b7c3408ea83b4f105ccb17edbf",
-    "own-confirm-dialog.png": "d66cd48db0df60c413dd83f05df30e9bd783dcb70c236a284b9c2304bc794ac5",
+    "own-confirm-dialog.png": "92c0ef176a01c5f01016ac7ce858f5115f7cc2fa0842be28743bcc40bb43c5f8",
     "phone-focus-1.png": "10a9b50bf31faed0c60b8cc360532a0362849fb0c29b599286bd27c49178e875",
     "phone-focus-2.png": "4eb7f8ccc6bd1e0bde3e4891e27e36ba6ac8b69b650aee5e8465ed2581f16ec5",
     "phone-objective-1.png": "2300e8342b4fdf3bdbfd8ea8f4f64bbef3624c43f90d702480cca5ba6d366757",
     "phone-objective-2.png": "40e37938b7e399d33ef5ad7dcd9698ada088b02808a7ecb283f027f9232e7c9e",
     "phone-objective-3.png": "a0ed516882714daff05d324d8c88ff12cada929319b1f7e1be31ba5089aea339",
+    "phone-progress.png": "af11a93edc6fa5dc69187028ee2fa269b4fb54c16ded451fac22f199fdeebb33",
     "phone-sidebar-collapsed.png": "e5e04428642570143f39bfe2f436e45e287969664a5c827c81b92dffe9d2ee65",
     "progress-activity-1.png": "b8f504f510b22b6e2df5f56a8094f90fd37aee338e2590df44a96f6630a9782e",
     "progress-activity-2.png": "7eac556f2c7b2ac370be6c89a4167378f88b73ed739169f766d4d04128285cf6",
@@ -188,5 +189,5 @@
       }
     }
   },
-  "pdf": "66e90faa5ca657a55515334db1e4062736a76ed6233420702df998d7460e1836"
+  "pdf": "fa04915c12b98e16787a1cab1f72de1380e4e636594b7f7455af663d4cad4efd"
 }

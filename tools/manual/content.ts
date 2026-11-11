@@ -332,7 +332,7 @@ export const chapters: Chapter[] = [
         tryIt: ["In a review, tick **We have discussed and agreed this focus.**", "Choose **Confirm focus**.", "Open the focus as the member."],
         check: [
           "The member sees Confirmed by the lead, with the date.",
-          "The agreed focus remains read-only; progress can be recorded separately.",
+          "The focus stays read-only. Progress flag: focus-progress; hidden in production until released.",
           "Confirming an older version than the latest request is refused.",
         ],
         shots: [
@@ -355,10 +355,11 @@ export const chapters: Chapter[] = [
         roles: ["Member", "Career lead"],
         summary: "Members track statuses and notes for objectives and goals. Career leads can read them. Flag: focus-progress; hidden in production until released.",
         tryIt: ["Open a confirmed focus and select **Progress & notes**.", "Select **Add note** or **Edit progress** for an item.", "Choose a status, write a note, then save.", "Return to **Focus** to read the agreed wording."],
-        check: ["Each note appears under its own objective or goal.", "The status and note save together; either can be cleared.", "Career leads can read progress but cannot change it."],
+        check: ["Notes stay with their objective or goal.", "Status and note save or clear together.", "Leads read, not edit. Failed edits keep text.", "Phones can page or swipe objectives."],
         shots: [
           {id:"progress-activity",persona:"member",path:confirmed,act:click("Progress & notes"),ready:role("button","Progress & notes"),mode:longPage,caption:"Progress grouped by objective"},
           {id:"progress-edit",persona:"member",path:confirmed,act:click("Progress & notes","Edit progress"),ready:(p)=>p.getByRole("dialog"),mode:{kind:"viewport",...dialog},caption:"Edit status and note together"},
+          {id:"phone-progress",persona:"member",device:"phone",path:confirmed,act:click("Progress & notes"),ready:(p)=>p.getByLabel("Read progress objectives"),caption:"Phone objective navigation"},
         ],
       },
       {
