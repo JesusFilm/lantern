@@ -17,6 +17,8 @@ Automatic promotion requires a successful trusted main push run and its exact SH
 
 Implementation: [CI](../../.github/workflows/ci.yml), [production workflow](../../.github/workflows/promote.yml), [verifier](../../tools/release/verify-promotion.mjs). Use these for exact step order and current configuration.
 
+New behavior can reach production hidden behind a feature flag. Making it visible is a separate step the owner takes in the webapp's Railway variables after the release; see [feature flags](../development/feature-flags.md).
+
 ## Manual release and schema changes
 
 1. Review compatibility with the application still serving: migrations run **before** app replacement. Check expected schema settings in both workflows when adding a migration. Destructive changes may need a compatibility release first and a production backup; for installations still before schema 6, use the [legacy domain-removal procedure](remove-hosted-domain.md). Staging cannot prove a production backfill is safe.
@@ -45,6 +47,35 @@ For staging failure, inspect the failed step and safe checkpoint, distinguish pr
 
 A production smoke failure happens **after deployment**; a migration may already have committed. Inspect before retrying, assess the serving app/schema, and choose compatible fix-forward or manual recovery. There is no automatic rollback or persistent failure stop. To stop further releases, set repository `AUTO_PRODUCTION_ENABLED=false` and separately cancel already admitted/queued production runs. Keep staging acceptance enabled for evidence. Engineers own recovery and their built-in GitHub Actions notification preferences.
 
-For auth/OAuth/admission-policy changes, disable automatic promotion before the merge and cancel pending admissions. Complete real Google sign-in on staging before releasing that SHA. Restore automatic promotion with release authorization; rerun the current-main push CI run if a fresh automatic event is needed (CI has no manual-dispatch trigger). First activation or a changed gate needs the [activation procedure](activating-delivery.md).
+For auth/OAuth/admission-policy changes, disable automatic promotion before the merge and cancel pending admissions. Complete real Jesus Film sign-in on staging before releasing that SHA. Restore automatic promotion with release authorization; rerun the current-main push CI run if a fresh automatic event is needed (CI has no manual-dispatch trigger). First activation or a changed gate needs the [activation procedure](activating-delivery.md).
 
 Schema 9 adds coaching checkpoints and review records. Follow [coaching provider setup and rollout](coaching.md) before enabling inference. The additive database guard prevents an older application instance from confirming an outdated request during replacement. Keep the migration on rollback; disabling model calls does not remove saved review data.
+
+
+## Jesus Film Auth cutover
+
+Hold automatic promotion for this authentication change. Deploy Forge's reviewed
+Lantern first-party registration through its normal main pipeline first. Set
+staging `AUTH_CLIENT_ID=jfp_lantern_staging` without deploying an older revision,
+then release and complete a real approved-user sign-in at
+`/auth/jesusfilm`. Verify denial for unapproved accounts and access isolation.
+
+Before production, privately verify the existing Lantern account ID and exact
+email against trusted Auth records with `emailVerified=true` and a human actor.
+Use the separate administrative connection and the new revision:
+
+```sh
+npm run access:ops -- link-auth USER_UUID RAW_AUTH_SUBJECT VERIFIED_EMAIL
+```
+
+Run the guarded match during the coordinated production cutover, before that
+person's first new-provider sign-in. It retains the account ID and history,
+revokes old sessions, and refuses a conflicting match. Set production
+`AUTH_CLIENT_ID=jfp_lantern_production` and release the verified SHA. No client
+secret or schema change is needed. Remove retired Google client settings after
+the cutover. Verify the matched person retains their original department, role
+and documents; readiness smoke cannot establish this.
+
+Do not roll back the provider without an explicit account-binding recovery plan:
+the matching operation intentionally refuses changing an existing Auth binding.
+See [ADR 0015](../adrs/0015-jesus-film-identity.md).

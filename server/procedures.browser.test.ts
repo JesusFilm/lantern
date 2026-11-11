@@ -95,9 +95,13 @@ test("Guide Procedures distinguishes unavailable revisions from current confirma
     const december = await phone.getByRole('listitem').filter({hasText:'DEC'}).boundingBox();
     assert.ok(january && december && december.x + december.width < january.x, 'year milestone labels must not overlap');
     await phone.setViewportSize({width:901,height:900});
-    const narrowJanuary = await phone.getByRole('listitem').filter({hasText:'JAN'}).boundingBox();
-    const narrowDecember = await phone.getByRole('listitem').filter({hasText:'DEC'}).boundingBox();
-    assert.ok(narrowJanuary && narrowDecember && narrowDecember.x + narrowDecember.width < narrowJanuary.x, 'narrow desktop milestone labels must not overlap');
+    // Read both labels in one browser frame while the sidebar/content column animates.
+    const narrowLabelsDoNotOverlap = await phone.getByRole('listitem').evaluateAll(items => {
+      const january = items.find(item => item.textContent?.includes('JAN'))?.getBoundingClientRect();
+      const december = items.find(item => item.textContent?.includes('DEC'))?.getBoundingClientRect();
+      return !!january && !!december && december.right < january.left;
+    });
+    assert.ok(narrowLabelsDoNotOverlap, 'narrow desktop milestone labels must not overlap');
     await phoneContext.close();
     await leadPage.goto(origin + '/?page=guide');
     await leadPage.getByRole('button',{name:'Procedures',exact:true}).click();

@@ -3,6 +3,9 @@
 Date: 2026-10-21
 Status: Accepted for release policy; optional authentication choices remain proposed
 
+Superseded in part: 2026-11-11 — identity provider replaced by
+[ADR 0015](0015-jesus-film-identity.md); post-login release checks remain current.
+
 ## Decision
 
 Run bounded Playwright acceptance after staging deployment and readiness, alongside

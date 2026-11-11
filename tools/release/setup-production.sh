@@ -361,10 +361,9 @@ if [[ -z "$RESUME_DIR" ]]; then
 PRIVATE_DIR=$(node "$ROOT/tools/release/settings-command.mjs" write)
 say "Private role settings retained at $PRIVATE_DIR (directory 700, files 600). Move this folder to secure owner storage after completion."
 fi
-open_url 'https://console.cloud.google.com/apis/credentials'
-step "Use your Web OAuth client. Add authorized redirect URI $APP_ORIGIN/auth/google/callback."
-ask GOOGLE_CLIENT_ID 'Google client ID:'; required GOOGLE_CLIENT_ID
-ask_secret GOOGLE_CLIENT_SECRET 'Google client secret:'; required GOOGLE_CLIENT_SECRET
+step "Register the exact callback $APP_ORIGIN/auth/jesusfilm/callback in Forge Auth's first-party app registry, using its reviewed PR-to-main deployment."
+step 'Use the public production client jfp_lantern_production after registration is deployed. No client secret is used.'
+ask AUTH_CLIENT_ID 'Jesus Film Auth public client ID:'; required AUTH_CLIENT_ID
 open_url "https://railway.com/project/$RAILWAY_PROJECT?environmentId=$RAILWAY_ENVIRONMENT"
 step 'Create a project token scoped ONLY to production; keep your owner login separate.'
 ask_secret PRODUCTION_TOKEN 'Production-scoped project token:'; required PRODUCTION_TOKEN
@@ -380,12 +379,12 @@ for name in RAILWAY_PROJECT RAILWAY_ENVIRONMENT RAILWAY_SERVICE APP_ORIGIN LANTE
 unset RAILWAY_API_TOKEN
 export RAILWAY_TOKEN="$PRODUCTION_TOKEN"
 unset PRODUCTION_TOKEN
-for name in DATABASE_URL GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET APP_ORIGIN LANTERN_ENV; do railway_variable "$name" "${!name}"; done
+for name in DATABASE_URL AUTH_CLIENT_ID APP_ORIGIN LANTERN_ENV; do railway_variable "$name" "${!name}"; done
 railway_variable NODE_ENV production
 railway_variable LOCAL_ACCESS 0
 railway_variable LANTERN_HOSTING_ONLY 0
 railway_variable HOST 0.0.0.0
-unset DATABASE_URL GOOGLE_CLIENT_SECRET
+unset DATABASE_URL
 step 'In the production webapp Settings: start command node dist/server/index.js; healthcheck /health; timeout 120; restart ON_FAILURE with 3 retries.'
 step 'Use root Dockerfile (builder Dockerfile or Railpack); root directory /; no build override, pre-deploy command, cron, custom Railway config or independent GitHub/image source/deploy trigger.'
 step 'Remove privileged BOOTSTRAP_DATABASE_URL, MIGRATION_DATABASE_URL and ADMIN_DATABASE_URL from webapp variables if present. Do not display their values.'
