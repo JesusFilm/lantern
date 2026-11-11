@@ -11,11 +11,11 @@ export function FocusStatus({section,goal}:{section:number;goal:number|null}) {
  return value?<span className={'progress-pill '+value}>{labels[value]}</span>:null;
 }
 const same=(a:ProgressTarget,b:ProgressTarget)=>a.section===b.section && a.goal===b.goal;
-export function FocusProgress({focus,memberId,children}:{focus:PositionFocus;memberId?:string;children:ReactNode}) {
+export function FocusProgress({focus,memberId,enabled,children}:{focus:PositionFocus;memberId?:string;enabled:boolean;children:ReactNode}) {
  const [tab,setTab]=useState<'focus'|'activity'>('focus'),[data,setData]=useState<ProgressRecord>(),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
  const [editing,setEditing]=useState<ProgressTarget>();
  const path=memberId?`/api/department/members/${encodeURIComponent(memberId)}/focuses/${encodeURIComponent(focus.id)}/progress`:`/api/focuses/${encodeURIComponent(focus.id)}/progress`;
- useEffect(()=>{let active=true;setData(undefined);setError('');void api<ProgressRecord>(path).then(result=>{if(active)setData(result)}).catch((e:Error)=>{if(active)setError(e.message)});return()=>{active=false}},[path,attempt]);
+ useEffect(()=>{if(!enabled)return;let active=true;setData(undefined);setError('');void api<ProgressRecord>(path).then(result=>{if(active)setData(result)}).catch((e:Error)=>{if(active)setError(e.message)});return()=>{active=false}},[path,attempt,enabled]);
  const status=(target:ProgressTarget)=>data?.statuses.find(s=>same(s,target))?.status;
  async function save(form:FormData) {
   if(!editing)return;
@@ -38,6 +38,7 @@ export function FocusProgress({focus,memberId,children}:{focus:PositionFocus;mem
    {hasNote?<div className="progress-note"><span className="muted">{new Date(note!.createdAt).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}</span><p>{note!.body}</p></div>:<p className="muted progress-empty">No notes yet</p>}
   </section>;
  }
+ if(!enabled)return <>{children}</>;
  return <><nav className="progress-tabs" aria-label="Position focus views"><button className={tab==='focus'?'active':''} aria-pressed={tab==='focus'} onClick={()=>setTab('focus')}>Focus</button><button className={tab==='activity'?'active':''} aria-pressed={tab==='activity'} onClick={()=>setTab('activity')}>Progress &amp; notes</button></nav>
   {tab==='focus'?<ProgressContext.Provider value={data}>{children}</ProgressContext.Provider>:error?<p role="alert">{error} <button onClick={()=>setAttempt(x=>x+1)}>Try again</button></p>:!data?<p role="status">Loading progress…</p>:<div className="progress-activity">{!data.notes.some(item=>item.body) && !data.statuses.some(item=>item.status) && <p className="muted">Track progress and add notes to each objective or SMART goal.</p>}{focus.sections.map((section,i)=><section className="read-section progress-panel" aria-label={`Objective ${i+1}`} key={i}><header className="progress-heading"><span className="muted">Objective {i+1}</span><h2>{section.objective}</h2></header>{row(i,null)}{section.goals.map((_,j)=>row(i,j))}</section>)}</div>}
   {editing&&<Dialog title={`Progress · Objective ${editing.section+1}`+(editing.goal===null?'':` · SMART goal ${editing.goal+1}`)} onClose={()=>setEditing(undefined)} onSave={save} saveLabel="Save progress">

@@ -8,13 +8,13 @@ export interface CoachProviderConfig {
 export function resolveCoachConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): CoachProviderConfig | undefined {
-  if (env.COACH_ENABLED && !["0", "1"].includes(env.COACH_ENABLED))
-    throw new Error("Invalid COACH_ENABLED.");
-  if (env.COACH_ENABLED !== "1") return;
+  // The providers count as configured once either credential is set. Who is
+  // offered coaching is decided by the coach feature flag, not here.
+  if (!env.AI_GATEWAY_CHAT_API_KEY?.trim() && !env.OPENROUTER_API_KEY?.trim()) return;
   const key = (name: string) => {
     const value = env[name]?.trim();
     if (!value || /[\r\n]/.test(value))
-      throw new Error(`${name} is required when coaching is enabled.`);
+      throw new Error(`${name} is required when the coach's providers are configured.`);
     return value;
   };
   const url = (name: string) => {

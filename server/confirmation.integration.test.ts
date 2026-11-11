@@ -6,12 +6,13 @@ import {privilegeFixture} from './privilege-test-support.js';
 import {migrate} from './schema.js';
 import {createApp} from './app.js';
 import {hash} from './access.js';
+import {resolveFeatureConfig} from './features.js';
 import type {PositionFocus} from '../shared/focus.js';
 
 const draft = {title:'Agreed annual focus',start:'2026-01-01',end:'2026-12-31',sections:[
   {kind:'normal',objective:'Support onboarding',goals:['Publish a guide by June']},
 ]};
-async function fixture() {
+async function fixture(feature = 'on') {
   const f = await privilegeFixture();
   const server = createServer();
   try {
@@ -28,7 +29,7 @@ async function fixture() {
     await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));
     const address=server.address(); assert.ok(address && typeof address!=='string');
     const origin=`http://127.0.0.1:${address.port}`;
-    server.on('request',createApp(f.runtime,{origin}));
+    server.on('request',createApp(f.runtime,{origin,features:resolveFeatureConfig({LANTERN_FEATURES:`focus-progress=${feature}`,LANTERN_PREVIEW_EMAILS:feature==='preview'?`${member}@example.test`:undefined},'production')}));
     const request=(actor:string,path:string,method='GET',body?:unknown)=>fetch(origin+path,{method,headers:{Cookie:`lantern-session=${actor}`,Origin:origin,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
     const create=async(actor=member,content=draft)=>{
       const response=await request(actor,'/api/focuses','POST',content); assert.equal(response.status,201);
@@ -38,6 +39,27 @@ async function fixture() {
     return {...f,server,origin,request,create,confirm,lead,member,peer,outsider,team,otherTeam,async close(){server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await f.close();}};
   } catch(error) {server.closeAllConnections();server.close();await f.close();throw error;}
 }
+
+test('hidden focus progress denies all progress routes while the confirmed focus remains readable',async()=>{
+  const f=await fixture('off');
+  try {
+    const focus=await f.create();assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    assert.equal((await f.request(f.member,`/api/focuses/${focus.id}`)).status,200);
+    assert.equal((await f.request(f.member,`/api/focuses/${focus.id}/progress`)).status,404);
+    assert.equal((await f.request(f.lead,`/api/department/members/${f.member}/focuses/${focus.id}/progress`)).status,404);
+    assert.equal((await f.request(f.member,`/api/focuses/${focus.id}/progress-entry`,'PUT',{section:0,goal:null,status:'achieved',body:'hello',revision:null,noteRevision:null})).status,404);
+  } finally {await f.close();}
+});
+
+test('progress preview is limited to the server-resolved allowed account',async()=>{
+  const f=await fixture('preview');
+  try {
+    const focus=await f.create();assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    assert.equal((await f.request(f.member,`/api/focuses/${focus.id}/progress`)).status,200);
+    assert.equal((await f.request(f.lead,`/api/department/members/${f.member}/focuses/${focus.id}/progress`)).status,404);
+    assert.equal((await f.request(f.peer,`/api/focuses/${focus.id}/progress`)).status,404);
+  } finally {await f.close();}
+});
 
 test('lead confirms an agreed focus; both views persist the baseline and owner updates are locked',async()=>{
   const f=await fixture();
@@ -165,7 +187,7 @@ test('migration upgrades existing drafts without data loss and confirmed state s
     const confirmed=await (await f.confirm(existing.id,1)).json();
     await migrate(f.migration,f.roles);
     f.server.removeAllListeners('request');
-    f.server.on('request',createApp(f.runtime,{origin:f.origin}));
+    f.server.on('request',createApp(f.runtime,{origin:f.origin,features:resolveFeatureConfig({},'local')}));
     assert.deepEqual(await (await f.request(f.member,`/api/focuses/${existing.id}`)).json(),confirmed);
     assert.equal((await f.request(f.member,`/api/focuses/${existing.id}`,'PUT',{...draft,version:2})).status,409);
   } finally {await f.close();}

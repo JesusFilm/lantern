@@ -1,4 +1,5 @@
 import { lanternEnvironment } from './runtime.js';
+import { linkJesusFilmIdentity } from './auth-link.js';
 import { prepareLocalAccount } from './local-access.js';
 import { assertDatabaseTarget, databaseRoleConfig } from './database-privileges.js';
 import { approveEmail, revokeEmail, approvedEmails } from './admission.js';
@@ -21,10 +22,11 @@ try {
   }
   else if (operation === 'setup' && args.length === 2) await setupDepartment(db, args[0]!, args[1]!);
   else if (operation === 'remove-member' && args.length === 1) await removeMember(db, args[0]!);
+  else if (operation === 'link-auth' && args.length === 3) await linkJesusFilmIdentity(db, args[0]!, args[1]!, args[2]!);
   else if (operation === 'approve-email' && args.length === 1) await approveEmail(db, args[0]!);
   else if (operation === 'remove-approved-email' && args.length === 1) await revokeEmail(db, args[0]!);
   else if (operation === 'list-approved-emails' && !args.length) console.log((await approvedEmails(db)).join('\n'));
-  else throw new Error('Usage: npm run access:ops -- local-account | setup DEPARTMENT REGISTERED_LEAD_EMAIL | remove-member USER_UUID | approve-email EMAIL | remove-approved-email EMAIL | list-approved-emails');
+  else throw new Error('Usage: npm run access:ops -- local-account | setup DEPARTMENT REGISTERED_LEAD_EMAIL | remove-member USER_UUID | link-auth USER_UUID AUTH_SUBJECT VERIFIED_EMAIL | approve-email EMAIL | remove-approved-email EMAIL | list-approved-emails');
   console.log('Operation completed.');
 } catch (error) {
   console.error(error instanceof Error ? error.message : 'Operation failed.');

@@ -39,6 +39,8 @@ test('stage smoke exercises real HTTPS/browser/PostgreSQL and refuses expired QA
   }
   const sha = 'a'.repeat(40);
   const app = createApp(db,{origin,provider:{authorizationUrl:()=>'',exchange:async()=>{throw new Error('Not used');}}},{revision:sha,deployment:'isolated-test-deployment'});
+  let blockAssets = false;
+  app.use((req,res,next)=>{if(blockAssets && req.path.startsWith('/assets/'))return res.sendStatus(404);next();});
   app.use(express.static('dist/client')); server.on('request',app);
   // TLS trust is injected only in this isolated fixture; the deployed CLI always uses normal verification.
   const transport = {
@@ -48,6 +50,9 @@ test('stage smoke exercises real HTTPS/browser/PostgreSQL and refuses expired QA
   const env={EXPECTED_DEPLOYMENT_ID:'isolated-test-deployment',APP_ORIGIN:origin,RELEASE_SHA:sha,RELEASE_TARGET:'stage',GITHUB_RUN_ID:'123',QA_MEMBER_A_SESSION:tokens[0],QA_MEMBER_B_SESSION:tokens[1]};
   const basic = await smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'10',QA_MEMBER_A_SESSION:undefined,QA_MEMBER_B_SESSION:undefined},transport);
   assert.equal(basic.readiness,'passed');
+  blockAssets = true;
+  try { await assert.rejects(smoke({...env,RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'10'},transport),{code:'browser-login-shell'}); }
+  finally { blockAssets = false; }
   const production = await smoke({...env,RELEASE_TARGET:'production',RELEASE_SMOKE_MODE:'readiness',EXPECTED_SCHEMA_VERSION:'10',QA_MEMBER_A_SESSION:undefined,QA_MEMBER_B_SESSION:undefined},transport);
   assert.equal(production.readiness,'passed');
   assert.equal(production.target,'production');

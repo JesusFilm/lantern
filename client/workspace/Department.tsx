@@ -17,9 +17,11 @@ const explanation = (user: RegisteredUser) =>
 
 export function Department({
   session,
+  viewerId,
   accessRevision,
 }: {
   accessRevision: number;
+  viewerId: string;
   session: SessionView & { department: NonNullable<SessionView["department"]> };
 }) {
   const route = () => ({
@@ -105,6 +107,8 @@ export function Department({
       <MemberFocuses
         key={`${selection.member}:${selection.focus}:${accessRevision}`}
         memberId={selection.member}
+        progressEnabled={session.features.includes("focus-progress")}
+        viewerId={viewerId}
         focusId={selection.focus}
         navigate={navigate}
       />

@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import pg from 'pg';
 import { createServer } from 'node:http';
 import { createApp } from './app.js';
-import type { Identity } from './google.js';
+import type { Identity } from './identity.js';
 import { setupDepartment, removeMember } from './membership.js';
 import { migrate } from './schema.js';
 import { approveEmail, revokeEmail, approvedEmails } from './admission.js';
@@ -47,7 +47,7 @@ async function httpFixture(db: pg.Pool, work: (request: (path: string, cookie?: 
   lanternEnvironment(environment);
   let identity: Identity;
   server.on('request', createApp(db, { origin, provider: {
-    authorizationUrl: state => `/auth/google/callback?state=${state}&code=test`,
+    authorizationUrl: state => `/auth/jesusfilm/callback?state=${state}&code=test`,
     exchange: async () => { if (identity.sub === 'provider-failure') throw new Error('secret provider detail'); return identity; },
   } }));
   const request = (path: string, cookie = '', body?: unknown) => fetch(origin + path, {
@@ -57,7 +57,7 @@ async function httpFixture(db: pg.Pool, work: (request: (path: string, cookie?: 
   try {
     await work(request, async (next, extra = '') => {
       identity = next;
-      const start = await request('/auth/google');
+      const start = await request('/auth/jesusfilm');
       const response = await request(start.headers.get('location')! + extra, start.headers.get('set-cookie')!.split(';')[0]);
       const cookie = response.headers.get('set-cookie')?.match(/lantern-session=[^;]+/)?.[0] ?? '';
       return { response, cookie };
@@ -65,7 +65,7 @@ async function httpFixture(db: pg.Pool, work: (request: (path: string, cookie?: 
   } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
 }
 const workIdentity = { sub: 'work-sub', email: 'person@example.test', name: 'Person', hostedDomain: 'example.test' };
-test('Google callback requires exact email approval before registration and rechecks active sessions', async () => {
+test('Jesus Film callback requires exact email approval before registration and rechecks active sessions', async () => {
   await fixture(async db => {
     await httpFixture(db, async (request, login) => {
       const denied = await login(workIdentity, '&role=career-lead&owner=someone&environment=stage');

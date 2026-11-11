@@ -621,3 +621,35 @@ test("legacy checkpoint creation and revision-less stored progress upgrade to fr
     await f.close();
   }
 });
+test("the coach feature decides who is offered coaching and who may reach the model", async () => {
+  const { resolveFeatureConfig } = await import("./features.js");
+  let calls = 0;
+  const coach = { suggest: async () => { calls += 1; throw new Error("The model is not reached in this test."); } } as unknown as import("./coach-provider.js").CoachProvider;
+  const preview = resolveFeatureConfig({ LANTERN_FEATURES: "coach=preview", LANTERN_PREVIEW_EMAILS: "member@example.test" }, "production");
+  const f = await coachingFixture(coach, preview);
+  try {
+    const available = async (role: string) => (await (await f.request(role, "/api/session")).json()).coachAvailable;
+    assert.equal(await available("member"), true);
+    assert.equal(await available("peer"), false);
+    assert.equal(await available("anonymous"), false);
+    // The previewing member passes the gate and reaches input validation; a member outside the preview is refused.
+    assert.equal((await f.request("member", "/api/coach/suggest", "POST", {})).status, 400);
+    const refused = await f.request("peer", "/api/coach/suggest", "POST", {});
+    assert.equal(refused.status, 503);
+    assert.match((await refused.json()).error, /Coaching is unavailable/);
+    assert.equal(calls, 0);
+    // Review, notes and manual saves do not depend on the coach.
+    assert.equal((await f.request("peer", "/api/coach/focuses")).status, 200);
+  } finally {
+    await f.close();
+  }
+  for (const features of [resolveFeatureConfig({ LANTERN_FEATURES: "coach=off" }, "stage"), undefined]) {
+    const hidden = await coachingFixture(coach, features, { defaultFeatures: false });
+    try {
+      assert.equal((await (await hidden.request("member", "/api/session")).json()).coachAvailable, false);
+      assert.equal((await hidden.request("member", "/api/coach/suggest", "POST", {})).status, 503);
+    } finally {
+      await hidden.close();
+    }
+  }
+});

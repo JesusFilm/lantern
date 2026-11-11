@@ -4,6 +4,8 @@ Lantern helps team members prepare a position focus and agree it with their care
 
 ## Product behavior
 
+- The application uses a geometric Lantern mark and labelled navigation icons. With `sidebar-collapse` enabled, members can collapse the desktop sidebar to an icon rail using the control above their profile at the bottom. With the same flag enabled, phones show a top-right three-bar button that opens a sliding menu panel. Selecting a destination, closing the panel, tapping outside it or pressing Escape dismisses it; keyboard focus returns to the menu button. Desktop icons stay anchored while labels fade out before the rail narrows; on expansion the labels fade in after the rail widens. Animations respect reduced-motion preferences. Destinations retain accessible names and hover labels. The choice is stored in the current browser, survives navigation and reload, and defaults to expanded when browser storage is cleared or unavailable. Storage failures do not prevent toggling for the current page. This preference does not change access or account data. The flag is enabled by default in local/stage and hidden by default in production.
+
 - Guide → Example expands Single Example and Engineering Example as nested choices on desktop and phones, using the same submenu selection styling as other guide topics. The reading panel has no duplicate example toggle buttons.
 - Guide includes a Procedures topic using the existing nested topic navigation: The year, Agree a focus, and Make a change. The year is a minimal circular January–December diagram with two six-month focuses, quarterly check-ins and half-year reviews. Agreement and amendment guidance use ordered icon flows with member/career-lead responsibilities. These screens retain a Proposed label: this UI addition does not schedule reviews, unlock confirmed focuses, or implement revision history. The existing writing topics remain available.
 
@@ -60,7 +62,7 @@ to UI work. Native apps and offline operation are outside this decision.
 
 ## Access and data
 
-Hosted access uses Google sign-in and server-issued sessions. Admission requires an exact approved email, with no domain restriction in any environment. Active department membership and server-assigned roles determine access. Members cannot read another member's focuses; career leads can read and confirm focuses within their department, but cannot edit another member's draft.
+Hosted access uses Jesus Film sign-in and server-issued sessions. The server checks the session on application document requests and redirects signed-out visitors before sending the app HTML or loading screen. Authentication uses prompt=login, requesting a fresh login at Auth. The redirect also works with JavaScript disabled. Existing valid Lantern sessions remain signed in. Failed or cancelled authentication shows an explicit retry screen instead of automatically looping; unavailable authentication shows its configuration state. Admission requires an exact approved email, with no domain restriction in any environment. Active department membership and server-assigned roles determine access. Members cannot read another member's focuses; career leads can read and confirm focuses within their department, but cannot edit another member's draft.
 
 See [People and access](../GLOSSARY.md#people-and-access) for the account, approval, membership and career-lead relationships. A manager does not automatically gain access through their job title; application permissions come from active membership and role.
 

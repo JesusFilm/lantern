@@ -6,7 +6,8 @@ import express from "express";
 import { createApp } from "../../server/app.js";
 import { hash } from "../../server/access.js";
 import type { CoachProvider } from "../../server/coach-provider.js";
-import type { IdentityProvider } from "../../server/google.js";
+import { resolveFeatureConfig } from "../../server/features.js";
+import type { IdentityProvider } from "../../server/identity.js";
 import { initiativeDefaults } from "../../server/local-initiatives.js";
 import { privilegeFixture } from "../../server/privilege-test-support.js";
 import { migrate } from "../../server/schema.js";
@@ -57,7 +58,7 @@ function fakeCoach(initiative: () => string): CoachProvider {
 const signInOnly: IdentityProvider = {
   authorizationUrl: () => "/?signInError=1",
   exchange: async () => {
-    throw new Error("The manual never completes Google sign-in.");
+    throw new Error("The manual never completes Jesus Film sign-in.");
   },
 };
 
@@ -96,7 +97,7 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     const address = server.address();
     assert.ok(address && typeof address !== "string");
     const origin = `http://127.0.0.1:${address.port}`;
-    const app = createApp(fixture.runtime, { origin, provider: signInOnly, coach: fakeCoach(() => firstInitiative) });
+    const app = createApp(fixture.runtime, { origin, provider: signInOnly, coach: fakeCoach(() => firstInitiative), features: resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,sidebar-collapse=on,focus-progress=on" }, "production") });
     app.use(express.static(resolve(clientDirectory)));
     server.on("request", app);
 

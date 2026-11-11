@@ -1,3 +1,4 @@
+import {resolveFeatureConfig} from './features.js';
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { chromium, expect } from "@playwright/test";
@@ -29,7 +30,7 @@ test("confirmed focus status badges do not appear on earlier-draft review snapsh
     const address = server.address();
     assert.ok(address && typeof address !== "string");
     const origin = `http://127.0.0.1:${address.port}`;
-    const app = createApp(f.runtime, { origin });
+    const app = createApp(f.runtime, { origin, features: resolveFeatureConfig({}, 'local') });
     vite = await createViteServer({ server: { middlewareMode: { server }, hmr: { server } }, appType: "spa" });
     app.use(vite.middlewares);
     server.on("request", app);

@@ -8,10 +8,14 @@ import { formatFocusDate as date } from "./focusDate.js";
 
 export function MemberFocuses({
   memberId,
+  progressEnabled,
+  viewerId,
   focusId,
   navigate,
 }: {
   memberId: string;
+  progressEnabled: boolean;
+  viewerId: string;
   focusId: string | null;
   navigate: (member?: string, focus?: string) => void;
 }) {
@@ -85,9 +89,10 @@ export function MemberFocuses({
                 key={data.focus.id}
                 focus={data.focus}
                 member={data.member}
+                viewerId={viewerId}
                 onConfirmed={(focus) => setData({ member: data.member, focus })}
               />
-              {data.focus.status === "confirmed" ? <FocusProgress key={data.focus.id} focus={data.focus} memberId={memberId}><FocusDocument focus={data.focus} showPeriod={false} /></FocusProgress> : <FocusDocument focus={data.focus} showPeriod={false} />}
+              {data.focus.status === "confirmed" ? <FocusProgress key={"progress-" + data.focus.id} focus={data.focus} memberId={memberId} enabled={progressEnabled}><FocusDocument focus={data.focus} showPeriod={false} /></FocusProgress> : <FocusDocument focus={data.focus} showPeriod={false} />}
             </>
           ) : (
             <>
