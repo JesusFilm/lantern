@@ -25,6 +25,10 @@ test('separate database roles migrate and administer while runtime is denied DDL
       "INSERT INTO memberships VALUES (gen_random_uuid(),gen_random_uuid(),'career-lead',NULL)",
       "UPDATE memberships SET role='career-lead'", 'DELETE FROM memberships',
       'UPDATE schema_migrations SET version=99',
+      "UPDATE focus_progress_notes SET body='x'", 'DELETE FROM focus_progress_notes',
+      'DELETE FROM focus_progress_statuses',
+      'UPDATE focus_progress_statuses SET focus_id=gen_random_uuid()',
+      'UPDATE focus_progress_statuses SET section_index=0',
     ]) await assert.rejects(runtime.query(sql), { code: '42501' }, sql);
     await assert.rejects(migrate(runtime), { code: '42501' });
     await assert.rejects(admin.query('ALTER TABLE users ADD COLUMN forbidden text'), { code: '42501' });
