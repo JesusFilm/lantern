@@ -9,8 +9,8 @@ const qaDepartmentId = "e2a42cf2-e1ba-4e71-992d-61c080d1e8d0";
  * exact approved email; ambiguous, unapproved and foreign memberships fail closed. */
 export async function resetQaDepartment(db: Pool, options: { participants: string[]; lead?: string }) {
   const names = options.participants.map((name) => name.trim());
-  if (names.length !== 3 || names.some((name) => !name) || new Set(names.map((name) => name.toLowerCase())).size !== 3)
-    throw new Error("Exactly three distinct participant names are required.");
+  if (names.length < 2 || names.some((name) => !name) || new Set(names.map((name) => name.toLowerCase())).size !== names.length)
+    throw new Error("At least two distinct participant names are required.");
   const client = await db.connect();
   try {
     await client.query("BEGIN");
