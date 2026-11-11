@@ -167,4 +167,4 @@ are rejected. This script is manual; it is not run on deployment.
 
 ### Goal coaching
 
-Configure the Qwen primary and OpenRouter fallback using [coaching operations](docs/operations/coaching.md). `COACH_ENABLED=1` requires both dedicated server-side credentials. With inference disabled, manual editing and review requests remain available.
+Configure the Qwen primary and OpenRouter fallback using [coaching operations](docs/operations/coaching.md). Whether members are offered the coach is the `coach` [feature flag](docs/development/feature-flags.md); setting it to `preview` or `on` requires both dedicated server-side credentials. With the coach off, manual editing and review requests remain available.

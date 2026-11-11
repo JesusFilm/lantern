@@ -50,3 +50,11 @@ The repository owner does this in Railway. Each variable change redeploys the we
 ## Remove the flag
 
 Once the feature is on in production and has settled, remove its name from the registry together with every guard and client check, and delete the tests for the hidden state. The leftover entry in `LANTERN_FEATURES` is harmless; remove it when convenient.
+
+## Standing switches
+
+`coach` stays registered. It controls the goal coach, which calls paid external models, so the owner keeps the ability to turn it off or limit it to a preview. It differs from a release flag in three ways:
+
+- It is never removed.
+- Its model endpoint answers 503 with "Coaching is unavailable" when the coach is not offered to the caller, because the client already treats that as "continue manually". Review, notes and manual editing do not depend on it.
+- It also needs its providers. The session's `coachAvailable` is true only when the flag shows the coach to that account and both providers are configured. Setting `coach` to `preview` or `on` without them stops startup and the release configuration check. See [coaching operations](../operations/coaching.md).

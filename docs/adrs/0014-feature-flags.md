@@ -19,6 +19,8 @@ The application checks both variables at startup and refuses to start on an inva
 
 The owner changes production variables; agents have no production access. Once a feature is on for everyone, a follow-up change removes its name and guards. Use the [feature flags guide](../development/feature-flags.md) for the working procedure.
 
+The goal coach is the first registered feature, `coach`, and replaces the separate `COACH_ENABLED` variable. It is a standing switch that is never removed, because it gates paid external model calls. While `COACH_ENABLED` is still set, the release configuration check requires an explicit `coach` setting, so the change of mechanism cannot silently change who is offered coaching.
+
 ## Rationale and alternatives
 
 Main is promoted to production automatically ([ADR 0008](0008-staging-gate-and-production-smoke.md)). Without a way to hide it, new behavior reaches members before the owner has tried it in production. The alternatives were:

@@ -65,17 +65,32 @@ test('standalone configuration check never uploads and fails closed on provider 
 
 test('provider null source is accepted as no independent integration',()=>{const config=structuredClone(settings);config.data.serviceInstance.source=null;const result=run(config,variables,{},'configuration.mjs');assert.equal(result.status,0,result.stderr);});
 
-test('enabled coaching cannot deploy without both providers configured',()=>{
+test('a coach set to preview or on cannot deploy without both providers, and feature settings are checked before upload',()=>{
+ const providers={AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:'https://gateway.example.com'};
  for(const patch of [
-  {COACH_ENABLED:'1'},
-  {COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary'},
-  {COACH_ENABLED:'1',OPENROUTER_API_KEY:'do-not-print-fallback'},
-  {COACH_ENABLED:'sometimes'},
-  {COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback'},
-  {COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:''},
-  {COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:'http://unsafe.example'},
+  {LANTERN_FEATURES:'coach=on'},
+  {LANTERN_FEATURES:'coach=preview',LANTERN_PREVIEW_EMAILS:'owner@example.com',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary'},
+  {LANTERN_FEATURES:'coach=on',OPENROUTER_API_KEY:'do-not-print-fallback'},
+  {LANTERN_FEATURES:'coach=on',...providers,AI_GATEWAY_CHAT_BASE_URL:''},
+  {LANTERN_FEATURES:'coach=on',...providers,AI_GATEWAY_CHAT_BASE_URL:'http://unsafe.example'},
+  {AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary'},
+  {LANTERN_FEATURES:'coach=sometimes',...providers},
+  {LANTERN_FEATURES:'coach',...providers},
+  {LANTERN_FEATURES:'coach=preview',...providers},
  ]) {
+  const result=run(settings,{...variables,...patch});assert.equal(result.status,1,JSON.stringify(Object.keys(patch)));assert.ok(!result.calls.some(c=>c[0]==='up'));assert.doesNotMatch(result.stdout+result.stderr,/do-not-print/);
+ }
+ for(const patch of [{LANTERN_FEATURES:'coach=on',...providers},{LANTERN_FEATURES:' coach=preview , other-feature=off ',LANTERN_PREVIEW_EMAILS:'owner@example.com',...providers},{LANTERN_FEATURES:'coach=off'},providers,{}]) {
+  const result=run(settings,{...variables,...patch});assert.equal(result.status,0,result.stderr);
+ }
+});
+
+test('the retired COACH_ENABLED switch blocks deployment until coach is set in LANTERN_FEATURES',()=>{
+ const providers={AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:'https://gateway.example.com'};
+ for(const patch of [{COACH_ENABLED:'1',...providers},{COACH_ENABLED:'0'},{COACH_ENABLED:'1',...providers,LANTERN_FEATURES:'other-feature=on'}]) {
   const result=run(settings,{...variables,...patch});assert.equal(result.status,1);assert.ok(!result.calls.some(c=>c[0]==='up'));assert.doesNotMatch(result.stdout+result.stderr,/do-not-print/);
  }
- const result=run(settings,{...variables,COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:'https://gateway.example.com'});assert.equal(result.status,0,result.stderr);
+ for(const patch of [{COACH_ENABLED:'1',...providers,LANTERN_FEATURES:'coach=on'},{COACH_ENABLED:'0',LANTERN_FEATURES:'coach=off'}]) {
+  const result=run(settings,{...variables,...patch});assert.equal(result.status,0,result.stderr);
+ }
 });

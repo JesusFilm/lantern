@@ -12,7 +12,7 @@ import { directionRoutes } from './direction-http.js';
 import { guideContent } from './guide-content.js';
 import { AccessError, addMember, membership } from './membership.js';
 import type { RegisteredUser } from '../shared/access.js';
-import { enabledFeatures, resolveFeatureConfig } from './features.js';
+import { enabledFeatures, featureEnabled, resolveFeatureConfig } from './features.js';
 import type { FeatureConfig } from './features.js';
 
 export const hash = (value: string) => createHash('sha256').update(value).digest('hex');
@@ -85,9 +85,9 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
   });
   router.get('/api/session', async (req, res) => {
     const user = await currentUser(req);
-    res.json({ coachAvailable: !!config.coach, features: enabledFeatures(features, user?.email), user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !config.hostingOnly && !!config.provider, localAccess: !!config.localUserId });
+    res.json({ coachAvailable: !!config.coach && featureEnabled(features, 'coach', user?.email), features: enabledFeatures(features, user?.email), user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !config.hostingOnly && !!config.provider, localAccess: !!config.localUserId });
   });
-  router.use(coachRoutes(db, requireUser, config.coach));
+  router.use(coachRoutes(db, requireUser, config.coach, (user) => featureEnabled(features, 'coach', user.email)));
   router.use(focusRoutes(db, requireUser));
   router.use(directionRoutes(db, requireUser));
   router.patch('/api/account', async (req, res) => {

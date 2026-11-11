@@ -14,6 +14,7 @@ import { resolveRuntime } from './runtime.js';
 import { assertSchemaReady } from './schema.js';
 const { coach, features, environment, connectionString, port, host, localAccess, origin, clientId, clientSecret, hosted, hostingOnly } = resolveRuntime();
 if (features.unknown.length) console.warn('LANTERN_FEATURES names features this release does not have: ' + features.unknown.join(', ') + '.');
+if (process.env.COACH_ENABLED !== undefined) console.warn('COACH_ENABLED is no longer read. Set coach in LANTERN_FEATURES instead.');
 const database = createDatabase(connectionString);
 try {
   await assertSchemaReady(database);

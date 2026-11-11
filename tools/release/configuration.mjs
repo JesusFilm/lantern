@@ -42,8 +42,15 @@ export function verifyConfiguration(env){
  for(const [key,value] of Object.entries({LANTERN_ENV:target,NODE_ENV:'production',LOCAL_ACCESS:'0',LANTERN_HOSTING_ONLY:'0',APP_ORIGIN:origin,HOST:'0.0.0.0'}))requireSetting(v[key]===value,key);
  for(const key of ['BOOTSTRAP_DATABASE_URL','MIGRATION_DATABASE_URL','ADMIN_DATABASE_URL'])requireSetting(!(key in v),'privileged database credential present');
  for(const key of ['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET'])requireSetting(typeof v[key]==='string' && v[key].length>0,key);
- requireSetting(v.COACH_ENABLED===undefined || ['0','1'].includes(v.COACH_ENABLED),'COACH_ENABLED');
- if(v.COACH_ENABLED==='1') {
+ // Feature settings are checked here so a bad value stops the release before migrations; the application checks them again at startup.
+ const features=typeof v.LANTERN_FEATURES==='string' && v.LANTERN_FEATURES.trim() ? v.LANTERN_FEATURES.split(',').map(entry=>entry.trim()) : [];
+ requireSetting(features.every(entry=>/^[a-z][a-z0-9-]*=(off|preview|on)$/.test(entry)),'LANTERN_FEATURES');
+ requireSetting(!features.some(entry=>entry.endsWith('=preview')) || (typeof v.LANTERN_PREVIEW_EMAILS==='string' && v.LANTERN_PREVIEW_EMAILS.trim().length>0),'LANTERN_PREVIEW_EMAILS');
+ const coach=features.find(entry=>entry.startsWith('coach='))?.slice('coach='.length);
+ // COACH_ENABLED is retired. While it is still set, require its replacement, so a release cannot silently change who is offered coaching.
+ requireSetting(!('COACH_ENABLED' in v) || coach!==undefined,'COACH_ENABLED is retired; set coach in LANTERN_FEATURES');
+ const providers=['AI_GATEWAY_CHAT_API_KEY','OPENROUTER_API_KEY'].some(key=>typeof v[key]==='string' && v[key].trim().length>0);
+ if(providers || coach==='preview' || coach==='on') {
   for(const key of ['AI_GATEWAY_CHAT_API_KEY','OPENROUTER_API_KEY','AI_GATEWAY_CHAT_BASE_URL'])requireSetting(typeof v[key]==='string' && v[key].trim().length>0 && !/[\r\n]/.test(v[key]),key);
   if(v.AI_GATEWAY_CHAT_BASE_URL){let endpoint;try{endpoint=new URL(v.AI_GATEWAY_CHAT_BASE_URL);}catch{throw new Error('Deployment preflight failed: coaching gateway URL.');}
    requireSetting(endpoint.protocol==='https:'&&!endpoint.username&&!endpoint.password&&!endpoint.search&&!endpoint.hash,'coaching gateway URL');}
