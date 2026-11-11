@@ -1,5 +1,5 @@
 {
-  "edition": 24,
+  "edition": 37,
   "editionDate": "2026-11-11",
   "deck": "8950ff8c4eab649cb9261560fc148340d5c6b5d3d482cd8d66112612d7352ad7",
   "sources": {
@@ -167,11 +167,11 @@
       "image": null,
       "capturedFor": {
         "server/google.ts": "d1cf188a15d20cf5fa866fdab847f83ed4c1769b8dbf24feae8bef678d8e2bb6",
-        "server/access.ts": "fe0738f37afda3887e83e314f477a3d6674bc77149d2fca2dcef0634f3715fd5",
+        "server/access.ts": "ada14b479560adc28564f58402cbfdad5fcf4d6c0590d35f387e4192c2e970f5",
         "server/admission.ts": "66f8ed1c7ec91ac98b6f6ebf66d87912985ee180d354eda36a2b1846f86bf316",
         "server/accounts.ts": "4d11039c013c4d1902285aa2b1581cc53ae450abf1e4e911544d8cfcc7994b30"
       }
     }
   },
-  "pdf": "677e25e6e6533c22e901abf819c5b0a529d6b06e785807c65bfe19e0a2d333f4"
+  "pdf": "75d8221d21cc6817b9628d4ca29c756b15f22745209d28f1a40750d141da7854"
 }
