@@ -39,6 +39,7 @@ jobs:
       - name: Check existing manual release content
         env:
           GH_TOKEN: ${{ github.token }}
+          MANUAL_PUSH_BEFORE: ${{ github.event.before }}
         run: bash tools/manual/release.sh --check
   typecheck:
     name: typecheck
@@ -88,7 +89,7 @@ jobs:
       - run: docker build -t lantern-ci .
   stage:
     name: stage delivery and smoke
-    needs: [typecheck, tests, build]
+    needs: [manual, manual-release-guard, typecheck, tests, build]
     # Enabled only after staging credentials and migration connectivity are verified.
     # This must be a repository variable: environment variables are unavailable here.
     if: vars.STAGE_DELIVERY_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'

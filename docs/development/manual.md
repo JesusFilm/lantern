@@ -143,3 +143,5 @@ To supply or replace a capture, save the PNG named on the slide in [docs/manual/
 
 On every push to main, the [QA manual release workflow](../../.github/workflows/manual.yml) checks that the manual is fresh. It then publishes `manual-<edition>` with the PDF attached, marked as the latest release. CI and the release workflow compare an existing release or tag to the current deck, so a reused edition with different content fails even after a later unrelated push. If an upload or publication fails and leaves a draft, rerunning the workflow verifies its target commit and any existing tag before replacing the draft's PDF and publishing it. The stable "latest" link works only while manual editions are the repository's only releases marked latest.
 
+If publication fails before any draft or tag exists and another push reaches main, the workflow cannot establish which deck first used that edition. It fails closed instead of publishing it; recover by verifying the intended edition and creating its draft or tag at the correct commit, or generate a new edition. A rerun of the original workflow can proceed while its commit is still current main.
+

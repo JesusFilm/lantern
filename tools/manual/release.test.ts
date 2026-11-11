@@ -14,6 +14,7 @@ async function releaseFixture(t: TestContext, draft: boolean | null) {
   await writeFile(join(root, "docs/manual/manifest.json"), JSON.stringify({ edition: 7, editionDate: "2026-11-02", deck: "published-deck" }));
   await writeFile(join(root, "published-manifest.json"), JSON.stringify({ edition: 7, deck: "published-deck" }));
   await writeFile(join(root, "tagged-manifest.json"), JSON.stringify({ edition: 7, deck: "published-deck" }));
+  await writeFile(join(root, "before-manifest.json"), JSON.stringify({ edition: 6, deck: "previous-deck" }));
   await writeFile(join(root, "docs/manual/lantern-manual.pdf"), "fixture PDF");
   await writeFile(join(root, "state.json"), JSON.stringify({ exists: draft !== null, draft, uploaded: draft === false, calls: [] }));
   await writeFile(join(root, "gh"), `#!${process.execPath}
@@ -42,8 +43,9 @@ process.exit(status);
 const fs = require('node:fs');
 const args = process.argv.slice(2);
 if (args[0] === 'fetch') process.exit(0);
+if (args[0] === 'merge-base') process.exit(0);
 if (args[0] === 'ls-remote') { if (fs.existsSync('existing-tag')) console.log('b'.repeat(40) + '\\trefs/tags/manual-7'); process.exit(0); }
-if (args[0] === 'show') { console.log(fs.readFileSync(args[1].startsWith('manual-') && fs.existsSync('existing-tag') ? 'tagged-manifest.json' : 'published-manifest.json', 'utf8')); process.exit(0); }
+if (args[0] === 'show') { console.log(fs.readFileSync(args[1].startsWith('b'.repeat(40)) ? 'before-manifest.json' : args[1].startsWith('manual-') && fs.existsSync('existing-tag') ? 'tagged-manifest.json' : 'published-manifest.json', 'utf8')); process.exit(0); }
 if (args[0] === 'rev-parse') {
   console.log(args[1] === 'HEAD' || !fs.existsSync('main-moved') ? 'a'.repeat(40) : 'b'.repeat(40));
   process.exit(0);
@@ -54,7 +56,7 @@ process.exit(1);
   return {
     root,
     run: (mode = "--publish") => promisify(execFile)("bash", ["-e", "-o", "pipefail", "-c", script, "release.sh", mode], {
-      cwd: root, env: { PATH: root + ":" + process.env.PATH, GITHUB_SHA: "a".repeat(40) },
+      cwd: root, env: { PATH: root + ":" + process.env.PATH, GITHUB_SHA: "a".repeat(40), MANUAL_PUSH_BEFORE: "b".repeat(40) },
     }),
     state: async () => JSON.parse(await readFile(join(root, "state.json"), "utf8")) as { draft: boolean; uploaded: boolean; calls: string[][] },
   };
@@ -141,6 +143,14 @@ test("CI fails closed when the release lookup is unavailable", async (t) => {
   assert.deepEqual((await fixture.state()).calls.map((args) => args[1]), ['view']);
 });
 
+test("an unpublished edition with no tag cannot be silently retried after an unrelated push", async (t) => {
+  const fixture = await releaseFixture(t, null);
+  await writeFile(join(fixture.root, 'before-manifest.json'), JSON.stringify({edition:7,deck:'published-deck'}));
+  await assert.rejects(fixture.run('--check'), /cannot verify.*edition/i);
+  await assert.rejects(fixture.run('--publish'), /cannot verify.*edition/i);
+  assert.deepEqual((await fixture.state()).calls.map((args) => args[1]), ['view','view']);
+});
+
 test("a new release cannot reuse an existing tag for different content", async (t) => {
   const fixture = await releaseFixture(t, null);
   await writeFile(join(fixture.root, 'existing-tag'), '');
@@ -161,4 +171,12 @@ test("every main push can publish a pending manual edition", async () => {
   const trigger = workflow.split("\npermissions:")[0]!;
   assert.match(trigger, /push:\s*\n\s*branches:\s*\[main\]/);
   assert.doesNotMatch(trigger, /\n\s*paths(?:-ignore)?:/, "an unrelated newer main push must still retry publication");
+});
+
+test("staging waits for both manual checks before producing promotion evidence", async () => {
+  const workflow = await readFile(new URL("../../.github/workflows/ci.yml", import.meta.url), "utf8");
+  const stage = workflow.split("\n  stage:")[1]!;
+  const needs = stage.match(/\n\s*needs:\s*\[([^\]]+)\]/)?.[1]?.split(',').map(name => name.trim()) ?? [];
+  assert.ok(needs.includes('manual'));
+  assert.ok(needs.includes('manual-release-guard'));
 });

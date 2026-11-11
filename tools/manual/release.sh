@@ -63,7 +63,25 @@ if [ "$(cat "$lookup_error")" != "release not found" ]; then
 fi
 # A tag can exist even when no release exists for it.
 check_existing_tag
+if [ -z "$remote_tag" ]; then
+  # With no release or tag, an unchanged deck on a later push provides no
+  # evidence that an earlier failed edition transition was valid.
+  before=${MANUAL_PUSH_BEFORE:-}
+  if ! [[ "$before" =~ ^[[:xdigit:]]{40}$ ]] || [[ "$before" =~ ^0{40}$ ]]; then
+    echo "Cannot verify the unpublished manual edition without the revision before this push." >&2
+    exit 1
+  fi
+  git merge-base --is-ancestor "$before" HEAD
+  git show "$before:docs/manual/manifest.json" | node -e '
+    const fs = require("node:fs");
+    const before = JSON.parse(fs.readFileSync(0, "utf8"));
+    const current = require("./docs/manual/manifest.json");
+    if (typeof before.edition !== "number" || typeof before.deck !== "string" || current.edition <= before.edition || current.deck === before.deck) {
+      console.error("Cannot verify the unpublished manual edition after a prior push; recover it or generate a new edition.");
+      process.exit(1);
+    }
+  '
+fi
 if [ "${1:-}" = "--check" ]; then exit 0; fi
 printf 'Lantern QA manual, edition %s (%s), generated from %s.\n\nOpen lantern-manual.pdf below. Screenshots use synthetic data.\n' "$edition" "$date" "$GITHUB_SHA" > notes.md
 gh release create "$tag" docs/manual/lantern-manual.pdf --target "$GITHUB_SHA" --title "QA manual, edition $edition" --notes-file notes.md --latest
-
