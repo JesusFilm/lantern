@@ -90,6 +90,7 @@ Store these in the **webapp service's Variables** for the selected Railway envir
 | `LANTERN_HOSTING_ONLY` | `0`; enables normal authenticated application operation rather than a hosting-only sign-in-disabled shell. |
 | `LANTERN_FEATURES` | Optional. States of flagged features, such as `focus-notes=preview,team-calendar=on`; see [feature flags](docs/development/feature-flags.md). Unset features are off in production and on in stage. |
 | `LANTERN_PREVIEW_EMAILS` | Optional. Comma-separated exact email addresses that see features in `preview`; required while any feature is in preview. |
+| `LANTERN_FLAG_OWNER_EMAIL` | Optional. One exact approved email that can open the read-only `/ops/feature-flags` page with active membership; unset disables the page. An invalid value fails preflight and startup; see [feature flags](docs/development/feature-flags.md#inspect-the-current-state). |
 | `HOST` | `0.0.0.0`; listens on the container network. |
 | `PORT` | Listening port supplied by Railway; local default is `4391`. |
 
