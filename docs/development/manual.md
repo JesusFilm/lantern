@@ -131,7 +131,7 @@ node fonts-probe.mjs; rm fonts-probe.mjs
 
 Expect `NotoSans-Regular`, `LiberationSerif`, `DejaVuSansMono` and `NotoSans-Bold`.
 
-**Acceptance test.** On an unmodified checkout of `main`, `npm run manual` must report `0 screenshot(s) changed of 44` and `The deck is unchanged`. If it rewrites screenshots or fails the slide-fit check, the environment is wrong. Do not commit the output. Fix the fonts first (the probe above shows what Chromium chose) and repeat. When screenshots change after a product change, inspect each changed image and the matching PDF page and confirm the difference is intended before committing. A product source change requires successful generation. A changed deck or a missing or mismatched PDF issues a new edition. The cover does not contain the source fingerprint.
+**Acceptance test.** On an unmodified checkout of `main`, `npm run manual` must report `0 screenshot(s) changed` and `The deck is unchanged`. If it rewrites screenshots or fails the slide-fit check, the environment is wrong. Do not commit the output. Fix the fonts first (the probe above shows what Chromium chose) and repeat. When screenshots change after a product change, inspect each changed image and the matching PDF page and confirm the difference is intended before committing. A product source change requires successful generation. A changed deck or a missing or mismatched PDF issues a new edition. The cover does not contain the source fingerprint.
 
 ## Supplied captures
 
