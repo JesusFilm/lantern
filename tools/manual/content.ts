@@ -20,12 +20,12 @@ const longPage = { kind: "frames", crop: ".workspace", maxFrames: 3 } as const;
 const dialog = { crop: "role=dialog", cropPadding: 0 } as const;
 const confirmed = (ids: { confirmedFocus: string }) => "/?focus=" + ids.confirmedFocus;
 
-const googleSignIn: Supplied = {
-  id: "google-account-chooser",
-  file: "google-account-chooser.png",
-  sources: ["server/google.ts", "server/access.ts", "server/admission.ts", "server/accounts.ts"],
-  caption: "Google account chooser",
-  instructions: "On staging, choose Sign in with Google and capture Google's account chooser in a 1440 × 900 window.",
+const jesusFilmSignIn: Supplied = {
+  id: "jesusfilm-sign-in",
+  file: "jesusfilm-sign-in.png",
+  sources: ["server/jesusfilm.ts", "server/access.ts", "server/admission.ts", "server/accounts.ts"],
+  caption: "Jesus Film Auth sign-in",
+  instructions: "Open staging signed out and capture Jesus Film Auth’s sign-in screen in a 1440 × 900 window.",
 };
 const guided = async (page: Page) => {
   await click("+ Add objective", "Guide with AI")(page);
@@ -58,7 +58,7 @@ export const chapters: Chapter[] = [
       {
         kind: "people",
         title: "The people in the screenshots",
-        lead: "The screenshots follow five fictional people in a local demonstration. QA uses their own Google accounts in the staging QA department.",
+        lead: "The screenshots follow five fictional people in a local demonstration. QA uses their own Jesus Film accounts in the staging QA department.",
         people: [
           { name: "Aroha Ngata", role: "Member · Engineering", text: "Has a confirmed focus for the second half of 2026 and is drafting one for 2027." },
           { name: "Sam Patel", role: "Member · Engineering", text: "Has sent two versions of a focus to the career lead for review." },
@@ -71,23 +71,23 @@ export const chapters: Chapter[] = [
   },
   {
     title: "Signing in and your account",
-    summary: "Lantern uses Google sign-in. An approved account then needs a career lead to add it to a department.",
+    summary: "Lantern uses Jesus Film sign-in. An approved account then needs a career lead to add it to a department.",
     slides: [
       {
         kind: "feature",
-        title: "Sign in with Google",
+        title: "Sign in with Jesus Film",
         roles: ["Signed out"],
-        summary: "Signed-out visitors see only the welcome screen. Only approved Google accounts can sign in.",
-        tryIt: ["Open the staging address in a private window.", "Choose ① **Sign in with Google**.", "Pick your test Google account and allow access."],
+        summary: "Signed-out visitors go straight to Jesus Film Auth with a fresh login prompt. Only approved accounts can sign in.",
+        tryIt: ["Open the staging address in a private window.", "Lantern sends you straight to Jesus Film Auth.", "Sign in to your test Jesus Film account."],
         check: [
           "You return to Lantern signed in, with your name in the sidebar.",
-          "An account that is not approved returns to the welcome screen with “Sign-in could not be completed”.",
-          "Cancelling at Google also returns with that message.",
+          "An account that is not approved returns to the retry screen with “Sign-in could not be completed”.",
+          "Cancelling at Jesus Film Auth also returns with that message.",
           "Reloading keeps you signed in.",
         ],
         shots: [
-          { id: "sign-in", persona: "anonymous", ready: role("link", "Sign in with Google"), highlight: ['role=link[name="Sign in with Google"]'], caption: "Welcome screen" },
-          googleSignIn,
+          { id: "sign-in", persona: "anonymous", path: "/?signInError=1", ready: role("link", "Sign in with Jesus Film"), highlight: ['role=link[name="Sign in with Jesus Film"]'], caption: "Retry after failed or cancelled sign-in" },
+          jesusFilmSignIn,
         ],
       },
       {
@@ -102,6 +102,18 @@ export const chapters: Chapter[] = [
           "No department data is visible before you are added.",
         ],
         shots: [{ id: "account-pending", persona: "newcomer", ready: heading("Your account is ready"), highlight: ['role=button[name="Check access"]'], caption: "Signed in, no department" }],
+      },
+      {
+        kind: "feature",
+        title: "Sidebar navigation",
+        roles: ["Member", "Career lead"],
+        summary: "The Lantern mark and icons identify the main destinations. Navigation flag: sidebar-collapse; hidden in production until released.",
+        tryIt: ["Choose **Collapse sidebar** above your profile at the bottom.", "Use an icon to open Guide or Account; hover for its name.", "Reload, then choose ① **Expand sidebar**."],
+        check: ["Desktop icons stay fixed while labels fade and the rail narrows. Phones use a top-right menu button.", "The choice survives navigation and reload in this browser.", "The phone menu slides in; select a destination or close it with × or Escape.", "Members see only their permitted destinations; career leads also see reviews and Department."],
+        shots: [
+          { id: "sidebar-collapsed", persona: "lead", act: async (p) => { await click("Collapse sidebar")(p); await p.reload(); }, ready: role("button", "Expand sidebar"), highlight: ['role=button[name="Expand sidebar"]'], caption: "Collapsed desktop navigation" },
+          { id: "phone-sidebar-collapsed", persona: "lead", device: "phone", act: click("Open menu"), ready: role("button", "Close menu"), highlight: ['role=button[name="Close menu"]'], caption: "Sliding phone navigation" },
+        ],
       },
       {
         kind: "feature",
@@ -484,10 +496,10 @@ export const chapters: Chapter[] = [
         roles: ["Member", "Career lead"],
         summary: "Strategic initiatives lists the department's active initiatives with their current descriptions. Procedures outlines the yearly rhythm (marked Proposed).",
         tryIt: ["Open **Strategic initiatives** and choose an initiative.", "Open **Procedures** and its three steps."],
-        check: ["Archived initiatives are not listed.", "A missing description shows a clear empty state.", "Procedures screens show the Proposed label."],
+        check: ["Archived initiatives are not listed.", "A missing description shows a clear empty state.", "Procedures screens show the Proposed label.", "Make a change says confirmed focuses cannot be edited or unlocked; revisions are unavailable."],
         shots: [
           { id: "guide-initiatives", persona: "member", path: "/?page=guide", act: click("Strategic initiatives"), ready: role("button", "Strategic initiatives"), caption: "Strategic initiatives" },
-          { id: "guide-procedures", persona: "member", path: "/?page=guide", act: click("Procedures"), ready: role("button", "Procedures"), caption: "Procedures" },
+          { id: "guide-procedures", persona: "member", path: "/?page=guide", act: click("Procedures", "Make a change"), ready: heading("Confirmed focuses stay locked.", 2), caption: "Proposed revisions — not available yet" },
         ],
       },
     ],
@@ -525,7 +537,7 @@ export const chapters: Chapter[] = [
         title: "Checks the automated tests cannot make",
         lead: "Please spend most of your time here. Record each result, with your device and browser, in the QA results sheet.",
         items: [
-          { title: "Real Google sign-in", text: "Approved and unapproved accounts, cancelling at Google, signing in on a second device, signing out." },
+          { title: "Real Jesus Film sign-in", text: "Approved and unapproved accounts, cancelling at Jesus Film Auth, signing in on a second device, signing out." },
           { title: "Joining a department", text: "A brand-new account signs in, the career lead adds it, and Check access opens the workspace." },
           { title: "AI guidance with the real model", text: "Useful suggestions, slow replies, cancelling, and the message when the AI cannot reply." },
           { title: "Real phones", text: "iOS and Android keyboards, date pickers, rotation, browser bars and enlarged text." },

@@ -131,7 +131,7 @@ Expect `NotoSans-Regular`, `LiberationSerif`, `DejaVuSansMono` and `NotoSans-Bol
 
 ## Supplied captures
 
-Screens the synthetic world cannot reach, such as Google's own sign-in pages, are supplied by a person. Each supplied capture lists the source files it depends on. Until it is supplied, the slide shows a placeholder and the check prints a warning.
+Screens the synthetic world cannot reach, such as Jesus Film Auth's sign-in pages, are supplied by a person. Each supplied capture lists the source files it depends on. Until it is supplied, the slide shows a placeholder and the check prints a warning.
 
 To supply or replace a capture, save the PNG named on the slide in [docs/manual/supplied](../manual/supplied/), then run `npm run manual`. When one of its source files changes, the slide marks the capture as possibly outdated and the check warns. Replace the image, or confirm it still matches with `npm run manual -- --confirm=<id>`.
 

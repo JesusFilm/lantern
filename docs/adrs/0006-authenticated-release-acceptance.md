@@ -8,6 +8,9 @@ Superseded: 2026-10-21 — release policy refined by
 engineer recovery and production readiness smoke. The staging fixture and
 exact-revision evidence architecture below remains in force.
 
+Superseded in part: 2026-11-11 — identity provider replaced by
+[ADR 0015](0015-jesus-film-identity.md); post-login release checks remain current.
+
 ## Decision
 
 Keep the existing PostgreSQL, HTTP, browser, migration and packaging tests.

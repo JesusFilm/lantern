@@ -44,7 +44,7 @@ export async function setupDepartment(db: Pool, name: string, leadEmail: string)
     const users = await client.query(`SELECT u.id FROM users u
       JOIN approved_emails e ON e.email=lower(btrim(u.email))
       WHERE lower(btrim(u.email))=lower($1)`, [leadEmail.trim()]);
-    if (users.rowCount !== 1) throw new Error('Career lead must first register with an approved Google account; email must identify one account.');
+    if (users.rowCount !== 1) throw new Error('Career lead must first register with an approved Jesus Film account; email must identify one account.');
     const leadId = users.rows[0].id;
     const departments = await client.query('SELECT id, name, deleted_at FROM departments');
     if (departments.rowCount) {

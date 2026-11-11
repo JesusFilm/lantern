@@ -50,8 +50,9 @@ function AgreementFlow({ amendment, headingRef }: { amendment: boolean; headingR
     { icon: LockKeyhole, title: 'Lock in', who: 'Career lead' },
   ];
   return <section className="procedure-flow-panel">
-    <p className="procedure-timing">{amendment ? 'Any time of year' : 'January & July'}</p>
-    <h2 ref={headingRef} tabIndex={-1}>{amendment ? 'Priorities change. Your focus can too.' : 'Start each half together.'}</h2>
+    <p className="procedure-timing">{amendment ? 'Proposed revision flow · Not available yet' : 'January & July'}</p>
+    <h2 ref={headingRef} tabIndex={-1}>{amendment ? 'Confirmed focuses stay locked.' : 'Start each half together.'}</h2>
+    {amendment && <p>Confirmed focuses can’t be edited or unlocked, even by a career lead.</p>}
     <ol className="procedure-flow" aria-label={amendment ? 'Make a change' : 'Agree a focus'}>
       {stages.map((stage, i) => <li key={stage.title}>
         <span className="procedure-flow-icon"><stage.icon size={28} aria-hidden="true" /></span>
