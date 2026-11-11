@@ -77,6 +77,10 @@ test('a coach set to preview or on cannot deploy without both providers, and fea
   {LANTERN_FEATURES:'coach=sometimes',...providers},
   {LANTERN_FEATURES:'coach',...providers},
   {LANTERN_FEATURES:'coach=preview',...providers},
+  {LANTERN_FEATURES:'coach=off,coach=on',...providers},
+  {LANTERN_FEATURES:'coach=preview,other-feature=off,coach=on',...providers,LANTERN_PREVIEW_EMAILS:'owner@example.com'},
+  {LANTERN_FEATURES:'coach=preview',LANTERN_PREVIEW_EMAILS:'owner',...providers},
+  {LANTERN_FEATURES:'coach=preview',LANTERN_PREVIEW_EMAILS:'owner@example.com,not-an-email',...providers},
  ]) {
   const result=run(settings,{...variables,...patch});assert.equal(result.status,1,JSON.stringify(Object.keys(patch)));assert.ok(!result.calls.some(c=>c[0]==='up'));assert.doesNotMatch(result.stdout+result.stderr,/do-not-print/);
  }

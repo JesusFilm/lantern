@@ -45,7 +45,10 @@ export function verifyConfiguration(env){
  // Feature settings are checked here so a bad value stops the release before migrations; the application checks them again at startup.
  const features=typeof v.LANTERN_FEATURES==='string' && v.LANTERN_FEATURES.trim() ? v.LANTERN_FEATURES.split(',').map(entry=>entry.trim()) : [];
  requireSetting(features.every(entry=>/^[a-z][a-z0-9-]*=(off|preview|on)$/.test(entry)),'LANTERN_FEATURES');
- requireSetting(!features.some(entry=>entry.endsWith('=preview')) || (typeof v.LANTERN_PREVIEW_EMAILS==='string' && v.LANTERN_PREVIEW_EMAILS.trim().length>0),'LANTERN_PREVIEW_EMAILS');
+ requireSetting(new Set(features.map(entry=>entry.split('=')[0])).size===features.length,'LANTERN_FEATURES must not list the same feature more than once');
+ const previewEmails=typeof v.LANTERN_PREVIEW_EMAILS==='string' && v.LANTERN_PREVIEW_EMAILS.trim() ? v.LANTERN_PREVIEW_EMAILS.split(',').map(entry=>entry.trim().toLowerCase()) : [];
+ requireSetting(!previewEmails.length || previewEmails.every(email=>/^[^\s@*]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(email)),'LANTERN_PREVIEW_EMAILS must list exact email addresses');
+ requireSetting(!features.some(entry=>entry.endsWith('=preview')) || previewEmails.length>0,'LANTERN_PREVIEW_EMAILS');
  const coach=features.find(entry=>entry.startsWith('coach='))?.slice('coach='.length);
  // COACH_ENABLED is retired. While it is still set, require its replacement, so a release cannot silently change who is offered coaching.
  requireSetting(!('COACH_ENABLED' in v) || coach!==undefined,'COACH_ENABLED is retired; set coach in LANTERN_FEATURES');
