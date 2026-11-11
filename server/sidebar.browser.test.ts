@@ -78,6 +78,9 @@ test("hidden sidebar collapse keeps labelled navigation expanded despite a saved
     await expect(nav.getByText("Position focuses", { exact: true })).toBeVisible();
     await nav.getByRole("button", { name: "Guide", exact: true }).click();
     await expect(page).toHaveURL(/page=guide/);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByRole("button", { name: "Open menu", exact: true })).toHaveCount(0);
+    await expect(nav.getByRole("button", { name: "Account", exact: true })).toBeVisible();
   } finally {
     await browser.close(); await vite.close(); await f.close();
   }

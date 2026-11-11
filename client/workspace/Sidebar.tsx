@@ -16,17 +16,18 @@ export function Sidebar({ session, activePage, onNavigate }: {
   onNavigate: (page: string) => void;
 }) {
   const phone = usePhoneLayout();
+  const canCollapse = session?.features?.includes("sidebar-collapse") ?? false;
+  const mobileMenu = phone && canCollapse;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = menuRef.current;
     if (!dialog) return;
-    if (phone && menuOpen) dialog.showModal();
+    if (mobileMenu && menuOpen) dialog.showModal();
     else dialog.close();
-  }, [phone, menuOpen]);
-  useEffect(() => { setMenuOpen(false); }, [phone, session?.user?.id]);
+  }, [mobileMenu, menuOpen]);
+  useEffect(() => { setMenuOpen(false); }, [mobileMenu, session?.user?.id]);
   const [preferredCollapsed, setCollapsed] = useState(readCollapsed);
-  const canCollapse = session?.features?.includes("sidebar-collapse") ?? false;
   const collapsed = !phone && canCollapse && preferredCollapsed;
   useEffect(() => {
     const sync = (event: StorageEvent) => {
@@ -58,7 +59,7 @@ export function Sidebar({ session, activePage, onNavigate }: {
         <img src="/lantern.svg" alt="" width="36" height="36" />
         <span className="brand-name">Lantern</span>
       </div>
-      {phone && <button type="button" className="mobile-menu-close" aria-label="Close menu" onClick={() => setMenuOpen(false)}><X size={22} /></button>}
+      {mobileMenu && <button type="button" className="mobile-menu-close" aria-label="Close menu" onClick={() => setMenuOpen(false)}><X size={22} /></button>}
     </div>
     <nav id="main-navigation" aria-label="Main navigation">
       {items.map(({ id, label, icon: Icon }) => <button key={id} type="button" aria-label={label} title={collapsed ? label : undefined} aria-current={activePage === id ? "page" : undefined} className={activePage === id ? "active" : ""} onClick={() => { onNavigate(id); setMenuOpen(false); }}>
@@ -79,7 +80,7 @@ export function Sidebar({ session, activePage, onNavigate }: {
       </>}
     </div>
   </>;
-  if (phone) return <>
+  if (mobileMenu) return <>
     <header className="mobile-header">
       <div className="brand" role="img" aria-label="Lantern"><img src="/lantern.svg" alt="" width="30" height="30" /><span>Lantern</span></div>
       <button type="button" aria-label="Open menu" aria-expanded={menuOpen} aria-controls="mobile-menu" onClick={() => setMenuOpen(true)}><Menu size={24} aria-hidden="true" /></button>

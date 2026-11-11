@@ -1,9 +1,9 @@
 {
-  "edition": 32,
+  "edition": 33,
   "editionDate": "2026-11-11",
-  "deck": "abae57810c95257449b28e23d4c7db61d35ae59bcee54fa004a674831dae72c6",
+  "deck": "d945a337f2e34f20887796df5a1f74efdd71ed975e56279d3eac51bcd79df893",
   "sources": {
-    "fingerprint": "d59d03e1a77154b47176ae7c47546c2554b3035423b2e367c1cde44de0783b31",
+    "fingerprint": "f3f3e6235da7a90d1fbed6979a3102bce3a4bb9b86cfa8fefeba6dfb5e5c8b0d",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -36,7 +36,7 @@
       "client/workspace/ObjectiveEditor.tsx": "87a74981b729b59c0315765acb2a8ca97e0589f67f5cdcfd5e422fad0bcefab1",
       "client/workspace/ObjectiveType.tsx": "bd84d8608f07f41cd22d5a53d9b6b7ce7102e77d410afc1eb2432fc1603bad79",
       "client/workspace/ProceduresGuide.tsx": "bfd6d4bc216f8da998cff3286d071c2b8567f71dc009f2ecf9a6acc08e48d14f",
-      "client/workspace/Sidebar.tsx": "d574d3b1b1a5b2d18e364796f8d723ba46813edcfd35f148bf07e4d9292e198f",
+      "client/workspace/Sidebar.tsx": "debc393525a5714e236ad2553a61110890300bf37a125fcfab55eee8433088a2",
       "client/workspace/TeamDirection.tsx": "8e8a413df63e272dc1993dd17a04dcfbef290aa19d2a53718ffce4b216808278",
       "client/workspace/api.ts": "d2dd55e7f2af3d7c05d3039d67c7083bf4286558e14e1f05c4ea0f1425d4724f",
       "client/workspace/appearance.ts": "6f4247a8c1623311c9d91bd7ea1fdacbfe7c645f54a252da5da2bd756ba838c9",
@@ -46,12 +46,12 @@
       "client/workspace/lessons.ts": "6652885603e591d01752d3b3cbe3c514bfa9d732791f1803677a55df7ad4b6a7",
       "client/workspace/mission-image.ts": "5238cddacef5adcba66eb24dcaff7fb6acac0a1b98340fb058e8d7846848599b",
       "client/workspace/procedures-guide.css": "5e4d43c4c3499dacd7d1de740b239761de0c573183ba43622211f4893e85b848",
-      "client/workspace/sidebar.css": "3ed5baee96f8cbe2490ef839225d94b673144e2a056490e387d77b092bfac5c7",
+      "client/workspace/sidebar.css": "b7ede66a6036a188509299464d9ddf67eb9dd53639599b54e16ab2f5bccb39c2",
       "client/workspace/style.css": "8c99536738a45944d1d970c1cad9a2c8099599c73c78d303ecfeb9f8900fbca1",
       "client/workspace/useDraftFocusWorkflow.ts": "e2da1d2d80c856d6cfc1c41891461dc78cc8b71c1b5e5ccacc1bc0e95129806a",
       "client/workspace/usePhoneLayout.ts": "eda4b107cebeca888fbf15d99ada307b256711ae56c4100e5b184b72467447bf",
       "client/workspace/useSwipeNavigation.ts": "3afbeefed498f713fc7e42e6d8fcc313dba7d8dd20a2f3aca59631d23820d420",
-      "docs/PRD.md": "b85b173d0642f66210961695cdd12cf5b9d19e53fa95d8cae131037d52fd3949",
+      "docs/PRD.md": "a2780f1ed5fa7df9fbfbfc2374145d9a4ef90a22d67783841714d85edf5e48db",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
       "package-lock.json": "059c56461c32b2febbc0ce1f608b1ca02a837c6533063011bb7824bc752b5481",
       "package.json": "1e9b07af6d7d0e9154e972b99a0ec1df4768a6d5e12e3e0f9e66d6f605bc5e60",
@@ -106,7 +106,7 @@
       "shared/mission-image.ts": "578da384bea0ebf3e60fc460387b19933c05e441d651c57603578e6641573ba9",
       "tools/manual/capture.ts": "d9b9672b5873d693c18c675e20d22ee773894dca8a6b76700bd1abaf75bfdf8a",
       "tools/manual/check.ts": "74a86ee33518d7d5c4ceb22680cbb5ef587340a7d22c235c7e76fd4c42e38f35",
-      "tools/manual/content.ts": "f5ca60a425b59864f0cebd9c09cb19efd281a2351dc8c0f6bd8a09aa0fdcab50",
+      "tools/manual/content.ts": "83335c47d243f0e26eba8b2a07767511280279d1ba7129b64ded8d451c30a336",
       "tools/manual/freshness.ts": "af50e310bc2661ece832e973cf0a6943fd4925ff77dd8b18f2c2f200349037ba",
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
@@ -179,5 +179,5 @@
       }
     }
   },
-  "pdf": "9ad43cb6c9a8ed374e45614875edb8da671e92a7b0ef60c49120fbeefe08b9f9"
+  "pdf": "ed58577e8c86f545679a621fc52856ce1cffabdab723c83afc4b62b5f2775f45"
 }

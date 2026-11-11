@@ -107,7 +107,7 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Sidebar navigation",
         roles: ["Member", "Career lead"],
-        summary: "The Lantern mark and icons identify the main destinations. Desktop collapse flag: sidebar-collapse; hidden in production until released.",
+        summary: "The Lantern mark and icons identify the main destinations. Navigation flag: sidebar-collapse; hidden in production until released.",
         tryIt: ["Choose **Collapse sidebar** above your profile at the bottom.", "Use an icon to open Guide or Account; hover for its name.", "Reload, then choose ① **Expand sidebar**."],
         check: ["Desktop icons stay fixed while labels fade and the rail narrows. Phones use a top-right menu button.", "The choice survives navigation and reload in this browser.", "The phone menu slides in; select a destination or close it with × or Escape.", "Members see only their permitted destinations; career leads also see reviews and Department."],
         shots: [

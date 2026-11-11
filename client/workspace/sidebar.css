@@ -107,6 +107,14 @@
 .sidebar nav button, .sidebar-toggle { flex-shrink: 0; }
 .mobile-header { display: none; }
 @media (max-width: 620px), (max-width: 900px) and (max-height: 500px) and (pointer: coarse) {
+  aside.sidebar { position: static; display: block; width: auto; padding: 10px 12px 6px; }
+  aside.sidebar .sidebar-heading { padding-bottom: 6px; }
+  aside.sidebar .brand { font-size: 20px; }
+  aside.sidebar .brand img { width: 30px; height: 30px; }
+  aside.sidebar nav { display: flex; flex-wrap: wrap; gap: 3px; }
+  aside.sidebar nav button { width: auto; min-height: 44px; margin: 0; padding: 8px; gap: 7px; font-size: 12px; }
+  aside.sidebar .aside-foot { display: none; }
+  aside.sidebar + .main { margin-left: 0; transition: none; }
   .mobile-menu + .main { margin-left: 0; transition: none; }
   .mobile-header { margin: 0; flex-wrap: nowrap; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #102d3e; color: #f2faf7; }
   .mobile-header .brand { display: flex; align-items: center; gap: 10px; padding: 0; font-size: 20px; }
