@@ -1,9 +1,9 @@
 {
-  "edition": 38,
+  "edition": 39,
   "editionDate": "2026-11-12",
-  "deck": "2ce72b8971bc8836abf502c8c231e55f245c871498d4024f2fd002d25585d126",
+  "deck": "5fb515ebd0e98e57f8f13e8fed3bdf3de889d95031182a6e34564b15080afacc",
   "sources": {
-    "fingerprint": "4add8ef48ce59cbd7366bd61a2cf42f93b8a4d7c248e9c34d42588e5c4753ff4",
+    "fingerprint": "b761279db5ccfcf525e7768863448d6dc49f1d35a339fb9ea78021d3c4fd6ada",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -54,7 +54,7 @@
       "client/workspace/useSwipeNavigation.ts": "3afbeefed498f713fc7e42e6d8fcc313dba7d8dd20a2f3aca59631d23820d420",
       "docs/PRD.md": "95a015cdd7edc6783f5d3f507d3d1937377db8bbd54bb1ed4990f165b104f1a7",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
-      "package-lock.json": "059c56461c32b2febbc0ce1f608b1ca02a837c6533063011bb7824bc752b5481",
+      "package-lock.json": "e912cf739d19f22eeb3c3b8ba0a5b8dece0dd3f59d6f3640117afd3ebce02736",
       "package.json": "1e9b07af6d7d0e9154e972b99a0ec1df4768a6d5e12e3e0f9e66d6f605bc5e60",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/lantern.svg": "3525f31ec77634d4ed9bd979e916ca5b3639199c23cd25578089cb319b1b2d57",
@@ -135,7 +135,7 @@
     "department-member.png": "1740bf8386425f8b6a3603c5266b9db43da4a0ce95f9197cc6936db6ac730822",
     "department-people.png": "48eaac26ab0a32ae352d6e7e1da78d5a4007f4800df57644b893b63169610433",
     "focus-confirmed-1.png": "0acf4b0e51c690fa1bc70f35d220d6549455ed91054c4058261b13fb847767cc",
-    "focus-confirmed-2.png": "223c5f37c700866fc96d0e410b825a89a62978e8bf699e7e9857685c0c5e132a",
+    "focus-confirmed-2.png": "7fcd30492a92a4e776b4632257e55a7ecca672944000a8099a01f3a735efccc7",
     "focus-draft-1.png": "8f3dec8b47392e6e45d255f1d4b00de11b942249bc8b0e6707734e01995c091c",
     "focus-draft-2.png": "848dc13d1e64b46b861e2144fb5ab12c234b438cdf87cba2f33297e2a2627d7f",
     "focus-list.png": "34cf7d1b159537b0cf144f1e104115cb8312cf4ec91091cb60b31350ccae9769",
@@ -188,5 +188,5 @@
       }
     }
   },
-  "pdf": "a2b2f401cf1d3ac3361fc6259b11aa5230397ebe1f0f9878b9cde8872a09b46d"
+  "pdf": "66e90faa5ca657a55515334db1e4062736a76ed6233420702df998d7460e1836"
 }
