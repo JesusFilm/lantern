@@ -208,6 +208,9 @@ test('progress statuses and notes stay scoped to the confirmed focus and its par
     assert.notEqual((await f.request(f.peer,path)).status,200);
     for(const payload of [{section:2,goal:null,status:'achieved',revision:null},{section:0,goal:1,status:'achieved',revision:null},{section:0,goal:0,status:'invalid',revision:null},{section:0,goal:0,status:'achieved',userId:f.peer}]) assert.equal((await f.request(f.member,path,'PUT',payload)).status,400);
     for(const payload of [{section:2,goal:null,body:'bad',status:null,revision:null,noteRevision:null},{section:0,goal:0,body:'x'.repeat(4001),status:null,revision:null,noteRevision:null}]) assert.equal((await f.request(f.member,entryPath,'PUT',payload)).status,400);
+    for(const actor of [f.lead,f.outsider]) for(const payload of [{section:0,goal:null,status:'in-progress',body:'Lead finding',revision:obj.revision??null,noteRevision:null},{section:0,goal:0,status:'in-progress',body:'Lead finding',revision:goalStatus.revision,noteRevision:null}]) assert.equal((await f.request(actor,entryPath,'PUT',payload)).status,404);
+    for(const payload of [{section:0,goal:0,status:null,body:'x',revision:null,noteRevision:null,userId:f.peer}]) assert.equal((await f.request(f.member,entryPath,'PUT',payload)).status,400);
+    assert.deepEqual(await (await f.request(f.member,path)).json(),own);
     const beforeFail=await (await f.request(f.member,path)).json() as {statuses:{section:number;goal:number|null;status:string|null;revision?:string}[];notes:{section:number;goal:number|null;revision:string}[]};
     const failStatus=beforeFail.statuses.find(s=>s.section===0&&s.goal===0)!;
     const failNote=beforeFail.notes.find(n=>n.section===0&&n.goal===0);
