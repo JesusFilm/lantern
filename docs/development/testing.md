@@ -68,7 +68,7 @@ The [fixture lifecycle](../../tools/release/acceptance-fixture.mjs) holds a data
 
 ## Readiness and coverage limits
 
-Both deployed environments use [readiness smoke](../../tools/release/smoke.mjs): health/database readiness; matching SHA, deployment ID and schema; anonymous `/api/focuses`, `/api/department` and `/api/guide` return 401; the Jesus Film sign-in control renders without page JavaScript errors; final health still matches. **Production runs only these readiness checks**, with no synthetic business data or authenticated journey.
+Both deployed environments use [readiness smoke](../../tools/release/smoke.mjs): health/database readiness; matching SHA, deployment ID and schema; anonymous `/api/focuses`, `/api/department` and `/api/guide` return 401; the signed-out browser automatically reaches Lantern’s Jesus Film authentication handoff without page JavaScript errors (intercepted before the external provider); final health still matches. **Production runs only these readiness checks**, with no synthetic business data or authenticated journey.
 
 Acceptance evidence records `coaching: enabled` or `disabled`; a flag-off run does not establish live inference. Enabled runs make at most six model turns (each may use fallback), use only synthetic work and check workflow/response contracts rather than exact wording or model quality. The runner does not deliberately disrupt the hosted primary; forced failover and restoration remain a separate activation check.
 

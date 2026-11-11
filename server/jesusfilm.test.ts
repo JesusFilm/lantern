@@ -41,6 +41,7 @@ test("Jesus Film OIDC uses PKCE and verifies signed identity, issuer, audience, 
     assert.equal(url.pathname, "/api/auth/oauth2/authorize");
     assert.equal(url.searchParams.get("redirect_uri"), "https://lantern.example.test/auth/jesusfilm/callback");
     assert.equal(url.searchParams.get("scope"), "openid profile:read email:read");
+    assert.equal(url.searchParams.get("prompt"), "login");
     assert.equal(url.searchParams.get("state"), "state");
     assert.equal(url.searchParams.get("nonce"), "fixture-nonce");
     assert.equal(url.searchParams.get("code_challenge_method"), "S256");

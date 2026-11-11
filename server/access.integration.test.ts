@@ -135,19 +135,9 @@ test('OIDC boundary, persistent access, assignment restrictions and browser jour
       const { expect } = await import('@playwright/test');
       nextIdentity = 'browser-member';
       await memberPage.goto(origin);
-      const signIn = memberPage.getByRole('link', { name: 'Sign in with Jesus Film' });
-      await expect(signIn).toHaveCSS('text-decoration-line', 'none');
-      await expect(signIn).toHaveCSS('height', '44px');
+      // Signed-out entry starts authentication without a welcome-button click.
+      await expect(memberPage).toHaveURL(origin + '/?signInError=1');
       const navigation = memberPage.getByRole('navigation', { name: 'Main navigation' });
-      await expect(navigation.getByRole('button')).toHaveText(['Account']);
-      await expect(navigation.getByRole('button', { name: 'Account', exact: true })).toHaveAttribute('aria-current', 'page');
-      await memberPage.goto(origin + '/?page=guide');
-      await expect(signIn).toBeVisible();
-      await expect(navigation.getByRole('button')).toHaveText(['Account']);
-      await memberPage.goto(origin);
-      await signIn.focus();
-      await expect(signIn).toBeFocused();
-      await memberPage.getByRole('link', { name: 'Sign in with Jesus Film' }).click();
       await expect(memberPage).toHaveURL(origin + '/?signInError=1');
       await expect(memberPage.getByRole('alert')).toHaveText('Sign-in could not be completed. Try again or contact your career lead.');
       await expect(memberPage.getByRole('link', { name: 'Sign in with Jesus Film' })).toBeVisible();
@@ -157,7 +147,6 @@ test('OIDC boundary, persistent access, assignment restrictions and browser jour
       await expect(memberPage.getByText('Contact your career lead directly', { exact: false })).toBeVisible();
       nextIdentity = 'lead';
       await leadPage.goto(origin);
-      await leadPage.getByRole('link', { name: 'Sign in with Jesus Film' }).click();
       await leadPage.getByRole('button', { name: 'Department', exact: true }).click();
       await expect(leadPage.getByRole('heading', { name: 'Department' })).toBeVisible();
       await leadPage.getByRole('button', { name: 'Add user', exact: true }).click();
@@ -180,6 +169,7 @@ test('OIDC boundary, persistent access, assignment restrictions and browser jour
       await expect(memberPage.getByRole('button', { name: 'Add user' })).toHaveCount(0);
       await memberPage.reload();
       await expect(memberPage.getByRole('button', { name: 'Department', exact: true })).toHaveCount(0);
+      nextIdentity = 'browser-member';
       await revokeEmail(admin, 'browser-member@gmail.com');
       assert.equal((await memberContext.request.get(origin + '/api/department')).status(), 401);
       await memberPage.evaluate("window.dispatchEvent(new Event('focus'))");
@@ -193,6 +183,7 @@ test('OIDC boundary, persistent access, assignment restrictions and browser jour
       await memberPage.reload();
       await expect(memberPage.getByRole('heading', { name: 'Your account is ready' })).toBeVisible();
       await memberPage.getByRole('button', { name: 'Account', exact: true }).click();
+      nextIdentity = 'invalid';
       await memberPage.getByRole('button', { name: 'Sign out' }).click();
       await expect(memberPage.getByRole('link', { name: 'Sign in with Jesus Film' })).toBeVisible();
       await expect(navigation.getByRole('button')).toHaveText(['Account']);

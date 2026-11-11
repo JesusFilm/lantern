@@ -48,6 +48,12 @@ function App() {
     try {
       const next = await api<SessionView>("/api/session");
       if (version !== refreshVersion.current) return;
+      if (!next.user && next.signInAvailable && !new URLSearchParams(location.search).has("signInError")) {
+        setSession(undefined);
+        setError("");
+        location.replace("/auth/jesusfilm");
+        return;
+      }
       setSession(next);
       setAccessRevision(version);
       setError("");

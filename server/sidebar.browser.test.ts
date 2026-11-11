@@ -27,9 +27,15 @@ test("sidebar collapse survives reload and navigation, expands again, and stays 
     const userBox = (await sidebar.getByText("lead", { exact: true }).boundingBox())!;
     assert.ok(toggleBox.y > navBox.y + navBox.height && toggleBox.y + toggleBox.height <= userBox.y, "sidebar toggle sits below navigation and above the user profile");
     const expanded = await sidebar.boundingBox();
+    const icon = page.getByRole("navigation", { name: "Main navigation" }).getByRole("button", { name: "Guide", exact: true }).locator("svg");
+    const iconBefore = (await icon.boundingBox())!;
     await page.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
     await expect(page.getByRole("button", { name: "Expand sidebar", exact: true })).toHaveAttribute("aria-expanded", "false");
     await expect.poll(async () => (await sidebar.boundingBox())!.width).toBeLessThan(expanded!.width);
+    await expect.poll(async () => (await sidebar.boundingBox())!.width).toBe(76);
+    const iconCollapsed = (await icon.boundingBox())!;
+    assert.equal(iconCollapsed.x, iconBefore.x, "navigation icon stays anchored while collapsing");
+    assert.equal(iconCollapsed.y, iconBefore.y);
     await page.reload();
     await expect(page.getByRole("button", { name: "Expand sidebar", exact: true })).toBeVisible();
     await page.getByRole("navigation", { name: "Main navigation" }).getByRole("button", { name: "Guide", exact: true }).click();
@@ -93,7 +99,10 @@ test("sidebar remains usable without storage and across narrow phone and landsca
     const errors: string[] = [];
     page.on("pageerror", error => errors.push(error.message));
     await page.goto(f.origin);
-    await page.getByRole("button", { name: "Collapse sidebar", exact: true }).click();
+    const menu = page.getByRole("button", { name: "Open menu", exact: true });
+    await expect(menu).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Main navigation" })).not.toBeVisible();
+    await menu.click();
     const nav = page.getByRole("navigation", { name: "Main navigation" });
     for (const viewport of [{ width: 320, height: 640 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
       await page.setViewportSize(viewport);
@@ -107,8 +116,14 @@ test("sidebar remains usable without storage and across narrow phone and landsca
     }
     await nav.getByRole("button", { name: "Account", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Account", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Expand sidebar", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Menu", exact: true })).not.toBeVisible();
+    await page.getByRole("button", { name: "Open menu", exact: true }).click();
     await expect(nav.getByText("Account", { exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeFocused();
+    await menu.click();
+    await page.getByRole("button", { name: "Close menu", exact: true }).click();
+    await expect(menu).toBeFocused();
     assert.deepEqual(errors, []);
   } finally {
     await browser.close(); await vite.close(); await f.close();
