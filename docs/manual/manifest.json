@@ -1,9 +1,9 @@
 {
-  "edition": 38,
+  "edition": 39,
   "editionDate": "2026-11-12",
   "deck": "e505990fc15100b4a0f3ee2fd9cb46f16a018f162b783f4d0f099ea9134d4679",
   "sources": {
-    "fingerprint": "6163f2d12f93df2ea3a289f7046b9e5d3f1eb8c1ee3d8405f9a841893b715758",
+    "fingerprint": "86c01ba2a668f501bac7d58697baf55c04572df0a31eb612e49e82a0d687a9ce",
     "files": {
       ".env.example": "e7ae073637769c75bd3221996f7209e06606e4e2f33a5e68a5af82ff2b1c9a56",
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
@@ -55,7 +55,7 @@
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
       "docs/PRD.md": "00468a7dc8a838dbbb4dd53d10d2e6a590c76c6a9a5d57fd469b86d1837c6267",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
-      "package-lock.json": "8c775c1c35a9efd713db8bd700aa97c71d27f2ec855c9f596ffc715df2039b71",
+      "package-lock.json": "88109f831f683b81a1a556d551f7078185d702b3c700ae0ca70db19240aaa0c6",
       "package.json": "e11c29b41f49f4f6f3624f9e6cd3a0da9a7a664dad54f934ed6066ced4a5b181",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/lantern.svg": "3525f31ec77634d4ed9bd979e916ca5b3639199c23cd25578089cb319b1b2d57",
@@ -187,9 +187,9 @@
       }
     }
   },
-  "pdf": "7a2cc6bce1f76c7fafeb740dbff827dc18794119e9f027c3c165e6f3fe593da8",
+  "pdf": "d1a81775862f0eb49cfe2cc7032782073be4b7dd325d378fcb6cdbad6557b361",
   "verification": {
-    "generatedAt": "2026-11-11T19:51:06.270Z",
+    "generatedAt": "2026-11-11T20:03:42.676Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "e7ae073637769c75bd3221996f7209e06606e4e2f33a5e68a5af82ff2b1c9a56",
@@ -242,7 +242,7 @@
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
       "docs/PRD.md": "00468a7dc8a838dbbb4dd53d10d2e6a590c76c6a9a5d57fd469b86d1837c6267",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
-      "package-lock.json": "059c56461c32b2febbc0ce1f608b1ca02a837c6533063011bb7824bc752b5481",
+      "package-lock.json": "e912cf739d19f22eeb3c3b8ba0a5b8dece0dd3f59d6f3640117afd3ebce02736",
       "package.json": "1e9b07af6d7d0e9154e972b99a0ec1df4768a6d5e12e3e0f9e66d6f605bc5e60",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/lantern.svg": "3525f31ec77634d4ed9bd979e916ca5b3639199c23cd25578089cb319b1b2d57",
