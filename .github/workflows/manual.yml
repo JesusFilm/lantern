@@ -36,25 +36,44 @@ jobs:
           edition=$(node -p "require('./docs/manual/manifest.json').edition")
           date=$(node -p "require('./docs/manual/manifest.json').editionDate")
           tag="manual-$edition"
+          check_edition() {
+            git show "$1:docs/manual/manifest.json" | node -e '
+              const fs = require("node:fs");
+              const published = JSON.parse(fs.readFileSync(0, "utf8"));
+              const current = require("./docs/manual/manifest.json");
+              if (published.edition !== current.edition || typeof published.deck !== "string" || published.deck !== current.deck) {
+                console.error("The existing manual edition has different content; generate a new edition.");
+                process.exit(1);
+              }
+            '
+          }
           if draft=$(gh release view "$tag" --json isDraft --jq '.isDraft'); then
             if [ "$draft" = "true" ]; then
-              # gh create uploads through a draft. A failed upload/publish can
-              # leave that draft behind; resume it instead of reporting success.
+              # Drafts may not yet have a Git tag; gh create recorded the
+              # exact target commit and we require that immutable identity.
+              ref=$(gh release view "$tag" --json targetCommitish --jq '.targetCommitish')
+              if ! [[ "$ref" =~ ^[[:xdigit:]]{40}$ ]]; then
+                echo "Cannot verify the draft manual edition's target commit." >&2
+                exit 1
+              fi
+            else
+              git fetch origin "refs/tags/$tag:refs/tags/$tag"
+              ref="$tag"
+            fi
+            # A later unrelated push must not hide invalid edition reuse.
+            check_edition "$ref"
+            if [ "$draft" = "true" ]; then
+              # A draft can also name a pre-existing tag, whose commit takes
+              # precedence over targetCommitish when GitHub publishes it.
+              remote_tag=$(git ls-remote --tags --refs origin "refs/tags/$tag")
+              if [ -n "$remote_tag" ]; then
+                git fetch origin "refs/tags/$tag:refs/tags/$tag"
+                check_edition "$tag"
+              fi
+              # Resume an incomplete upload only after validating its target.
               gh release upload "$tag" docs/manual/lantern-manual.pdf --clobber
               gh release edit "$tag" --draft=false --latest
             else
-              # Do not let a later unrelated push hide an earlier invalid
-              # edition reuse. Compare with the immutable published tag.
-              git fetch origin "refs/tags/$tag:refs/tags/$tag"
-              git show "$tag:docs/manual/manifest.json" | node -e '
-                const fs = require("node:fs");
-                const published = JSON.parse(fs.readFileSync(0, "utf8"));
-                const current = require("./docs/manual/manifest.json");
-                if (published.edition !== current.edition || typeof published.deck !== "string" || published.deck !== current.deck) {
-                  console.error("The published manual edition has different content; generate a new edition.");
-                  process.exit(1);
-                }
-              '
               echo "$tag is already published."
             fi
             exit 0

@@ -280,6 +280,22 @@ export async function checkManual(layout: ManualLayout, base: (() => EditionLine
       if (typeof prior.edition !== "number" || typeof prior.deck !== "string") throw new Error("invalid push base");
       editionBase_ = {edition:prior.edition, deck:prior.deck};
     } catch { errors.push("Cannot compare the manual edition with the revision before this push."); }
+    // The immediately preceding push may itself have reused an edition and
+    // failed CI. Recheck the last deck transition on main so an unrelated
+    // follow-up push cannot turn the invalid edition green.
+    try {
+      const git = (...args: string[]) => execFileSync("git", args, {cwd:layout.root, encoding:"utf8", stdio:["ignore", "pipe", "ignore"]}).trim();
+      const history = git("log", "--first-parent", "--format=%H", "--", "docs/manual/manifest.json").split("\n").filter(Boolean);
+      if (!history.length) throw new Error("missing manual history");
+      for (const revision of history) {
+        const previous = JSON.parse(git("show", `${revision}:docs/manual/manifest.json`));
+        if (typeof previous.edition !== "number" || typeof previous.deck !== "string") throw new Error("invalid manual history");
+        if (previous.deck !== manifest.deck) {
+          if (manifest.edition <= previous.edition) errors.push(`The manual's deck changed but the edition did not move forward from ${previous.edition}. Start from main's docs/manual, then ${regenerate}`);
+          break;
+        }
+      }
+    } catch { errors.push("Cannot verify the manual edition against its main history."); }
   }
   if (!editionBase_ && options.requireBase) {
     errors.push("Cannot compare the manual edition with main; fetch main and its history.");

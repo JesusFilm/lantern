@@ -219,6 +219,8 @@ test("edition comparison reads current main and the real common ancestor", async
   await writeFile(join(root, "README.md"), "later unrelated commit"); git("add", "."); git("commit", "-m", "unrelated");
   git("update-ref", "refs/remotes/origin/main", "HEAD");
   assert.match((await checkManual(layout, undefined, {requireBase:true, push:true, pushBase:beforePush})).errors.join("\n"), /edition did not move forward from 7/);
+  const beforeUnrelatedPush = git("rev-parse", "HEAD^");
+  assert.match((await checkManual(layout, undefined, {requireBase:true, push:true, pushBase:beforeUnrelatedPush})).errors.join("\n"), /edition did not move forward from 7/);
   await writeFile(join(root, "docs/manual/manifest.json"), "malformed");
   git("add", "."); git("commit", "-m", "broken remote"); git("update-ref", "refs/remotes/origin/main", "HEAD"); git("checkout", "old-branch");
   assert.equal(editionBase(root, {requireRemote:true}), undefined);
@@ -229,6 +231,18 @@ test('a required edition comparison fails clearly when main is unavailable', asy
   await recordManifest(layout, {edition:1, editionDate:'2026-11-10', deck:'deck'});
   const result = await checkManual(layout, () => undefined, {requireBase:true});
   assert.match(result.errors.join('\n'), /cannot compare.*main/i);
+});
+
+test('a later push cannot hide edition reuse introduced by a merge commit', async (t) => {
+  const {root, layout} = await project(t);
+  const git = (...args:string[]) => execFileSync('git', ['-c','user.name=Manual Test','-c','user.email=manual@example.test',...args], {cwd:root,stdio:'pipe'}).toString().trim();
+  await recordManifest(layout, {edition:7, editionDate:'2026-11-10', deck:'old-deck'});
+  git('init','-b','main');git('add','.');git('commit','-m','base');git('checkout','-b','feature');
+  await recordManifest(layout, {edition:7, editionDate:'2026-11-10', deck:'new-deck'});
+  git('add','.');git('commit','-m','invalid edition');git('checkout','main');git('merge','--no-ff','feature','-m','merge feature');
+  const before = git('rev-parse','HEAD');
+  await writeFile(join(root,'README.md'),'an unrelated later change');git('add','.');git('commit','-m','unrelated');git('update-ref','refs/remotes/origin/main','HEAD');
+  assert.match((await checkManual(layout, undefined, {requireBase:true,push:true,pushBase:before})).errors.join('\n'), /edition did not move forward from 7/);
 });
 
 test("CI requires the edition comparison for common true values", () => {

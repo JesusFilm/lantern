@@ -13,6 +13,7 @@ async function releaseFixture(t: TestContext, draft: boolean | null) {
   await mkdir(join(root, "docs/manual"), { recursive: true });
   await writeFile(join(root, "docs/manual/manifest.json"), JSON.stringify({ edition: 7, editionDate: "2026-11-02", deck: "published-deck" }));
   await writeFile(join(root, "published-manifest.json"), JSON.stringify({ edition: 7, deck: "published-deck" }));
+  await writeFile(join(root, "tagged-manifest.json"), JSON.stringify({ edition: 7, deck: "published-deck" }));
   await writeFile(join(root, "docs/manual/lantern-manual.pdf"), "fixture PDF");
   await writeFile(join(root, "state.json"), JSON.stringify({ exists: draft !== null, draft, uploaded: draft === false, calls: [] }));
   await writeFile(join(root, "gh"), `#!${process.execPath}
@@ -23,7 +24,7 @@ state.calls.push(args);
 let status = 0;
 if (args[1] === 'view') {
   if (!state.exists) status = 1;
-  else console.log(args.includes('--json') ? String(state.draft) : 'QA manual, edition 7');
+  else console.log(args.includes('targetCommitish') ? 'a'.repeat(40) : args.includes('--json') ? String(state.draft) : 'QA manual, edition 7');
 } else if (args[1] === 'create') {
   state.exists = true; state.draft = false; state.uploaded = true;
 } else if (args[1] === 'upload') {
@@ -40,7 +41,8 @@ process.exit(status);
 const fs = require('node:fs');
 const args = process.argv.slice(2);
 if (args[0] === 'fetch') process.exit(0);
-if (args[0] === 'show') { console.log(fs.readFileSync('published-manifest.json', 'utf8')); process.exit(0); }
+if (args[0] === 'ls-remote') { if (fs.existsSync('existing-tag')) console.log('b'.repeat(40) + '\\trefs/tags/manual-7'); process.exit(0); }
+if (args[0] === 'show') { console.log(fs.readFileSync(args[1].startsWith('manual-') && fs.existsSync('existing-tag') ? 'tagged-manifest.json' : 'published-manifest.json', 'utf8')); process.exit(0); }
 if (args[0] === 'rev-parse') {
   console.log(args[1] === 'HEAD' || !fs.existsSync('main-moved') ? 'a'.repeat(40) : 'b'.repeat(40));
   process.exit(0);
@@ -64,9 +66,25 @@ test("release rerun resumes an unpublished draft and uploads the PDF before publ
   const state = await fixture.state();
   assert.equal(state.draft, false, "a successful rerun must make the manual available to QA");
   assert.equal(state.uploaded, true);
-  assert.deepEqual(state.calls.map((args) => args[1]), ["view", "upload", "edit"]);
-  assert.ok(state.calls[1]!.includes("--clobber"));
-  assert.ok(state.calls[2]!.includes("--latest"));
+  assert.deepEqual(state.calls.map((args) => args[1]), ["view", "view", "upload", "edit"]);
+  assert.ok(state.calls[2]!.includes("--clobber"));
+  assert.ok(state.calls[3]!.includes("--latest"));
+});
+
+test("a draft cannot publish a different deck after an unrelated push", async (t) => {
+  const fixture = await releaseFixture(t, true);
+  await writeFile(join(fixture.root, "docs/manual/manifest.json"), JSON.stringify({edition: 7, editionDate: "2026-11-02", deck: "changed-deck"}));
+  await assert.rejects(fixture.run(), /edition.*different content/i);
+  assert.equal((await fixture.state()).draft, true);
+  assert.deepEqual((await fixture.state()).calls.map((args) => args[1]), ["view", "view"]);
+});
+
+test("a draft cannot publish a deck that differs from its already existing tag", async (t) => {
+  const fixture = await releaseFixture(t, true);
+  await writeFile(join(fixture.root, 'existing-tag'), '');
+  await writeFile(join(fixture.root, 'tagged-manifest.json'), JSON.stringify({edition:7,deck:'older-tag-deck'}));
+  await assert.rejects(fixture.run(), /edition.*different content/i);
+  assert.equal((await fixture.state()).draft, true);
 });
 
 test("a failed draft upload fails the run and can be retried", async (t) => {
@@ -88,15 +106,15 @@ test("an already published edition is left unchanged", async (t) => {
 test("a reused published edition remains blocked after an unrelated push", async (t) => {
   const fixture = await releaseFixture(t, false);
   await writeFile(join(fixture.root, "docs/manual/manifest.json"), JSON.stringify({edition: 7, editionDate: "2026-11-02", deck: "changed-deck"}));
-  await assert.rejects(fixture.run(), /published.*edition|edition.*published/i);
-  await assert.rejects(fixture.run(), /published.*edition|edition.*published/i);
+  await assert.rejects(fixture.run(), /edition.*different content/i);
+  await assert.rejects(fixture.run(), /edition.*different content/i);
   assert.deepEqual((await fixture.state()).calls.map((args) => args[1]), ["view", "view"]);
 });
 
 test("a published edition without a verifiable tagged manifest fails closed", async (t) => {
   const fixture = await releaseFixture(t, false);
   await writeFile(join(fixture.root, "published-manifest.json"), JSON.stringify({edition: 7}));
-  await assert.rejects(fixture.run(), /published.*edition|edition.*published/i);
+  await assert.rejects(fixture.run(), /edition.*different content/i);
 });
 
 test("a new edition is created with its PDF", async (t) => {
