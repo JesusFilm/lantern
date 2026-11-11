@@ -41,7 +41,7 @@ export function verifyConfiguration(env){
  const v=command(['variables','--json','--project',project,'--environment',environment,'--service',service]);
  for(const [key,value] of Object.entries({LANTERN_ENV:target,NODE_ENV:'production',LOCAL_ACCESS:'0',LANTERN_HOSTING_ONLY:'0',APP_ORIGIN:origin,HOST:'0.0.0.0'}))requireSetting(v[key]===value,key);
  for(const key of ['BOOTSTRAP_DATABASE_URL','MIGRATION_DATABASE_URL','ADMIN_DATABASE_URL'])requireSetting(!(key in v),'privileged database credential present');
- for(const key of ['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET'])requireSetting(typeof v[key]==='string' && v[key].length>0,key);
+ requireSetting(typeof v.AUTH_CLIENT_ID==='string' && v.AUTH_CLIENT_ID.length>0 && v.AUTH_CLIENT_ID.length<=200 && !/\s/.test(v.AUTH_CLIENT_ID),'AUTH_CLIENT_ID');
  // Feature settings are checked here so a bad value stops the release before migrations; the application checks them again at startup.
  const features=typeof v.LANTERN_FEATURES==='string' && v.LANTERN_FEATURES.trim() ? v.LANTERN_FEATURES.split(',').map(entry=>entry.trim()) : [];
  requireSetting(features.every(entry=>/^[a-z][a-z0-9-]*=(off|preview|on)$/.test(entry)),'LANTERN_FEATURES');
