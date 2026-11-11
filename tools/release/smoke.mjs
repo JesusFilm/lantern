@@ -42,12 +42,22 @@ try {
  const page = await browser.newPage();
  const errors = []; page.on('pageerror', () => errors.push('browser error'));
  checkpoint = 'browser-navigation';
- await page.goto(origin);
- checkpoint = 'browser-login-control';
- await page.getByRole('button', { name: /sign in with google/i }).or(page.getByRole('link', { name: /sign in with google/i })).waitFor();
+ // Stop at Lantern's authentication boundary; readiness does not log into the external provider.
+ await page.route(origin+'/auth/jesusfilm', route => route.fulfill({status:200,contentType:'text/html',body:'<p>Authentication handoff</p>'}));
+ checkpoint = 'document-auth-redirect';
+ const entry = await fetch(origin+'/', {redirect:'manual',signal:AbortSignal.timeout(5000)});
+ assert.equal(entry.status,302);
+ assert.equal(entry.headers.get('location'),'/auth/jesusfilm');
+ checkpoint = 'browser-navigation';
+ await page.goto(origin+'/auth/jesusfilm');
+ checkpoint = 'browser-auth-handoff';
+ await page.waitForURL(origin+'/auth/jesusfilm');
+ checkpoint = 'browser-login-shell';
+ await page.goto(origin+'/?signInError=1');
+ await page.getByRole('link',{name:'Sign in with Jesus Film',exact:true}).waitFor({timeout:10000});
  checkpoint = 'browser-js-errors';
  assert.equal(errors.length, 0, 'Login shell failed.');
- // Stage cookies come from normal, manually completed Google login. Never mint sessions or bypass authentication.
+ // Stage cookies come from normal, manually completed Jesus Film login. Never mint sessions or bypass authentication.
  if (env.RELEASE_TARGET === 'stage' && mode === 'authenticated') {
   checkpoint = 'authenticated-stage';
   const cookies = [env.QA_MEMBER_A_SESSION, env.QA_MEMBER_B_SESSION];

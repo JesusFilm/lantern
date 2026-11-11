@@ -6,7 +6,7 @@ import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 const project='11111111-1111-4111-8111-111111111111',environment='22222222-2222-4222-8222-222222222222',service='33333333-3333-4333-8333-333333333333';
 const settings={data:{environment:{id:environment,projectId:project,name:'staging',deploymentTriggers:{edges:[],pageInfo:{hasNextPage:false}}},serviceInstance:{environmentId:environment,serviceId:service,builder:'RAILPACK',dockerfilePath:null,buildCommand:null,startCommand:'node dist/server/index.js',preDeployCommand:[],healthcheckPath:'/health',healthcheckTimeout:120,restartPolicyType:'ON_FAILURE',restartPolicyMaxRetries:3,rootDirectory:null,cronSchedule:null,railwayConfigFile:null,source:{repo:null,image:null}}}};
-const variables={LANTERN_ENV:'stage',NODE_ENV:'production',LOCAL_ACCESS:'0',LANTERN_HOSTING_ONLY:'0',DATABASE_URL:'postgresql://lantern_stage_runtime:do-not-print-secret@postgres.railway.internal:5432/railway',GOOGLE_CLIENT_ID:'do-not-print-client',GOOGLE_CLIENT_SECRET:'do-not-print-secret',APP_ORIGIN:'https://stage.example.com',HOST:'0.0.0.0'};
+const variables={LANTERN_ENV:'stage',NODE_ENV:'production',LOCAL_ACCESS:'0',LANTERN_HOSTING_ONLY:'0',DATABASE_URL:'postgresql://lantern_stage_runtime:do-not-print-secret@postgres.railway.internal:5432/railway',AUTH_CLIENT_ID:'jfp_lantern_staging',APP_ORIGIN:'https://stage.example.com',HOST:'0.0.0.0'};
 function run(config=settings,vars=variables,extraEnv={},script='deploy.mjs'){
  const dir=mkdtempSync(join(tmpdir(),'lantern-deploy-test-'));
  try{
@@ -45,7 +45,7 @@ test('deployment rejects drift, ambiguous targets and privileged runtime configu
   c=>{delete c.data.serviceInstance.source;},
  ];
  for(const change of cases){const config=structuredClone(settings);change(config);const result=run(config);assert.equal(result.status,1,change.toString());assert.ok(!result.calls.some(c=>c[0]==='up'));assert.doesNotMatch(result.stdout+result.stderr,/do-not-print/);}
- for(const patch of [{LANTERN_ENV:'production'},{LOCAL_ACCESS:'1'},{LANTERN_HOSTING_ONLY:'1'},{NODE_ENV:'development'},{APP_ORIGIN:'https://wrong.example.com'},{DATABASE_URL:'postgresql://postgres:do-not-print-secret@postgres.railway.internal/railway'},{MIGRATION_DATABASE_URL:'do-not-print-secret'},{ADMIN_DATABASE_URL:'do-not-print-secret'},{BOOTSTRAP_DATABASE_URL:'do-not-print-secret'},{GOOGLE_CLIENT_SECRET:null}]){
+ for(const patch of [{LANTERN_ENV:'production'},{LOCAL_ACCESS:'1'},{LANTERN_HOSTING_ONLY:'1'},{NODE_ENV:'development'},{APP_ORIGIN:'https://wrong.example.com'},{DATABASE_URL:'postgresql://postgres:do-not-print-secret@postgres.railway.internal/railway'},{MIGRATION_DATABASE_URL:'do-not-print-secret'},{ADMIN_DATABASE_URL:'do-not-print-secret'},{BOOTSTRAP_DATABASE_URL:'do-not-print-secret'},{AUTH_CLIENT_ID:null}]){
   const result=run(settings,{...variables,...patch});assert.equal(result.status,1);assert.ok(!result.calls.some(c=>c[0]==='up'));assert.doesNotMatch(result.stdout+result.stderr,/do-not-print/);
  }
  for(const patch of [{RAILWAY_PROJECT:''},{RELEASE_TARGET:'unknown'},{RAILWAY_API_TOKEN:'do-not-print-secret'}]){const result=run(settings,variables,patch);assert.equal(result.status,1);assert.ok(!result.calls.some(c=>c[0]==='up'));}
@@ -65,17 +65,36 @@ test('standalone configuration check never uploads and fails closed on provider 
 
 test('provider null source is accepted as no independent integration',()=>{const config=structuredClone(settings);config.data.serviceInstance.source=null;const result=run(config,variables,{},'configuration.mjs');assert.equal(result.status,0,result.stderr);});
 
-test('enabled coaching cannot deploy without both providers configured',()=>{
+test('a coach set to preview or on cannot deploy without both providers, and feature settings are checked before upload',()=>{
+ const providers={AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:'https://gateway.example.com'};
  for(const patch of [
-  {COACH_ENABLED:'1'},
-  {COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary'},
-  {COACH_ENABLED:'1',OPENROUTER_API_KEY:'do-not-print-fallback'},
-  {COACH_ENABLED:'sometimes'},
-  {COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback'},
-  {COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:''},
-  {COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:'http://unsafe.example'},
+  {LANTERN_FEATURES:'coach=on'},
+  {LANTERN_FEATURES:'coach=preview',LANTERN_PREVIEW_EMAILS:'owner@example.com',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary'},
+  {LANTERN_FEATURES:'coach=on',OPENROUTER_API_KEY:'do-not-print-fallback'},
+  {LANTERN_FEATURES:'coach=on',...providers,AI_GATEWAY_CHAT_BASE_URL:''},
+  {LANTERN_FEATURES:'coach=on',...providers,AI_GATEWAY_CHAT_BASE_URL:'http://unsafe.example'},
+  {AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary'},
+  {LANTERN_FEATURES:'coach=sometimes',...providers},
+  {LANTERN_FEATURES:'coach',...providers},
+  {LANTERN_FEATURES:'coach=preview',...providers},
+  {LANTERN_FEATURES:'coach=off,coach=on',...providers},
+  {LANTERN_FEATURES:'coach=preview,other-feature=off,coach=on',...providers,LANTERN_PREVIEW_EMAILS:'owner@example.com'},
+  {LANTERN_FEATURES:'coach=preview',LANTERN_PREVIEW_EMAILS:'owner',...providers},
+  {LANTERN_FEATURES:'coach=preview',LANTERN_PREVIEW_EMAILS:'owner@example.com,not-an-email',...providers},
  ]) {
+  const result=run(settings,{...variables,...patch});assert.equal(result.status,1,JSON.stringify(Object.keys(patch)));assert.ok(!result.calls.some(c=>c[0]==='up'));assert.doesNotMatch(result.stdout+result.stderr,/do-not-print/);
+ }
+ for(const patch of [{LANTERN_FEATURES:'coach=on',...providers},{LANTERN_FEATURES:' coach=preview , other-feature=off ',LANTERN_PREVIEW_EMAILS:'owner@example.com',...providers},{LANTERN_FEATURES:'coach=off'},providers,{}]) {
+  const result=run(settings,{...variables,...patch});assert.equal(result.status,0,result.stderr);
+ }
+});
+
+test('the retired COACH_ENABLED switch blocks deployment until coach is set in LANTERN_FEATURES',()=>{
+ const providers={AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:'https://gateway.example.com'};
+ for(const patch of [{COACH_ENABLED:'1',...providers},{COACH_ENABLED:'0'},{COACH_ENABLED:'1',...providers,LANTERN_FEATURES:'other-feature=on'}]) {
   const result=run(settings,{...variables,...patch});assert.equal(result.status,1);assert.ok(!result.calls.some(c=>c[0]==='up'));assert.doesNotMatch(result.stdout+result.stderr,/do-not-print/);
  }
- const result=run(settings,{...variables,COACH_ENABLED:'1',AI_GATEWAY_CHAT_API_KEY:'do-not-print-primary',OPENROUTER_API_KEY:'do-not-print-fallback',AI_GATEWAY_CHAT_BASE_URL:'https://gateway.example.com'});assert.equal(result.status,0,result.stderr);
+ for(const patch of [{COACH_ENABLED:'1',...providers,LANTERN_FEATURES:'coach=on'},{COACH_ENABLED:'0',LANTERN_FEATURES:'coach=off'}]) {
+  const result=run(settings,{...variables,...patch});assert.equal(result.status,0,result.stderr);
+ }
 });

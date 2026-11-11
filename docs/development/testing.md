@@ -33,18 +33,19 @@ Use TDD and a focused test while changing behavior; run typecheck, build and the
 
 | Area | Behavior checked; source entry points |
 | --- | --- |
-| Identity and access | Signed Google-token claims using a mocked exchange, approval/enrollment, membership, session expiry/revocation and browser account switching. `server/google.test.ts`, `server/access.integration.test.ts`, `server/session.browser.test.ts` |
+| Identity and access | Signed OIDC ID-token claims through local token/JWKS HTTP fixtures, approval/enrollment, membership, session expiry/revocation and browser account switching. `server/jesusfilm.test.ts`, `server/access.integration.test.ts`, `server/session.browser.test.ts` |
+| Feature flags | Setting validation, environment defaults, and that a session lists a flagged feature only for accounts allowed to see it. `server/features.test.ts`, `server/features.integration.test.ts` |
 | Product workflows | Position-focus drafts, objectives/goals, direction and artwork, career-lead views, confirmation/locking, guide, reload persistence and asynchronous editing races. `server/*integration.test.ts`, `server/*browser.test.ts` |
 | Data and permissions | Real PostgreSQL persistence, stale/forged writes, cross-member/department denial, separated runtime/migration/admin roles, migrations, bootstrap and recovery failure paths. `server/database-*.test.ts`, `server/migration.integration.test.ts` |
 | Delivery safeguards | Configuration/target checks, migration failures, evidence identity/freshness, manual override, cleanup/interruption recovery and safe diagnostics. `tools/release/*.test.mjs` |
 | Supporting tools | Local ticket-board behavior. `tools/ticket-board/tickets.test.ts` |
 | QA manual tooling | Screenshot capture (scroll frames, fixed bars, crops, settling, failures), slide image layout and manual freshness. `tools/manual/*.test.ts` |
 
-Local browser tests largely use Vite/HTTP. Release integration tests additionally exercise built assets, HTTPS smoke and restricted database roles locally. These do not establish hosted networking/configuration or real Google interaction.
+Local browser tests largely use Vite/HTTP. Release integration tests additionally exercise built assets, HTTPS smoke and restricted database roles locally. These do not establish hosted networking/configuration or real Jesus Film interaction.
 
 ## Deployed staging journey
 
-The main CI stage job validates configuration, applies migrations and deploys the selected revision, then verifies readiness (below). With acceptance enabled, a private runner seeds four synthetic accounts: member, peer, career lead and an outsider in another department. It supplies ordinary 15-minute sessions, then uses the deployed browser and HTTP interfaces. This starts **after Google identity verification**; there is no public test-login endpoint.
+The main CI stage job validates configuration, applies migrations and deploys the selected revision, then verifies readiness (below). With acceptance enabled, a private runner seeds four synthetic accounts: member, peer, career lead and an outsider in another department. It supplies ordinary 15-minute sessions, then uses the deployed browser and HTTP interfaces. This starts **after Jesus Film identity verification**; there is no public test-login endpoint.
 
 The [browser runner](../../tools/release/acceptance-browser.mjs) records these twelve checkpoints in order:
 
@@ -67,11 +68,11 @@ The [fixture lifecycle](../../tools/release/acceptance-fixture.mjs) holds a data
 
 ## Readiness and coverage limits
 
-Both deployed environments use [readiness smoke](../../tools/release/smoke.mjs): health/database readiness; matching SHA, deployment ID and schema; anonymous `/api/focuses`, `/api/department` and `/api/guide` return 401; the Google sign-in control renders without page JavaScript errors; final health still matches. **Production runs only these readiness checks**, with no synthetic business data or authenticated journey.
+Both deployed environments use [readiness smoke](../../tools/release/smoke.mjs): health/database readiness; matching SHA, deployment ID and schema; anonymous `/api/focuses`, `/api/department` and `/api/guide` return 401; the document HTTP request redirects to authentication before any app HTML; the browser reaches Lantern’s authentication handoff (intercepted before the external provider), then renders the retry shell and checks for JavaScript errors; final health still matches. **Production runs only these readiness checks**, with no synthetic business data or authenticated journey.
 
 Acceptance evidence records `coaching: enabled` or `disabled`; a flag-off run does not establish live inference. Enabled runs make at most six model turns (each may use fallback), use only synthetic work and check workflow/response contracts rather than exact wording or model quality. The runner does not deliberately disrupt the hosted primary; forced failover and restoration remain a separate activation check.
 
-Staging acceptance does not cover real Google login, enrollment, every initiative lifecycle, production backfills/data conditions, load/stress behavior or every regression. Local tests cover some of those functional gaps, but do not prove them on the hosted deployment. Complete a real Google sign-in during initial rollout and after auth/OAuth/admission-policy changes; use the [release procedure](../operations/releasing.md) to hold automatic promotion for that check. Schema changes require compatibility review and manual release. Production is rebuilt from the selected source, not promoted as an identical container image.
+Staging acceptance does not cover real Jesus Film login, enrollment, every initiative lifecycle, production backfills/data conditions, load/stress behavior or every regression. Local tests cover some of those functional gaps, but do not prove them on the hosted deployment. Complete a real Jesus Film sign-in during initial rollout and after auth/OAuth/admission-policy changes; use the [release procedure](../operations/releasing.md) to hold automatic promotion for that check. Schema changes require compatibility review and manual release. Production is rebuilt from the selected source, not promoted as an identical container image.
 
 When changing a checkpoint or coverage boundary, update this guide alongside its runner/tests. Keep test counts in run results, not as a coverage claim here.
 

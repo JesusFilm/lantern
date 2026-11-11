@@ -1,7 +1,7 @@
 import { checkManual } from "./freshness.js";
 import { supplied } from "./content.js";
 
-const { errors, warnings } = await checkManual({ root: process.cwd(), supplied });
+const { errors, warnings } = await checkManual({ root: process.cwd(), supplied }, undefined, { requireBase: process.env.CI === "true" });
 for (const warning of warnings) console.warn("warning: " + warning);
 for (const error of errors) console.error("error: " + error);
 if (errors.length) process.exitCode = 1;

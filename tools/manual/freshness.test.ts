@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { checkManual, recordManifest, readManifest, productSources, type ManualLayout } from "./freshness.js";
+import { checkManual, recordManifest, readManifest, productSources, editionBase, type ManualLayout } from "./freshness.js";
 
 async function project(t: import("node:test").TestContext) {
   const root = await mkdtemp(join(tmpdir(), "manual-freshness-"));
@@ -179,4 +180,41 @@ test("a changed deck must not reuse an edition main has already published", asyn
   const result = await checkManual(layout, base);
   assert.match(result.errors.join("\n"), /edition did not move forward from 7/);
   assert.match(result.errors.join("\n"), /npm run manual/);
+});
+
+test('an updated deck cannot publish an edition older than the current main edition', async (t) => {
+  const {layout} = await project(t);
+  await recordManifest(layout, {edition: 6, editionDate: '2026-11-10', deck: 'new-branch-deck'});
+  const base = () => ({edition: 7, deck: 'current-main-deck', ancestor: {edition: 5, deck: 'old-branch-deck'}});
+  assert.match((await checkManual(layout, base)).errors.join('\n'), /edition did not move forward from 7/);
+});
+
+test('an untouched manual on an older branch is not mistaken for a new edition', async (t) => {
+  const {layout} = await project(t);
+  await recordManifest(layout, {edition: 5, editionDate: '2026-11-10', deck: 'old-branch-deck'});
+  const base = () => ({edition: 7, deck: 'current-main-deck', ancestor: {edition: 5, deck: 'old-branch-deck'}});
+  assert.deepEqual((await checkManual(layout, base)).errors, []);
+});
+
+test("edition comparison reads current main and the real common ancestor", async (t) => {
+  const {root, layout} = await project(t);
+  const git = (...args:string[]) => execFileSync("git", ["-c", "user.name=Manual Test", "-c", "user.email=manual@example.test", ...args], {cwd:root, stdio:"pipe"}).toString().trim();
+  await recordManifest(layout, {edition:5, editionDate:"2026-11-10", deck:"old-branch-deck"});
+  git("init", "-b", "main"); git("add", "."); git("commit", "-m", "base"); git("branch", "old-branch");
+  await recordManifest(layout, {edition:7, editionDate:"2026-11-11", deck:"current-main-deck"});
+  git("add", "."); git("commit", "-m", "new manual"); git("update-ref", "refs/remotes/origin/main", "HEAD"); git("checkout", "old-branch");
+  assert.deepEqual(editionBase(root), {edition:7, deck:"current-main-deck", ancestor:{edition:5, deck:"old-branch-deck"}});
+  assert.deepEqual((await checkManual(layout)).errors, []);
+  await recordManifest(layout, {edition:6, editionDate:"2026-11-11", deck:"new-branch-deck"});
+  assert.match((await checkManual(layout)).errors.join("\n"), /edition did not move forward from 7/);
+  git("add", "."); git("commit", "-m", "old branch manual"); git("checkout", "main");
+  assert.deepEqual(editionBase(root), {edition:5, deck:"old-branch-deck"});
+  assert.deepEqual((await checkManual(layout, undefined, {requireBase:true})).errors, []);
+});
+
+test('a required edition comparison fails clearly when main is unavailable', async (t) => {
+  const {layout} = await project(t);
+  await recordManifest(layout, {edition:1, editionDate:'2026-11-10', deck:'deck'});
+  const result = await checkManual(layout, () => undefined, {requireBase:true});
+  assert.match(result.errors.join('\n'), /cannot compare.*main/i);
 });

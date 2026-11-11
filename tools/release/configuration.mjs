@@ -41,9 +41,19 @@ export function verifyConfiguration(env){
  const v=command(['variables','--json','--project',project,'--environment',environment,'--service',service]);
  for(const [key,value] of Object.entries({LANTERN_ENV:target,NODE_ENV:'production',LOCAL_ACCESS:'0',LANTERN_HOSTING_ONLY:'0',APP_ORIGIN:origin,HOST:'0.0.0.0'}))requireSetting(v[key]===value,key);
  for(const key of ['BOOTSTRAP_DATABASE_URL','MIGRATION_DATABASE_URL','ADMIN_DATABASE_URL'])requireSetting(!(key in v),'privileged database credential present');
- for(const key of ['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET'])requireSetting(typeof v[key]==='string' && v[key].length>0,key);
- requireSetting(v.COACH_ENABLED===undefined || ['0','1'].includes(v.COACH_ENABLED),'COACH_ENABLED');
- if(v.COACH_ENABLED==='1') {
+ requireSetting(typeof v.AUTH_CLIENT_ID==='string' && v.AUTH_CLIENT_ID.length>0 && v.AUTH_CLIENT_ID.length<=200 && !/\s/.test(v.AUTH_CLIENT_ID),'AUTH_CLIENT_ID');
+ // Feature settings are checked here so a bad value stops the release before migrations; the application checks them again at startup.
+ const features=typeof v.LANTERN_FEATURES==='string' && v.LANTERN_FEATURES.trim() ? v.LANTERN_FEATURES.split(',').map(entry=>entry.trim()) : [];
+ requireSetting(features.every(entry=>/^[a-z][a-z0-9-]*=(off|preview|on)$/.test(entry)),'LANTERN_FEATURES');
+ requireSetting(new Set(features.map(entry=>entry.split('=')[0])).size===features.length,'LANTERN_FEATURES must not list the same feature more than once');
+ const previewEmails=typeof v.LANTERN_PREVIEW_EMAILS==='string' && v.LANTERN_PREVIEW_EMAILS.trim() ? v.LANTERN_PREVIEW_EMAILS.split(',').map(entry=>entry.trim().toLowerCase()) : [];
+ requireSetting(!previewEmails.length || previewEmails.every(email=>/^[^\s@*]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(email)),'LANTERN_PREVIEW_EMAILS must list exact email addresses');
+ requireSetting(!features.some(entry=>entry.endsWith('=preview')) || previewEmails.length>0,'LANTERN_PREVIEW_EMAILS');
+ const coach=features.find(entry=>entry.startsWith('coach='))?.slice('coach='.length);
+ // COACH_ENABLED is retired. While it is still set, require its replacement, so a release cannot silently change who is offered coaching.
+ requireSetting(!('COACH_ENABLED' in v) || coach!==undefined,'COACH_ENABLED is retired; set coach in LANTERN_FEATURES');
+ const providers=['AI_GATEWAY_CHAT_API_KEY','OPENROUTER_API_KEY'].some(key=>typeof v[key]==='string' && v[key].trim().length>0);
+ if(providers || coach==='preview' || coach==='on') {
   for(const key of ['AI_GATEWAY_CHAT_API_KEY','OPENROUTER_API_KEY','AI_GATEWAY_CHAT_BASE_URL'])requireSetting(typeof v[key]==='string' && v[key].trim().length>0 && !/[\r\n]/.test(v[key]),key);
   if(v.AI_GATEWAY_CHAT_BASE_URL){let endpoint;try{endpoint=new URL(v.AI_GATEWAY_CHAT_BASE_URL);}catch{throw new Error('Deployment preflight failed: coaching gateway URL.');}
    requireSetting(endpoint.protocol==='https:'&&!endpoint.username&&!endpoint.password&&!endpoint.search&&!endpoint.hash,'coaching gateway URL');}

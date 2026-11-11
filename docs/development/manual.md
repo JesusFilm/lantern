@@ -49,7 +49,7 @@ Dependency inputs are normalized JSON. Only the explicit type-only development p
 
 The manifest separates `sources` (the normalized freshness inputs) from `verification` (the raw input hashes and time of the last successful full generation). An irrelevant type-only update can pass without generation: the recorded `verification.generatedAt` and raw hashes intentionally remain unchanged. A full successful capture updates provenance; it preserves the PDF and edition when content and images are unchanged. The freshness check never claims or records that generation occurred.
 
-When two branches both regenerate, the manual files conflict. Resolve the conflict by taking main's generated files as the starting point, then running `npm run manual` again; never merge the generated files by hand. The edition must move forward from main's: the release workflow tags `manual-<edition>` once and never republishes a tag, so if the branch's deck differs from main's, generating from the branch's own old manifest would keep main's edition number under a different PDF and the new deck would never reach QA's "latest" link. Starting from main's generated files makes `npm run manual` compare against main's deck and render the next edition. The freshness check fails in a checkout where main's manifest can be read (such as a local clone) when a committed deck differs from main's while still carrying main's edition number; the required CI check does not resolve main yet, so the edition guard is not enforced there.
+When two branches both regenerate, the manual files conflict. Resolve the conflict by taking main's generated files as the starting point, then running `npm run manual` again; never merge the generated files by hand. The edition must move forward from main's: the release workflow tags `manual-<edition>` once and never republishes a tag, so if the branch's deck differs from main's, generating from the branch's own old manifest would keep main's edition number under a different PDF and the new deck would never reach QA's "latest" link. Starting from main's generated files makes `npm run manual` compare against main's deck and render the next edition. CI fetches main and its history and fails if it cannot compare editions. A changed deck must advance beyond main's edition; a branch whose manual is unchanged since its common ancestor is allowed to be behind. Local checks use the same comparison when main is available.
 
 ## Appearance coverage
 
@@ -135,7 +135,7 @@ Expect `NotoSans-Regular`, `LiberationSerif`, `DejaVuSansMono` and `NotoSans-Bol
 
 ## Supplied captures
 
-Screens the synthetic world cannot reach, such as Google's own sign-in pages, are supplied by a person. Each supplied capture lists the source files it depends on. Until it is supplied, the slide shows a placeholder and the check prints a warning.
+Screens the synthetic world cannot reach, such as Jesus Film Auth's sign-in pages, are supplied by a person. Each supplied capture lists the source files it depends on. Until it is supplied, the slide shows a placeholder and the check prints a warning.
 
 To supply or replace a capture, save the PNG named on the slide in [docs/manual/supplied](../manual/supplied/), then run `npm run manual`. When one of its source files changes, the slide marks the capture as possibly outdated and the check warns. Replace the image, or confirm it still matches with `npm run manual -- --confirm=<id>`.
 
