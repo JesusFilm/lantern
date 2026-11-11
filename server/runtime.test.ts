@@ -18,6 +18,24 @@ test('environment identity defaults restrictively and validates hosted configura
   assert.equal(resolveRuntime({ DATABASE_URL: 'postgresql://unused', LANTERN_ENV: 'local', LOCAL_ACCESS: '1' }).localAccess, true);
 });
 
+test('feature settings are checked at startup, before connecting', () => {
+  assert.deepEqual(resolveRuntime({ ...hosted, LANTERN_FEATURES: 'retired-feature=on' }).features.unknown, ['retired-feature']);
+  assert.throws(() => resolveRuntime({ ...hosted, LANTERN_FEATURES: 'retired-feature=maybe' }));
+  assert.throws(() => resolveRuntime({ ...hosted, LANTERN_PREVIEW_EMAILS: 'not-an-email' }));
+});
+
+test('a coach set to preview or on needs its providers; shown by default it is simply unavailable without them', () => {
+  const providers = { AI_GATEWAY_CHAT_API_KEY: 'primary', OPENROUTER_API_KEY: 'fallback', AI_GATEWAY_CHAT_BASE_URL: 'https://gateway.example.com' };
+  assert.throws(() => resolveRuntime({ ...hosted, LANTERN_FEATURES: 'coach=on' }), /coach/);
+  assert.throws(() => resolveRuntime({ ...hosted, LANTERN_FEATURES: ' coach=preview ', LANTERN_PREVIEW_EMAILS: 'owner@example.test' }), /coach/);
+  assert.ok(resolveRuntime({ ...hosted, ...providers, LANTERN_FEATURES: 'coach=on' }).coach);
+  assert.equal(resolveRuntime({ ...hosted, LANTERN_ENV: 'stage' }).coach, undefined);
+  assert.equal(resolveRuntime({ ...hosted, LANTERN_FEATURES: 'coach=off' }).coach, undefined);
+  // The retired COACH_ENABLED switch neither enables nor disables anything.
+  assert.equal(resolveRuntime({ ...hosted, COACH_ENABLED: '1' }).coach, undefined);
+  assert.ok(resolveRuntime({ ...hosted, ...providers, COACH_ENABLED: '0' }).coach);
+});
+
 test('application deployment never runs the privileged migration command', async () => {
   const { readFile } = await import('node:fs/promises');
   const config = JSON.parse(await readFile('railway.json','utf8'));

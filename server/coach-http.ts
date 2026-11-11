@@ -15,8 +15,9 @@ import {
 
 export function coachRoutes(
   db: Pool,
-  requireUser: (req: Request) => Promise<{ id: string }>,
+  requireUser: (req: Request) => Promise<{ id: string; email: string }>,
   provider?: CoachProvider,
+  offered: (user: { email: string }) => boolean = () => true,
 ) {
   const router = Router(),
     store = coachStore(db);
@@ -176,11 +177,12 @@ export function coachRoutes(
   const active = new Set<string>(),
     usage = new Map<string, { at: number; count: number }>();
   router.post("/api/coach/suggest", async (req, res) => {
-    const actor = (await requireUser(req)).id,
+    const user = await requireUser(req),
+      actor = user.id,
       department = await membership(db, actor);
     if (!department)
       throw new AccessError(403, "Active department membership is required.");
-    if (!provider)
+    if (!provider || !offered(user))
       throw new AccessError(
         503,
         "Coaching is unavailable. You can continue writing manually.",

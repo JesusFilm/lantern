@@ -19,7 +19,17 @@ release artifacts or command arguments.
 | `AI_GATEWAY_CHAT_BASE_URL` | `https://gateway.example.com` | Same endpoint |
 | `AI_GATEWAY_CHAT_MODEL` | `coding` | `coding` |
 | `COACH_FALLBACK_MODEL` | `google/gemini-3.8-flash` | Same model |
-| `COACH_ENABLED` | `1` after both keys are installed | `1` after staging verification |
+| `LANTERN_FEATURES` | Include `coach=on` after both keys are installed | Include `coach=on` after staging verification |
+
+The coach is the `coach` [feature flag](../development/feature-flags.md): `off` stops
+model calls, `preview` offers coaching only to the accounts in `LANTERN_PREVIEW_EMAILS`,
+and `on` offers it to everyone. With no setting it is off in production. On staging an
+unset coach is offered whenever both keys are present.
+
+`COACH_ENABLED` is retired and no longer read. While that variable is still set, the
+release configuration check refuses to deploy unless `LANTERN_FEATURES` sets `coach`,
+so a release cannot silently change who is offered coaching. Add the `coach` setting
+first, then remove `COACH_ENABLED`.
 
 The gateway URL above is illustrative; replace it with the actual endpoint in
 Railway. There is no application default. The gateway authenticates requests
@@ -44,8 +54,9 @@ and retention are controlled in the provider account, not by Lantern.
 
 Use Railway's variable editor or a secret-prompt/standard-input workflow. Stage
 variable changes without an automatic deployment while setting up both keys.
-The release configuration check and startup reject enabled coaching with either
-key or the gateway URL missing; they do not prove provider connectivity. Existing
+The release configuration check and startup reject a coach set to `preview` or `on`
+with either key or the gateway URL missing, and reject one key without the other;
+they do not prove provider connectivity. Existing
 release tooling preserves unrelated Railway variables rather than replacing the
 complete set.
 
@@ -62,8 +73,8 @@ complete set.
    and verify an OpenRouter reply. Restore the primary URL and verify Qwen recovery.
    This is a connectivity/failover check, not a coaching-quality benchmark.
 4. Run staging readiness and authenticated acceptance for the exact release. With
-   `COACH_ENABLED=0`, acceptance verifies model rejection and manual draft submission.
-   With `COACH_ENABLED=1`, synthetic members also complete the deployed coaching
+   the coach off, acceptance verifies model rejection and manual draft submission.
+   With the coach on, synthetic members also complete the deployed coaching
    journey through save, reopen and review submission. The evidence records which
    mode ran; all synthetic records and sessions are cleaned up. A green disabled
    run does not certify provider connectivity.
@@ -99,7 +110,7 @@ checking key validity, quota and reachability. The UI retains input and offers
 retry or manual writing. `/health` tests application/database readiness, not model
 availability; do not take the whole application down because a model is offline.
 
-Set `COACH_ENABLED=0` and redeploy to stop model calls while keeping saved focuses,
+Set `coach=off` in `LANTERN_FEATURES` and redeploy to stop model calls while keeping saved focuses,
 review requests and notes available. Prefer this or a compatible fix-forward over
 rolling back feature code. Keep schema 9 and its confirmation guard in place even
 if an older compatible application is temporarily restored. Rotate compromised

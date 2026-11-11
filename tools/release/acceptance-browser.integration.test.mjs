@@ -5,6 +5,7 @@ import express from 'express';
 import { privilegeFixture } from '../../server/privilege-test-support.ts';
 import { createCoachProvider } from '../../dist/server/coach-provider.js';
 import { createApp } from '../../dist/server/app.js';
+import { resolveFeatureConfig } from '../../dist/server/features.js';
 import { migrate } from '../../dist/server/schema.js';
 import { runAcceptanceBrowser } from './acceptance-browser.mjs';
 import { withAcceptanceFixture } from './acceptance-fixture.mjs';
@@ -31,7 +32,7 @@ async function fixture(work, { rejectFocusSave = false, rejectImageSave = false,
         else next();
       });
     }
-    app.use(createApp(database.runtime, { origin, coach }));
+    app.use(createApp(database.runtime, { origin, coach, features: resolveFeatureConfig({}, 'stage') }));
     app.use(express.static('dist/client'));
     server.on('request', app);
     await withAcceptanceFixture(database.migration, async fixture => {

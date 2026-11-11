@@ -5,6 +5,8 @@ export interface SessionView {
   signInAvailable: boolean;
   localAccess?: boolean;
   coachAvailable?: boolean;
+  /** Flagged features this account may see; see shared/features.ts. */
+  features: string[];
 }
 export interface RegisteredUser {
   id: string; name: string; email: string;
