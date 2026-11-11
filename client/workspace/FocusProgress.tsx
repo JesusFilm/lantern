@@ -20,7 +20,7 @@ function ProgressActivity({focus,data,row}:{focus:PositionFocus;data:ProgressRec
  function move(next:number){interacted.current=true;setAll(false);setIndex(Math.max(0,Math.min(next,count-1)))}
  useEffect(()=>{if(compact&&interacted.current&&!all){heading.current?.focus({preventScroll:true});heading.current?.closest('.progress-activity')?.scrollIntoView({block:'start'})}},[active,all,compact,count]);
  const swipe=useSwipeNavigation(compact&&!all&&count>1,()=>move(active-1),()=>move(active+1));
- return <div className="progress-activity focus-objectives" {...swipe}>
+ return <div className={"progress-activity focus-objectives"+(compact&&count>1&&!all?" is-paged":"")} {...swipe}>
   {!data.notes.some(item=>item.body)&&!data.statuses.some(item=>item.status)&&<p className="muted">Track progress and add notes to each objective or SMART goal.</p>}
   {compact&&count>1&&<div className="objective-chooser"><label htmlFor="read-progress-objectives">Read progress objectives {!all&&<span aria-hidden="true">· swipe to move</span>}</label><select id="read-progress-objectives" value={all?'all':active} onChange={event=>event.target.value==='all'?setAll(true):move(Number(event.target.value))}>{focus.sections.map((section,i)=><option key={i} value={i}>Objective {i+1} of {count} · {section.objective.slice(0,70)}</option>)}<option value="all">Full document · all {count} objectives</option></select></div>}
   {focus.sections.map((section,i)=><section className="read-section progress-panel" aria-label={`Objective ${i+1}`} key={i} hidden={compact&&!all&&i!==active}><header className="progress-heading"><span className="muted">Objective {i+1}</span><h2 tabIndex={-1} ref={i===active?heading:undefined}>{section.objective}</h2></header>{row(i,null)}{section.goals.map((_,j)=>row(i,j))}</section>)}
@@ -60,6 +60,7 @@ export function FocusProgress({focus,memberId,enabled,children}:{focus:PositionF
   const hasNote=!!note?.body;
   return <section key={goal===null?'objective':goal} className="progress-item" aria-label={name}>
    <div className="progress-row"><h3>{name}</h3><div className="progress-actions">{value&&<span className={'progress-pill '+value}>{labels[value]}</span>}{!memberId&&<button className="link" onClick={()=>setEditing(target)}>{value||hasNote?'Edit progress':'Add note'}</button>}</div></div>
+   {goal!==null&&<p className="read-text">{focus.sections[section]?.goals[goal]}</p>}
    {hasNote?<div className="progress-note"><span className="muted">{new Date(note!.createdAt).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}</span><p>{note!.body}</p></div>:<p className="muted progress-empty">No notes yet</p>}
   </section>;
  }
@@ -67,7 +68,7 @@ export function FocusProgress({focus,memberId,enabled,children}:{focus:PositionF
  return <><nav className="progress-tabs" aria-label="Position focus views"><button className={tab==='focus'?'active':''} aria-pressed={tab==='focus'} onClick={()=>setTab('focus')}>Focus</button><button className={tab==='activity'?'active':''} aria-pressed={tab==='activity'} onClick={()=>setTab('activity')}>Progress &amp; notes</button></nav>
   {error&&<p role="alert">{error} <button onClick={()=>setAttempt(x=>x+1)}>Try again</button></p>}
   {tab==='focus'?<ProgressContext.Provider value={data}>{children}</ProgressContext.Provider>:error?null:!data?<p role="status">Loading progress…</p>:<ProgressActivity focus={focus} data={data} row={row}/>}
-  {editing&&<Dialog title={`Progress · Objective ${editing.section+1}`+(editing.goal===null?'':` · SMART goal ${editing.goal+1}`)} onClose={()=>{setConflict(undefined);setEditing(undefined)}} onSave={save} saveLabel="Save progress">
+  {editing&&<Dialog title={`Progress · Objective ${editing.section+1}`+(editing.goal===null?'':` · SMART goal ${editing.goal+1}`)} onClose={()=>{if(conflict)setData(conflict);setConflict(undefined);setEditing(undefined)}} onSave={save} saveLabel="Save progress">
     {conflict&&<div className="progress-conflict"><p>Your edit is still below. Review the latest version, then use it as the base before saving your edit.</p><p>Latest saved status: {conflict.statuses.find(item=>same(item,editing))?.status ? labels[conflict.statuses.find(item=>same(item,editing))!.status!] : 'No status set'}</p><p>Latest saved note: {conflict.notes.find(item=>same(item,editing))?.body || 'No note'}</p><button type="button" onClick={()=>{setData(conflict);setConflict(undefined)}}>Use latest version</button></div>}
     <label htmlFor="progress-status">Status</label><select id="progress-status" name="status" defaultValue={status(editing)||''}><option value="">No status set</option>{Object.entries(labels).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select>
     <label htmlFor="progress-note">Progress note</label><textarea id="progress-note" name="body" maxLength={4000} defaultValue={data?.notes.find(item=>same(item,editing))?.body||''}/><p className="muted">Visible to you and your career lead. Leave the note blank if you only want to set a status.</p>

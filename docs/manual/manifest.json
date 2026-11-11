@@ -1,9 +1,9 @@
 {
-  "edition": 40,
+  "edition": 41,
   "editionDate": "2026-11-12",
-  "deck": "1b448d4326560bc762c91a45db7fdebb098a885ff502c8bb344dab24a8ec8100",
+  "deck": "599c1aea1b8b46ffb7a3967061f43fa5c9acf6dfe43c71a20d2f7dbf8858e9cf",
   "sources": {
-    "fingerprint": "322bf1739e1b47924c7b6930d856a5d3a2fc21573a5d151e10ae7c0c343a3e8a",
+    "fingerprint": "e490d211147fe0e9354fe7dd6b14422a2ec2782d94133e0cc9971e98987d71c6",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -25,7 +25,7 @@
       "client/workspace/FocusHeading.tsx": "f654871b28631093184a3d2e24e1dd3eb0075833a78d3a5f9c843f85214bdac7",
       "client/workspace/FocusObjectives.tsx": "130d549fcaf96c5403c36a3993e0c8670876d6086d3f0bf2997857341a4aba31",
       "client/workspace/FocusProcess.tsx": "f0db6123ec67fc954c2ef58454a1d54317e7a4c1aff21b015751862211abf51e",
-      "client/workspace/FocusProgress.tsx": "d7d80b7715ff06f7e8f467530a3f16ecbb7c44a0319d4c65d684b3e7affe4b09",
+      "client/workspace/FocusProgress.tsx": "ad7f3f45444d23c2d4133a4a498298e82c203418e7db2f353b2b519b36a7838d",
       "client/workspace/FocusWorkspace.tsx": "6f2bfd91e08ff96b4c29cc35d28c698d82df0f0dad1a7c33387a38ddb6d503cd",
       "client/workspace/InitiativeChoices.tsx": "16c6fe9415415978e2bca1abcea22d61e6535e8b2a13b351fddd90aa959a8d82",
       "client/workspace/InitiativeDialog.tsx": "e0e1ee635e4d1b0f9a4131e6deccd428673840542ba75da5896c76dd9326c5c9",
@@ -115,7 +115,7 @@
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",
-      "tools/manual/qa-fixture.ts": "0d72447b96bd5a529f935c09b90cfc20de0de98988cc27acaefa4d96e10c8861",
+      "tools/manual/qa-fixture.ts": "710263817582f8cb735ae1679a450a620cc30174980e8ee3b77a54186eb2dc13",
       "tools/manual/qa-stage.ts": "4bfe24391240bbe32a293622db8b8bfc6cb51c2f45a626fc278a66019fc04e8c",
       "tools/manual/render.ts": "eedd830fcf3ccbdd403a8b3563b487be2edda4041ed4f6a724795dbaba2dda0c",
       "tools/manual/tsconfig.json": "b2c53bf7e0a9203acae2292d0215afb5abb1d3e90311ace1b9e8a11ec37ef1ac",
@@ -162,16 +162,16 @@
     "objective-choice.png": "25dc3f4f23d52ae4e8b884749969b12f4d0ff68a8b0fd679a64d3d6621e613d6",
     "objective-manual-1.png": "2457176db78259341e1a5538da2d816e3a73935c7b437b8d08b21ab343c06d1b",
     "objective-manual-2.png": "d6c53c465406a4967b43ec7b3c648278f28050b7c3408ea83b4f105ccb17edbf",
-    "own-confirm-dialog.png": "92c0ef176a01c5f01016ac7ce858f5115f7cc2fa0842be28743bcc40bb43c5f8",
+    "own-confirm-dialog.png": "d66cd48db0df60c413dd83f05df30e9bd783dcb70c236a284b9c2304bc794ac5",
     "phone-focus-1.png": "10a9b50bf31faed0c60b8cc360532a0362849fb0c29b599286bd27c49178e875",
     "phone-focus-2.png": "4eb7f8ccc6bd1e0bde3e4891e27e36ba6ac8b69b650aee5e8465ed2581f16ec5",
     "phone-objective-1.png": "2300e8342b4fdf3bdbfd8ea8f4f64bbef3624c43f90d702480cca5ba6d366757",
     "phone-objective-2.png": "40e37938b7e399d33ef5ad7dcd9698ada088b02808a7ecb283f027f9232e7c9e",
     "phone-objective-3.png": "a0ed516882714daff05d324d8c88ff12cada929319b1f7e1be31ba5089aea339",
-    "phone-progress.png": "af11a93edc6fa5dc69187028ee2fa269b4fb54c16ded451fac22f199fdeebb33",
+    "phone-progress.png": "f4298c670126811fe0b0d04ac7cf39f3be0027632deea708a3dd5fe930e6de15",
     "phone-sidebar-collapsed.png": "e5e04428642570143f39bfe2f436e45e287969664a5c827c81b92dffe9d2ee65",
-    "progress-activity-1.png": "b8f504f510b22b6e2df5f56a8094f90fd37aee338e2590df44a96f6630a9782e",
-    "progress-activity-2.png": "7eac556f2c7b2ac370be6c89a4167378f88b73ed739169f766d4d04128285cf6",
+    "progress-activity-1.png": "5c20959e4c0b3f2d8b4156abc06b7f9fab03a2555d89683d20fba336364040a5",
+    "progress-activity-2.png": "c4a6764d1c3b9574110307578323bc7d995477e0246856b4921c3bffe0785aad",
     "progress-edit.png": "e132ca1c71716eec0dd93e9e735270203aad16ebccbcf2ee1572c29f8b4cf435",
     "review-request-1.png": "9d70215541de9535597abfbd315a2544d1f9472c9dca7bf9b496f193f95c8aee",
     "review-request-2.png": "1b9de875c4450d1220f3a6ef2d668dbea21bea38ab5525733f65d2f30a63f0ed",
@@ -189,5 +189,5 @@
       }
     }
   },
-  "pdf": "fa04915c12b98e16787a1cab1f72de1380e4e636594b7f7455af663d4cad4efd"
+  "pdf": "82b88799b6cdfbac927ac20468b900233ae2ebcd312b9bc9448574689d772e9c"
 }

@@ -69,6 +69,9 @@ async function cleanup(client,runId) {
    return member && row.department_id===member.departmentId && (row.confirmed_by===null || confirmer?.role==='career-lead' && confirmer.departmentId===row.department_id);
   }));
   const focusIds=focuses.map(row=>row.id);
+  const progressNotes=(await client.query(`SELECT n.author_id,n.focus_id,f.user_id AS focus_owner FROM focus_progress_notes n JOIN position_focuses f ON f.id=n.focus_id
+    WHERE n.author_id=ANY($1::uuid[]) OR n.focus_id=ANY($2::uuid[]) FOR UPDATE OF n`,[users,focusIds])).rows;
+  requireOwned(progressNotes.every(row=>owned.has(row.author_id)&&focusIds.includes(row.focus_id)&&row.focus_owner===row.author_id));
   const notes=(await client.query(`SELECT n.author_id,r.focus_id FROM focus_review_notes n JOIN focus_review_requests r ON r.id=n.request_id
     WHERE n.author_id=ANY($1::uuid[]) OR r.focus_id=ANY($2::uuid[]) FOR UPDATE OF n,r`,[users,focusIds])).rows;
   requireOwned(notes.every(row=>owned.has(row.author_id)&&focusIds.includes(row.focus_id)));

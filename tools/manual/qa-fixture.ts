@@ -49,6 +49,8 @@ export async function resetQaDepartment(db: Pool, options: { participants: strin
     await client.query("SELECT n.id FROM focus_review_notes n JOIN focus_review_requests r ON r.id=n.request_id JOIN position_focuses f ON f.id=r.focus_id WHERE f.department_id=$1 FOR UPDATE OF n", [id]);
     const foreignReads = await client.query(`SELECT x.user_id FROM focus_note_reads x JOIN focus_review_notes n ON n.id=x.note_id JOIN focus_review_requests r ON r.id=n.request_id JOIN position_focuses f ON f.id=r.focus_id WHERE f.department_id=$1 AND NOT (x.user_id=ANY($2::uuid[])) FOR UPDATE OF x`, [id, users.map((u) => u.id)]);
     if (foreignReads.rowCount) throw new Error("Unexpected note reader prevents QA reset.");
+    const foreignProgress = await client.query(`SELECT n.id FROM focus_progress_notes n JOIN position_focuses f ON f.id=n.focus_id WHERE f.department_id=$1 AND (n.author_id<>f.user_id OR NOT (n.author_id=ANY($2::uuid[]))) FOR UPDATE OF n`, [id, users.map((u) => u.id)]);
+    if (foreignProgress.rowCount) throw new Error("Unexpected progress author prevents QA reset.");
     await client.query("DELETE FROM position_focuses WHERE department_id=$1 AND user_id=ANY($2::uuid[])", [id, users.map((u) => u.id)]);
     const previous = await client.query("SELECT initiatives FROM department_direction WHERE department_id=$1 FOR UPDATE", [id]);
     const existing: StrategicInitiative[] = previous.rows[0]?.initiatives ?? [];
