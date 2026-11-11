@@ -7,7 +7,7 @@ function fixture(failure){
  let healthCalls=0;
  const headers=new Headers({'x-lantern-revision':env.RELEASE_SHA,'x-lantern-deployment':env.EXPECTED_DEPLOYMENT_ID,'x-lantern-schema':'4'});
  const fail=stage=>{if(failure===stage)throw new Error(privateMessage);};
- const page={on(event,callback){if(failure==='browser-js-errors')callback(new Error(privateMessage));},async goto(){fail('browser-navigation');},async route(){},async waitForURL(){fail('browser-auth-handoff');}};
+ const page={on(event,callback){if(failure==='browser-js-errors')callback(new Error(privateMessage));},async goto(){fail('browser-navigation');},async route(){},getByRole(){return {async waitFor(){fail('browser-login-shell');}};},async waitForURL(){fail('browser-auth-handoff');}};
  return {fetch:async url=>{
   if(url.endsWith('/health')){
    healthCalls++;
@@ -15,11 +15,12 @@ function fixture(failure){
    if(healthCalls>1){fail('final-health');const finalHeaders=new Headers(headers);for(const [code,key] of [['final-revision','revision'],['final-deployment','deployment'],['final-schema','schema']])if(failure===code)finalHeaders.set('x-lantern-'+key,privateMessage);return new Response(null,{headers:finalHeaders});}
    return new Response(null,{headers});
   }
+  if(url===env.APP_ORIGIN+'/')return new Response(null,{status:failure==='document-auth-redirect'?200:302,headers:{location:'/auth/jesusfilm'}});
   const route=url.split('/').at(-1);return new Response(null,{status:failure==='anonymous-'+route?500:401});
  },chromium:{async launch(){fail('browser-launch');return {async newPage(){fail('browser-page');return page;},async close(){fail('browser-close');}};}}};
 }
 test('smoke failures identify only a safe checkpoint and never retain private diagnostics',async()=>{
- for(const code of ['health-schema','anonymous-focuses','anonymous-department','anonymous-guide','browser-launch','browser-page','browser-navigation','browser-auth-handoff','browser-js-errors','browser-close','final-health','final-revision','final-deployment','final-schema']){
+ for(const code of ['health-schema','anonymous-focuses','anonymous-department','anonymous-guide','browser-launch','browser-page','document-auth-redirect','browser-navigation','browser-auth-handoff','browser-login-shell','browser-js-errors','browser-close','final-health','final-revision','final-deployment','final-schema']){
   await assert.rejects(smoke(env,fixture(code)),error=>{
    assert.equal(error.code,code);assert.equal(error.message,`Release smoke failed [${code}].`);assert.equal(error.cause,undefined);assert.doesNotMatch(error.stack,new RegExp(privateMessage));return true;
   });

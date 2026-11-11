@@ -44,9 +44,17 @@ try {
  checkpoint = 'browser-navigation';
  // Stop at Lantern's authentication boundary; readiness does not log into the external provider.
  await page.route(origin+'/auth/jesusfilm', route => route.fulfill({status:200,contentType:'text/html',body:'<p>Authentication handoff</p>'}));
- await page.goto(origin);
+ checkpoint = 'document-auth-redirect';
+ const entry = await fetch(origin+'/', {redirect:'manual',signal:AbortSignal.timeout(5000)});
+ assert.equal(entry.status,302);
+ assert.equal(entry.headers.get('location'),'/auth/jesusfilm');
+ checkpoint = 'browser-navigation';
+ await page.goto(origin+'/auth/jesusfilm');
  checkpoint = 'browser-auth-handoff';
  await page.waitForURL(origin+'/auth/jesusfilm');
+ checkpoint = 'browser-login-shell';
+ await page.goto(origin+'/?signInError=1');
+ await page.getByRole('link',{name:'Sign in with Jesus Film',exact:true}).waitFor({timeout:10000});
  checkpoint = 'browser-js-errors';
  assert.equal(errors.length, 0, 'Login shell failed.');
  // Stage cookies come from normal, manually completed Jesus Film login. Never mint sessions or bypass authentication.

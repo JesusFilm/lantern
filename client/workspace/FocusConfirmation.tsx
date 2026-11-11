@@ -16,10 +16,12 @@ const date = (value: string) => new Date(value + "T12:00:00").toLocaleDateString
 export function FocusConfirmation({
   focus,
   member,
+  viewerId,
   onConfirmed,
 }: {
   focus: PositionFocus;
   member: { id: string; name: string };
+  viewerId: string;
   onConfirmed?: (focus: PositionFocus) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
@@ -57,7 +59,7 @@ export function FocusConfirmation({
             setConfirming(false);
           }}
         >
-          <p>Confirm after your discussion with {member.name}.</p>
+          <p>Confirm after your discussion with {member.id === viewerId ? "your senior or manager" : member.name}.</p>
           <div className="confirmation-summary">
             <h3>Focus summary</h3>
             <dl>

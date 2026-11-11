@@ -78,7 +78,10 @@ test('production-only package migrates, starts without dotenv, serves assets and
        assert.equal(revoked.user, null);
      }
      assert.equal(health.headers.get('x-lantern-revision'), 'a'.repeat(40));
-     assert.match(await (await fetch(origin)).text(), /assets\//);
+     const entry = await fetch(origin,{redirect:'manual'});
+     assert.equal(entry.status,302);
+     assert.equal(entry.headers.get('location'),'/auth/jesusfilm');
+     assert.match(await (await fetch(origin+'/?signInError=1')).text(), /assets\//);
      assert.equal((await fetch(origin+'/api/focuses')).status, 401);
      if (n === 1) {
        const scoped = migration;

@@ -53,6 +53,10 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     if (!user) throw new AccessError(401, 'Sign in to continue.');
     return user;
   }
+  router.get(['/', '/index.html'], async (req, res, next) => {
+    if (!config.provider || config.hostingOnly || 'signInError' in req.query || await currentUser(req)) return next();
+    res.redirect('/auth/jesusfilm');
+  });
   router.get('/auth/jesusfilm', async (_req, res) => {
     if (config.hostingOnly || !config.provider) throw new AccessError(503, 'Jesus Film sign-in is not configured.');
     const state = random(), nonce = random(), verifier = random();
