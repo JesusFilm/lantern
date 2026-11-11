@@ -203,7 +203,7 @@ test(
         ).toBeVisible();
         await expect(
           page.getByRole("button", {
-            name: /Edit|Remove|Add SMART|Add objective|Confirm and lock/,
+            name: /Edit|Remove|Add SMART|Add objective|Confirm and lock|Unlock/,
           }),
         ).toHaveCount(0);
       }
@@ -321,7 +321,7 @@ test(
       await expect(leadPage.getByText(/Confirmed by Lead/)).toBeVisible();
       await expect(
         leadPage.getByRole("button", {
-          name: /Edit|Remove|Add SMART|Add objective|Confirm and lock/,
+          name: /Edit|Remove|Add SMART|Add objective|Confirm and lock|Unlock/,
         }),
       ).toHaveCount(0);
       await leadPage.setViewportSize({ width: 390, height: 844 });
