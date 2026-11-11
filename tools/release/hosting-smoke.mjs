@@ -30,7 +30,7 @@ export async function hostingSmoke(env, {fetch = globalThis.fetch, chromium = de
   for (const path of ['/api/focuses','/api/department','/api/guide']) {
     assert.equal((await fetch(origin+path,{signal:AbortSignal.timeout(5000)})).status,401);
   }
-  assert.equal((await fetch(origin+'/auth/google',{redirect:'manual',signal:AbortSignal.timeout(5000)})).status,503);
+  assert.equal((await fetch(origin+'/auth/jesusfilm',{redirect:'manual',signal:AbortSignal.timeout(5000)})).status,503);
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
@@ -38,7 +38,7 @@ export async function hostingSmoke(env, {fetch = globalThis.fetch, chromium = de
     await page.goto(origin);
     await page.getByRole('heading',{name:'Welcome to Lantern'}).waitFor();
     await page.getByText('Sign-in is awaiting configuration.',{exact:true}).waitFor();
-    assert.equal(await page.getByRole('link',{name:'Sign in with Google'}).count(),0);
+    assert.equal(await page.getByRole('link',{name:'Sign in with Jesus Film'}).count(),0);
     const write = await page.request.post(origin+'/api/focuses', {
       headers:{Origin:origin},
       data:{title:'Hosting denial check',start:'2026-01-01',end:'2026-12-31',sections:[]},
