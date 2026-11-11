@@ -1,6 +1,6 @@
 import { approveEmail, revokeEmail } from './admission.js';
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { test } from 'node:test';
 import { privilegeFixture } from './privilege-test-support.js';
@@ -27,9 +27,11 @@ test('OIDC boundary, persistent access, assignment restrictions and browser jour
     await grantApplicationPrivileges(migration, roles);
     for (const name of ['lead', 'member', 'other']) await approveEmail(admin, `${name}@example.test`);
     let nextIdentity = 'lead';
+    let authorizationPage: string | undefined;
     const provider: IdentityProvider = {
       authorizationUrl: (state, nonce, challenge) => {
         assert.ok(nonce); assert.ok(challenge);
+        if (authorizationPage) return authorizationPage;
         return `/auth/jesusfilm/callback?${new URLSearchParams({ state, code: nextIdentity })}`;
       },
       exchange: async (code, verifier, nonce) => {
@@ -73,6 +75,67 @@ test('OIDC boundary, persistent access, assignment restrictions and browser jour
       }
       const rows = await admin.query('SELECT google_sub FROM users');
       assert.deepEqual(rows.rows.map((row) => row.google_sub), ['lead']);
+    });
+    await t.test('signed-out document requests redirect before sending the application', async () => {
+      for (const path of ['/', '/?page=guide', '/index.html']) {
+        const response = await request(path);
+        assert.equal(response.status, 302);
+        assert.equal(response.headers.get('location'), '/auth/jesusfilm');
+        assert.equal(response.headers.get('cache-control'), 'no-store');
+        assert.doesNotMatch(await response.text(), /client\/main|id="root"/);
+      }
+      const retry = await request('/?signInError=1');
+      assert.equal(retry.status, 200, 'a denied or cancelled sign-in must not loop');
+      assert.match(retry.headers.get('content-type')!, /text\/html/);
+      assert.equal((await request('/lantern.svg')).status, 200);
+      assert.equal((await request('/api/focuses')).status, 401);
+    });
+    await t.test('server entry honors valid sessions, expiry and revoked admission', async () => {
+      const account = await login('other');
+      assert.equal((await request('/', account.cookie)).status, 200);
+      assert.equal((await request('/index.html', account.cookie)).status, 200);
+      assert.equal((await request('/', 'lantern-session=forged')).headers.get('location'), '/auth/jesusfilm');
+      const token = account.cookie.split('=')[1]!;
+      await admin.query("UPDATE sessions SET expires_at=now()-interval '1 second' WHERE token_hash=$1", [createHash('sha256').update(token).digest('hex')]);
+      assert.equal((await request('/', account.cookie)).headers.get('location'), '/auth/jesusfilm');
+      const renewed = await login('other');
+      await revokeEmail(admin, 'other@example.test');
+      assert.equal((await request('/', renewed.cookie)).headers.get('location'), '/auth/jesusfilm');
+      await approveEmail(admin, 'other@example.test');
+      await migration.query(`REVOKE SELECT ON sessions FROM "${roles.runtime}"`);
+      try {
+        const failed = await request('/', renewed.cookie);
+        assert.equal(failed.status, 503);
+        assert.deepEqual(await failed.json(), { error: 'The service is temporarily unavailable. Please try again.' });
+      } finally {
+        await migration.query(`GRANT SELECT ON sessions TO "${roles.runtime}"`);
+      }
+    });
+    await t.test('signed-out entry reaches the identity provider with JavaScript disabled and no app assets', async () => {
+      const entryBrowser = await chromium.launch();
+      const identityServer = createServer((_req, res) => { res.setHeader('Content-Type', 'text/html'); res.end('<h1>Identity provider</h1>'); });
+      await new Promise<void>(resolve => identityServer.listen(0, '127.0.0.1', resolve));
+      const identityAddress = identityServer.address();
+      assert.ok(identityAddress && typeof identityAddress !== 'string');
+      authorizationPage = `http://127.0.0.1:${identityAddress.port}/login`;
+      try {
+        const context = await entryBrowser.newContext({ javaScriptEnabled: false });
+        const page = await context.newPage();
+        const assets: string[] = [];
+        page.on('request', request => {
+          const path = new URL(request.url()).pathname;
+          if (path.startsWith('/client/') || path.startsWith('/assets/') || path === '/appearance.js') assets.push(path);
+        });
+        await page.goto(origin + '/?page=guide');
+        const { expect } = await import('@playwright/test');
+        await expect(page.getByRole('heading', { name: 'Identity provider' })).toBeVisible();
+        assert.deepEqual(assets, [], 'Lantern must redirect before its application or appearance scripts load');
+      } finally {
+        authorizationPage = undefined;
+        await entryBrowser.close();
+        identityServer.closeAllConnections();
+        await new Promise<void>(resolve => identityServer.close(() => resolve()));
+      }
     });
     const lead = await login('lead');
     const member = await login('member');
