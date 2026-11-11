@@ -1,14 +1,14 @@
 {
-  "edition": 23,
+  "edition": 24,
   "editionDate": "2026-11-11",
-  "deck": "95abc9413735bf88b0a029c354c5682855434215dba661925ef1ef44d4b84800",
+  "deck": "29f424c0e7f968043f4812cf40fbcb0acc93d8064ee2ac5a1ca544b7b243736b",
   "sources": {
-    "fingerprint": "f151cd2ab6b148b5eb98d6f4c85fe165f7c628922bc6c02e88046066f7b4616a",
+    "fingerprint": "4936dcc4a5c73fc849a61306bbcaab5f882ee927ae12925b21543cb4570ce546",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
       "client/coach/CoachPreparing.tsx": "08ba217572bc5465ab73c3db2d665ef9969bf8547033745db70bfa2fc837a7f3",
-      "client/coach/CoachWorkspace.tsx": "05bbd5c19563ca30b133367fdd3354279aac76b6543f7803d93665e9b320a901",
+      "client/coach/CoachWorkspace.tsx": "0e592afc8a19198612921fb867b1f632773096b79fc2da16389ac0c43460a15a",
       "client/coach/StatusBadge.ts": "c711778994e08f5fd3875d07fbc03b3d5c2e65bf7fe60549ba934a62829a45be",
       "client/coach/coach.css": "0643af5084c648e891d28ac6229828a6224ba52ed23b713e570d1c64abd4ffeb",
       "client/coach/status-badge.css": "9f57090f86c8fa1fbec58b9e25d8fdf3e5a15a1af040adfaf5c268106484a0a1",
@@ -20,7 +20,7 @@
       "client/workspace/Department.tsx": "9bf4046ee92dd12a7c7c99f9fec59febc76b2a91bed6f4b6343852b42080c8f9",
       "client/workspace/Dialog.tsx": "ea96e8a314ef6ddef4c822bf90bd60808ab97166d89091edaa4cf2ccfe66ce60",
       "client/workspace/FocusConfirmation.tsx": "29725ee6814f860b676402f07ba3e9dbc4dc6a0e7ce9c23773905e20923244db",
-      "client/workspace/FocusDocument.tsx": "40a5742aa2b64c2d687fb189c780b34bcac046855cb2112c491b5530cc6c49b0",
+      "client/workspace/FocusDocument.tsx": "3ac7bcc82cab060751fe2a112b053f8a3e983a0fa43fe94afbc2973220a796f4",
       "client/workspace/FocusExample.tsx": "9f977c2cae6803dc50d037b662d25eebd0a7cfe9bae376516c0ce7bfc4dcb2e0",
       "client/workspace/FocusHeading.tsx": "5cec14537742a3c2971da137f208c9a10be726cc8b696b165f87eeb091edb811",
       "client/workspace/FocusObjectives.tsx": "130d549fcaf96c5403c36a3993e0c8670876d6086d3f0bf2997857341a4aba31",
@@ -178,5 +178,5 @@
       }
     }
   },
-  "pdf": "0e7a3f8c57da95dcc062b7fbae15dcb304fb5eaecd951347c3c137a8b89d66bb"
+  "pdf": "a6ab05f196e7e17ee581b549fa1ae35af46e9e1c1aaa78032385f0198df04d3d"
 }
