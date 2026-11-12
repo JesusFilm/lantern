@@ -1,4 +1,5 @@
-import { execFile } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { readFile, readdir, stat, writeFile, mkdir } from "node:fs/promises";
 import { join, relative } from "node:path";
@@ -32,6 +33,8 @@ export interface Manifest {
   /** Hash of the rendered deck content, used to decide whether a new edition is needed. */
   deck: string;
   sources: { fingerprint: string; files: Record<string, string> };
+  /** Written only after successful full generation; raw inputs remain auditable. */
+  verification?: { generatedAt: string; policy: string; rawSources: Record<string, string> };
   screenshots: Record<string, string>;
   supplied: Record<string, SuppliedRecord>;
   pdf: string | null;
@@ -42,11 +45,13 @@ export interface Manifest {
  * documents and the manual's own output are deliberately excluded.
  */
 export function isProductSource(path: string) {
+  if (path === "server/privilege-test-support.ts") return true; // Imported by the capture world.
   if (/\.test\.(ts|tsx|mjs)$/.test(path) || /test-support\.ts$/.test(path)) return false;
   if (path.startsWith("tools/manual/")) return !/\/(README\.md|_[^/]*)$/.test(path);
   return (
     ["client/", "shared/", "server/", "public/"].some((prefix) => path.startsWith(prefix)) ||
-    ["index.html", "vite.config.ts", "package.json", "package-lock.json", ".nvmrc", "docs/PRD.md"].includes(path)
+    ["index.html", "vite.config.ts", "package.json", "package-lock.json", ".nvmrc", ".env.example", "compose.yaml", "docker-compose.yml", "docs/PRD.md"].includes(path) ||
+    /^tsconfig[^/]*\.json$/.test(path)
   );
 }
 
@@ -84,10 +89,58 @@ async function listFiles(root: string) {
   }
 }
 
+/** Explicit type-only development packages; unknown packages stay conservative. */
+const typeOnly = new Set(["@types/node", "@types/express", "@types/pg", "@types/react", "@types/react-dom"]);
+const canonical = (value: unknown): string => JSON.stringify(value, (_key, item: unknown) =>
+  item && typeof item === "object" && !Array.isArray(item)
+    ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item);
+
+async function dependencyInputs(root: string): Promise<Record<string, string>> {
+  try {
+    const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+    const lock = JSON.parse(await readFile(join(root, "package-lock.json"), "utf8"));
+    if (lock.lockfileVersion !== 3 || !lock.packages?.[""]) return {};
+    const entries = lock.packages as Record<string, Record<string, unknown>>;
+    const name = (path: string) => path.split("node_modules/").at(-1)!;
+    const runtime = new Set([...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.optionalDependencies ?? {}), ...Object.keys(pkg.peerDependencies ?? {})]);
+    const ignored = new Set(Object.keys(entries).filter((path) => typeOnly.has(name(path)) && !runtime.has(name(path)) &&
+      entries[path]!.dev === true && !entries[path]!.hasInstallScript && !entries[path]!.link));
+    // @types/node's type-only child is ignored only when no retained package or root depends on it.
+    for (const path of Object.keys(entries).filter((path) => name(path) === "undici-types")) {
+      const entry = entries[path]!;
+      const usedByRetained = Object.entries(entries).some(([parent, value]) => !ignored.has(parent) &&
+        ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"].some((field) =>
+          Object.hasOwn((value[field] ?? {}) as object, "undici-types")));
+      if (entry.dev === true && !entry.hasInstallScript && !entry.link && !usedByRetained) ignored.add(path);
+    }
+    const ignoredNames = new Set([...ignored].map(name));
+    for (const config of [pkg, entries[""]!]) {
+      if (config.devDependencies) config.devDependencies = Object.fromEntries(
+        Object.entries(config.devDependencies).filter(([dep]) => !ignoredNames.has(dep)));
+    }
+    for (const path of ignored) delete entries[path];
+    return { "package.json": canonical(pkg), "package-lock.json": canonical(lock) };
+  } catch {
+    // Missing, malformed and unsupported lockfiles retain byte-level detection.
+    return {};
+  }
+}
+
+async function sourceFiles(root: string) {
+  return (await listFiles(root)).filter(isProductSource).sort();
+}
+
 export async function productSources(root: string) {
   const files: Record<string, string> = {};
-  for (const path of (await listFiles(root)).filter(isProductSource).sort()) files[path] = (await hashFile(join(root, path)))!;
+  const dependencies = await dependencyInputs(root);
+  for (const path of await sourceFiles(root)) files[path] = path in dependencies ? sha(dependencies[path]!) : (await hashFile(join(root, path)))!;
   return { fingerprint: sha(JSON.stringify(files)), files };
+}
+
+async function verification(root: string) {
+  const rawSources: Record<string, string> = {};
+  for (const path of await sourceFiles(root)) rawSources[path] = (await hashFile(join(root, path)))!;
+  return { generatedAt: new Date().toISOString(), policy: "manual-inputs/2", rawSources };
 }
 
 async function screenshotHashes(root: string) {
@@ -110,6 +163,48 @@ export async function readManifest(root: string): Promise<Manifest | undefined> 
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;
   }
+}
+
+/**
+ * Compare with current main and the common ancestor so an unchanged older
+ * branch can remain behind. On main itself, compare with its parent. CI fetches
+ * the necessary history and requires the comparison to be available.
+ */
+export function requiresEditionBase(env: NodeJS.ProcessEnv) {
+  return !!env.CI && env.CI !== "false" && env.CI !== "0";
+}
+
+type EditionLineage = { edition: number; deck: string; ancestor?: { edition: number; deck: string } };
+
+export function editionBase(root: string, options: {requireRemote?: boolean} = {}): EditionLineage | undefined {
+  const read = (ref: string) => {
+    try {
+      const text = execFileSync("git", ["show", `${ref}:docs/manual/manifest.json`], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+      const manifest = JSON.parse(text);
+      return typeof manifest.edition === "number" && typeof manifest.deck === "string" ? {edition: manifest.edition as number, deck: manifest.deck as string} : undefined;
+    } catch {
+      return undefined;
+    }
+  };
+  for (const ref of options.requireRemote ? ["origin/main"] : ["origin/main", "main"]) {
+    const current = read(ref);
+    if (!current) {
+      if (ref === "origin/main") {
+        try { execFileSync("git", ["rev-parse", "--verify", ref], {cwd: root, stdio: "ignore"}); return undefined; } catch { /* ref absent */ }
+      }
+      continue;
+    }
+    try {
+      const git = (...args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+      if (git("rev-parse", "HEAD") === git("rev-parse", ref)) {
+        const working = JSON.parse(readFileSync(join(root, manualDirectory, "manifest.json"), "utf8"));
+        return working.edition === current.edition && working.deck === current.deck ? read("HEAD^") : current;
+      }
+      const ancestor = git("merge-base", "HEAD", ref);
+      return { ...current, ancestor: read(ancestor) };
+    } catch { return undefined; }
+  }
+  return undefined;
 }
 
 /** Supplied captures whose sources changed after a person last supplied or confirmed them. */
@@ -152,17 +247,48 @@ export async function currentManifest(
 /** Records the current state as the generated manual. */
 export async function recordManifest(layout: ManualLayout, edition: Parameters<typeof currentManifest>[1]) {
   const manifest = await currentManifest(layout, edition);
+  // Only a successful full capture/render path records this evidence; checking never refreshes it.
+  manifest.verification = await verification(layout.root);
   await mkdir(join(layout.root, manualDirectory), { recursive: true });
   await writeFile(join(layout.root, manualDirectory, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   return manifest;
 }
 
-/** Fast check, without a browser or database, that the committed manual matches the source. */
-export async function checkManual(layout: ManualLayout) {
+/**
+ * Fast check, without a browser or database, that the committed manual matches
+ * the source. `base` is the manifest the committed one must have moved the
+ * edition forward from; it resolves from Git by default.
+ */
+export async function checkManual(layout: ManualLayout, base: (() => EditionLineage | undefined) | undefined = undefined, options: {requireBase?: boolean; push?: boolean; pushBase?: string} = {}) {
   const errors: string[] = [];
   const warnings: string[] = [];
   const manifest = await readManifest(layout.root);
   if (!manifest) return { errors: [`The manual has not been generated. ${regenerate}`], warnings };
+
+  // A changed deck needs a fresh edition. An unchanged branch that merely
+  // predates main should not be forced to regenerate until it merges main.
+  let editionBase_ = base ? base() : editionBase(layout.root, {requireRemote: options.requireBase});
+  if (options.push) {
+    try {
+      const git = (...args: string[]) => execFileSync("git", args, {cwd:layout.root, encoding:"utf8", stdio:["ignore", "pipe", "ignore"]}).trim();
+      if (git("rev-parse", "HEAD") !== git("rev-parse", "origin/main")) errors.push("The push is not current main; refusing a stale manual release.");
+    } catch { errors.push("Cannot compare the push with current main."); }
+    try {
+      if (!options.pushBase || !/^[0-9a-f]{40}$/i.test(options.pushBase) || /^0{40}$/.test(options.pushBase)) throw new Error("missing push base");
+      execFileSync("git", ["merge-base", "--is-ancestor", options.pushBase, "HEAD"], {cwd:layout.root, stdio:"ignore"});
+      const prior = JSON.parse(execFileSync("git", ["show", `${options.pushBase}:docs/manual/manifest.json`], {cwd:layout.root,encoding:"utf8",stdio:["ignore","pipe","ignore"]}));
+      if (typeof prior.edition !== "number" || typeof prior.deck !== "string") throw new Error("invalid push base");
+      editionBase_ = {edition:prior.edition, deck:prior.deck};
+    } catch { errors.push("Cannot compare the manual edition with the revision before this push."); }
+  }
+  if (!editionBase_ && options.requireBase) {
+    errors.push("Cannot compare the manual edition with main; fetch main and its history.");
+  }
+  const ancestor = editionBase_?.ancestor;
+  const unchangedSinceAncestor = ancestor && manifest.edition === ancestor.edition && manifest.deck === ancestor.deck;
+  if (editionBase_ && !unchangedSinceAncestor && editionBase_.deck !== manifest.deck && manifest.edition <= editionBase_.edition) {
+    errors.push(`The manual's deck changed but the edition did not move forward from ${editionBase_.edition}. Start from main's docs/manual, then ${regenerate}`);
+  }
 
   const current = await productSources(layout.root);
   if (current.fingerprint !== manifest.sources.fingerprint) {
