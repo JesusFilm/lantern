@@ -12,7 +12,7 @@ async function releaseFixture(t: TestContext, draft: boolean | null) {
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(join(root, "docs/manual"), { recursive: true });
   await writeFile(join(root, "docs/manual/manifest.json"), JSON.stringify({ edition: 7, editionDate: "2026-11-02", deck: "published-deck" }));
-  await writeFile(join(root, "published-manifest.json"), JSON.stringify({ edition: 7, deck: "published-deck" }));
+  await writeFile(join(root, "published-manifest.json"), JSON.stringify({ edition: 7, deck: "published-deck", pdf: "f".repeat(64) }));
   await writeFile(join(root, "tagged-manifest.json"), JSON.stringify({ edition: 7, deck: "published-deck" }));
   await writeFile(join(root, "before-manifest.json"), JSON.stringify({ edition: 6, deck: "previous-deck" }));
   await writeFile(join(root, "docs/manual/lantern-manual.pdf"), "fixture PDF");
@@ -26,6 +26,7 @@ let status = 0;
 if (args[1] === 'view') {
   if (fs.existsSync('gh-unavailable')) { console.error('network unavailable'); status = 1; }
   else if (!state.exists) { console.error('release not found'); status = 1; }
+  else if (args.includes('assets')) console.log(JSON.stringify({assets:fs.existsSync('missing-asset') ? [] : [{name:'lantern-manual.pdf',digest:'sha256:' + (fs.existsSync('wrong-asset') ? 'e' : 'f').repeat(64)}]}));
   else console.log(args.includes('targetCommitish') ? 'a'.repeat(40) : args.includes('--json') ? String(state.draft) : 'QA manual, edition 7');
 } else if (args[1] === 'create') {
   state.exists = true; state.draft = false; state.uploaded = true;
@@ -86,6 +87,35 @@ test("an edition superseded by an unrelated push can still be published", async 
   assert.equal((await fixture.state()).uploaded, true);
 });
 
+test("one push can introduce an edition through multiple draft commits", async (t) => {
+  const fixture = await releaseFixture(t, null);
+  await rm(join(fixture.root, "git"));
+  const git = async (...args: string[]) => (await promisify(execFile)("git", args, {cwd: fixture.root})).stdout.trim();
+  await git("init", "--bare", "remote.git"); await git("init", "-b", "main");
+  await git("config", "user.name", "Manual Test"); await git("config", "user.email", "manual@example.test");
+  await git("remote", "add", "origin", join(fixture.root, "remote.git"));
+  await writeFile(join(fixture.root, "docs/manual/manifest.json"), JSON.stringify({edition:6,deck:"old"}));
+  await git("add", "docs/manual"); await git("commit", "-m", "old edition");
+  const before = await git("rev-parse", "HEAD");
+  await writeFile(join(fixture.root, "docs/manual/manifest.json"), JSON.stringify({edition:7,deck:"draft"}));
+  await git("add", "docs/manual"); await git("commit", "-m", "draft edition");
+  await writeFile(join(fixture.root, "docs/manual/manifest.json"), JSON.stringify({edition:7,editionDate:"2026-11-02",deck:"published-deck"}));
+  await git("add", "docs/manual"); await git("commit", "-m", "final edition");
+  const sha = await git("rev-parse", "HEAD"); await git("push", "origin", "main");
+  await fixture.run("--check", before, sha);
+  await fixture.run("--publish", before, sha);
+  assert.equal((await fixture.state()).uploaded, true);
+});
+
+test("a published edition must have its verified PDF asset", async (t) => {
+  const fixture = await releaseFixture(t, false);
+  for (const marker of ["missing-asset", "wrong-asset"]) {
+    await writeFile(join(fixture.root, marker), "");
+    await assert.rejects(fixture.run("--check"), /manual.*asset/i);
+    await rm(join(fixture.root, marker));
+  }
+});
+
 test("release rerun resumes an unpublished draft and uploads the PDF before publishing", async (t) => {
   const fixture = await releaseFixture(t, true);
   await fixture.run();
@@ -134,7 +164,7 @@ test("a failed draft upload fails the run and can be retried", async (t) => {
 test("an already published edition is left unchanged", async (t) => {
   const fixture = await releaseFixture(t, false);
   await fixture.run();
-  assert.deepEqual((await fixture.state()).calls.map((args) => args[1]), ["view"]);
+  assert.deepEqual((await fixture.state()).calls.map((args) => args[1]), ["view", "view"]);
 });
 
 test("a reused published edition remains blocked after an unrelated push", async (t) => {

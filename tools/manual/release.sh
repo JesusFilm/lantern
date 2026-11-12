@@ -53,6 +53,21 @@ if draft=$(gh release view "$tag" --json isDraft --jq '.isDraft' 2>"$lookup_erro
     gh release upload "$tag" docs/manual/lantern-manual.pdf --clobber
     gh release edit "$tag" --draft=false --latest
   else
+    expected_pdf=$(git show "$ref:docs/manual/manifest.json" | node -e '
+      const fs = require("node:fs");
+      const {pdf} = JSON.parse(fs.readFileSync(0, "utf8"));
+      if (typeof pdf !== "string" || !/^[a-f0-9]{64}$/.test(pdf)) process.exit(1);
+      process.stdout.write(pdf);
+    ')
+    gh release view "$tag" --json assets | node -e '
+      const fs = require("node:fs");
+      const {assets} = JSON.parse(fs.readFileSync(0, "utf8"));
+      const matches = Array.isArray(assets) ? assets.filter(a => a.name === "lantern-manual.pdf") : [];
+      if (matches.length !== 1 || matches[0].digest !== `sha256:${process.argv[1]}`) {
+        console.error("The published manual PDF asset is missing or does not match its tagged manifest.");
+        process.exit(1);
+      }
+    ' "$expected_pdf"
     echo "$tag is already published."
   fi
   exit 0
@@ -77,6 +92,10 @@ if [ -z "$remote_tag" ]; then
     const {execFileSync} = require("node:child_process");
     const current = require("./docs/manual/manifest.json");
     try {
+      const before = JSON.parse(execFileSync("git", ["show", `${process.argv[1]}:docs/manual/manifest.json`], {encoding:"utf8", stdio:["ignore","pipe","ignore"]}));
+      if (typeof before.edition !== "number" || typeof before.deck !== "string") throw new Error("invalid push base");
+      // Different intermediate decks in the same push were never published.
+      if (before.edition < current.edition) process.exit(0);
       const history = execFileSync("git", ["rev-list", "--first-parent", "HEAD"], {encoding:"utf8"}).trim().split("\n");
       for (const ref of history) {
         const previous = JSON.parse(execFileSync("git", ["show", `${ref}:docs/manual/manifest.json`], {encoding:"utf8", stdio:["ignore","pipe","ignore"]}));
@@ -87,7 +106,7 @@ if [ -z "$remote_tag" ]; then
     } catch {}
     console.error("Cannot verify the unpublished manual edition after a prior push; recover it or generate a new edition.");
     process.exit(1);
-  '
+  ' "$before"
 fi
 if [ "${1:-}" = "--check" ]; then exit 0; fi
 printf 'Lantern QA manual, edition %s (%s), generated from %s.\n\nOpen lantern-manual.pdf below. Screenshots use synthetic data.\n' "$edition" "$date" "$GITHUB_SHA" > notes.md
