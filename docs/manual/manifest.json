@@ -1,12 +1,12 @@
 {
   "edition": 47,
   "editionDate": "2026-11-13",
-  "deck": "241b5446af649da0af601f2119f097d5341bb540e4395d4570e35617e77881c1",
+  "deck": "6adc88f01883b32a2510cc31b7ad84da21c1b53ac9c0fafa59c6ebd0d724b1b8",
   "sources": {
-    "fingerprint": "6118c18e367c26566b4210b6f059dafb3af240967061c1b8a7dded7589180368",
+    "fingerprint": "ef709a8b32c8df4904d0c61446f7d653c3910f335cbb0996bee303af51355a60",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
-      ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
+      ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
       "client/coach/CoachPreparing.tsx": "08ba217572bc5465ab73c3db2d665ef9969bf8547033745db70bfa2fc837a7f3",
       "client/coach/CoachWorkspace.tsx": "0e592afc8a19198612921fb867b1f632773096b79fc2da16389ac0c43460a15a",
@@ -56,8 +56,8 @@
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
       "docs/PRD.md": "0390e315caf328322e967c8f2c0640b30bf3d9867b2fc5ca0664238e3f19b1d7",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
-      "package-lock.json": "54eb18f191f8595ee94e03bf55216571ae147233027bb40f1c656ed5730b6102",
-      "package.json": "e11c29b41f49f4f6f3624f9e6cd3a0da9a7a664dad54f934ed6066ced4a5b181",
+      "package-lock.json": "153c2e4445cbef80f18c0bcf4eb8cb169b96c5374246b2ac7bae01f191b4426a",
+      "package.json": "992a1a5a01fb2b67495a414d2dd1ebd857e53ef696eb4d14fc5249f3c3e4c3bf",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/lantern.svg": "3525f31ec77634d4ed9bd979e916ca5b3639199c23cd25578089cb319b1b2d57",
       "public/mission-jesus-geometric.png": "831365bf853db1196611e59f298ba57a8ddae13029adff24fc83ee1172dda410",
@@ -171,7 +171,7 @@
     "objective-choice.png": "7fc9f21bc224510e80af0132c5e421d8380d4dc74595c549cd9dd30a3b183885",
     "objective-manual-1.png": "2457176db78259341e1a5538da2d816e3a73935c7b437b8d08b21ab343c06d1b",
     "objective-manual-2.png": "d6c53c465406a4967b43ec7b3c648278f28050b7c3408ea83b4f105ccb17edbf",
-    "own-confirm-dialog.png": "92c0ef176a01c5f01016ac7ce858f5115f7cc2fa0842be28743bcc40bb43c5f8",
+    "own-confirm-dialog.png": "d66cd48db0df60c413dd83f05df30e9bd783dcb70c236a284b9c2304bc794ac5",
     "phone-focus-1.png": "10a9b50bf31faed0c60b8cc360532a0362849fb0c29b599286bd27c49178e875",
     "phone-focus-2.png": "4eb7f8ccc6bd1e0bde3e4891e27e36ba6ac8b69b650aee5e8465ed2581f16ec5",
     "phone-objective-1.png": "2300e8342b4fdf3bdbfd8ea8f4f64bbef3624c43f90d702480cca5ba6d366757",
@@ -198,13 +198,13 @@
       }
     }
   },
-  "pdf": "da2c777883fe5205c28f19b71d7d504764f6559d30f3152b9ddc8e6aad0cff59",
+  "pdf": "da0f3acb9a84a0652cde7641e84f98cffd5ba8989361db306bf967225891bddd",
   "verification": {
-    "generatedAt": "2026-11-12T21:21:40.760Z",
+    "generatedAt": "2026-11-12T21:33:54.377Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
-      ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
+      ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
       "client/coach/CoachPreparing.tsx": "08ba217572bc5465ab73c3db2d665ef9969bf8547033745db70bfa2fc837a7f3",
       "client/coach/CoachWorkspace.tsx": "0e592afc8a19198612921fb867b1f632773096b79fc2da16389ac0c43460a15a",
@@ -254,8 +254,8 @@
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
       "docs/PRD.md": "0390e315caf328322e967c8f2c0640b30bf3d9867b2fc5ca0664238e3f19b1d7",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
-      "package-lock.json": "3b6f97f06d286135be4cc8c77da10398bbdc1ba734970df8512b4f359fcbd3ae",
-      "package.json": "1e9b07af6d7d0e9154e972b99a0ec1df4768a6d5e12e3e0f9e66d6f605bc5e60",
+      "package-lock.json": "aa69968145bb0d3248b6106b708223ddf834747a70f44e977935ddc4e88662ff",
+      "package.json": "146cd29a3418464bcca5bc39539f23bf06cf08883ab6439d151388b1c6ea7d39",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/lantern.svg": "3525f31ec77634d4ed9bd979e916ca5b3639199c23cd25578089cb319b1b2d57",
       "public/mission-jesus-geometric.png": "831365bf853db1196611e59f298ba57a8ddae13029adff24fc83ee1172dda410",
