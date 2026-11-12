@@ -80,24 +80,15 @@ test('member records status and goal note; lead reads progress after reload', {t
   await expect(page.getByLabel('Status',{exact:true})).toHaveValue('needs-attention');
   await page.getByLabel('Progress note').fill('My unsaved update\n'+('Long progress detail\n'.repeat(25)));await page.getByRole('button',{name:'Save progress'}).click();
   await expect(page.getByText('My unsaved update')).toBeVisible();
-  await page.setViewportSize({width:390,height:500});
-  const debugBefore=await page.evaluate('({scrollY:window.scrollY,body:document.body.scrollHeight,root:document.documentElement.scrollHeight,inner:window.innerHeight})');
-  await page.evaluate("window.scrollTo(0,document.body.scrollHeight)");
-  const noteBox=await page.getByText('My unsaved update').boundingBox(),pagerBox=await page.getByRole('navigation',{name:'Objective navigation'}).boundingBox();
-  const pagerDebug=await page.evaluate('({scrollY:window.scrollY,innerHeight:window.innerHeight,scrollHeight:document.documentElement.scrollHeight,scrollBehavior:getComputedStyle(document.documentElement).scrollBehavior})');
-  if (noteBox&&pagerBox&&noteBox.y+noteBox.height>pagerBox.y) {
-   await page.waitForTimeout(200);
-   const debugLater=await page.evaluate('({scrollY:window.scrollY,body:document.body.scrollHeight,root:document.documentElement.scrollHeight,inner:window.innerHeight})');
+  const noteClearsPager=async()=>{
    await page.evaluate('window.scrollTo(0,document.documentElement.scrollHeight)');
-   const debugAfter=await page.evaluate('({scrollY:window.scrollY,body:document.body.scrollHeight,root:document.documentElement.scrollHeight,inner:window.innerHeight})');
-   const secondBox=await page.getByText('My unsaved update').boundingBox();
-   assert.fail(`[DEBUG-pager] ${JSON.stringify({debugBefore,noteBox,pagerBox,pagerDebug,debugLater,debugAfter,secondBox})}`);
-  }
-  assert.ok(noteBox&&pagerBox,'the fixed pager must not cover the last note');
+   const note=await page.getByText('My unsaved update').boundingBox(),pager=await page.getByRole('navigation',{name:'Objective navigation'}).boundingBox();
+   return !!note&&!!pager&&note.y+note.height<=pager.y;
+  };
+  await page.setViewportSize({width:390,height:500});
+  await expect.poll(noteClearsPager,{message:'the fixed pager must not cover the last note'}).toBe(true);
   await page.setViewportSize({width:740,height:390});await expect(page.getByRole('navigation',{name:'Objective navigation'})).toBeVisible();
-  await page.evaluate("window.scrollTo(0,document.body.scrollHeight)");
-  const landscapeNote=await page.getByText('My unsaved update').boundingBox(),landscapePager=await page.getByRole('navigation',{name:'Objective navigation'}).boundingBox();
-  assert.ok(landscapeNote&&landscapePager&&landscapeNote.y+landscapeNote.height<=landscapePager.y,'landscape pager must not cover the last note');
+  await expect.poll(noteClearsPager,{message:'landscape pager must not cover the last note'}).toBe(true);
   await page.setViewportSize({width:390,height:844});
   const beforeStatusEdit=await (await mc.request.get(`${origin}/api/focuses/${focus.id}/progress`)).json();
   const currentStatusForEdit=beforeStatusEdit.statuses.find((x:{goal:number|null})=>x.goal===0),currentNoteForEdit=beforeStatusEdit.notes.find((x:{goal:number|null})=>x.goal===0);
