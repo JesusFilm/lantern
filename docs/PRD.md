@@ -66,6 +66,8 @@ Hosted access uses Jesus Film sign-in and server-issued sessions. The server che
 
 See [People and access](../GLOSSARY.md#people-and-access) for the account, approval, membership and career-lead relationships. A manager does not automatically gain access through their job title; application permissions come from active membership and role.
 
+The configured owner can open a read-only feature flag page after signing in with an active department membership. It shows each registered flag's state for the current environment, without listing preview accounts. Other accounts cannot open the page; flags remain controlled through environment settings. In explicitly enabled local access, the synthetic local account uses the same owner-email and membership checks without signing in.
+
 PostgreSQL stores account, membership and focus data. Saves detect concurrent edits. Ending membership removes access while preserving department-scoped history. Local access is explicitly configured and disabled by default.
 
 ## Delivery and scope

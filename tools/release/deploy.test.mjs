@@ -98,3 +98,16 @@ test('the retired COACH_ENABLED switch blocks deployment until coach is set in L
   const result=run(settings,{...variables,...patch});assert.equal(result.status,0,result.stderr);
  }
 });
+
+test('the optional flag-owner email is validated before deployment without logging its value',()=>{
+ for(const owner of ['not-an-email','one@example.test,two@example.test','alice,bob@example.test','alice;bob@example.test','.alice@example.test','alice..bob@example.test','   ']){
+  const result=run(settings,{...variables,LANTERN_FLAG_OWNER_EMAIL:owner});
+  assert.equal(result.status,1);
+  assert.ok(!result.calls.some(c=>c[0]==='up'));
+  if(owner.trim()) assert.ok(!(result.stdout+result.stderr).includes(owner));
+ }
+ for(const owner of ['', ' Owner@Example.test ', ' First.Last+flags@Example.test ']){
+  const result=run(settings,{...variables,LANTERN_FLAG_OWNER_EMAIL:owner});
+  assert.equal(result.status,0,result.stderr);
+ }
+});

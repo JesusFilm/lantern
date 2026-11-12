@@ -4,6 +4,8 @@ Date: 2026-11-11
 
 Status: Accepted by Jaco.
 
+Partially superseded: 2026-11-13 — the owner-only feature flag reporting page is governed by [ADR 0017](0017-owner-flag-reporting.md).
+
 ## Decision
 
 New user-visible behavior can merge and deploy while hidden. Each such feature has a name registered in [shared/features.ts](../../shared/features.ts). The server guards the feature's routes, and the client shows its entry points only when the server-resolved session lists the name. [server/features.ts](../../server/features.ts) owns the rules.

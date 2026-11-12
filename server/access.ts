@@ -1,7 +1,7 @@
 import type {CoachProvider} from './coach-provider.js';
 import {coachRoutes} from './coach-http.js';
 import { registerSession } from './accounts.js';
-import { isAdmitted } from './admission.js';
+import { isAdmitted, normalizeEmail } from './admission.js';
 import { createHash, randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
@@ -20,7 +20,7 @@ const random = () => randomBytes(32).toString('base64url');
 function cookie(request: Request, name: string) {
   return request.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1);
 }
-export interface AccessConfig { origin: string; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean; coach?: CoachProvider; features?: FeatureConfig }
+export interface AccessConfig { origin: string; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean; coach?: CoachProvider; features?: FeatureConfig; flagOwnerEmail?: string }
 export function accessRoutes(db: Pool, config: AccessConfig) {
   const router = Router();
   // Without explicit settings every registered feature is hidden, as production starts.
@@ -86,6 +86,15 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     const token = cookie(req, sessionCookie);
     if (token) await db.query('DELETE FROM sessions WHERE token_hash=$1', [hash(token)]);
     res.clearCookie(sessionCookie, options).sendStatus(204);
+  });
+  router.get('/ops/feature-flags', async (req, res) => {
+    const user = await requireUser(req);
+    if (!config.flagOwnerEmail || normalizeEmail(user.email) !== config.flagOwnerEmail || !await membership(db, user.id)) {
+      throw new AccessError(403, 'This page is available to the configured owner with active membership.');
+    }
+    const escape = (value: string) => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
+    const rows = [...features.states].map(([name, state]) => `<tr><th scope="row">${escape(name)}</th><td>${escape(state)}</td></tr>`).join('');
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Feature flags · Lantern</title><style>body{margin:0;background:#f6f5f1;color:#252521;font:16px/1.5 system-ui,sans-serif}main{max-width:720px;margin:48px auto;padding:0 24px}h1{font-size:28px;margin-bottom:4px}p{color:#5d605a}table{width:100%;border-collapse:collapse;background:white;border:1px solid #dedfd8;border-radius:8px}th,td{padding:14px 18px;text-align:left;border-bottom:1px solid #dedfd8}thead th{font-size:13px;color:#5d605a}tbody th{font-weight:500}@media(max-width:500px){main{margin:24px auto;padding:0 16px}}</style></head><body><main><h1>Feature flags</h1><p>Current settings for this Lantern environment. Change settings in Railway.</p><table><thead><tr><th>Feature</th><th>State</th></tr></thead><tbody>${rows}</tbody></table></main></body></html>`);
   });
   router.get('/api/session', async (req, res) => {
     const user = await currentUser(req);

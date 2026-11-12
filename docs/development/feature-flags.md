@@ -6,6 +6,8 @@ Read this before adding behavior that users would notice, and when releasing or 
 
 Put new screens, controls and workflows behind a flag, so they can reach production hidden. They can be tested on staging and, using `preview`, by selected accounts in production. QA's issue verification does not gate deployment or production preview. The manual checks required by [Releasing](../operations/releasing.md), including real staging sign-in for auth, OAuth and admission-policy changes, still apply. Jaco decides when to enable a feature for everyone, normally after QA passes; the owner tries the feature in production preview before enabling it for everyone.
 
+The owner-only `/ops/feature-flags` reporting page is an exception: its owner email setting controls access and is disabled when unset; it has no separate flag. See [ADR 0017](../adrs/0017-owner-flag-reporting.md).
+
 A flag cannot hide these, so do not add one for them:
 
 - fixes and wording changes to behavior that already exists
@@ -33,6 +35,12 @@ A flagged feature that needs a schema change must keep the migration compatible 
 Set states in the webapp's `LANTERN_FEATURES` variable, for example `focus-notes=preview,team-calendar=on`. A registered feature with no setting is off in production and on in stage and local environments. To hide a feature on stage or locally, set it to `off` there.
 
 The application refuses to start when either variable is malformed, names a state other than these three, repeats a feature, or puts a feature in preview with no preview accounts. It logs and ignores a setting for a name the release does not have.
+
+## Inspect the current state
+
+The environment owner may set `LANTERN_FLAG_OWNER_EMAIL` to one exact approved account email in the webapp's environment. After signing in with that account and an active department membership, open `/ops/feature-flags` on that environment. The page lists registered names and their resolved `off`, `preview` or `on` state. It never lists preview email addresses and does not change settings. A signed-out visitor, another account, or a former member cannot view it. When the variable is unset the page is unavailable to everyone. An invalid value prevents startup. In explicitly enabled loopback-only local access, the synthetic local account has no sign-in or admission check; its email and active membership must still match the owner setting.
+
+The owner sets this variable separately in each environment; changing it redeploys that environment and has the same staging evidence consequences described below. The private LanternBot board may link to the page, but does not fetch production data.
 
 ## Change a feature's state
 
