@@ -1,9 +1,9 @@
 {
-  "edition": 42,
+  "edition": 44,
   "editionDate": "2026-11-12",
-  "deck": "34d24b5fa6da2a373082786c174e6528448afc3abefea78ae5143378d6cf2109",
+  "deck": "3225f2e9563bf5a3c4a6f6897239a1f41754e6df872d711f52808fd3e53d054f",
   "sources": {
-    "fingerprint": "0ecd648319397266418cdb50bd03173505aadd3e9621539ee23355b7526b276c",
+    "fingerprint": "c67f34ee5da3f25fb40aa02921c31a6d5d908c76c4715db2b620a43a9a6cccaf",
     "files": {
       ".env.example": "e7ae073637769c75bd3221996f7209e06606e4e2f33a5e68a5af82ff2b1c9a56",
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
@@ -117,7 +117,7 @@
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",
       "tools/manual/qa-fixture.ts": "0a0f417aacb8cc31bda0f0b8732a04a6fc35d5f5237c8df7199ae456f070cb29",
       "tools/manual/qa-stage.ts": "93d54f3f6760f41cde405416109dc8908dbeeaeca040991510aa9650e72aa29a",
-      "tools/manual/release.sh": "8932e14a1268e13f70afb7209bae400a8099133d942d2c0c183a7e7a26a5e3f4",
+      "tools/manual/release.sh": "ac2e7d10fa6f2eb077244363e93b230ac2b4fb2ae6799bbf2e4c0b94ea5b57b9",
       "tools/manual/render.ts": "f28432b743120a56c1f4136d1714d0e88c44230e4f1f6372e52e816b8a095eb0",
       "tools/manual/tsconfig.json": "b2c53bf7e0a9203acae2292d0215afb5abb1d3e90311ace1b9e8a11ec37ef1ac",
       "tools/manual/world.ts": "4cf1da5f8324da3c824fd4b2d847f575dfd9baec3aacde6d9aa158984098808e",
@@ -139,7 +139,7 @@
     "department-member.png": "1740bf8386425f8b6a3603c5266b9db43da4a0ce95f9197cc6936db6ac730822",
     "department-people.png": "48eaac26ab0a32ae352d6e7e1da78d5a4007f4800df57644b893b63169610433",
     "focus-confirmed-1.png": "ace94662f5a20ae207153a45de1179b4e75717a802ca44d1a48fc9a2b3b3fa6c",
-    "focus-confirmed-2.png": "a78deb227564ef85d4dba98d8e6fd388dca458ecbbd445dc33ba91cdd31439d5",
+    "focus-confirmed-2.png": "f8f315248530e67daba414bd3fc5ad83649329343f46e3649fb0134b575b0897",
     "focus-draft-1.png": "8f3dec8b47392e6e45d255f1d4b00de11b942249bc8b0e6707734e01995c091c",
     "focus-draft-2.png": "848dc13d1e64b46b861e2144fb5ab12c234b438cdf87cba2f33297e2a2627d7f",
     "focus-list.png": "34cf7d1b159537b0cf144f1e104115cb8312cf4ec91091cb60b31350ccae9769",
@@ -166,7 +166,7 @@
     "objective-choice.png": "25dc3f4f23d52ae4e8b884749969b12f4d0ff68a8b0fd679a64d3d6621e613d6",
     "objective-manual-1.png": "2457176db78259341e1a5538da2d816e3a73935c7b437b8d08b21ab343c06d1b",
     "objective-manual-2.png": "d6c53c465406a4967b43ec7b3c648278f28050b7c3408ea83b4f105ccb17edbf",
-    "own-confirm-dialog.png": "92c0ef176a01c5f01016ac7ce858f5115f7cc2fa0842be28743bcc40bb43c5f8",
+    "own-confirm-dialog.png": "d66cd48db0df60c413dd83f05df30e9bd783dcb70c236a284b9c2304bc794ac5",
     "phone-focus-1.png": "10a9b50bf31faed0c60b8cc360532a0362849fb0c29b599286bd27c49178e875",
     "phone-focus-2.png": "4eb7f8ccc6bd1e0bde3e4891e27e36ba6ac8b69b650aee5e8465ed2581f16ec5",
     "phone-objective-1.png": "2300e8342b4fdf3bdbfd8ea8f4f64bbef3624c43f90d702480cca5ba6d366757",
@@ -189,9 +189,9 @@
       }
     }
   },
-  "pdf": "ee5b0ddcb9e9fbdc870df188b1c7f104d955b67e6d5cb8502c62aa7b2a2eaf7f",
+  "pdf": "e29089d536510c12bb2472586ab9ab7de2a89c1be66534dc30271b4b4a86bf49",
   "verification": {
-    "generatedAt": "2026-11-12T03:15:28.769Z",
+    "generatedAt": "2026-11-12T03:26:14.674Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "e7ae073637769c75bd3221996f7209e06606e4e2f33a5e68a5af82ff2b1c9a56",
@@ -306,7 +306,7 @@
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",
       "tools/manual/qa-fixture.ts": "0a0f417aacb8cc31bda0f0b8732a04a6fc35d5f5237c8df7199ae456f070cb29",
       "tools/manual/qa-stage.ts": "93d54f3f6760f41cde405416109dc8908dbeeaeca040991510aa9650e72aa29a",
-      "tools/manual/release.sh": "8932e14a1268e13f70afb7209bae400a8099133d942d2c0c183a7e7a26a5e3f4",
+      "tools/manual/release.sh": "ac2e7d10fa6f2eb077244363e93b230ac2b4fb2ae6799bbf2e4c0b94ea5b57b9",
       "tools/manual/render.ts": "f28432b743120a56c1f4136d1714d0e88c44230e4f1f6372e52e816b8a095eb0",
       "tools/manual/tsconfig.json": "b2c53bf7e0a9203acae2292d0215afb5abb1d3e90311ace1b9e8a11ec37ef1ac",
       "tools/manual/world.ts": "4cf1da5f8324da3c824fd4b2d847f575dfd9baec3aacde6d9aa158984098808e",
