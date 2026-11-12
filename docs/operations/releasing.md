@@ -13,6 +13,8 @@ main push: same checks → configuration → migrate → deploy staging → read
 
 Repository Actions variables `STAGE_DELIVERY_ENABLED`, `STAGE_ACCEPTANCE_ENABLED` and `AUTO_PRODUCTION_ENABLED` control the stages; `STAGE_APP_ORIGIN` identifies the accepted staging target. Read current values when operating.
 
+Staging also waits for the QA manual freshness and release-content checks. The manual release workflow runs on every main push; an unverifiable edition or unavailable GitHub release state blocks staging until the manual issue is resolved. See [QA manual releases](../development/manual.md#releases).
+
 Automatic promotion requires a successful trusted main push run and its exact SHA/run/attempt evidence, passing acceptance **and cleanup**, latest-main freshness, the accepted staging deployment still live, and matching advertised staging/production schema versions. Production verifies again under its lock and immediately before migrations. Configured environment reviewers still apply. A newer main revision supersedes a queued automatic candidate.
 
 Implementation: [CI](../../.github/workflows/ci.yml), [production workflow](../../.github/workflows/promote.yml), [verifier](../../tools/release/verify-promotion.mjs). Use these for exact step order and current configuration.

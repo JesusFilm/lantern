@@ -6,7 +6,8 @@ import { chromium, expect, type Browser } from "@playwright/test";
 import { build } from "vite";
 import { capture, CaptureError, contextOptions, launchOptions, watchPage, type CaptureFrame } from "./capture.js";
 import { chapters, supplied } from "./content.js";
-import { currentManifest, manualDirectory, outdatedSupplied, pdfName, productSources, readManifest, recordManifest } from "./freshness.js";
+import { currentManifest, manualDirectory, outdatedSupplied, pdfName } from "./freshness.js";
+import { finalizeGeneration } from "./finalize.js";
 import { allShots, isSupplied, type Shot } from "./manual.js";
 import { deckHtml, printPdf, type Assets } from "./render.js";
 import { manualNow, startWorld, type ManualWorld } from "./world.js";
@@ -111,7 +112,6 @@ try {
       const frames = captured.get(shot.id)!;
       assets.shots[shot.id] = frames.map((frame, index) => ({ file: join(screenshots, frameName(shot, index, frames.length)), width: frame.viewport.width, height: frame.viewport.height }));
     }
-    const previous = await readManifest(root);
     const outdated = await outdatedSupplied(layout, await currentManifest(layout, { edition: 0, editionDate: "", deck: "", confirm }));
     for (const item of supplied) {
       const file = join(output, "supplied", item.file);
@@ -121,20 +121,11 @@ try {
       const scale = (meta.density ?? 72) >= 144 ? 2 : 1;
       assets.supplied[item.id] = { file, width: meta.width! / scale, height: meta.height! / scale, outdated: outdated[item.id] ?? [] };
     }
-    const fingerprint = (await productSources(root)).fingerprint;
-    const draft = await deckHtml(chapters, assets, { edition: 0, date: "", fingerprint });
+    const draft = await deckHtml(chapters, assets, { edition: 0, date: "" });
     const deck = createHash("sha256").update(draft).digest("hex");
-    const pdfPath = join(output, pdfName);
-    const pdfMatches = previous?.pdf && createHash("sha256").update(await readFile(pdfPath).catch(() => Buffer.alloc(0))).digest("hex") === previous.pdf;
-    let edition = previous?.edition ?? 0, editionDate = previous?.editionDate ?? "";
-    if (deck !== previous?.deck || !pdfMatches) {
-      edition++;
-      editionDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Pacific/Auckland" }).format(new Date());
-      const pdf = await printPdf(browser, await deckHtml(chapters, assets, { edition, date: editionDate, fingerprint }));
-      await writeFile(pdfPath, pdf);
-      log(`Rendered edition ${edition} (${(pdf.length / 1048576).toFixed(1)} MB): ${resolve(pdfPath)}`);
-    } else log(`The deck is unchanged; edition ${edition} remains current.`);
-    await recordManifest(layout, { edition, editionDate, deck, confirm });
+    const result = await finalizeGeneration(layout, deck, async (edition, date) => printPdf(browser, await deckHtml(chapters, assets, {edition, date})), confirm);
+    if (result.rendered) log(`Rendered edition ${result.edition}: ${resolve(join(output, pdfName))}`);
+    else log(`The deck is unchanged; edition ${result.edition} remains current.`);
     for (const item of supplied) if (!assets.supplied[item.id]) log(`Pending supplied capture: ${item.id} → docs/manual/supplied/${item.file}`);
     for (const [id, paths] of Object.entries(outdated)) log(`Supplied capture ${id} may be outdated (${paths.join(", ")}).`);
   }
