@@ -6,6 +6,8 @@ Read this before adding behavior that users would notice, and when releasing or 
 
 Put new screens, controls and workflows behind a flag, so they can reach production hidden. They can be tested on staging and, using `preview`, by selected accounts in production. QA's issue verification does not gate deployment or production preview. The manual checks required by [Releasing](../operations/releasing.md), including real staging sign-in for auth, OAuth and admission-policy changes, still apply. Jaco decides when to enable a feature for everyone, normally after QA passes; the owner tries the feature in production preview before enabling it for everyone.
 
+The owner-only `/ops/feature-flags` reporting page is an exception: its owner email setting controls access and is disabled when unset; it has no separate flag. See [ADR 0017](../adrs/0017-owner-flag-reporting.md).
+
 A flag cannot hide these, so do not add one for them:
 
 - fixes and wording changes to behavior that already exists

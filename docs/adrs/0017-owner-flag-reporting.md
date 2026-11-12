@@ -1,11 +1,13 @@
 # Owner-only feature flag reporting
 
 Date: 2026-11-11
-Status: Proposed; awaiting Jaco's decision on the feature-flag exception.
+Status: Accepted by Jaco.
 
 ## Decision
 
 Provide a read-only `/ops/feature-flags` page in the running Lantern environment. It reports registered flag names and resolved states, not preview account addresses. Access requires an admitted session, active department membership and an exact match to the normalized `LANTERN_FLAG_OWNER_EMAIL` environment setting. Unset means no account can view the page. The environment owner sets the optional value; a malformed value stops startup. Railway remains authoritative for changes.
+
+As an exception to [ADR 0014](0014-feature-flags.md), this page has no separate registered feature flag. The owner email setting controls access and is disabled when unset.
 
 The private LanternBot board links to this page; the owner's browser accesses the environment directly. Agents and the VM do not fetch production state. Product behavior is in the [PRD](../PRD.md); flag configuration remains governed by [ADR 0014](0014-feature-flags.md).
 
