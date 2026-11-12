@@ -6,6 +6,8 @@ Keep responsibilities separate: React presents data and captures intent; HTTP mo
 
 Server-resolved identity and active department membership are authoritative. Never accept ownership or role grants from client input. Preserve history and department scope when membership ends, except for explicitly requested data removal. Keep local access explicitly configured and unavailable by default; production requires authenticated sessions.
 
+Link tracked issues in PR descriptions with `Refs #123`, not GitHub's automatic closing keywords. Include a `## QA checks` section with concrete checks and flag names when known. QA owns issue verification and closes an issue after it passes; release and production promotion do not wait for QA's issue verification. The manual checks required by [Releasing](docs/operations/releasing.md), including real staging sign-in for auth, OAuth and admission-policy changes, still apply.
+
 ## Read for the task
 
 Load the relevant guide when its task applies; follow its source links only for implementation details.
@@ -13,6 +15,7 @@ Load the relevant guide when its task applies; follow its source links only for 
 | Task | Start here |
 | --- | --- |
 | Run/write tests, explain coverage, or assess what a green check proves | [Testing](docs/development/testing.md): local commands, staging journeys, production checks and limits |
+| Link issues in a PR or hand a fix or feature to QA | [QA issue workflow](docs/development/qa-issue-workflow.md): labels, release evidence, checks and retesting |
 | Merge, release, change schema or delivery switches, or recover a failed release | [Releasing](docs/operations/releasing.md): automatic/manual paths, evidence and recovery |
 | Review a change or modify workflows, release tooling or agent instructions | [Change review](docs/operations/review-gate.md): independent inspection, protected changes and owner authority |
 | Change product or data-model behavior | [PRD](docs/PRD.md), [domain terms](GLOSSARY.md), [priorities](docs/ROADMAP.md) |

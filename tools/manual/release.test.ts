@@ -44,6 +44,7 @@ const fs = require('node:fs');
 const args = process.argv.slice(2);
 if (args[0] === 'fetch') process.exit(0);
 if (args[0] === 'merge-base') process.exit(0);
+if (args[0] === 'rev-list') { console.log('a'.repeat(40) + '\\n' + 'b'.repeat(40)); process.exit(0); }
 if (args[0] === 'ls-remote') { if (fs.existsSync('existing-tag')) console.log('b'.repeat(40) + '\\trefs/tags/manual-7'); process.exit(0); }
 if (args[0] === 'show') { console.log(fs.readFileSync(args[1].startsWith('b'.repeat(40)) ? 'before-manifest.json' : args[1].startsWith('manual-') && fs.existsSync('existing-tag') ? 'tagged-manifest.json' : 'published-manifest.json', 'utf8')); process.exit(0); }
 if (args[0] === 'rev-parse') {
@@ -55,12 +56,35 @@ process.exit(1);
   const script = await readFile(new URL("./release.sh", import.meta.url), "utf8");
   return {
     root,
-    run: (mode = "--publish") => promisify(execFile)("bash", ["-e", "-o", "pipefail", "-c", script, "release.sh", mode], {
-      cwd: root, env: { PATH: root + ":" + process.env.PATH, GITHUB_SHA: "a".repeat(40), MANUAL_PUSH_BEFORE: "b".repeat(40) },
+    run: (mode = "--publish", before = "b".repeat(40), sha = "a".repeat(40)) => promisify(execFile)("bash", ["-e", "-o", "pipefail", "-c", script, "release.sh", mode], {
+      cwd: root, env: { PATH: root + ":" + process.env.PATH, GITHUB_SHA: sha, MANUAL_PUSH_BEFORE: before },
     }),
     state: async () => JSON.parse(await readFile(join(root, "state.json"), "utf8")) as { draft: boolean; uploaded: boolean; calls: string[][] },
   };
 }
+
+test("an edition superseded by an unrelated push can still be published", async (t) => {
+  const fixture = await releaseFixture(t, null);
+  await rm(join(fixture.root, "git"));
+  const git = async (...args: string[]) => (await promisify(execFile)("git", args, {cwd: fixture.root})).stdout.trim();
+  await git("init", "--bare", "remote.git");
+  await git("init", "-b", "main");
+  await git("config", "user.name", "Manual Test");
+  await git("config", "user.email", "manual@example.test");
+  await git("remote", "add", "origin", join(fixture.root, "remote.git"));
+  await writeFile(join(fixture.root, "docs/manual/manifest.json"), JSON.stringify({edition:6,deck:"previous-deck"}));
+  await git("add", "docs/manual"); await git("commit", "-m", "previous edition");
+  await writeFile(join(fixture.root, "docs/manual/manifest.json"), JSON.stringify({edition:7,editionDate:"2026-11-02",deck:"published-deck"}));
+  await git("add", "docs/manual"); await git("commit", "-m", "new edition");
+  const before = await git("rev-parse", "HEAD");
+  await writeFile(join(fixture.root, "unrelated.txt"), "unrelated");
+  await git("add", "unrelated.txt"); await git("commit", "-m", "unrelated push");
+  const sha = await git("rev-parse", "HEAD");
+  await git("push", "origin", "main");
+  await fixture.run("--check", before, sha);
+  await fixture.run("--publish", before, sha);
+  assert.equal((await fixture.state()).uploaded, true);
+});
 
 test("release rerun resumes an unpublished draft and uploads the PDF before publishing", async (t) => {
   const fixture = await releaseFixture(t, true);

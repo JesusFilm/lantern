@@ -167,6 +167,19 @@ test("a full generation records the raw input hashes of the generation that succ
   assert.equal((await readManifest(layout.root))?.edition, 1);
 });
 
+test("generation provenance records byte changes excluded from freshness", async (t) => {
+  const { layout, write } = await project(t);
+  const pkg = {devDependencies:{"@types/node":"^1"}};
+  await write("package.json", JSON.stringify(pkg));
+  await write("package-lock.json", JSON.stringify({lockfileVersion:3,packages:{"":pkg,"node_modules/@types/node":{dev:true,version:"1"}}}));
+  const generated = await recordManifest(layout, {edition:1,editionDate:"2026-11-10",deck:"d1"});
+  await write("package.json", JSON.stringify(pkg, null, 2));
+  const rerun = await recordManifest(layout, {edition:1,editionDate:"2026-11-10",deck:"d1"});
+  assert.equal(rerun.sources.fingerprint, generated.sources.fingerprint);
+  assert.notEqual(rerun.verification!.rawSources["package.json"], generated.verification!.rawSources["package.json"]);
+  assert.notEqual(rerun.verification!.rawSources["package.json"], rerun.sources.files["package.json"]);
+});
+
 test("a changed deck must not reuse an edition main has already published", async (t) => {
   const { layout, write } = await project(t);
   // The base is main's manifest, the deck the branch's edition must move past.

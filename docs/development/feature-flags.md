@@ -4,7 +4,7 @@ Read this before adding behavior that users would notice, and when releasing or 
 
 ## When to use a flag
 
-Put new screens, controls and workflows behind a flag, so they can reach production hidden and be checked there before members see them.
+Put new screens, controls and workflows behind a flag, so they can reach production hidden. They can be tested on staging and, using `preview`, by selected accounts in production. QA's issue verification does not gate deployment or production preview. The manual checks required by [Releasing](../operations/releasing.md), including real staging sign-in for auth, OAuth and admission-policy changes, still apply. Jaco decides when to enable a feature for everyone, normally after QA passes; the owner tries the feature in production preview before enabling it for everyone.
 
 A flag cannot hide these, so do not add one for them:
 

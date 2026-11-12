@@ -64,22 +64,29 @@ fi
 # A tag can exist even when no release exists for it.
 check_existing_tag
 if [ -z "$remote_tag" ]; then
-  # With no release or tag, an unchanged deck on a later push provides no
-  # evidence that an earlier failed edition transition was valid.
+  # Verify the introduction of an unpublished edition even when this push
+  # did not change it. Every intervening first-parent revision must carry the
+  # same deck, and the previous edition must be lower.
   before=${MANUAL_PUSH_BEFORE:-}
   if ! [[ "$before" =~ ^[[:xdigit:]]{40}$ ]] || [[ "$before" =~ ^0{40}$ ]]; then
     echo "Cannot verify the unpublished manual edition without the revision before this push." >&2
     exit 1
   fi
   git merge-base --is-ancestor "$before" HEAD
-  git show "$before:docs/manual/manifest.json" | node -e '
-    const fs = require("node:fs");
-    const before = JSON.parse(fs.readFileSync(0, "utf8"));
+  node -e '
+    const {execFileSync} = require("node:child_process");
     const current = require("./docs/manual/manifest.json");
-    if (typeof before.edition !== "number" || typeof before.deck !== "string" || current.edition <= before.edition) {
-      console.error("Cannot verify the unpublished manual edition after a prior push; recover it or generate a new edition.");
-      process.exit(1);
-    }
+    try {
+      const history = execFileSync("git", ["rev-list", "--first-parent", "HEAD"], {encoding:"utf8"}).trim().split("\n");
+      for (const ref of history) {
+        const previous = JSON.parse(execFileSync("git", ["show", `${ref}:docs/manual/manifest.json`], {encoding:"utf8", stdio:["ignore","pipe","ignore"]}));
+        if (typeof previous.edition !== "number" || typeof previous.deck !== "string") break;
+        if (previous.edition < current.edition) process.exit(0);
+        if (previous.edition !== current.edition || previous.deck !== current.deck) break;
+      }
+    } catch {}
+    console.error("Cannot verify the unpublished manual edition after a prior push; recover it or generate a new edition.");
+    process.exit(1);
   '
 fi
 if [ "${1:-}" = "--check" ]; then exit 0; fi
