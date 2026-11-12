@@ -110,6 +110,30 @@ test("type-only dependency metadata does not require recapturing the manual", as
   assert.deepEqual((await checkManual(layout)).errors, []);
 });
 
+test("type-only exclusions preserve dependencies that can affect the manual", async (t) => {
+  for (const scenario of ["unused undici", "retained undici", "root runtime type", "linked type"] as const) {
+    await t.test(scenario, async (t) => {
+      const {layout, write} = await project(t);
+      const pkg = {devDependencies:{"@types/node":"^1", vite:"^1"}, ...(scenario === "root runtime type" ? {dependencies:{"@types/node":"^1"}} : {})};
+      const entries: Record<string, unknown> = {
+        "": pkg,
+        "node_modules/@types/node": {version:"1",dev:true,dependencies:{"undici-types":"^1"}, ...(scenario === "linked type" ? {link:true} : {})},
+        "node_modules/undici-types": {version:"1",dev:true},
+        "node_modules/vite": {version:"1",dev:true, ...(scenario === "retained undici" ? {dependencies:{"undici-types":"^1"}} : {})},
+      };
+      await write("package.json", JSON.stringify(pkg));
+      await write("package-lock.json", JSON.stringify({lockfileVersion:3,packages:entries}));
+      await recordManifest(layout, {edition:1,editionDate:"2026-11-10",deck:"d1"});
+      const changed = scenario.endsWith("undici") ? "node_modules/undici-types" : "node_modules/@types/node";
+      entries[changed] = {...entries[changed] as object, version:"2"};
+      await write("package-lock.json", JSON.stringify({lockfileVersion:3,packages:entries}));
+      const errors = (await checkManual(layout)).errors.join("\n");
+      if (scenario === "unused undici") assert.equal(errors, "");
+      else assert.match(errors, /changed: package-lock.json/);
+    });
+  }
+});
+
 
 test("runtime, build, browser, unknown and install-script dependency changes stay relevant", async (t) => {
   for (const [name, dev, extra] of [["react", false, {}], ["vite", true, {}], ["@vitejs/plugin-react", true, {}], ["@playwright/test", true, {}], ["unknown-tool", true, {}], ["@types/node", true, { hasInstallScript: true }]] as const) {
