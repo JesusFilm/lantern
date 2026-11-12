@@ -25,8 +25,10 @@ Refs #123
 ## Hand over for testing
 
 After the fix reaches production, confirm that the change is available to the
-intended testers in the agreed environment: staging or production preview.
-Use the release evidence in [Releasing](../operations/releasing.md); a merge or
+intended testers in the agreed environment: staging or production. For a flagged
+feature that is not yet on, use production preview when testing in production.
+Use the release evidence in [Releasing](../operations/releasing.md) to confirm
+the fix is live in production and available in the agreed environment; a merge or
 a submitted deployment alone does not establish availability. If a deployment
 failed or was superseded, or a needed flag or account is unavailable or unknown
 in the chosen environment, investigate before marking the issue ready.
@@ -36,7 +38,7 @@ what changed, the PR, the environment, the relevant flag and its verified state
 if known, and the checks to perform. Say when the production flag state is
 unknown. Contributors can do this manually; LanternBot may perform the handoff
 for work it handles, subject to its evidence and safety checks. Its current
-automatic handoff checks staging availability; a production-preview handoff
+automatic handoff checks staging availability; a production handoff
 can be made manually after a person verifies access. Do not assume it handles
 every PR.
 
