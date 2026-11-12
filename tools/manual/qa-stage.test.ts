@@ -46,7 +46,7 @@ test("stage labels cannot authorize a self-consistent connection to an unpinned 
         LANTERN_DB_RUNTIME_ROLE: "lantern_stage_runtime", LANTERN_DB_MIGRATION_ROLE: "lantern_stage_migration", LANTERN_DB_ADMIN_ROLE: "lantern_stage_admin",
         MIGRATION_DATABASE_URL: `postgresql://lantern_stage_migration:synthetic-only@${endpoint}/railway`,
         MIGRATION_DATABASE_CA: readFileSync(join(directory, "ca.pem"), "utf8"),
-        QA_SHARON: "qa0@example.test", QA_SUSHMA: "qa1@example.test", QA_ESTHER: "qa2@example.test", QA_LEAD: "SharonQA",
+        QA_SHARON: "qa0@example.test", QA_SUSHMA: "qa1@example.test", QA_ESTHER: "qa2@example.test", QA_JUDY: "qa3@example.test", QA_LEAD: "SharonQA",
       },
       timeout: 5000,
     });
@@ -56,7 +56,7 @@ test("stage labels cannot authorize a self-consistent connection to an unpinned 
     const [code] = await once(child, "close");
     assert.equal(code, 1);
     assert.match(output, /failed safely/i);
-    assert.doesNotMatch(output, /synthetic-only|qa[012]@example/);
+    assert.doesNotMatch(output, /synthetic-only|qa[0-3]@example/);
     assert.equal(connections, 0, "untrusted endpoint must be rejected before opening a database connection");
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));

@@ -92,7 +92,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     res.json({ coachAvailable: !!config.coach && featureEnabled(features, 'coach', user?.email), features: enabledFeatures(features, user?.email), user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !config.hostingOnly && !!config.provider, localAccess: !!config.localUserId });
   });
   router.use(coachRoutes(db, requireUser, config.coach, (user) => featureEnabled(features, 'coach', user.email)));
-  router.use(focusRoutes(db, requireUser));
+  router.use(focusRoutes(db, requireUser, features));
   router.use(directionRoutes(db, requireUser));
   router.patch('/api/account', async (req, res) => {
     const user = await requireUser(req);

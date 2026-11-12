@@ -11,12 +11,36 @@ jobs:
     name: QA manual matches the source
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      MANUAL_PUSH_BEFORE: ${{ github.event.before }}
     steps:
       - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - name: Fetch main for manual edition comparison
+        run: git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
       - uses: actions/setup-node@v7
         with: { node-version: '26.13.0', cache: npm }
       - run: npm ci
       - run: npm run manual:check
+  manual-release-guard:
+    name: QA manual release content
+    # Draft releases require repository write access to inspect. This job only
+    # runs trusted main pushes and never uploads or publishes an asset.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v7
+        with: { node-version: '26.13.0' }
+      - name: Check existing manual release content
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MANUAL_PUSH_BEFORE: ${{ github.event.before }}
+        run: bash tools/manual/release.sh --check
   typecheck:
     name: typecheck
     runs-on: ubuntu-latest
@@ -65,7 +89,7 @@ jobs:
       - run: docker build -t lantern-ci .
   stage:
     name: stage delivery and smoke
-    needs: [typecheck, tests, build]
+    needs: [manual, manual-release-guard, typecheck, tests, build]
     # Enabled only after staging credentials and migration connectivity are verified.
     # This must be a repository variable: environment variables are unavailable here.
     if: vars.STAGE_DELIVERY_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -79,7 +103,7 @@ jobs:
       RELEASE_SHA: ${{ github.sha }}
       APP_ORIGIN: ${{ vars.APP_ORIGIN }}
       RELEASE_TARGET: stage
-      EXPECTED_SCHEMA_VERSION: '9'
+      EXPECTED_SCHEMA_VERSION: '10'
       RAILWAY_PROJECT: ${{ vars.RAILWAY_PROJECT }}
       RAILWAY_SERVICE: ${{ vars.RAILWAY_SERVICE }}
       RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_ENVIRONMENT }}

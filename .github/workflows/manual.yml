@@ -4,7 +4,6 @@ name: QA manual release
 on:
   push:
     branches: [main]
-    paths: [docs/manual/manifest.json]
 permissions:
   contents: write
 concurrency:
@@ -14,8 +13,13 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      MANUAL_PUSH_BEFORE: ${{ github.event.before }}
     steps:
       - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - name: Fetch main for manual edition comparison
+        run: git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
       - uses: actions/setup-node@v7
         with: { node-version: '26.13.0', cache: npm }
       - run: npm ci
@@ -23,21 +27,4 @@ jobs:
       - name: Publish the edition once
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          edition=$(node -p "require('./docs/manual/manifest.json').edition")
-          date=$(node -p "require('./docs/manual/manifest.json').editionDate")
-          tag="manual-$edition"
-          if draft=$(gh release view "$tag" --json isDraft --jq '.isDraft'); then
-            if [ "$draft" = "true" ]; then
-              # gh create uploads through a draft. A failed upload/publish can
-              # leave that draft behind; resume it instead of reporting success.
-              gh release upload "$tag" docs/manual/lantern-manual.pdf --clobber
-              gh release edit "$tag" --draft=false --latest
-            else
-              echo "$tag is already published."
-            fi
-            exit 0
-          fi
-          printf 'Lantern QA manual, edition %s (%s), generated from %s.\n\nOpen lantern-manual.pdf below. Screenshots use synthetic data.\n' "$edition" "$date" "$GITHUB_SHA" > notes.md
-          gh release create "$tag" docs/manual/lantern-manual.pdf --target "$GITHUB_SHA" --title "QA manual, edition $edition" --notes-file notes.md --latest
-
+        run: bash tools/manual/release.sh --publish

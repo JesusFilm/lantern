@@ -107,6 +107,7 @@ export function Department({
       <MemberFocuses
         key={`${selection.member}:${selection.focus}:${accessRevision}`}
         memberId={selection.member}
+        progressEnabled={session.features.includes("focus-progress")}
         viewerId={viewerId}
         focusId={selection.focus}
         navigate={navigate}

@@ -97,7 +97,7 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     const address = server.address();
     assert.ok(address && typeof address !== "string");
     const origin = `http://127.0.0.1:${address.port}`;
-    const app = createApp(fixture.runtime, { origin, provider: signInOnly, coach: fakeCoach(() => firstInitiative), features: resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,sidebar-collapse=on" }, "production") });
+    const app = createApp(fixture.runtime, { origin, provider: signInOnly, coach: fakeCoach(() => firstInitiative), features: resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,sidebar-collapse=on,focus-progress=on" }, "production") });
     app.use(express.static(resolve(clientDirectory)));
     server.on("request", app);
 
@@ -152,6 +152,7 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     await call("lead", confirmedPath + "/notes", "POST", { version: confirmed.version, body: "This reads well. The release goal is clear and measurable." });
     await call("member", confirmedPath + "/notes", "POST", { version: confirmed.version, body: "Thanks — I'll share the runbook draft next week." });
     await call("lead", confirmedPath + "/confirm", "POST", { version: confirmed.version });
+    await call("member", `/api/focuses/${confirmed.id}/progress-entry`, "PUT", {section:0,goal:0,status:"in-progress",body:"The runbook draft is ready for the team's feedback.",revision:null,noteRevision:null});
 
     const draft = (await call("member", "/api/focuses", "POST", {
       title: "First half 2027",
@@ -256,6 +257,7 @@ async function pinTimestamps(pool: import("pg").Pool) {
        FROM (SELECT id, row_number() OVER (ORDER BY updated_at, id) AS n FROM lantern.position_focuses) o WHERE o.id = f.id`,
       [base],
     );
+    await owner.query("UPDATE lantern.focus_progress_notes SET created_at = '2026-10-29T15:30:00+13:00'");
     await owner.query("UPDATE lantern.position_focuses SET confirmed_at = '2026-10-29T15:30:00+13:00' WHERE confirmed_at IS NOT NULL");
   } finally {
     await owner.query("SET session_replication_role = DEFAULT");
