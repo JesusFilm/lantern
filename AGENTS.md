@@ -6,7 +6,7 @@ Keep responsibilities separate: React presents data and captures intent; HTTP mo
 
 Server-resolved identity and active department membership are authoritative. Never accept ownership or role grants from client input. Preserve history and department scope when membership ends, except for explicitly requested data removal. Keep local access explicitly configured and unavailable by default; production requires authenticated sessions.
 
-Link tracked issues in PR descriptions with `Refs #123`, not GitHub's automatic closing keywords. Include a `## QA checks` section with concrete checks and flag names when known. QA owns issue verification and closes an issue after it passes; release and production promotion do not wait for manual QA.
+Link tracked issues in PR descriptions with `Refs #123`, not GitHub's automatic closing keywords. Include a `## QA checks` section with concrete checks and flag names when known. QA owns issue verification and closes an issue after it passes; release and production promotion do not wait for QA's issue verification. The manual checks required by [Releasing](docs/operations/releasing.md), including real staging sign-in for auth, OAuth and admission-policy changes, still apply.
 
 ## Read for the task
 

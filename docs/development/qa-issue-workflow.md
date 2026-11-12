@@ -3,7 +3,9 @@
 Use this workflow for tracked fixes and features, whether the work is done by a
 person, a coding agent or LanternBot. The labels are GitHub issue labels; anyone
 with permission to edit an issue can use them. QA records verification on the
-issue. A release does not wait for manual QA.
+issue. A release does not wait for QA's issue verification; the manual checks
+required by [Releasing](../operations/releasing.md) still apply, including real
+staging sign-in for auth, OAuth and admission-policy changes.
 
 ## Link the work
 
@@ -68,5 +70,5 @@ New user-visible features follow the [feature flag policy](feature-flags.md):
 they can ship hidden in production and be tested on staging or by selected
 accounts in production preview. The owner tries the feature in production
 preview before enabling it for everyone. Jaco normally decides when to enable
-it for everyone after QA passes; staging sign-off is not required to deploy to
-production or test there. Manual QA is not a gate between staging and production.
+it for everyone after QA passes. QA's issue verification does not gate deployment
+or production preview; the manual release checks described above still apply.
