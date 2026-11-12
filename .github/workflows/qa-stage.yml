@@ -37,6 +37,7 @@ jobs:
       QA_SHARON: ${{ secrets.QA_SHARON_EMAIL }}
       QA_SUSHMA: ${{ secrets.QA_SUSHMA_EMAIL }}
       QA_ESTHER: ${{ secrets.QA_ESTHER_EMAIL }}
+      QA_JUDY: ${{ secrets.QA_JUDY_EMAIL }}
       QA_LEAD: ${{ inputs.lead }}
     steps:
       - uses: actions/checkout@v7

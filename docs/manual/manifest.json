@@ -1,9 +1,9 @@
 {
   "edition": 42,
   "editionDate": "2026-11-12",
-  "deck": "39a658355ba7405e72f22d84dbd9d1547f3539a087dc86697428bae7bf09773c",
+  "deck": "7405febd1896e01c8f51d961367671836abfc32f5cb43913a023bda75153dc98",
   "sources": {
-    "fingerprint": "d0274c1bcf08ff770d6dd7d2c036a383cba04d4184d2675618f78d1f0bb63a0c",
+    "fingerprint": "b098bd0f697030ecca9f781a86d0079159ceaf82e38121c548a57c24faa94b9e",
     "files": {
       ".nvmrc": "6e775beae185bb3f5837d2f6d3fbe910e6f60e18fa507e661e312e84d707a92f",
       "client/Guide.tsx": "2a04cd56387e9f740924df4e873a67677f3da6c162bc9dac57b06d80c6287250",
@@ -54,7 +54,7 @@
       "client/workspace/useSwipeNavigation.ts": "3afbeefed498f713fc7e42e6d8fcc313dba7d8dd20a2f3aca59631d23820d420",
       "docs/PRD.md": "95a015cdd7edc6783f5d3f507d3d1937377db8bbd54bb1ed4990f165b104f1a7",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
-      "package-lock.json": "e912cf739d19f22eeb3c3b8ba0a5b8dece0dd3f59d6f3640117afd3ebce02736",
+      "package-lock.json": "3b6f97f06d286135be4cc8c77da10398bbdc1ba734970df8512b4f359fcbd3ae",
       "package.json": "1e9b07af6d7d0e9154e972b99a0ec1df4768a6d5e12e3e0f9e66d6f605bc5e60",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/lantern.svg": "3525f31ec77634d4ed9bd979e916ca5b3639199c23cd25578089cb319b1b2d57",
@@ -115,8 +115,8 @@
       "tools/manual/generate.ts": "cf500d5525da239311ba9c112c1829dfea744d9fad2656340e8ddc66e9f7ce46",
       "tools/manual/layout.ts": "c7fba281b6e1dc0ef98f0c6d4b2a16d36791fa18856d96e7e4047de84cbdb96d",
       "tools/manual/manual.ts": "fec8222b1b7aa47f4aeb296c6fbf09308c478e879df9f8618cfb6c2f53fb3b7f",
-      "tools/manual/qa-fixture.ts": "710263817582f8cb735ae1679a450a620cc30174980e8ee3b77a54186eb2dc13",
-      "tools/manual/qa-stage.ts": "4bfe24391240bbe32a293622db8b8bfc6cb51c2f45a626fc278a66019fc04e8c",
+      "tools/manual/qa-fixture.ts": "6f55100d45fce6a26bc33381d3d907a6d70b0c7c8680a9be354dc9c711f98f53",
+      "tools/manual/qa-stage.ts": "93d54f3f6760f41cde405416109dc8908dbeeaeca040991510aa9650e72aa29a",
       "tools/manual/render.ts": "eedd830fcf3ccbdd403a8b3563b487be2edda4041ed4f6a724795dbaba2dda0c",
       "tools/manual/tsconfig.json": "b2c53bf7e0a9203acae2292d0215afb5abb1d3e90311ace1b9e8a11ec37ef1ac",
       "tools/manual/world.ts": "c32412698e84095d17180791202a3f2ff5c6979a7d739550cf27fd9320f77002",
@@ -135,7 +135,7 @@
     "department-member.png": "1740bf8386425f8b6a3603c5266b9db43da4a0ce95f9197cc6936db6ac730822",
     "department-people.png": "48eaac26ab0a32ae352d6e7e1da78d5a4007f4800df57644b893b63169610433",
     "focus-confirmed-1.png": "0acf4b0e51c690fa1bc70f35d220d6549455ed91054c4058261b13fb847767cc",
-    "focus-confirmed-2.png": "223c5f37c700866fc96d0e410b825a89a62978e8bf699e7e9857685c0c5e132a",
+    "focus-confirmed-2.png": "7fcd30492a92a4e776b4632257e55a7ecca672944000a8099a01f3a735efccc7",
     "focus-draft-1.png": "8f3dec8b47392e6e45d255f1d4b00de11b942249bc8b0e6707734e01995c091c",
     "focus-draft-2.png": "848dc13d1e64b46b861e2144fb5ab12c234b438cdf87cba2f33297e2a2627d7f",
     "focus-list.png": "34cf7d1b159537b0cf144f1e104115cb8312cf4ec91091cb60b31350ccae9769",
@@ -162,7 +162,7 @@
     "objective-choice.png": "25dc3f4f23d52ae4e8b884749969b12f4d0ff68a8b0fd679a64d3d6621e613d6",
     "objective-manual-1.png": "2457176db78259341e1a5538da2d816e3a73935c7b437b8d08b21ab343c06d1b",
     "objective-manual-2.png": "d6c53c465406a4967b43ec7b3c648278f28050b7c3408ea83b4f105ccb17edbf",
-    "own-confirm-dialog.png": "92c0ef176a01c5f01016ac7ce858f5115f7cc2fa0842be28743bcc40bb43c5f8",
+    "own-confirm-dialog.png": "d66cd48db0df60c413dd83f05df30e9bd783dcb70c236a284b9c2304bc794ac5",
     "phone-focus-1.png": "10a9b50bf31faed0c60b8cc360532a0362849fb0c29b599286bd27c49178e875",
     "phone-focus-2.png": "4eb7f8ccc6bd1e0bde3e4891e27e36ba6ac8b69b650aee5e8465ed2581f16ec5",
     "phone-objective-1.png": "2300e8342b4fdf3bdbfd8ea8f4f64bbef3624c43f90d702480cca5ba6d366757",
@@ -189,5 +189,5 @@
       }
     }
   },
-  "pdf": "a7a13e110b83e2c7b3b055f15b9fe46047fd5fc1aa19ee2d0d808a5ad2f26438"
+  "pdf": "5dedd11300ed06a4fd21c08d80d58a0cd8a15d68915e9887410d6a23edac6469"
 }

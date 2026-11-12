@@ -8,6 +8,8 @@ Lantern helps members write objectives and SMART goals, discuss their position f
 
 For test setup, focused/full commands, coverage and limits, read [Testing](docs/development/testing.md). Test fixtures use an isolated local owner connection; application setup below uses restricted runtime/migration/admin connections. Keep your private environment files, which hold settings. The local database is disposable and can be reset at any time.
 
+When linking issues or preparing a fix or feature for human testing, follow the [QA issue workflow](docs/development/qa-issue-workflow.md). It applies to all contributors and coding agents.
+
 For a fresh local application database:
 
 1. Create a dedicated database using the local PostgreSQL owner. Set `LANTERN_ENV=local`, `LANTERN_DB_SETUP_MODE=empty`, `LANTERN_DB_EXPECTED_ENDPOINT=127.0.0.1:55439`, `LANTERN_DB_SOURCE_OWNER=career_lead`, `LANTERN_DB_NAME`, `LANTERN_DB_SCHEMA`, and distinct `LANTERN_DB_RUNTIME_ROLE`, `LANTERN_DB_MIGRATION_ROLE`, `LANTERN_DB_ADMIN_ROLE` values.

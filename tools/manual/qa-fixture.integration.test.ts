@@ -94,6 +94,27 @@ test("refuses to adopt an unrelated department that happens to have the QA name"
 });
 
 
+test("enrolls a fourth registered QA participant as a member alongside the selected lead", async () => {
+  const f = await coachingFixture();
+  try {
+    const participants = [0, 1, 2, 3].map((i) => `fourqa${i}@example.test`);
+    for (const [i, email] of participants.entries()) {
+      await f.admin.query("INSERT INTO users(id,google_sub,email,name) VALUES($1,$2,$3,$4)", [randomUUID(), `fourqa-${i}`, email, `Four QA ${i}`]);
+      await f.admin.query("INSERT INTO approved_emails VALUES($1)", [email]);
+    }
+    const result = await resetQaDepartment(f.admin, { participants, lead: participants[0] });
+    assert.deepEqual(result, { registered: 4, missing: 0 });
+    const members = await f.admin.query(`SELECT u.name,m.role,d.name AS department FROM memberships m JOIN users u ON u.id=m.user_id
+      JOIN departments d ON d.id=m.department_id WHERE lower(u.email)=ANY($1::text[]) ORDER BY u.name`, [participants]);
+    assert.deepEqual(members.rows, [
+      { name: "Four QA 0", role: "career-lead", department: "Lantern QA" },
+      { name: "Four QA 1", role: "member", department: "Lantern QA" },
+      { name: "Four QA 2", role: "member", department: "Lantern QA" },
+      { name: "Four QA 3", role: "member", department: "Lantern QA" },
+    ]);
+  } finally { await f.close(); }
+});
+
 test("provision two registered QA participants and preserve unrelated acceptance data", async () => {
   const f = await coachingFixture();
   try {
