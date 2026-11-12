@@ -67,7 +67,17 @@ test('only the signed-in owner with active membership can see flag states', { ti
     config.flagOwnerEmail = '';
     assert.equal((await request('/ops/feature-flags', owner)).status, 403, 'An unset owner must fail closed');
     config.flagOwnerEmail = 'owner@example.test';
+    const localUser = await f.admin.query("SELECT id FROM users WHERE email='owner@example.test'");
+    await f.admin.query("DELETE FROM approved_emails WHERE email='owner@example.test'");
+    config.localUserId = localUser.rows[0].id as string;
+    assert.equal((await request('/ops/feature-flags')).status, 200, 'Explicit local access uses its synthetic account without a session or admission');
+    config.flagOwnerEmail = 'member@example.test';
+    assert.equal((await request('/ops/feature-flags')).status, 403, 'Local access still requires the configured owner email');
+    config.flagOwnerEmail = 'owner@example.test';
+    await approveEmail(f.admin, 'owner@example.test');
     await f.admin.query("UPDATE memberships SET deleted_at=now() WHERE user_id=(SELECT id FROM users WHERE email='owner@example.test')");
+    assert.equal((await request('/ops/feature-flags')).status, 403, 'Local access still requires active membership');
+    delete config.localUserId;
     assert.equal((await request('/ops/feature-flags', owner)).status, 403);
   } finally {
     await new Promise<void>(resolve => server.close(() => resolve()));

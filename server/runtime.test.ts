@@ -45,7 +45,8 @@ test('application deployment never runs the privileged migration command', async
 test('feature operations owner is optional, normalized and validated', () => {
   assert.equal(resolveRuntime(hosted).flagOwnerEmail, undefined);
   assert.equal(resolveRuntime({ ...hosted, LANTERN_FLAG_OWNER_EMAIL: ' Owner@Example.test ' }).flagOwnerEmail, 'owner@example.test');
-  for (const value of ['not-an-email', 'one@example.test,two@example.test', '  ']) {
+  assert.equal(resolveRuntime({ ...hosted, LANTERN_FLAG_OWNER_EMAIL: ' First.Last+flags@Example.test ' }).flagOwnerEmail, 'first.last+flags@example.test');
+  for (const value of ['not-an-email', 'one@example.test,two@example.test', 'alice,bob@example.test', 'alice;bob@example.test', '.alice@example.test', 'alice..bob@example.test', '  ']) {
     assert.throws(() => resolveRuntime({ ...hosted, LANTERN_FLAG_OWNER_EMAIL: value }));
   }
 });

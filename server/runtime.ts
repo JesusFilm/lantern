@@ -34,7 +34,10 @@ export function resolveRuntime(env: NodeJS.ProcessEnv = process.env) {
   if (/(^|,)\s*coach=(preview|on)\s*(,|$)/.test(env.LANTERN_FEATURES ?? '') && !coach) throw new Error('LANTERN_FEATURES sets coach to preview or on, but its providers are not configured.');
   let flagOwnerEmail: string | undefined;
   if (env.LANTERN_FLAG_OWNER_EMAIL) {
-    try { flagOwnerEmail = normalizeEmail(env.LANTERN_FLAG_OWNER_EMAIL); }
+    try {
+      flagOwnerEmail = normalizeEmail(env.LANTERN_FLAG_OWNER_EMAIL);
+      if (!/^[a-z0-9!#$%&'+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'+\/=?^_`{|}~-]+)*@/.test(flagOwnerEmail)) throw new Error();
+    }
     catch { throw new Error('LANTERN_FLAG_OWNER_EMAIL must be one valid email address.'); }
   }
   return { coach, features, flagOwnerEmail, environment, hosted, connectionString, port, host, localAccess, origin, clientId, hostingOnly };

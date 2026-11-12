@@ -3,7 +3,7 @@
   "editionDate": "2026-11-13",
   "deck": "6adc88f01883b32a2510cc31b7ad84da21c1b53ac9c0fafa59c6ebd0d724b1b8",
   "sources": {
-    "fingerprint": "ef709a8b32c8df4904d0c61446f7d653c3910f335cbb0996bee303af51355a60",
+    "fingerprint": "b1775ea0587a15ccec783ed74f3c8a479e263682815a21c5801189bba9099275",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -54,7 +54,7 @@
       "client/workspace/usePhoneLayout.ts": "eda4b107cebeca888fbf15d99ada307b256711ae56c4100e5b184b72467447bf",
       "client/workspace/useSwipeNavigation.ts": "3afbeefed498f713fc7e42e6d8fcc313dba7d8dd20a2f3aca59631d23820d420",
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
-      "docs/PRD.md": "0390e315caf328322e967c8f2c0640b30bf3d9867b2fc5ca0664238e3f19b1d7",
+      "docs/PRD.md": "f04636944333a5cf309865ba0a7a033a2bb6f20292e5acda305796022233c262",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
       "package-lock.json": "153c2e4445cbef80f18c0bcf4eb8cb169b96c5374246b2ac7bae01f191b4426a",
       "package.json": "992a1a5a01fb2b67495a414d2dd1ebd857e53ef696eb4d14fc5249f3c3e4c3bf",
@@ -97,7 +97,7 @@
       "server/privilege-test-support.ts": "b7cf3608a7cd4599358d198305c201de15ce878f4cd83af555199c4b05f58c3b",
       "server/progress-http.ts": "f8b73280f5a042c1e5c9009d529f62efa0f84617c2916cc3cb89c476a2d5e9e2",
       "server/progress.ts": "8f38ace6abce842d92fd94adc5f6dc412d7226dc93fa2ef822739a95f5f2a555",
-      "server/runtime.ts": "8064b06c1fd4682aa4b5be8208586b969d30747ee1de4afd69ea7d0ae5605576",
+      "server/runtime.ts": "6165e2a2095c934b598b4883f0ad4d43d7444f743295be882e6503cde02e7f49",
       "server/schema.ts": "7abf87150d5bde9dc2f4f2677563d244f18fa18cca8466da9182b89afe5f5d2e",
       "server/transition-database.ts": "b8e8eb9b982853b0225f71253841ba562a73049c737ad511e0836cd00a6bfff8",
       "server/verify-database.ts": "76a01de33a8d998c2a8c7cd6ac8d08679206f26c811fbdedce0b0159152df195",
@@ -200,7 +200,7 @@
   },
   "pdf": "da0f3acb9a84a0652cde7641e84f98cffd5ba8989361db306bf967225891bddd",
   "verification": {
-    "generatedAt": "2026-11-12T21:33:54.377Z",
+    "generatedAt": "2026-11-12T22:56:00.304Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -252,7 +252,7 @@
       "client/workspace/usePhoneLayout.ts": "eda4b107cebeca888fbf15d99ada307b256711ae56c4100e5b184b72467447bf",
       "client/workspace/useSwipeNavigation.ts": "3afbeefed498f713fc7e42e6d8fcc313dba7d8dd20a2f3aca59631d23820d420",
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
-      "docs/PRD.md": "0390e315caf328322e967c8f2c0640b30bf3d9867b2fc5ca0664238e3f19b1d7",
+      "docs/PRD.md": "f04636944333a5cf309865ba0a7a033a2bb6f20292e5acda305796022233c262",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
       "package-lock.json": "aa69968145bb0d3248b6106b708223ddf834747a70f44e977935ddc4e88662ff",
       "package.json": "146cd29a3418464bcca5bc39539f23bf06cf08883ab6439d151388b1c6ea7d39",
@@ -295,7 +295,7 @@
       "server/privilege-test-support.ts": "b7cf3608a7cd4599358d198305c201de15ce878f4cd83af555199c4b05f58c3b",
       "server/progress-http.ts": "f8b73280f5a042c1e5c9009d529f62efa0f84617c2916cc3cb89c476a2d5e9e2",
       "server/progress.ts": "8f38ace6abce842d92fd94adc5f6dc412d7226dc93fa2ef822739a95f5f2a555",
-      "server/runtime.ts": "8064b06c1fd4682aa4b5be8208586b969d30747ee1de4afd69ea7d0ae5605576",
+      "server/runtime.ts": "6165e2a2095c934b598b4883f0ad4d43d7444f743295be882e6503cde02e7f49",
       "server/schema.ts": "7abf87150d5bde9dc2f4f2677563d244f18fa18cca8466da9182b89afe5f5d2e",
       "server/transition-database.ts": "b8e8eb9b982853b0225f71253841ba562a73049c737ad511e0836cd00a6bfff8",
       "server/verify-database.ts": "76a01de33a8d998c2a8c7cd6ac8d08679206f26c811fbdedce0b0159152df195",

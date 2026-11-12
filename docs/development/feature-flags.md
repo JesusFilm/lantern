@@ -38,7 +38,7 @@ The application refuses to start when either variable is malformed, names a stat
 
 ## Inspect the current state
 
-The environment owner may set `LANTERN_FLAG_OWNER_EMAIL` to one exact approved account email in the webapp's environment. After signing in with that account and an active department membership, open `/ops/feature-flags` on that environment. The page lists registered names and their resolved `off`, `preview` or `on` state. It never lists preview email addresses and does not change settings. A signed-out visitor, another account, or a former member cannot view it. When the variable is unset the page is unavailable to everyone. An invalid value prevents startup.
+The environment owner may set `LANTERN_FLAG_OWNER_EMAIL` to one exact approved account email in the webapp's environment. After signing in with that account and an active department membership, open `/ops/feature-flags` on that environment. The page lists registered names and their resolved `off`, `preview` or `on` state. It never lists preview email addresses and does not change settings. A signed-out visitor, another account, or a former member cannot view it. When the variable is unset the page is unavailable to everyone. An invalid value prevents startup. In explicitly enabled loopback-only local access, the synthetic local account has no sign-in or admission check; its email and active membership must still match the owner setting.
 
 The owner sets this variable separately in each environment; changing it redeploys that environment and has the same staging evidence consequences described below. The private LanternBot board may link to the page, but does not fetch production data.
 
