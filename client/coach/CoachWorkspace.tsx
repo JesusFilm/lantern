@@ -202,6 +202,7 @@ export function CoachWorkspace({
                         (r) => r.document.version === n.requestVersion,
                       )!.document
                     }
+                    showProgress={false}
                   />
                 </details>
               )}
@@ -331,7 +332,7 @@ export function CoachWorkspace({
         )}
         <details>
           <summary>Previous request · Draft {before.version}</summary>
-          <FocusDocument focus={before} />
+          <FocusDocument focus={before} showProgress={false} />
         </details>
       </section>
     );

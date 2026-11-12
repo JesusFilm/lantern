@@ -9,7 +9,7 @@ import {createDatabase} from '../../dist/server/database.js';
 import {migrate} from '../../dist/server/schema.js';
 import {withAcceptanceFixture} from './acceptance-fixture.mjs';
 
-const tables=['approved_emails','users','departments','memberships','position_focuses','sessions','login_attempts','department_direction'];
+const tables=['approved_emails','users','departments','memberships','position_focuses','sessions','login_attempts','department_direction','focus_progress_notes','focus_progress_statuses'];
 async function isolated(work) {
  const owner=createDatabase(process.env.DATABASE_URL);
  const schema='acceptance_'+randomUUID().replaceAll('-','');
@@ -128,6 +128,24 @@ test('unexpected fixture relationships abort cleanup without changing any record
    const department=randomUUID();
    await db.query("INSERT INTO departments VALUES($1,'Manual focus department',NULL)",[department]);
    await db.query("INSERT INTO position_focuses(id,user_id,department_id,title,period_start,period_end) VALUES($1,$2,$3,'Manual reference','2026-01-01','2026-12-31')",[randomUUID(),fixture.actors.member.userId,department]);
+  },
+  'manual author has a progress note on a fixture focus':async(db,fixture)=>{
+   const user=randomUUID(),focus=randomUUID();
+   await db.query("INSERT INTO users VALUES($1,$2,'manual-progress@example.test','Manual')",[user,randomUUID()]);
+   await db.query("INSERT INTO position_focuses(id,user_id,department_id,title,period_start,period_end) VALUES($1,$2,$3,'Fixture focus','2026-01-01','2026-12-31')",[focus,fixture.actors.member.userId,fixture.actors.member.departmentId]);
+   await db.query("INSERT INTO focus_progress_notes(id,focus_id,section_index,author_id,body) VALUES($1,$2,0,$3,'foreign note')",[randomUUID(),focus,user]);
+  },
+  'another fixture member authored a progress note':async(db,fixture)=>{
+   const focus=randomUUID();
+   await db.query("INSERT INTO position_focuses(id,user_id,department_id,title,period_start,period_end) VALUES($1,$2,$3,'Fixture focus','2026-01-01','2026-12-31')",[focus,fixture.actors.member.userId,fixture.actors.member.departmentId]);
+   await db.query("INSERT INTO focus_progress_notes(id,focus_id,section_index,author_id,body) VALUES($1,$2,0,$3,'foreign note')",[randomUUID(),focus,fixture.actors.peer.userId]);
+  },
+  'fixture author has a progress note on a manual focus':async(db,fixture)=>{
+   const user=randomUUID(),department=randomUUID(),focus=randomUUID();
+   await db.query("INSERT INTO users VALUES($1,$2,'manual-focus@example.test','Manual')",[user,randomUUID()]);
+   await db.query("INSERT INTO departments VALUES($1,'Manual progress department',NULL)",[department]);
+   await db.query("INSERT INTO position_focuses(id,user_id,department_id,title,period_start,period_end) VALUES($1,$2,$3,'Manual focus','2026-01-01','2026-12-31')",[focus,user,department]);
+   await db.query("INSERT INTO focus_progress_notes(id,focus_id,section_index,author_id,body) VALUES($1,$2,0,$3,'foreign note')",[randomUUID(),focus,fixture.actors.member.userId]);
   },
   'manual focus references a fixture confirmer':async(db,fixture)=>{
    const user=randomUUID(),department=randomUUID();

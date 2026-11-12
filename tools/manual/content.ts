@@ -328,11 +328,11 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Confirm and lock a focus",
         roles: ["Career lead"],
-        summary: "After the conversation, the career lead ticks ① the agreement box and ② confirms. The focus and its notes become read-only for both people.",
+        summary: "After the conversation, the career lead ticks ① the agreement box and ② confirms. The focus and its review discussion become read-only for both people.",
         tryIt: ["In a review, tick **We have discussed and agreed this focus.**", "Choose **Confirm focus**.", "Open the focus as the member."],
         check: [
           "The member sees Confirmed by the lead, with the date.",
-          "No edit, add or remove actions remain for either person.",
+          "The focus stays read-only. Progress flag: focus-progress; hidden in production until released.",
           "Confirming an older version than the latest request is refused.",
         ],
         shots: [
@@ -347,6 +347,19 @@ export const chapters: Chapter[] = [
             caption: "Ready to confirm",
           },
           { id: "focus-confirmed", persona: "member", path: confirmed, ready: heading("Second half 2026"), mode: longPage, caption: "Confirmed, as the member sees it" },
+        ],
+      },
+      {
+        kind: "feature",
+        title: "Record progress on a confirmed focus",
+        roles: ["Member", "Career lead"],
+        summary: "Members track statuses and notes for objectives and goals. Career leads can read them. Flag: focus-progress; hidden in production until released.",
+        tryIt: ["Open a confirmed focus and select **Progress & notes**.", "Select **Add note** or **Edit progress** for an item.", "Choose a status, write a note, then save.", "Return to **Focus** to read the agreed wording."],
+        check: ["Notes stay with their objective or goal.", "Status and note save or clear together.", "Leads read, not edit. Failed edits keep text.", "Phones can page or swipe objectives."],
+        shots: [
+          {id:"progress-activity",persona:"member",path:confirmed,act:click("Progress & notes"),ready:role("button","Progress & notes"),mode:longPage,caption:"Progress grouped by objective"},
+          {id:"progress-edit",persona:"member",path:confirmed,act:click("Progress & notes","Edit progress"),ready:(p)=>p.getByRole("dialog"),mode:{kind:"viewport",...dialog},caption:"Edit status and note together"},
+          {id:"phone-progress",persona:"member",device:"phone",path:confirmed,act:click("Progress & notes"),ready:(p)=>p.getByLabel("Read progress objectives"),caption:"Phone objective navigation"},
         ],
       },
       {

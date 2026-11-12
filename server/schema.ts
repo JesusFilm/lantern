@@ -137,6 +137,22 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
         INSERT INTO schema_migrations(version) VALUES(9);
       `);
     }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=10')).rowCount) {
+      await client.query(`CREATE TABLE focus_progress_notes (
+        id uuid PRIMARY KEY, ordinal bigserial UNIQUE NOT NULL, focus_id uuid NOT NULL REFERENCES position_focuses(id) ON DELETE CASCADE,
+        section_index integer NOT NULL CHECK (section_index >= 0), goal_index integer CHECK (goal_index >= 0),
+        author_id uuid NOT NULL REFERENCES users(id), body text NOT NULL CHECK (length(body) BETWEEN 0 AND 4000),
+        created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE focus_progress_statuses (
+        focus_id uuid NOT NULL REFERENCES position_focuses(id) ON DELETE CASCADE,
+        section_index integer NOT NULL CHECK (section_index >= 0), goal_index integer NOT NULL CHECK (goal_index >= -1),
+        status text CHECK (status IN ('in-progress','achieved','needs-attention')),
+        revision uuid NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(focus_id,section_index,goal_index)
+      );
+      CREATE INDEX focus_progress_notes_focus ON focus_progress_notes(focus_id,section_index,goal_index,ordinal DESC);
+      INSERT INTO schema_migrations(version) VALUES(10);`);
+    }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
@@ -146,10 +162,12 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9)');
-  if (result.rowCount !== 9) throw new Error('Required migration is missing.');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10)');
+  if (result.rowCount !== 10) throw new Error('Required migration is missing.');
   await database.query('SELECT department_id,mission,mission_image,initiatives,version FROM department_direction LIMIT 0');
   await database.query('SELECT c.document,r.version,n.body,x.user_id FROM coach_checkpoints c,focus_review_requests r,focus_review_notes n,focus_note_reads x LIMIT 0');
+  await database.query('SELECT focus_id,section_index,goal_index,author_id,body,created_at,ordinal FROM focus_progress_notes LIMIT 0');
+  await database.query('SELECT focus_id,section_index,goal_index,status,revision,updated_at FROM focus_progress_statuses LIMIT 0');
   const legacy = await database.query(`SELECT to_regclass('allowed_domains') IS NOT NULL
     OR to_regprocedure('enroll_member(uuid,text,boolean)') IS NOT NULL
     OR EXISTS (SELECT 1 FROM information_schema.columns

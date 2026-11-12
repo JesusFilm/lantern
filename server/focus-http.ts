@@ -1,3 +1,5 @@
+import type { FeatureConfig } from "./features.js";
+import { progressRoutes } from "./progress-http.js";
 import { memberFocusReader } from "./member-focuses.js";
 import { Router } from "express";
 import type { Request } from "express";
@@ -7,9 +9,11 @@ import { focusStore, validateFocus } from "./focus.js";
 
 export function focusRoutes(
   db: Pool,
-  requireUser: (req: Request) => Promise<{ id: string }>,
+  requireUser: (req: Request) => Promise<{ id: string; email: string }>,
+  features: FeatureConfig,
 ) {
   const router = Router();
+  router.use(progressRoutes(db, requireUser, features));
   const focuses = focusStore(db);
   async function focusOwner(req: Request) {
     const user = await requireUser(req);

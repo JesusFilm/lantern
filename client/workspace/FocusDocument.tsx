@@ -1,6 +1,7 @@
 import { useId, type Ref } from "react";
 import type { PositionFocus } from "../../shared/focus.js";
 import type { EditTarget } from "./useDraftFocusWorkflow.js";
+import { FocusStatus } from "./FocusProgress.js";
 import { AlignmentSummary } from "./InitiativeChoices.js";
 import { ObjectiveType } from "./ObjectiveType.js";
 import { formatFocusDate } from "./focusDate.js";
@@ -20,10 +21,12 @@ export function FocusObjective({
   onGuide,
   hidden,
   headingRef,
+  showProgress = true,
 }: DocumentProps & {
   index: number;
   hidden?: boolean;
   headingRef?: Ref<HTMLHeadingElement>;
+  showProgress?: boolean;
 }) {
   const id = useId();
   const section = focus.sections[index]!;
@@ -37,6 +40,7 @@ export function FocusObjective({
               Objective {index + 1}
             </h2>
             <ObjectiveType kind={section.kind} />
+            {showProgress && <FocusStatus section={index} goal={null} />}
           </div>
           {editable && (
             <div className="section-tools">
@@ -81,7 +85,7 @@ export function FocusObjective({
                 <span className="goal-number" aria-hidden="true">
                   {goalIndex + 1}
                 </span>
-                <p className="read-text">{goal}</p>
+                <p className="read-text">{goal} {showProgress && <FocusStatus section={index} goal={goalIndex} />}</p>
                 {editable && (
                   <div className="goal-tools">
                     <button
@@ -138,7 +142,8 @@ export function FocusDocument({
   onEdit,
   onGuide,
   showPeriod = true,
-}: DocumentProps & { showPeriod?: boolean }) {
+  showProgress = true,
+}: DocumentProps & { showPeriod?: boolean; showProgress?: boolean }) {
   return (
     <div className="focus-document cp-document">
       {showPeriod && (
@@ -154,6 +159,7 @@ export function FocusDocument({
           index={index}
           onEdit={onEdit}
           onGuide={onGuide}
+          showProgress={showProgress}
         />
       ))}
       {!focus.sections.length && <p className="muted">No objectives yet.</p>}

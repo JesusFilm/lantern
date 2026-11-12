@@ -1,3 +1,7 @@
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) { super(message); }
+}
+
 export async function api<T>(
   path: string,
   method = "GET",
@@ -20,7 +24,7 @@ export async function api<T>(
         }),
       );
     const message = await response.json().catch(() => null);
-    throw new Error(message?.error ?? "The request failed. Please try again.");
+    throw new ApiError(message?.error ?? "The request failed. Please try again.", response.status);
   }
   return response.status === 204 ? (undefined as T) : response.json();
 }

@@ -44,6 +44,9 @@ Private answers and writing retained from the earlier coaching experience. The c
 **Review note**:
 An authored message attached to a requested version. Notes can be added or soft-deleted by their author, never edited. A note is not confirmation.
 
+**Focus progress**:
+A member's current status and editable note about an objective or SMART goal in a confirmed focus. It is separate from the agreed focus and from review notes; a career lead may read it.
+
 **Review phase**:
 An occasion to discuss a focus: initial draft/confirmation, midyear adjustment/review, or year-end review/retrospective. Later phase mechanics and dates remain deferred.
 
