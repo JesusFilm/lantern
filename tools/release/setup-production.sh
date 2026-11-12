@@ -247,7 +247,7 @@ else
 fi
 confirm 'Are you the production owner, on your own computer with private Railway and GitHub access?' || exit 1
 for command in git node npm gh railway psql openssl; do command -v "$command" >/dev/null || fail "Install $command first."; done
-[[ $(node -p 'process.versions.node.split(".")[0]') == 24 ]] || fail 'Use Node 24.'
+node -e 'const [major, minor, patch] = process.versions.node.split(".").map(Number); process.exit(major === 24 && (minor > 22 || (minor === 22 && patch >= 3)) ? 0 : 1)' || fail 'Use Node 24.22.3 or later patched Node 24.'
 [[ -z $(git -C "$ROOT" status --porcelain) ]] || fail 'Use a clean repository checkout.'
 gh auth status >/dev/null 2>&1 || fail 'Authenticate gh privately first.'
 # Catch account/key-access failures before database changes; writes still require separate authorization.

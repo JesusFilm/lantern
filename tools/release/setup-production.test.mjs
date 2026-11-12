@@ -49,3 +49,24 @@ test('empty resume path fails before entering interactive setup',()=>{
  const result=spawnSync('bash',['tools/release/setup-production.sh','--resume-config',''],{encoding:'utf8'});
  assert.equal(result.status,1);assert.match(result.stderr,/Usage:/);assert.doesNotMatch(result.stdout,/Stage/);
 });
+
+// Run only the local preflight, never the human-only wizard or its integrations.
+test('setup preflight rejects vulnerable Node 24 before any external interface',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'lantern-node-preflight-'));
+ try {
+  const source=readFileSync(new URL('./setup-production.sh',import.meta.url),'utf8');
+  const preflight=source.slice(source.indexOf('for command in git node npm gh railway psql openssl;'),source.indexOf('gh auth status',source.indexOf('for command in git node npm gh railway psql openssl;')));
+  assert.ok(preflight.length>0);
+  writeFileSync(join(dir,'version.cjs'),`Object.defineProperty(process.versions,'node',{value:process.env.TEST_NODE_VERSION});`);
+  writeFileSync(join(dir,'node'),`#!/bin/sh
+exec '${process.execPath}' --require '${join(dir,'version.cjs')}' "$@"
+`,{mode:0o700});
+  for(const name of ['gh','railway','psql']) writeFileSync(join(dir,name),'#!/bin/sh\nexit 99\n',{mode:0o700});
+  writeFileSync(join(dir,'git'),'#!/bin/sh\nprintf dirty\n',{mode:0o700});
+  for(const [version,accepted] of [['24.21.0',false],['24.22.2',false],['24.22.3',true],['24.22.4',true],['24.23.0',true],['24.100.0',true],['22.23.5',false],['26.13.1',false]]) {
+   const result=spawnSync('bash',['-c',`fail() { echo "$1"; exit 1; }; ROOT=.; ${preflight}`],{encoding:'utf8',env:{...process.env,PATH:dir+':'+process.env.PATH,TEST_NODE_VERSION:version}});
+   assert.equal(result.status,1,version);
+   assert.match(result.stdout,accepted?/Use a clean repository checkout/:/Use Node 24\.22\.3 or later patched Node 24/,version);
+  }
+ } finally {rmSync(dir,{recursive:true,force:true});}
+});
