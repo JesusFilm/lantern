@@ -111,10 +111,10 @@ test("type-only dependency metadata does not require recapturing the manual", as
 });
 
 test("type-only exclusions preserve dependencies that can affect the manual", async (t) => {
-  for (const scenario of ["unused undici", "retained undici", "root runtime type", "linked type"] as const) {
+  for (const scenario of ["unused undici", "retained undici", "root runtime type", "root optional type", "root peer type", "linked type"] as const) {
     await t.test(scenario, async (t) => {
       const {layout, write} = await project(t);
-      const pkg = {devDependencies:{"@types/node":"^1", vite:"^1"}, ...(scenario === "root runtime type" ? {dependencies:{"@types/node":"^1"}} : {})};
+      const pkg = {devDependencies:{"@types/node":"^1", vite:"^1"}, ...(scenario === "root runtime type" ? {dependencies:{"@types/node":"^1"}} : {}), ...(scenario === "root optional type" ? {optionalDependencies:{"@types/node":"^1"}} : {}), ...(scenario === "root peer type" ? {peerDependencies:{"@types/node":"^1"}} : {})};
       const entries: Record<string, unknown> = {
         "": pkg,
         "node_modules/@types/node": {version:"1",dev:true,dependencies:{"undici-types":"^1"}, ...(scenario === "linked type" ? {link:true} : {})},
