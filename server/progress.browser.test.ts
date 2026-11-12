@@ -82,7 +82,8 @@ test('member records status and goal note; lead reads progress after reload', {t
   await expect(page.getByText('My unsaved update')).toBeVisible();
   await page.setViewportSize({width:390,height:500});await page.evaluate("window.scrollTo(0,document.body.scrollHeight)");
   const noteBox=await page.getByText('My unsaved update').boundingBox(),pagerBox=await page.getByRole('navigation',{name:'Objective navigation'}).boundingBox();
-  assert.ok(noteBox&&pagerBox&&noteBox.y+noteBox.height<=pagerBox.y,'the fixed pager must not cover the last note');
+  const pagerDebug=await page.evaluate(()=>({scrollY:window.scrollY,innerHeight:window.innerHeight,scrollHeight:document.documentElement.scrollHeight,scrollBehavior:getComputedStyle(document.documentElement).scrollBehavior}));
+  assert.ok(noteBox&&pagerBox&&noteBox.y+noteBox.height<=pagerBox.y,`[DEBUG-pager] fixed pager must not cover the last note: ${JSON.stringify({noteBox,pagerBox,pagerDebug})}`);
   await page.setViewportSize({width:740,height:390});await expect(page.getByRole('navigation',{name:'Objective navigation'})).toBeVisible();
   await page.evaluate("window.scrollTo(0,document.body.scrollHeight)");
   const landscapeNote=await page.getByText('My unsaved update').boundingBox(),landscapePager=await page.getByRole('navigation',{name:'Objective navigation'}).boundingBox();
