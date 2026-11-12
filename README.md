@@ -1,6 +1,6 @@
 # Lantern
 
-Lantern helps members write objectives and SMART goals, discuss their position focus with a career lead, and confirm the agreed document. Google sign-in, department membership and server-enforced ownership control access.
+Lantern helps members write objectives and SMART goals, discuss their position focus with a career lead, and confirm the agreed document. Jesus Film sign-in, department membership and server-enforced ownership control access.
 
 [Product scope](docs/PRD.md) · [Roadmap](docs/ROADMAP.md) · [Architecture decisions](docs/adrs/AGENTS.md)
 
@@ -8,17 +8,19 @@ Lantern helps members write objectives and SMART goals, discuss their position f
 
 For test setup, focused/full commands, coverage and limits, read [Testing](docs/development/testing.md). Test fixtures use an isolated local owner connection; application setup below uses restricted runtime/migration/admin connections. Keep your private environment files, which hold settings. The local database is disposable and can be reset at any time.
 
+When linking issues or preparing a fix or feature for human testing, follow the [QA issue workflow](docs/development/qa-issue-workflow.md). It applies to all contributors and coding agents.
+
 For a fresh local application database:
 
 1. Create a dedicated database using the local PostgreSQL owner. Set `LANTERN_ENV=local`, `LANTERN_DB_SETUP_MODE=empty`, `LANTERN_DB_EXPECTED_ENDPOINT=127.0.0.1:55439`, `LANTERN_DB_SOURCE_OWNER=career_lead`, `LANTERN_DB_NAME`, `LANTERN_DB_SCHEMA`, and distinct `LANTERN_DB_RUNTIME_ROLE`, `LANTERN_DB_MIGRATION_ROLE`, `LANTERN_DB_ADMIN_ROLE` values.
 2. Supply `BOOTSTRAP_DATABASE_URL` privately and run `npm run db:bootstrap`. It creates the schema and three restricted NOLOGIN roles. Privately enable login with separate passwords for those roles.
 3. Put the target settings and migration-role `MIGRATION_DATABASE_URL` in `.env.migration`; run `npm run db:migrate:local`.
 4. Put the target settings and admin-role `ADMIN_DATABASE_URL` in `.env.admin`; run `npm run access:ops -- local-account` to prepare the synthetic local account.
-5. Copy `.env.example` to `.env` only if `.env` does not exist. Replace `DATABASE_URL` with the runtime-role connection. Run `npm run dev:local` for the loopback walkthrough or `npm run dev` for Google authentication.
+5. Copy `.env.example` to `.env` only if `.env` does not exist. Replace `DATABASE_URL` with the runtime-role connection. Run `npm run dev:local` for the loopback walkthrough or `npm run dev` for Jesus Film authentication.
 
-With `LANTERN_ENV=local` and `LOCAL_ACCESS=1`, startup automatically adds the four current Engineering initiatives to the synthetic local account’s active department. A loopback database is required. Their icons and colours match staging: pink heart, blue lightbulb, green sprout and yellow people. Repeat runs keep existing IDs, archive status, appearances, mission, extra initiatives and documents; only missing initiatives or missing appearances are filled. Removed membership stays removed. Ordinary Google-authenticated startup and hosted environments do not run this seed.
+With `LANTERN_ENV=local` and `LOCAL_ACCESS=1`, startup automatically adds the four current Engineering initiatives to the synthetic local account’s active department. A loopback database is required. Their icons and colours match staging: pink heart, blue lightbulb, green sprout and yellow people. Repeat runs keep existing IDs, archive status, appearances, mission, extra initiatives and documents; only missing initiatives or missing appearances are filled. Removed membership stays removed. Ordinary Jesus Film-authenticated startup and hosted environments do not run this seed.
 
-For Google sign-in, configure a Web OAuth client with the callback `APP_ORIGIN/auth/google/callback`, then provide its credentials privately. Local access defaults off and is rejected in production. `server/operations.ts` provides approval and department setup commands; use the admin connection separately from application runtime.
+For Jesus Film sign-in, register a public PKCE client in Forge Auth with the exact callback `APP_ORIGIN/auth/jesusfilm/callback` and set `AUTH_CLIENT_ID`. The local, staging and production client IDs are `jfp_lantern_local`, `jfp_lantern_staging` and `jfp_lantern_production`; registration deploys through Forge’s normal reviewed main pipeline. No client secret is used. Local access defaults off and is rejected in production. `server/operations.ts` provides approval and department setup commands; use the admin connection separately from application runtime.
 
 ## Delivery
 
@@ -82,8 +84,8 @@ Store these in the **webapp service's Variables** for the selected Railway envir
 | Name | Purpose / hosted value |
 | --- | --- |
 | `DATABASE_URL` | Secret runtime-account connection to the same environment's database through Railway's private hostname. Its account cannot change the schema. |
-| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google OAuth client settings; the secret is confidential. The callback is `APP_ORIGIN/auth/google/callback`. |
-| `APP_ORIGIN` | Public HTTPS origin without a trailing slash; must match GitHub's value and the Google callback configuration. |
+| `AUTH_CLIENT_ID` | Public Jesus Film Auth PKCE client ID. The exact callback is `APP_ORIGIN/auth/jesusfilm/callback`. |
+| `APP_ORIGIN` | Public HTTPS origin without a trailing slash; must match GitHub's value and the Forge Auth callback registration. |
 | `LANTERN_ENV` | `stage` or `production`; selects admission rules. |
 | `NODE_ENV` | `production` in both hosted environments; selects production execution behavior. |
 | `LOCAL_ACCESS` | `0`; disables the local single-account walkthrough. |

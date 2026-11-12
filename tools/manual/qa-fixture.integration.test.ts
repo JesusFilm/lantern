@@ -94,6 +94,27 @@ test("refuses to adopt an unrelated department that happens to have the QA name"
 });
 
 
+test("enrolls a fourth registered QA participant as a member alongside the selected lead", async () => {
+  const f = await coachingFixture();
+  try {
+    const participants = [0, 1, 2, 3].map((i) => `fourqa${i}@example.test`);
+    for (const [i, email] of participants.entries()) {
+      await f.admin.query("INSERT INTO users(id,google_sub,email,name) VALUES($1,$2,$3,$4)", [randomUUID(), `fourqa-${i}`, email, `Four QA ${i}`]);
+      await f.admin.query("INSERT INTO approved_emails VALUES($1)", [email]);
+    }
+    const result = await resetQaDepartment(f.admin, { participants, lead: participants[0] });
+    assert.deepEqual(result, { registered: 4, missing: 0 });
+    const members = await f.admin.query(`SELECT u.name,m.role,d.name AS department FROM memberships m JOIN users u ON u.id=m.user_id
+      JOIN departments d ON d.id=m.department_id WHERE lower(u.email)=ANY($1::text[]) ORDER BY u.name`, [participants]);
+    assert.deepEqual(members.rows, [
+      { name: "Four QA 0", role: "career-lead", department: "Lantern QA" },
+      { name: "Four QA 1", role: "member", department: "Lantern QA" },
+      { name: "Four QA 2", role: "member", department: "Lantern QA" },
+      { name: "Four QA 3", role: "member", department: "Lantern QA" },
+    ]);
+  } finally { await f.close(); }
+});
+
 test("provision two registered QA participants and preserve unrelated acceptance data", async () => {
   const f = await coachingFixture();
   try {
@@ -139,6 +160,10 @@ test("provision two registered QA participants and preserve unrelated acceptance
     assert.equal((await f.admin.query("SELECT count(*)::int n FROM focus_review_notes WHERE author_id=$1", [f.ids.outsider])).rows[0].n, 1);
     await f.admin.query("DELETE FROM focus_review_notes WHERE author_id=$1", [f.ids.outsider]);
     const focus = (await f.admin.query("SELECT id FROM position_focuses WHERE department_id=(SELECT department_id FROM memberships WHERE user_id=$1) AND status='confirmed' LIMIT 1", [ids[0]])).rows[0].id;
+    await f.admin.query("INSERT INTO focus_progress_notes(id,focus_id,section_index,author_id,body) VALUES($1,$2,0,$3,'foreign progress')", [randomUUID(), focus, f.ids.outsider]);
+    await assert.rejects(resetQaDepartment(f.admin, { participants: ["qa0@example.test", "qa1@example.test", "qa2@example.test"] }), /unexpected progress author/i);
+    assert.equal((await f.admin.query("SELECT count(*)::int n FROM focus_progress_notes WHERE author_id=$1", [f.ids.outsider])).rows[0].n, 1);
+    await f.admin.query("DELETE FROM focus_progress_notes WHERE author_id=$1", [f.ids.outsider]);
     await f.admin.query("UPDATE position_focuses SET confirmed_by=$2 WHERE id=$1", [focus, f.ids.outsider]);
     await assert.rejects(resetQaDepartment(f.admin, { participants: ["qa0@example.test", "qa1@example.test", "qa2@example.test"] }), /unexpected confirm/i);
   } finally { await f.close(); }

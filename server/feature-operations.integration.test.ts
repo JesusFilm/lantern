@@ -8,7 +8,7 @@ import { createApp } from './app.js';
 import type { AccessConfig } from './access.js';
 import { grantApplicationPrivileges } from './database-privileges.js';
 import { resolveFeatureConfig } from './features.js';
-import type { IdentityProvider } from './google.js';
+import type { IdentityProvider } from './identity.js';
 import { privilegeFixture } from './privilege-test-support.js';
 import { migrate } from './schema.js';
 
@@ -23,7 +23,7 @@ test('only the signed-in owner with active membership can see flag states', { ti
     for (const name of ['owner', 'member']) await approveEmail(f.admin, name + '@example.test');
     let next = 'owner';
     const provider: IdentityProvider = {
-      authorizationUrl: state => '/auth/google/callback?' + new URLSearchParams({ state, code: next }),
+      authorizationUrl: state => '/auth/jesusfilm/callback?' + new URLSearchParams({ state, code: next }),
       exchange: async code => ({ sub: code, name: code, email: code + '@example.test' }),
     };
     await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -36,7 +36,7 @@ test('only the signed-in owner with active membership can see flag states', { ti
     const request = (path: string, cookie = '') => fetch(origin + path, { redirect: 'manual', headers: { Cookie: cookie, Origin: origin } });
     async function signIn(who: string) {
       next = who;
-      const start = await request('/auth/google');
+      const start = await request('/auth/jesusfilm');
       const result = await request(start.headers.get('location')!, start.headers.get('set-cookie')!.split(';')[0]!);
       const cookie = result.headers.get('set-cookie')?.match(/(?:^|, )lantern-session=[^;]+/)?.[0].replace(/^, /, '');
       assert.ok(cookie); return cookie;
@@ -61,6 +61,8 @@ test('only the signed-in owner with active membership can see flag states', { ti
       await tab.goto(origin + '/ops/feature-flags');
       assert.equal(await tab.getByRole('heading', { name: 'Feature flags' }).count(), 1);
       assert.equal(await tab.getByRole('row', { name: 'focus-notes preview' }).count(), 1);
+      assert.equal(await tab.getByRole('row', { name: 'team-calendar on' }).count(), 1);
+      assert.equal(await tab.getByRole('row', { name: 'unreleased off' }).count(), 1);
     } finally { await browser.close(); }
     config.flagOwnerEmail = '';
     assert.equal((await request('/ops/feature-flags', owner)).status, 403, 'An unset owner must fail closed');

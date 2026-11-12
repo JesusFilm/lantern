@@ -5,7 +5,7 @@ import { approveEmail, revokeEmail } from './admission.js';
 import { createApp } from './app.js';
 import { grantApplicationPrivileges } from './database-privileges.js';
 import { resolveFeatureConfig } from './features.js';
-import type { IdentityProvider } from './google.js';
+import type { IdentityProvider } from './identity.js';
 import { privilegeFixture } from './privilege-test-support.js';
 import { migrate } from './schema.js';
 import type { SessionView } from '../shared/access.js';
@@ -22,7 +22,7 @@ test('the session lists only the features the signed-in account may see', { time
     for (const name of ['owner', 'member']) await approveEmail(admin, name + '@example.test');
     let nextIdentity = 'owner';
     const provider: IdentityProvider = {
-      authorizationUrl: (state) => '/auth/google/callback?' + new URLSearchParams({ state, code: nextIdentity }),
+      authorizationUrl: (state) => '/auth/jesusfilm/callback?' + new URLSearchParams({ state, code: nextIdentity }),
       exchange: async (code) => ({ sub: code, name: 'Test ' + code, email: code + '@example.test' }),
     };
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -36,7 +36,7 @@ test('the session lists only the features the signed-in account may see', { time
     const request = (path: string, cookie = '') => fetch(origin + path, { redirect: 'manual', headers: { Cookie: cookie, Origin: origin } });
     async function signIn(who: string) {
       nextIdentity = who;
-      const start = await request('/auth/google');
+      const start = await request('/auth/jesusfilm');
       const result = await request(start.headers.get('location')!, start.headers.get('set-cookie')!.split(';')[0]!);
       const cookie = result.headers.get('set-cookie')?.match(/(?:^|, )lantern-session=[^;]+/)?.[0].replace(/^, /, '');
       assert.ok(cookie, who + ' signs in');

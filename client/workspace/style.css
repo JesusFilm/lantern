@@ -1280,40 +1280,43 @@ dialog:has(.initiative-editor) h2 {
   }
 }
 
-/* Google's pre-approved light rectangular artwork, served locally.
-   Source: https://developers.google.com/identity/branding-guidelines */
-.google-sign-in {
+.identity-sign-in {
   display: inline-flex;
-  height: 40px;
-  border-radius: 4px;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-weight: 600;
   text-decoration: none;
 }
-.google-sign-in img {
+.identity-sign-in img {
   display: block;
-  width: auto;
-  height: 40px;
+  width: 24px;
+  height: 24px;
 }
-.google-sign-in:hover {
+.identity-sign-in:hover {
   box-shadow: 0 1px 3px rgb(60 64 67 / 30%);
 }
-.google-sign-in:active {
+.identity-sign-in:active {
   opacity: 0.85;
 }
-.google-sign-in:focus-visible {
+.identity-sign-in:focus-visible {
   outline: 3px solid #0b57d0;
   outline-offset: 3px;
 }
 
 /* Keep compact desktop controls; touch input needs larger hit areas. */
 @media (pointer: coarse), (max-width: 620px) {
-  .google-sign-in {
+  .identity-sign-in {
     min-width: 44px;
     min-height: 44px;
   }
   nav button {
     font-size: 13px;
   }
-  .google-sign-in {
+  .identity-sign-in {
     align-items: center;
   }
 }
@@ -2061,3 +2064,26 @@ dialog .initiative-description-field textarea {
   .registered-users td { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; padding: 4px 0; border: 0; }
   .registered-users td::before { content: attr(data-label); font-size: 13px; font-weight: 600; color: var(--muted); }
 }
+.progress-tabs { display:flex; gap:1.5rem; border-bottom:1px solid #94a3b8; margin:1.5rem 0; }
+.progress-tabs button { border:0; border-bottom:3px solid transparent; background:transparent; color:inherit; border-radius:0; padding:.7rem 0; }
+.progress-tabs button.active { background:transparent; border-color:#168995; font-weight:700; }
+.progress-tabs button:hover { background:transparent; }
+[data-theme="dark"] .progress-tabs button.active, [data-theme="dark"] .progress-tabs button:hover { background:transparent; }
+.progress-panel { padding:1.25rem 1.5rem; }
+.progress-heading { padding-bottom:1rem; border-bottom:1px solid #94a3b8; }
+.progress-heading h2 { font-size:1.1rem; margin:.4rem 0 0; }
+.progress-item { padding:1rem 0; border-bottom:1px solid #94a3b8; }
+.progress-item:last-child { border-bottom:0; }
+.progress-item h3 { margin:0; font-size:1rem; }
+.progress-row,.progress-actions { display:flex; justify-content:space-between; align-items:center; gap:1rem; }
+.progress-status-button { border:0; padding:0; background:transparent; min-height:44px; }
+.progress-actions .link { min-height:44px; }
+.progress-pill { display:inline-flex; border:1px solid; border-radius:2rem; padding:.3rem .65rem; font-size:.8rem; font-weight:700; white-space:nowrap; }
+.progress-pill.unset { color:#435567; background:#e2e8ed; border-color:#98a9b6; }
+.progress-pill.in-progress { color:#07577c; background:#d8f0fa; border-color:#7fb9ce; }
+.progress-pill.achieved { color:#155b38; background:#dbf6e6; border-color:#84cba1; }
+.progress-pill.needs-attention { color:#70400b; background:#fff0d7; border-color:#d6aa6d; }
+.progress-note { border-left:3px solid #54a7aa; margin-top:.8rem; padding-left:.8rem; overflow-wrap:anywhere; }
+.progress-note p { white-space:pre-wrap; margin:.3rem 0; }
+.progress-empty { font-size:.85rem; margin:.5rem 0 0; }
+@media(max-width:680px){.progress-panel{padding:1rem}.progress-row{align-items:flex-start;flex-direction:column;gap:.4rem}.progress-actions{flex-wrap:wrap}.progress-tabs button{min-height:44px}}

@@ -16,7 +16,7 @@ test('production-only package migrates, starts without dotenv, serves assets and
  const socket = createServer(); await new Promise<void>(r => socket.listen(0, '127.0.0.1', r));
  const address = socket.address(); assert.ok(address && typeof address !== 'string');
  await new Promise<void>(r => socket.close(() => r()));
- const env = { ...process.env, DATABASE_URL: url.href, NODE_ENV: 'production', LANTERN_ENV: 'stage', LOCAL_ACCESS: '0', HOST: '127.0.0.1', PORT: String(address.port), APP_ORIGIN: 'https://stage.example.test', GOOGLE_CLIENT_ID: 'synthetic', GOOGLE_CLIENT_SECRET: 'synthetic' };
+ const env = { ...process.env, DATABASE_URL: url.href, NODE_ENV: 'production', LANTERN_ENV: 'stage', LOCAL_ACCESS: '0', HOST: '127.0.0.1', PORT: String(address.port), APP_ORIGIN: 'https://stage.example.test', AUTH_CLIENT_ID: 'synthetic' };
  const commandEnv = { ...env, MIGRATION_DATABASE_URL:migration.options.connectionString!, ADMIN_DATABASE_URL:admin.options.connectionString!,
    LANTERN_DB_EXPECTED_ENDPOINT:url.host, LANTERN_DB_NAME:fixture.databaseName, LANTERN_DB_SCHEMA:'lantern', LANTERN_DB_RUNTIME_ROLE:roles.runtime, LANTERN_DB_MIGRATION_ROLE:roles.migration, LANTERN_DB_ADMIN_ROLE:roles.admin };
  let child: ReturnType<typeof spawn> | undefined;
@@ -26,9 +26,9 @@ test('production-only package migrates, starts without dotenv, serves assets and
    execFileSync('npm', ['ci', '--omit=dev', '--ignore-scripts'], { cwd: dir, stdio: 'pipe' });
    await writeFile(join(dir,'release.json'), JSON.stringify({sha:'a'.repeat(40)}));
    assert.throws(() => execFileSync(process.execPath, ['dist/server/index.js'], { cwd: dir, env, stdio: 'pipe' }));
-   for (const patch of [{LOCAL_ACCESS:'1'}, {GOOGLE_CLIENT_SECRET:''}, {LANTERN_ENV:'typo'}, {APP_ORIGIN:'http://localhost:4391'}]) assert.throws(() => execFileSync(process.execPath, ['dist/server/index.js'], {cwd:dir,env:{...env,...patch},stdio:'pipe'}));
+   for (const patch of [{LOCAL_ACCESS:'1'}, {AUTH_CLIENT_ID:''}, {LANTERN_ENV:'typo'}, {APP_ORIGIN:'http://localhost:4391'}]) assert.throws(() => execFileSync(process.execPath, ['dist/server/index.js'], {cwd:dir,env:{...env,...patch},stdio:'pipe'}));
    assert.throws(() => execFileSync(process.execPath, ['dist/server/index.js'], {
-     cwd:dir, env:{...env,NODE_ENV:'development',LANTERN_ENV:'local',APP_ORIGIN:'http://127.0.0.1:4391',GOOGLE_CLIENT_ID:'',GOOGLE_CLIENT_SECRET:''}, stdio:'pipe'
+     cwd:dir, env:{...env,NODE_ENV:'development',LANTERN_ENV:'local',APP_ORIGIN:'http://127.0.0.1:4391',AUTH_CLIENT_ID:''}, stdio:'pipe'
    }));
    assert.equal((await migration.query("SELECT to_regclass('schema_migrations') AS relation")).rows[0].relation, null);
    const personalId = randomUUID(), personalToken = randomUUID();
@@ -53,12 +53,12 @@ test('production-only package migrates, starts without dotenv, serves assets and
      const origin: string = `http://127.0.0.1:${address.port}`;
      const health = await fetch(origin+'/health');
      assert.equal(health.status, 200);
-     assert.equal(health.headers.get('x-lantern-schema'), '9');
+     assert.equal(health.headers.get('x-lantern-schema'), '10');
      const session = await (await fetch(origin+'/api/session', { headers: { Cookie: `__Host-lantern-session=${personalToken}` } })).json() as { user: { id: string } | null };
      assert.equal(session.user?.id ?? null, personalId);
      if (n === 0) {
        await stop();
-       child = spawn(process.execPath, ['dist/server/index.js'], { cwd: dir, env: { ...env, LANTERN_HOSTING_ONLY:'1', GOOGLE_CLIENT_ID:'', GOOGLE_CLIENT_SECRET:'' }, stdio: ['ignore','pipe','pipe'] });
+       child = spawn(process.execPath, ['dist/server/index.js'], { cwd: dir, env: { ...env, LANTERN_HOSTING_ONLY:'1', AUTH_CLIENT_ID:'' }, stdio: ['ignore','pipe','pipe'] });
        await new Promise<void>((resolve,reject) => { child!.once('exit', () => reject(new Error('Hosting-only startup failed'))); child!.stdout!.on('data', b => { if (String(b).includes('Lantern:')) resolve(); }); });
        const headers = { Cookie: `__Host-lantern-session=${personalToken}`, Origin: env.APP_ORIGIN };
        const locked = await (await fetch(origin+'/api/session', {headers})).json() as {user:unknown;signInAvailable:boolean;localAccess:boolean};
@@ -67,7 +67,7 @@ test('production-only package migrates, starts without dotenv, serves assets and
        assert.equal(locked.localAccess, false);
        for (const path of ['/api/focuses', '/api/department', '/api/guide']) assert.equal((await fetch(origin+path,{headers})).status,401);
        assert.equal((await fetch(origin+'/api/focuses',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({title:'Forbidden',start:'2026-01-01',end:'2026-12-31',sections:[]})})).status,401);
-       assert.equal((await fetch(origin+'/auth/google',{redirect:'manual'})).status,503);
+       assert.equal((await fetch(origin+'/auth/jesusfilm',{redirect:'manual'})).status,503);
        assert.equal((await fetch(origin+'/health')).status,200);
        await stop();
        child = spawn(process.execPath, ['dist/server/index.js'], { cwd:dir, env, stdio:['ignore','pipe','pipe'] });
@@ -78,7 +78,10 @@ test('production-only package migrates, starts without dotenv, serves assets and
        assert.equal(revoked.user, null);
      }
      assert.equal(health.headers.get('x-lantern-revision'), 'a'.repeat(40));
-     assert.match(await (await fetch(origin)).text(), /assets\//);
+     const entry = await fetch(origin,{redirect:'manual'});
+     assert.equal(entry.status,302);
+     assert.equal(entry.headers.get('location'),'/auth/jesusfilm');
+     assert.match(await (await fetch(origin+'/?signInError=1')).text(), /assets\//);
      assert.equal((await fetch(origin+'/api/focuses')).status, 401);
      if (n === 1) {
        const scoped = migration;

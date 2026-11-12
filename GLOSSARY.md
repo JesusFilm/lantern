@@ -11,7 +11,7 @@ An approved participant with active membership of the team who prepares and mana
 The person supporting members' development who can read their focuses and confirm an agreed baseline after discussion. The supported setup has one active career lead per department; this is an application role, not a database administrator.
 
 **Approved account**:
-A verified Google account whose exact normalized email is approved in the environment’s database. All environments admit approved personal and work accounts without a domain restriction. Approval permits eligible sign-in; membership and career-lead authority are separate grants. Google sign-in creates the account; approval alone creates neither an account nor a membership.
+A verified Jesus Film account whose exact normalized email is approved in the environment’s database. All environments admit approved personal and work accounts without a domain restriction. Approval permits eligible sign-in; membership and career-lead authority are separate grants. Jesus Film sign-in creates the account; approval alone creates neither an account nor a membership.
 
 **Department**:
 The team boundary within which membership and position focuses belong. An account has at most one department membership. Setup currently supports one department; transfer and rejoining workflows are unsupported. Ending membership preserves its history and department-scoped focuses.
@@ -43,6 +43,9 @@ Private answers and writing retained from the earlier coaching experience. The c
 
 **Review note**:
 An authored message attached to a requested version. Notes can be added or soft-deleted by their author, never edited. A note is not confirmation.
+
+**Focus progress**:
+A member's current status and editable note about an objective or SMART goal in a confirmed focus. It is separate from the agreed focus and from review notes; a career lead may read it.
 
 **Review phase**:
 An occasion to discuss a focus: initial draft/confirmation, midyear adjustment/review, or year-end review/retrospective. Later phase mechanics and dates remain deferred.

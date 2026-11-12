@@ -4,9 +4,10 @@ import * as gates from './gates.mjs';
 const {stageGate, promotionGate, verifyStageRun} = gates;
 const sha = 'a'.repeat(40);
 test('stage requires all successful checks on the exact merged main revision', () => {
- const input = { event: 'push', ref: 'refs/heads/main', sha, checkedSha: sha, checks: ['success','success','success'] };
+ const input = { event: 'push', ref: 'refs/heads/main', sha, checkedSha: sha, checks: ['success','success','success','success','success'] };
  assert.doesNotThrow(() => stageGate(input));
- for (const result of ['failure','cancelled','skipped',undefined]) assert.throws(() => stageGate({...input, checks:['success',result,'success']}));
+ for (const result of ['failure','cancelled','skipped',undefined]) assert.throws(() => stageGate({...input, checks:['success',result,'success','success','success']}));
+ assert.throws(() => stageGate({...input, checks:['success','success','success']}));
  assert.throws(() => stageGate({...input, checkedSha: 'b'.repeat(40)}));
  assert.throws(() => stageGate({...input, event:'pull_request'}));
 });

@@ -20,12 +20,12 @@ const longPage = { kind: "frames", crop: ".workspace", maxFrames: 3 } as const;
 const dialog = { crop: "role=dialog", cropPadding: 0 } as const;
 const confirmed = (ids: { confirmedFocus: string }) => "/?focus=" + ids.confirmedFocus;
 
-const googleSignIn: Supplied = {
-  id: "google-account-chooser",
-  file: "google-account-chooser.png",
-  sources: ["server/google.ts", "server/access.ts", "server/admission.ts", "server/accounts.ts"],
-  caption: "Google account chooser",
-  instructions: "On staging, choose Sign in with Google and capture Google's account chooser in a 1440 × 900 window.",
+const jesusFilmSignIn: Supplied = {
+  id: "jesusfilm-sign-in",
+  file: "jesusfilm-sign-in.png",
+  sources: ["server/jesusfilm.ts", "server/access.ts", "server/admission.ts", "server/accounts.ts"],
+  caption: "Jesus Film Auth sign-in",
+  instructions: "Open staging signed out and capture Jesus Film Auth’s sign-in screen in a 1440 × 900 window.",
 };
 const guided = async (page: Page) => {
   await click("+ Add objective", "Guide with AI")(page);
@@ -33,7 +33,9 @@ const guided = async (page: Page) => {
 };
 const planGoal = async (page: Page) => {
   await guided(page);
-  await click("Next", "Next", "Add SMART goal")(page);
+  await click("Next")(page);
+  await page.getByRole("checkbox", { name: "Other — none of these apply", exact: true }).check();
+  await click("Next", "Add SMART goal")(page);
   await page.getByRole("radio", { name: "Publish runbooks for the three most common causes" }).check();
 };
 
@@ -58,7 +60,7 @@ export const chapters: Chapter[] = [
       {
         kind: "people",
         title: "The people in the screenshots",
-        lead: "The screenshots follow five fictional people in a local demonstration. QA uses their own Google accounts in the staging QA department.",
+        lead: "The screenshots follow five fictional people in a local demonstration. QA uses their own Jesus Film accounts in the staging QA department.",
         people: [
           { name: "Aroha Ngata", role: "Member · Engineering", text: "Has a confirmed focus for the second half of 2026 and is drafting one for 2027." },
           { name: "Sam Patel", role: "Member · Engineering", text: "Has sent two versions of a focus to the career lead for review." },
@@ -71,23 +73,23 @@ export const chapters: Chapter[] = [
   },
   {
     title: "Signing in and your account",
-    summary: "Lantern uses Google sign-in. An approved account then needs a career lead to add it to a department.",
+    summary: "Lantern uses Jesus Film sign-in. An approved account then needs a career lead to add it to a department.",
     slides: [
       {
         kind: "feature",
-        title: "Sign in with Google",
+        title: "Sign in with Jesus Film",
         roles: ["Signed out"],
-        summary: "Signed-out visitors see only the welcome screen. Only approved Google accounts can sign in.",
-        tryIt: ["Open the staging address in a private window.", "Choose ① **Sign in with Google**.", "Pick your test Google account and allow access."],
+        summary: "Signed-out visitors go straight to Jesus Film Auth before Lantern loads, with a fresh login prompt. Only approved accounts can sign in.",
+        tryIt: ["Open the staging address in a private window.", "The server sends you straight to Jesus Film Auth, without a Lantern loading screen.", "Sign in to your test Jesus Film account."],
         check: [
           "You return to Lantern signed in, with your name in the sidebar.",
-          "An account that is not approved returns to the welcome screen with “Sign-in could not be completed”.",
-          "Cancelling at Google also returns with that message.",
+          "An account that is not approved returns to the retry screen with “Sign-in could not be completed”.",
+          "Cancelling at Jesus Film Auth also returns with that message.",
           "Reloading keeps you signed in.",
         ],
         shots: [
-          { id: "sign-in", persona: "anonymous", ready: role("link", "Sign in with Google"), highlight: ['role=link[name="Sign in with Google"]'], caption: "Welcome screen" },
-          googleSignIn,
+          { id: "sign-in", persona: "anonymous", path: "/?signInError=1", ready: role("link", "Sign in with Jesus Film"), highlight: ['role=link[name="Sign in with Jesus Film"]'], caption: "Retry after failed or cancelled sign-in" },
+          jesusFilmSignIn,
         ],
       },
       {
@@ -102,6 +104,18 @@ export const chapters: Chapter[] = [
           "No department data is visible before you are added.",
         ],
         shots: [{ id: "account-pending", persona: "newcomer", ready: heading("Your account is ready"), highlight: ['role=button[name="Check access"]'], caption: "Signed in, no department" }],
+      },
+      {
+        kind: "feature",
+        title: "Sidebar navigation",
+        roles: ["Member", "Career lead"],
+        summary: "The Lantern mark and icons identify the main destinations. Navigation flag: sidebar-collapse; hidden in production until released.",
+        tryIt: ["Choose **Collapse sidebar** above your profile at the bottom.", "Use an icon to open Guide or Account; hover for its name.", "Reload, then choose ① **Expand sidebar**."],
+        check: ["Desktop icons stay fixed while labels fade, and sit centred in the collapsed rail. Phones use a top-right menu button.", "The choice survives navigation and reload in this browser.", "The phone menu slides in; select a destination or close it with × or Escape.", "Members see only their permitted destinations; career leads also see reviews and Department."],
+        shots: [
+          { id: "sidebar-collapsed", persona: "lead", act: async (p) => { await click("Collapse sidebar")(p); await p.reload(); }, ready: role("button", "Expand sidebar"), highlight: ['role=button[name="Expand sidebar"]'], caption: "Collapsed desktop navigation" },
+          { id: "phone-sidebar-collapsed", persona: "lead", device: "phone", act: click("Open menu"), ready: role("button", "Close menu"), highlight: ['role=button[name="Close menu"]'], caption: "Sliding phone navigation" },
+        ],
       },
       {
         kind: "feature",
@@ -230,16 +244,16 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Guide with AI: from your work to an objective",
         roles: ["Member"],
-        summary: "Guided writing moves through **Your work → Objective → SMART goals → Check objective**. The member describes their work; the AI proposes wording and initiatives to accept or change.",
-        tryIt: ["Choose **+ Add objective**, then **Guide with AI**.", "Describe your work in a sentence or two.", "Choose **Next** and review the suggestion."],
+        summary: "Move through **Your work → Objective → SMART goals → Check objective**. AI suggests wording and initiatives; you choose what fits.",
+        tryIt: ["Choose **+ Add objective**, then **Guide with AI**.", "Describe your work in a sentence or two.", "Review the suggestion; choose an initiative or Other."],
         check: [
-          "AI recommendations are labelled and never selected for you.",
-          "Back returns to earlier stages with your text intact.",
-          "A slow reply shows a loading overlay you can cancel.",
+          "AI recommendations are labelled, not selected.",
+          "Next requires an initiative or Other; choosing either clears the error.",
+          "Back keeps text and goals. Slow replies can be cancelled.",
         ],
         shots: [
           { id: "guided-work", persona: "member", path: draft, act: guided, ready: (p) => p.getByLabel("Your work", { exact: true }), caption: "Your work" },
-          { id: "guided-objective", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next")(page); }, ready: (p) => p.getByText("AI recommended").first(), mode: longPage, caption: "Suggested objective" },
+          { id: "guided-objective", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Next")(page); }, ready: (p) => p.getByRole("alert"), mode: longPage, caption: "Choose an initiative or Other" },
         ],
       },
       {
@@ -314,11 +328,11 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Confirm and lock a focus",
         roles: ["Career lead"],
-        summary: "After the conversation, the career lead ticks ① the agreement box and ② confirms. The focus and its notes become read-only for both people.",
+        summary: "After the conversation, the career lead ticks ① the agreement box and ② confirms. The focus and its review discussion become read-only for both people.",
         tryIt: ["In a review, tick **We have discussed and agreed this focus.**", "Choose **Confirm focus**.", "Open the focus as the member."],
         check: [
           "The member sees Confirmed by the lead, with the date.",
-          "No edit, add or remove actions remain for either person.",
+          "The focus stays read-only. Progress flag: focus-progress; hidden in production until released.",
           "Confirming an older version than the latest request is refused.",
         ],
         shots: [
@@ -333,6 +347,61 @@ export const chapters: Chapter[] = [
             caption: "Ready to confirm",
           },
           { id: "focus-confirmed", persona: "member", path: confirmed, ready: heading("Second half 2026"), mode: longPage, caption: "Confirmed, as the member sees it" },
+        ],
+      },
+      {
+        kind: "feature",
+        title: "Record progress on a confirmed focus",
+        roles: ["Member", "Career lead"],
+        summary: "Members track statuses and notes for objectives and goals. Career leads can read them. Flag: focus-progress; hidden in production until released.",
+        tryIt: ["Open a confirmed focus and select **Progress & notes**.", "Select **Add note** or **Edit progress** for an item.", "Choose a status, write a note, then save.", "Return to **Focus** to read the agreed wording."],
+        check: ["Notes stay with their objective or goal.", "Status and note save or clear together.", "Leads read, not edit. Failed edits keep text.", "Phones can page or swipe objectives."],
+        shots: [
+          {id:"progress-activity",persona:"member",path:confirmed,act:click("Progress & notes"),ready:role("button","Progress & notes"),mode:longPage,caption:"Progress grouped by objective"},
+          {id:"progress-edit",persona:"member",path:confirmed,act:click("Progress & notes","Edit progress"),ready:(p)=>p.getByRole("dialog"),mode:{kind:"viewport",...dialog},caption:"Edit status and note together"},
+          {id:"phone-progress",persona:"member",device:"phone",path:confirmed,act:click("Progress & notes"),ready:(p)=>p.getByLabel("Read progress objectives"),caption:"Phone objective navigation"},
+        ],
+      },
+      {
+        kind: "feature",
+        title: "Confirm from a position focus",
+        roles: ["Career lead"],
+        summary: "The confirmation dialog identifies whose focus will lock and reminds you who to discuss it with.",
+        tryIt: ["Open a member's draft from Department.", "Choose **Confirm and lock**, then **Cancel**.", "Repeat with your own draft in Position focuses."],
+        check: [
+          "Another member's dialog names that member.",
+          "Your own says **your senior or manager**.",
+          "The summary still names the focus owner.",
+          "Cancel leaves the focus editable.",
+        ],
+        shots: [
+          {
+            id: "member-confirm-dialog",
+            persona: "lead",
+            path: (ids) => `/?page=department&member=${ids.member}&memberFocus=${ids.draftFocus}`,
+            act: click("Confirm and lock"),
+            ready: (p) => p.getByRole("dialog"),
+            mode: { kind: "viewport", ...dialog },
+            caption: "Another member's focus",
+          },
+          {
+            id: "own-confirm-dialog",
+            persona: "lead",
+            act: async (page) => {
+              const origin = new URL(page.url()).origin;
+              const response = await page.request.post(origin + "/api/focuses", {
+                headers: { Origin: origin },
+                data: { title: "Leadership focus 2027", start: "2027-01-01", end: "2027-12-31", sections: [{ kind: "normal", objective: "Support the team's development", goals: ["Hold a development conversation with each member by March."] }] },
+              });
+              if (response.status() !== 201) throw new Error("Could not create the lead's synthetic focus");
+              await page.goto(origin + "/?focus=" + (await response.json()).id);
+              await click("Confirm and lock")(page);
+            },
+            ready: (p) => p.getByRole("dialog"),
+            mode: { kind: "viewport", ...dialog },
+            caption: "Your own focus",
+            mutates: true,
+          },
         ],
       },
     ],
@@ -442,10 +511,10 @@ export const chapters: Chapter[] = [
         roles: ["Member", "Career lead"],
         summary: "Strategic initiatives lists the department's active initiatives with their current descriptions. Procedures outlines the yearly rhythm (marked Proposed).",
         tryIt: ["Open **Strategic initiatives** and choose an initiative.", "Open **Procedures** and its three steps."],
-        check: ["Archived initiatives are not listed.", "A missing description shows a clear empty state.", "Procedures screens show the Proposed label."],
+        check: ["Archived initiatives are not listed.", "A missing description shows a clear empty state.", "Procedures screens show the Proposed label.", "Make a change says confirmed focuses cannot be edited or unlocked; revisions are unavailable."],
         shots: [
           { id: "guide-initiatives", persona: "member", path: "/?page=guide", act: click("Strategic initiatives"), ready: role("button", "Strategic initiatives"), caption: "Strategic initiatives" },
-          { id: "guide-procedures", persona: "member", path: "/?page=guide", act: click("Procedures"), ready: role("button", "Procedures"), caption: "Procedures" },
+          { id: "guide-procedures", persona: "member", path: "/?page=guide", act: click("Procedures", "Make a change"), ready: heading("Confirmed focuses stay locked.", 2), caption: "Proposed revisions — not available yet" },
         ],
       },
     ],
@@ -496,7 +565,7 @@ export const chapters: Chapter[] = [
         title: "Checks the automated tests cannot make",
         lead: "Please spend most of your time here. Record each result, with your device and browser, in the QA results sheet.",
         items: [
-          { title: "Real Google sign-in", text: "Approved and unapproved accounts, cancelling at Google, signing in on a second device, signing out." },
+          { title: "Real Jesus Film sign-in", text: "Approved and unapproved accounts, cancelling at Jesus Film Auth, signing in on a second device, signing out." },
           { title: "Joining a department", text: "A brand-new account signs in, the career lead adds it, and Check access opens the workspace." },
           { title: "AI guidance with the real model", text: "Useful suggestions, slow replies, cancelling, and the message when the AI cannot reply." },
           { title: "Real phones", text: "iOS and Android keyboards, date pickers, rotation, browser bars and enlarged text." },

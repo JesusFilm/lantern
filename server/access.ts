@@ -6,7 +6,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { Router } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import type { Pool } from 'pg';
-import type { IdentityProvider } from './google.js';
+import type { IdentityProvider } from './identity.js';
 import { focusRoutes } from './focus-http.js';
 import { directionRoutes } from './direction-http.js';
 import { guideContent } from './guide-content.js';
@@ -53,15 +53,19 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     if (!user) throw new AccessError(401, 'Sign in to continue.');
     return user;
   }
-  router.get('/auth/google', async (_req, res) => {
-    if (config.hostingOnly || !config.provider) throw new AccessError(503, 'Google sign-in is not configured.');
+  router.get(['/', '/index.html'], async (req, res, next) => {
+    if (!config.provider || config.hostingOnly || 'signInError' in req.query || await currentUser(req)) return next();
+    res.redirect('/auth/jesusfilm');
+  });
+  router.get('/auth/jesusfilm', async (_req, res) => {
+    if (config.hostingOnly || !config.provider) throw new AccessError(503, 'Jesus Film sign-in is not configured.');
     const state = random(), nonce = random(), verifier = random();
     await db.query('DELETE FROM login_attempts WHERE expires_at<=now()');
     await db.query("INSERT INTO login_attempts VALUES($1,$2,$3,now()+interval '10 minutes')", [hash(state), nonce, verifier]);
     res.cookie(loginCookie, state, { ...options, maxAge: 600000 });
     res.redirect(config.provider.authorizationUrl(state, nonce, createHash('sha256').update(verifier).digest('base64url')));
   });
-  router.get('/auth/google/callback', async (req, res) => {
+  router.get('/auth/jesusfilm/callback', async (req, res) => {
     const state = req.query.state;
     res.clearCookie(loginCookie, options);
     if (config.hostingOnly || !config.provider || typeof state !== 'string' || cookie(req, loginCookie) !== state) return res.redirect('/?signInError=1');
@@ -97,7 +101,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     res.json({ coachAvailable: !!config.coach && featureEnabled(features, 'coach', user?.email), features: enabledFeatures(features, user?.email), user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !config.hostingOnly && !!config.provider, localAccess: !!config.localUserId });
   });
   router.use(coachRoutes(db, requireUser, config.coach, (user) => featureEnabled(features, 'coach', user.email)));
-  router.use(focusRoutes(db, requireUser));
+  router.use(focusRoutes(db, requireUser, features));
   router.use(directionRoutes(db, requireUser));
   router.patch('/api/account', async (req, res) => {
     const user = await requireUser(req);

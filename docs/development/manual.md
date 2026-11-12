@@ -35,7 +35,7 @@ npm run manual
 npm run manual:check
 ```
 
-Commit everything under `docs/manual`. `npm run manual` builds the client into a temporary folder and starts a disposable synthetic database. It photographs every scene and rewrites only the screenshots whose pixels changed. It renders a new edition only when the deck content changed. An unchanged rerun reports `0 screenshot(s) changed` and keeps the current edition.
+Commit everything under `docs/manual`. `npm run manual` builds the client into a temporary folder and starts a disposable synthetic database. It photographs every scene and rewrites only the screenshots whose pixels changed. It renders a new edition when the deck content changed or the existing PDF is missing or mismatched. An unchanged rerun with a valid PDF reports `0 screenshot(s) changed` and keeps the current edition.
 
 `npm run manual:check` needs no browser or database. It fails when:
 
@@ -43,9 +43,13 @@ Commit everything under `docs/manual`. `npm run manual` builds the client into a
 - a screenshot, supplied capture or the PDF differs from the manifest;
 - a screenshot is missing or not recorded.
 
-Product source means `client/`, `shared/`, `server/`, `public/`, `index.html`, `vite.config.ts`, Node and dependency configuration, [PRD.md](../PRD.md) and the manual tooling. Tests and test support files are excluded. [isProductSource](../../tools/manual/freshness.ts) defines the exact rule.
+Product source means `client/`, `shared/`, `server/`, `public/`, `index.html`, `vite.config.ts`, Node and dependency configuration, [PRD.md](../PRD.md) and the manual tooling. Tests and test support files are excluded, except `server/privilege-test-support.ts`, which the manual world imports. The rendering fixture configuration (`.env.example`, Compose and TypeScript configuration) is included. [isProductSource](../../tools/manual/freshness.ts) defines the exact rule.
 
-When two branches both regenerate, the manual files conflict. Resolve the conflict by merging the source changes, then running `npm run manual` again; never merge the generated files by hand.
+Dependency inputs are normalized JSON. Only the explicit type-only development packages `@types/node`, `@types/express`, `@types/pg`, `@types/react` and `@types/react-dom` are omitted when their lock entries are development-only, have no install script and are not runtime/optional/peer dependencies of the root. `undici-types` is omitted only when no retained package or root depends on it. Package scripts, install scripts, Node, runtime dependencies, Vite and its React plugin, Playwright, Sharp, TypeScript, TSX and unknown packages remain relevant. Version 2, malformed or unsupported lockfiles retain byte-level detection; the whole lockfile is never excluded.
+
+The manifest separates `sources` (the normalized freshness inputs) from `verification` (the raw input hashes and time of the last successful full generation). An irrelevant type-only update can pass without generation: the recorded `verification.generatedAt` and raw hashes intentionally remain unchanged. A full successful capture updates provenance; it preserves the PDF and edition when content and images are unchanged. The freshness check never claims or records that generation occurred.
+
+When two branches both regenerate, the manual files conflict. Resolve the conflict by taking main's generated files as the starting point, then running `npm run manual` again; never merge the generated files by hand. The edition must move forward from main's: the release workflow tags `manual-<edition>` once and never republishes a tag, so if the branch's deck differs from main's, generating from the branch's own old manifest would keep main's edition number under a different PDF and the new deck would never reach QA's "latest" link. Starting from main's generated files makes `npm run manual` compare against main's deck and render the next edition. CI fetches main and its history and fails if it cannot compare editions. Push checks compare against the revision before the whole push and reject an outdated main revision, and the release workflow checks main again immediately before publication. A changed deck must advance beyond main's edition; a branch whose manual is unchanged since its common ancestor is allowed to be behind. Local checks use the same comparison when main is available.
 
 ## Appearance coverage
 
@@ -127,15 +131,17 @@ node fonts-probe.mjs; rm fonts-probe.mjs
 
 Expect `NotoSans-Regular`, `LiberationSerif`, `DejaVuSansMono` and `NotoSans-Bold`.
 
-**Acceptance test.** On an unmodified checkout of `main`, `npm run manual` must report `0 screenshot(s) changed of 44` and `The deck is unchanged`. If it rewrites screenshots or fails the slide-fit check, the environment is wrong. Do not commit the output. Fix the fonts first (the probe above shows what Chromium chose) and repeat. When screenshots change after a product change, inspect each changed image and the matching PDF page and confirm the difference is intended before committing. A change to the product source alone also issues a new edition, because the source fingerprint is printed on the cover.
+**Acceptance test.** On an unmodified checkout of `main`, `npm run manual` must report `0 screenshot(s) changed` and `The deck is unchanged`. If it rewrites screenshots or fails the slide-fit check, the environment is wrong. Do not commit the output. Fix the fonts first (the probe above shows what Chromium chose) and repeat. When screenshots change after a product change, inspect each changed image and the matching PDF page and confirm the difference is intended before committing. A product source change requires successful generation. A changed deck or a missing or mismatched PDF issues a new edition. The cover does not contain the source fingerprint.
 
 ## Supplied captures
 
-Screens the synthetic world cannot reach, such as Google's own sign-in pages, are supplied by a person. Each supplied capture lists the source files it depends on. Until it is supplied, the slide shows a placeholder and the check prints a warning.
+Screens the synthetic world cannot reach, such as Jesus Film Auth's sign-in pages, are supplied by a person. Each supplied capture lists the source files it depends on. Until it is supplied, the slide shows a placeholder and the check prints a warning.
 
 To supply or replace a capture, save the PNG named on the slide in [docs/manual/supplied](../manual/supplied/), then run `npm run manual`. When one of its source files changes, the slide marks the capture as possibly outdated and the check warns. Replace the image, or confirm it still matches with `npm run manual -- --confirm=<id>`.
 
 ## Releases
 
-On every push to main that changes [manifest.json](../manual/manifest.json), the [QA manual release workflow](../../.github/workflows/manual.yml) checks that the manual is fresh. It then publishes `manual-<edition>` with the PDF attached, marked as the latest release. An edition that is already published is skipped. If an upload or publication fails and leaves a draft, rerunning the workflow replaces the draft's PDF and publishes it. The stable "latest" link works only while manual editions are the repository's only releases marked latest.
+On every push to main, the [QA manual release workflow](../../.github/workflows/manual.yml) checks that the manual is fresh. It then publishes `manual-<edition>` with the PDF attached, marked as the latest release. CI and the release workflow compare an existing release or tag to the current deck, and verify a published PDF's digest against its tagged manifest, so a reused edition or missing or replaced PDF fails even after a later unrelated push. If an upload or publication fails and leaves a draft, rerunning the workflow verifies its target commit and any existing tag before replacing the draft's PDF and publishing it. The stable "latest" link works only while manual editions are the repository's only releases marked latest.
+
+If the current push introduces a new edition, unpublished intermediate commits may contain earlier drafts of its deck. If another push arrives before an edition is published, the current main run verifies first-parent history back to an earlier edition. Every intervening revision of the unpublished edition must contain the same deck. Missing history or a conflicting deck fails closed; verify the intended edition and recover its draft or tag, or generate a new edition. A rerun of the original workflow can proceed while its commit is still current main.
 

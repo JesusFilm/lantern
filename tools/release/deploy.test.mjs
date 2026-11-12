@@ -6,7 +6,7 @@ import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 const project='11111111-1111-4111-8111-111111111111',environment='22222222-2222-4222-8222-222222222222',service='33333333-3333-4333-8333-333333333333';
 const settings={data:{environment:{id:environment,projectId:project,name:'staging',deploymentTriggers:{edges:[],pageInfo:{hasNextPage:false}}},serviceInstance:{environmentId:environment,serviceId:service,builder:'RAILPACK',dockerfilePath:null,buildCommand:null,startCommand:'node dist/server/index.js',preDeployCommand:[],healthcheckPath:'/health',healthcheckTimeout:120,restartPolicyType:'ON_FAILURE',restartPolicyMaxRetries:3,rootDirectory:null,cronSchedule:null,railwayConfigFile:null,source:{repo:null,image:null}}}};
-const variables={LANTERN_ENV:'stage',NODE_ENV:'production',LOCAL_ACCESS:'0',LANTERN_HOSTING_ONLY:'0',DATABASE_URL:'postgresql://lantern_stage_runtime:do-not-print-secret@postgres.railway.internal:5432/railway',GOOGLE_CLIENT_ID:'do-not-print-client',GOOGLE_CLIENT_SECRET:'do-not-print-secret',APP_ORIGIN:'https://stage.example.com',HOST:'0.0.0.0'};
+const variables={LANTERN_ENV:'stage',NODE_ENV:'production',LOCAL_ACCESS:'0',LANTERN_HOSTING_ONLY:'0',DATABASE_URL:'postgresql://lantern_stage_runtime:do-not-print-secret@postgres.railway.internal:5432/railway',AUTH_CLIENT_ID:'jfp_lantern_staging',APP_ORIGIN:'https://stage.example.com',HOST:'0.0.0.0'};
 function run(config=settings,vars=variables,extraEnv={},script='deploy.mjs'){
  const dir=mkdtempSync(join(tmpdir(),'lantern-deploy-test-'));
  try{
@@ -45,7 +45,7 @@ test('deployment rejects drift, ambiguous targets and privileged runtime configu
   c=>{delete c.data.serviceInstance.source;},
  ];
  for(const change of cases){const config=structuredClone(settings);change(config);const result=run(config);assert.equal(result.status,1,change.toString());assert.ok(!result.calls.some(c=>c[0]==='up'));assert.doesNotMatch(result.stdout+result.stderr,/do-not-print/);}
- for(const patch of [{LANTERN_ENV:'production'},{LOCAL_ACCESS:'1'},{LANTERN_HOSTING_ONLY:'1'},{NODE_ENV:'development'},{APP_ORIGIN:'https://wrong.example.com'},{DATABASE_URL:'postgresql://postgres:do-not-print-secret@postgres.railway.internal/railway'},{MIGRATION_DATABASE_URL:'do-not-print-secret'},{ADMIN_DATABASE_URL:'do-not-print-secret'},{BOOTSTRAP_DATABASE_URL:'do-not-print-secret'},{GOOGLE_CLIENT_SECRET:null}]){
+ for(const patch of [{LANTERN_ENV:'production'},{LOCAL_ACCESS:'1'},{LANTERN_HOSTING_ONLY:'1'},{NODE_ENV:'development'},{APP_ORIGIN:'https://wrong.example.com'},{DATABASE_URL:'postgresql://postgres:do-not-print-secret@postgres.railway.internal/railway'},{MIGRATION_DATABASE_URL:'do-not-print-secret'},{ADMIN_DATABASE_URL:'do-not-print-secret'},{BOOTSTRAP_DATABASE_URL:'do-not-print-secret'},{AUTH_CLIENT_ID:null}]){
   const result=run(settings,{...variables,...patch});assert.equal(result.status,1);assert.ok(!result.calls.some(c=>c[0]==='up'));assert.doesNotMatch(result.stdout+result.stderr,/do-not-print/);
  }
  for(const patch of [{RAILWAY_PROJECT:''},{RELEASE_TARGET:'unknown'},{RAILWAY_API_TOKEN:'do-not-print-secret'}]){const result=run(settings,variables,patch);assert.equal(result.status,1);assert.ok(!result.calls.some(c=>c[0]==='up'));}

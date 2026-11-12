@@ -1,6 +1,6 @@
 import { approveEmail, revokeEmail } from './admission.js';
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { test } from 'node:test';
 import { privilegeFixture } from './privilege-test-support.js';
@@ -11,12 +11,12 @@ import { createApp } from './app.js';
 import { migrate } from './schema.js';
 import { setupDepartment, removeMember } from './membership.js';
 import type { RegisteredUser, SessionView } from '../shared/access.js';
-import type { IdentityProvider } from './google.js';
+import type { IdentityProvider } from './identity.js';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is required.');
 
-test('Google boundary, persistent access, assignment restrictions and browser journey', { timeout: 90000 }, async (t) => {
+test('OIDC boundary, persistent access, assignment restrictions and browser journey', { timeout: 90000 }, async (t) => {
   const fixture = await privilegeFixture();
   const { runtime: db, admin, migration, roles } = fixture;
   let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
@@ -27,10 +27,12 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
     await grantApplicationPrivileges(migration, roles);
     for (const name of ['lead', 'member', 'other']) await approveEmail(admin, `${name}@example.test`);
     let nextIdentity = 'lead';
+    let authorizationPage: string | undefined;
     const provider: IdentityProvider = {
       authorizationUrl: (state, nonce, challenge) => {
         assert.ok(nonce); assert.ok(challenge);
-        return `/auth/google/callback?${new URLSearchParams({ state, code: nextIdentity })}`;
+        if (authorizationPage) return authorizationPage;
+        return `/auth/jesusfilm/callback?${new URLSearchParams({ state, code: nextIdentity })}`;
       },
       exchange: async (code, verifier, nonce) => {
         assert.ok(verifier); assert.ok(nonce);
@@ -52,7 +54,7 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
     });
     async function login(who: string) {
       nextIdentity = who;
-      const start = await request('/auth/google');
+      const start = await request('/auth/jesusfilm');
       assert.equal(start.status, 302);
       const loginCookie = start.headers.get('set-cookie')!.split(';')[0]!;
       const callback = start.headers.get('location')!;
@@ -60,7 +62,7 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       return { response: result, cookie: result.headers.get('set-cookie')?.match(/(?:^|, )lantern-session=[^;]+/)?.[0].replace(/^, /, '') ?? '', callback, loginCookie };
     }
     await t.test('state is bound to browser, single-use, and invalid identities and unapproved emails cannot register', async () => {
-      const start = await request('/auth/google');
+      const start = await request('/auth/jesusfilm');
       const callback = start.headers.get('location')!;
       assert.equal((await request(callback)).headers.get('location'), '/?signInError=1');
       const valid = await login('lead');
@@ -73,6 +75,67 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       }
       const rows = await admin.query('SELECT google_sub FROM users');
       assert.deepEqual(rows.rows.map((row) => row.google_sub), ['lead']);
+    });
+    await t.test('signed-out document requests redirect before sending the application', async () => {
+      for (const path of ['/', '/?page=guide', '/index.html']) {
+        const response = await request(path);
+        assert.equal(response.status, 302);
+        assert.equal(response.headers.get('location'), '/auth/jesusfilm');
+        assert.equal(response.headers.get('cache-control'), 'no-store');
+        assert.doesNotMatch(await response.text(), /client\/main|id="root"/);
+      }
+      const retry = await request('/?signInError=1');
+      assert.equal(retry.status, 200, 'a denied or cancelled sign-in must not loop');
+      assert.match(retry.headers.get('content-type')!, /text\/html/);
+      assert.equal((await request('/lantern.svg')).status, 200);
+      assert.equal((await request('/api/focuses')).status, 401);
+    });
+    await t.test('server entry honors valid sessions, expiry and revoked admission', async () => {
+      const account = await login('other');
+      assert.equal((await request('/', account.cookie)).status, 200);
+      assert.equal((await request('/index.html', account.cookie)).status, 200);
+      assert.equal((await request('/', 'lantern-session=forged')).headers.get('location'), '/auth/jesusfilm');
+      const token = account.cookie.split('=')[1]!;
+      await admin.query("UPDATE sessions SET expires_at=now()-interval '1 second' WHERE token_hash=$1", [createHash('sha256').update(token).digest('hex')]);
+      assert.equal((await request('/', account.cookie)).headers.get('location'), '/auth/jesusfilm');
+      const renewed = await login('other');
+      await revokeEmail(admin, 'other@example.test');
+      assert.equal((await request('/', renewed.cookie)).headers.get('location'), '/auth/jesusfilm');
+      await approveEmail(admin, 'other@example.test');
+      await migration.query(`REVOKE SELECT ON sessions FROM "${roles.runtime}"`);
+      try {
+        const failed = await request('/', renewed.cookie);
+        assert.equal(failed.status, 503);
+        assert.deepEqual(await failed.json(), { error: 'The service is temporarily unavailable. Please try again.' });
+      } finally {
+        await migration.query(`GRANT SELECT ON sessions TO "${roles.runtime}"`);
+      }
+    });
+    await t.test('signed-out entry reaches the identity provider with JavaScript disabled and no app assets', async () => {
+      const entryBrowser = await chromium.launch();
+      const identityServer = createServer((_req, res) => { res.setHeader('Content-Type', 'text/html'); res.end('<h1>Identity provider</h1>'); });
+      await new Promise<void>(resolve => identityServer.listen(0, '127.0.0.1', resolve));
+      const identityAddress = identityServer.address();
+      assert.ok(identityAddress && typeof identityAddress !== 'string');
+      authorizationPage = `http://127.0.0.1:${identityAddress.port}/login`;
+      try {
+        const context = await entryBrowser.newContext({ javaScriptEnabled: false });
+        const page = await context.newPage();
+        const assets: string[] = [];
+        page.on('request', request => {
+          const path = new URL(request.url()).pathname;
+          if (path.startsWith('/client/') || path.startsWith('/assets/') || path === '/appearance.js') assets.push(path);
+        });
+        await page.goto(origin + '/?page=guide');
+        const { expect } = await import('@playwright/test');
+        await expect(page.getByRole('heading', { name: 'Identity provider' })).toBeVisible();
+        assert.deepEqual(assets, [], 'Lantern must redirect before its application or appearance scripts load');
+      } finally {
+        authorizationPage = undefined;
+        await entryBrowser.close();
+        identityServer.closeAllConnections();
+        await new Promise<void>(resolve => identityServer.close(() => resolve()));
+      }
     });
     const lead = await login('lead');
     const member = await login('member');
@@ -135,29 +198,18 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       const { expect } = await import('@playwright/test');
       nextIdentity = 'browser-member';
       await memberPage.goto(origin);
-      const signIn = memberPage.getByRole('link', { name: 'Sign in with Google' });
-      await expect(signIn).toHaveCSS('text-decoration-line', 'none');
-      await expect(signIn).toHaveCSS('height', '40px');
+      // Signed-out entry starts authentication without a welcome-button click.
+      await expect(memberPage).toHaveURL(origin + '/?signInError=1');
       const navigation = memberPage.getByRole('navigation', { name: 'Main navigation' });
-      await expect(navigation.getByRole('button')).toHaveText(['Account']);
-      await expect(navigation.getByRole('button', { name: 'Account', exact: true })).toHaveAttribute('aria-current', 'page');
-      await memberPage.goto(origin + '/?page=guide');
-      await expect(signIn).toBeVisible();
-      await expect(navigation.getByRole('button')).toHaveText(['Account']);
-      await memberPage.goto(origin);
-      await signIn.focus();
-      await expect(signIn).toBeFocused();
-      await memberPage.getByRole('link', { name: 'Sign in with Google' }).click();
       await expect(memberPage).toHaveURL(origin + '/?signInError=1');
       await expect(memberPage.getByRole('alert')).toHaveText('Sign-in could not be completed. Try again or contact your career lead.');
-      await expect(memberPage.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
+      await expect(memberPage.getByRole('link', { name: 'Sign in with Jesus Film' })).toBeVisible();
       await approveEmail(admin, 'browser-member@gmail.com');
-      await memberPage.getByRole('link', { name: 'Sign in with Google' }).click();
+      await memberPage.getByRole('link', { name: 'Sign in with Jesus Film' }).click();
       await expect(memberPage.getByRole('heading', { name: 'Your account is ready' })).toBeVisible();
       await expect(memberPage.getByText('Contact your career lead directly', { exact: false })).toBeVisible();
       nextIdentity = 'lead';
       await leadPage.goto(origin);
-      await leadPage.getByRole('link', { name: 'Sign in with Google' }).click();
       await leadPage.getByRole('button', { name: 'Department', exact: true }).click();
       await expect(leadPage.getByRole('heading', { name: 'Department' })).toBeVisible();
       await leadPage.getByRole('button', { name: 'Add user', exact: true }).click();
@@ -180,21 +232,23 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       await expect(memberPage.getByRole('button', { name: 'Add user' })).toHaveCount(0);
       await memberPage.reload();
       await expect(memberPage.getByRole('button', { name: 'Department', exact: true })).toHaveCount(0);
+      nextIdentity = 'browser-member';
       await revokeEmail(admin, 'browser-member@gmail.com');
       assert.equal((await memberContext.request.get(origin + '/api/department')).status(), 401);
       await memberPage.evaluate("window.dispatchEvent(new Event('focus'))");
-      await expect(memberPage.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
+      await expect(memberPage.getByRole('link', { name: 'Sign in with Jesus Film' })).toBeVisible();
       await approveEmail(admin, 'browser-member@gmail.com');
       nextIdentity = 'browser-member';
-      await memberPage.getByRole('link', { name: 'Sign in with Google' }).click();
+      await memberPage.getByRole('link', { name: 'Sign in with Jesus Film' }).click();
       await expect(memberPage.getByRole('heading', { name: 'Position focuses', exact: true })).toBeVisible();
       await removeMember(admin, browserId);
       assert.equal((await memberContext.request.get(origin + '/api/department')).status(), 403);
       await memberPage.reload();
       await expect(memberPage.getByRole('heading', { name: 'Your account is ready' })).toBeVisible();
       await memberPage.getByRole('button', { name: 'Account', exact: true }).click();
+      nextIdentity = 'invalid';
       await memberPage.getByRole('button', { name: 'Sign out' }).click();
-      await expect(memberPage.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
+      await expect(memberPage.getByRole('link', { name: 'Sign in with Jesus Film' })).toBeVisible();
       await expect(navigation.getByRole('button')).toHaveText(['Account']);
       await expect(navigation.getByRole('button', { name: 'Account', exact: true })).toHaveAttribute('aria-current', 'page');
       await leadPage.setViewportSize({ width: 390, height: 844 });
@@ -203,7 +257,7 @@ test('Google boundary, persistent access, assignment restrictions and browser jo
       assert.ok(await leadPage.evaluate('document.documentElement.scrollWidth <= innerWidth'));
       await leadPage.setViewportSize({ width: 1280, height: 900 });
     });
-    await t.test('an edited display name survives a later Google login', async () => {
+    await t.test('an edited display name survives a later Jesus Film login', async () => {
       const result = await fetch(origin + '/api/account', {method:'PATCH',headers:{Cookie:lead.cookie,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({name:'Chosen name'})});
       assert.equal(result.status,200);
       const again = await login('lead');

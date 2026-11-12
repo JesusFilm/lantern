@@ -10,7 +10,7 @@ export interface Assets {
   shots: Record<string, FrameAsset[]>;
   supplied: Record<string, { file: string; width: number; height: number; outdated: string[] } | undefined>;
 }
-export interface Edition { edition: number; date: string; fingerprint: string }
+export interface Edition { edition: number; date: string;  }
 
 const slide = { width: 1280, height: 720, padding: 40, text: 392, gap: 24, header: 96, footer: 30 };
 const media = { width: slide.width - slide.padding * 2 - slide.text - slide.gap, height: slide.height - slide.padding - slide.header - slide.footer - 20 };
@@ -76,7 +76,7 @@ export async function deckHtml(chapters: Chapter[], assets: Assets, edition: Edi
       <div class="card"><span class="label">Edition</span><strong>${edition.edition || "—"}</strong><span>${escape(date(edition.date))}</span></div>
       <div class="card"><span class="label">Coverage</span><strong>${features} features</strong><span>${shotCount} screenshots</span></div>
       <div class="card"><span class="label">Devices</span><strong>Desktop &amp; phone</strong><span>1440 × 900 · 390 × 844</span></div>
-      <div class="card"><span class="label">Source fingerprint</span><strong class="mono">${escape(edition.fingerprint.slice(0, 12))}</strong><span>Synthetic data; all people are fictional</span></div>
+      <div class="card"><span class="label">Capture data</span><strong>Synthetic</strong><span>All people are fictional</span></div>
     </div></section>`);
   const contentsAt = pages.length;
   pages.push("");

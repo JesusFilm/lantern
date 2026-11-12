@@ -1,7 +1,7 @@
 # Owner-only feature flag reporting
 
 Date: 2026-11-11
-Status: Accepted by Jaco.
+Status: Proposed; awaiting Jaco's decision on the feature-flag exception.
 
 ## Decision
 
