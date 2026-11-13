@@ -28,7 +28,14 @@ check_existing_tag() {
   fi
 }
 lookup_error=$(mktemp)
-trap 'rm -f "$lookup_error"' EXIT
+notes_file=$(mktemp)
+trap 'rm -f "$lookup_error" "$notes_file"' EXIT
+write_notes() {
+  local target=$1 target_date
+  target_date=$(git show "$target:docs/manual/manifest.json" | node -e 'let s=""; process.stdin.on("data",c=>s+=c).on("end",()=>process.stdout.write(JSON.parse(s).editionDate));')
+  printf 'Lantern QA manual, edition %s (%s), generated from %s.\n\nOpen lantern-manual.pdf below. Screenshots use synthetic data.\n\n' "$edition" "$target_date" "$target" > "$notes_file"
+  node tools/manual/_release-notes.mjs --release "$target" >> "$notes_file"
+}
 if draft=$(gh release view "$tag" --json isDraft --jq '.isDraft' 2>"$lookup_error"); then
   if [ "$draft" = "true" ]; then
     # Drafts may not yet have a Git tag; gh create recorded the
@@ -50,8 +57,9 @@ if draft=$(gh release view "$tag" --json isDraft --jq '.isDraft' 2>"$lookup_erro
     check_existing_tag
     if [ "${1:-}" = "--check" ]; then exit 0; fi
     # Resume an incomplete upload only after validating its target.
+    write_notes "$ref"
     gh release upload "$tag" docs/manual/lantern-manual.pdf --clobber
-    gh release edit "$tag" --draft=false --latest
+    gh release edit "$tag" --draft=false --latest --notes-file "$notes_file"
   else
     expected_pdf=$(git show "$ref:docs/manual/manifest.json" | node -e '
       const fs = require("node:fs");
@@ -109,5 +117,5 @@ if [ -z "$remote_tag" ]; then
   ' "$before"
 fi
 if [ "${1:-}" = "--check" ]; then exit 0; fi
-printf 'Lantern QA manual, edition %s (%s), generated from %s.\n\nOpen lantern-manual.pdf below. Screenshots use synthetic data.\n' "$edition" "$date" "$GITHUB_SHA" > notes.md
-gh release create "$tag" docs/manual/lantern-manual.pdf --target "$GITHUB_SHA" --title "QA manual, edition $edition" --notes-file notes.md --latest
+write_notes "$GITHUB_SHA"
+gh release create "$tag" docs/manual/lantern-manual.pdf --target "$GITHUB_SHA" --title "QA manual, edition $edition" --notes-file "$notes_file" --latest

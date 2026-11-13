@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
@@ -11,8 +11,11 @@ async function releaseFixture(t: TestContext, draft: boolean | null) {
   const root = await mkdtemp(join(tmpdir(), "manual-release-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(join(root, "docs/manual"), { recursive: true });
+  await mkdir(join(root, "tools/manual"), { recursive: true });
+  await writeFile(join(root, "tools/manual/_release-notes.mjs"), await readFile(new URL("./_release-notes.mjs", import.meta.url)));
+  await symlink(join(process.cwd(), "node_modules"), join(root, "node_modules"), "dir");
   await writeFile(join(root, "docs/manual/manifest.json"), JSON.stringify({ edition: 7, editionDate: "2026-11-02", deck: "published-deck" }));
-  await writeFile(join(root, "published-manifest.json"), JSON.stringify({ edition: 7, deck: "published-deck", pdf: "f".repeat(64) }));
+  await writeFile(join(root, "published-manifest.json"), JSON.stringify({ edition: 7, editionDate: "2026-11-02", deck: "published-deck", pdf: "f".repeat(64) }));
   await writeFile(join(root, "tagged-manifest.json"), JSON.stringify({ edition: 7, deck: "published-deck" }));
   await writeFile(join(root, "before-manifest.json"), JSON.stringify({ edition: 6, deck: "previous-deck" }));
   await writeFile(join(root, "docs/manual/lantern-manual.pdf"), "fixture PDF");
@@ -23,18 +26,29 @@ const args = process.argv.slice(2);
 const state = JSON.parse(fs.readFileSync('state.json', 'utf8'));
 state.calls.push(args);
 let status = 0;
-if (args[1] === 'view') {
+if (args[0] === 'api') {
+  if (fs.existsSync('api-unavailable')) { console.error('API unavailable'); status = 1; }
+  else console.log(fs.existsSync('releases.json') ? fs.readFileSync('releases.json', 'utf8') : '[]');
+} else if (args[1] === 'view') {
   if (fs.existsSync('gh-unavailable')) { console.error('network unavailable'); status = 1; }
   else if (!state.exists) { console.error('release not found'); status = 1; }
   else if (args.includes('assets')) console.log(JSON.stringify({assets:fs.existsSync('missing-asset') ? [] : [{name:'lantern-manual.pdf',digest:'sha256:' + (fs.existsSync('wrong-asset') ? 'e' : 'f').repeat(64)}]}));
-  else console.log(args.includes('targetCommitish') ? 'a'.repeat(40) : args.includes('--json') ? String(state.draft) : 'QA manual, edition 7');
+  else if (args.includes('targetCommitish')) {
+    const f = 'draft-target.json';
+    const target = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : 'a'.repeat(40);
+    if (target === 'invalid') { console.error('draft target unavailable'); status = 1; }
+    else console.log(target);
+  }
+  else console.log(args.includes('--json') ? String(state.draft) : 'QA manual, edition 7');
 } else if (args[1] === 'create') {
   state.exists = true; state.draft = false; state.uploaded = true;
+  state.notes = fs.readFileSync(args[args.indexOf('--notes-file') + 1], 'utf8');
 } else if (args[1] === 'upload') {
   if (fs.existsSync('fail-upload')) status = 1;
   else state.uploaded = true;
 } else if (args[1] === 'edit') {
   if (!state.uploaded) throw new Error('Published without the PDF');
+  state.notes = fs.readFileSync(args[args.indexOf('--notes-file') + 1], 'utf8');
   state.draft = false;
 } else throw new Error('Unexpected gh call');
 fs.writeFileSync('state.json', JSON.stringify(state));
@@ -60,7 +74,7 @@ process.exit(1);
     run: (mode = "--publish", before = "b".repeat(40), sha = "a".repeat(40)) => promisify(execFile)("bash", ["-e", "-o", "pipefail", "-c", script, "release.sh", mode], {
       cwd: root, env: { PATH: root + ":" + process.env.PATH, GITHUB_SHA: sha, MANUAL_PUSH_BEFORE: before },
     }),
-    state: async () => JSON.parse(await readFile(join(root, "state.json"), "utf8")) as { draft: boolean; uploaded: boolean; calls: string[][] },
+    state: async () => JSON.parse(await readFile(join(root, "state.json"), "utf8")) as { draft: boolean; uploaded: boolean; notes: string; calls: string[][] },
   };
 }
 
@@ -122,9 +136,68 @@ test("release rerun resumes an unpublished draft and uploads the PDF before publ
   const state = await fixture.state();
   assert.equal(state.draft, false, "a successful rerun must make the manual available to QA");
   assert.equal(state.uploaded, true);
-  assert.deepEqual(state.calls.map((args) => args[1]), ["view", "view", "upload", "edit"]);
-  assert.ok(state.calls[2]!.includes("--clobber"));
-  assert.ok(state.calls[3]!.includes("--latest"));
+  assert.deepEqual(state.calls.filter((args) => args[0] === "release").map((args) => args[1]), ["view", "view", "upload", "edit"]);
+  assert.ok(state.calls.find((args) => args[1] === "upload")!.includes("--clobber"));
+  assert.ok(state.calls.find((args) => args[1] === "edit")!.includes("--latest"));
+  assert.match(state.notes, /## What changed/);
+});
+
+test("resuming a draft publishes release notes comparing its own target commit", async (t) => {
+  const fixture = await releaseFixture(t, true);
+  await rm(join(fixture.root, "git"));
+  const git = async (...args: string[]) => (await promisify(execFile)("git", args, {cwd: fixture.root})).stdout.trim();
+  await git("init", "--bare", "remote.git"); await git("init", "-b", "main");
+  await git("config", "user.name", "Manual Test"); await git("config", "user.email", "manual@example.test");
+  await git("remote", "add", "origin", join(fixture.root, "remote.git"));
+  // Track the notes generator so a later `git checkout` does not remove it
+  // as an untracked file.
+  await writeFile(join(fixture.root, "tools/manual/_release-notes.mjs"), await readFile(new URL("./_release-notes.mjs", import.meta.url)));
+  await git("add", "tools/manual/_release-notes.mjs"); await git("commit", "-m", "notes generator");
+  const save = async (edition: number, topics: string[]) => {
+    const slides = topics.map((title) => `{kind:"feature",title:"${title}",summary:"${title} guidance.",tryIt:[],check:[],shots:[]}`).join(",");
+    await writeFile(join(fixture.root, "tools/manual/content.ts"), `export const chapters = [{ title:"Manual", slides:[${slides}] }];`);
+    await writeFile(join(fixture.root, "docs/manual/manifest.json"), JSON.stringify({edition, editionDate:"2026-11-02", deck:`deck-${edition}`, screenshots:{}, supplied:{}}));
+    await git("add", "docs/manual", "tools/manual/content.ts"); await git("commit", "-m", `edition ${edition}`);
+    return git("rev-parse", "HEAD");
+  };
+  await save(4, ["Existing"]); await git("tag", "manual-4");
+  const target = await save(6, ["Existing", "Draft topic"]);
+  await writeFile(join(fixture.root, "tools/manual/content.ts"), `export const chapters = [{ title:"Manual", slides:[{kind:"feature",title:"Existing",summary:"Existing guidance.",tryIt:[],check:[],shots:[]},{kind:"feature",title:"Draft topic",summary:"Draft topic guidance.",tryIt:[],check:[],shots:[]},{kind:"feature",title:"Later topic",summary:"Later topic guidance.",tryIt:[],check:[],shots:[]}] }];`);
+  await git("add", "tools/manual"); await git("commit", "-m", "later push");
+  const later = await git("rev-parse", "HEAD");
+  await git("push", "origin", "HEAD:main", "--tags");
+  await writeFile(join(fixture.root, "draft-target.json"), JSON.stringify(target));
+  await writeFile(join(fixture.root, "releases.json"), JSON.stringify([[{tag_name:"manual-4",draft:false,prerelease:false}]]));
+  await fixture.run("--publish", target, later);
+  const state = await fixture.state();
+  assert.equal(state.draft, false);
+  assert.equal(state.uploaded, true);
+  assert.match(state.notes, /What changed since edition 4/);
+  assert.match(state.notes, /Added \*\*Draft topic\*\*/, "the notes must compare the draft's target commit, whose topic set the draft was created from");
+  assert.doesNotMatch(state.notes, /Added \*\*Later topic\*\*/, "the later HEAD push must not change the draft's release notes");
+  assert.doesNotMatch(state.notes, /First published edition/);
+});
+
+test("a failed previous-edition lookup leaves an unpublished draft unpublishable", async (t) => {
+  const fixture = await releaseFixture(t, true);
+  await writeFile(join(fixture.root, "api-unavailable"), "");
+  await assert.rejects(fixture.run());
+  const state = await fixture.state();
+  assert.equal(state.draft, true, "a draft cannot be published when the comparison cannot be made");
+  assert.equal(state.uploaded, false);
+  assert.ok(!state.calls.some((args) => args[1] === "edit"), "no edit call may publish the draft");
+  assert.ok(!state.calls.some((args) => args[1] === "upload"), "no upload call may precede a valid notes comparison");
+});
+
+test("a draft with an unreadable target commit cannot be resumed", async (t) => {
+  const fixture = await releaseFixture(t, true);
+  await writeFile(join(fixture.root, "draft-target.json"), JSON.stringify("invalid"));
+  await assert.rejects(fixture.run(), /target commit/);
+  const state = await fixture.state();
+  assert.equal(state.draft, true);
+  assert.equal(state.uploaded, false);
+  assert.ok(!state.calls.some((args) => args[1] === "upload"));
+  assert.ok(!state.calls.some((args) => args[1] === "edit"));
 });
 
 test("a draft cannot publish a different deck after an unrelated push", async (t) => {
@@ -187,7 +260,42 @@ test("a new edition is created with its PDF", async (t) => {
   const state = await fixture.state();
   assert.equal(state.draft, false);
   assert.equal(state.uploaded, true);
-  assert.ok(state.calls[1]!.includes("docs/manual/lantern-manual.pdf"));
+  assert.ok(state.calls.find((args) => args[1] === "create")?.includes("docs/manual/lantern-manual.pdf"));
+  assert.match(state.notes, /## What changed/);
+  assert.match(state.notes, /- First published edition of the QA manual\./);
+});
+
+test("published notes cover all changes since the previous published edition", async (t) => {
+  const fixture = await releaseFixture(t, null);
+  await rm(join(fixture.root, "git"));
+  const git = async (...args: string[]) => (await promisify(execFile)("git", args, {cwd: fixture.root})).stdout.trim();
+  await git("init", "--bare", "remote.git"); await git("init", "-b", "main");
+  await git("config", "user.name", "Manual Test"); await git("config", "user.email", "manual@example.test");
+  await git("remote", "add", "origin", join(fixture.root, "remote.git"));
+  const save = async (edition: number, features: string[]) => {
+    const slides = features.map((title) => `{kind:"feature",title:"${title}",summary:"${title} guidance.",tryIt:[],check:[],shots:[]}`).join(",");
+    await writeFile(join(fixture.root, "tools/manual/content.ts"), `export const chapters = [{ title:"Manual", slides:[${slides}] }];`);
+    await writeFile(join(fixture.root, "docs/manual/manifest.json"), JSON.stringify({edition, editionDate:"2026-11-02", deck:`deck-${edition}`, screenshots:{}, supplied:{}}));
+    await git("add", "docs/manual", "tools/manual/content.ts"); await git("commit", "-m", `edition ${edition}`);
+    return git("rev-parse", "HEAD");
+  };
+  await save(4, ["Existing"]); await git("tag", "manual-4");
+  const before = await save(6, ["Existing", "Unpublished topic"]);
+  const sha = await save(7, ["Existing", "Unpublished topic", "New topic"]);
+  await git("push", "origin", "main", "--tags");
+  await writeFile(join(fixture.root, "releases.json"), JSON.stringify([[{tag_name:"manual-4",draft:false,prerelease:false},{tag_name:"manual-6",draft:true,prerelease:false}]]));
+  await fixture.run("--publish", before, sha);
+  const state = await fixture.state();
+  assert.match(state.notes, /What changed since edition 4/);
+  assert.match(state.notes, /Added \*\*Unpublished topic\*\*/);
+  assert.match(state.notes, /Added \*\*New topic\*\*/);
+});
+
+test("a release is not published if the previous edition cannot be determined", async (t) => {
+  const fixture = await releaseFixture(t, null);
+  await writeFile(join(fixture.root, "api-unavailable"), "");
+  await assert.rejects(fixture.run());
+  assert.equal((await fixture.state()).calls.some((args) => args[1] === "create"), false);
 });
 
 test("a new edition can restore a damaged PDF without changing the deck", async (t) => {
