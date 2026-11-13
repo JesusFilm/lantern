@@ -162,15 +162,13 @@ test("resuming a draft publishes release notes comparing its own target commit",
   };
   await save(4, ["Existing"]); await git("tag", "manual-4");
   const target = await save(6, ["Existing", "Draft topic"]);
-  await git("checkout", "-b", "work", target);
   await writeFile(join(fixture.root, "tools/manual/content.ts"), `export const chapters = [{ title:"Manual", slides:[{kind:"feature",title:"Existing",summary:"Existing guidance.",tryIt:[],check:[],shots:[]},{kind:"feature",title:"Draft topic",summary:"Draft topic guidance.",tryIt:[],check:[],shots:[]},{kind:"feature",title:"Later topic",summary:"Later topic guidance.",tryIt:[],check:[],shots:[]}] }];`);
   await git("add", "tools/manual"); await git("commit", "-m", "later push");
-  await git("checkout", "-q", "main");
+  const later = await git("rev-parse", "HEAD");
   await git("push", "origin", "HEAD:main", "--tags");
   await writeFile(join(fixture.root, "draft-target.json"), JSON.stringify(target));
   await writeFile(join(fixture.root, "releases.json"), JSON.stringify([[{tag_name:"manual-4",draft:false,prerelease:false}]]));
-  console.log("DEBUG notes exists before run:", (await import("node:fs")).existsSync(join(fixture.root, "tools/manual/_release-notes.mjs")));
-  await fixture.run("--publish", "b".repeat(40), target);
+  await fixture.run("--publish", target, later);
   const state = await fixture.state();
   assert.equal(state.draft, false);
   assert.equal(state.uploaded, true);
