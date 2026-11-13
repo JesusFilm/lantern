@@ -60,9 +60,9 @@ function outdated(ref, manifest, shot) {
   const record = manifest.supplied?.[shot.id];
   if (!record?.image) return [];
   return shot.sources.filter((path) => {
-    let contents;
-    try { contents = execFileSync("git", ["show", `${ref}:${path}`], { stdio: ["ignore", "pipe", "ignore"] }); }
-    catch { return record.capturedFor[path] !== null; }
+    const files = git("ls-tree", "-r", "--name-only", "-z", ref, "--", path).split("\0");
+    if (!files.includes(path)) return record.capturedFor[path] !== null;
+    const contents = execFileSync("git", ["show", `${ref}:${path}`], { maxBuffer: 64 << 20 });
     return createHash("sha256").update(contents).digest("hex") !== record.capturedFor[path];
   });
 }
@@ -131,7 +131,7 @@ for (const [title, slide] of after) {
           const wasOutdated = outdated(previous, previousManifest, prior);
           const nowOutdated = outdated(current, currentManifest, shot);
           if (nowOutdated.length && JSON.stringify(wasOutdated) !== JSON.stringify(nowOutdated)) details.push(`Screenshot ${shot.caption ?? shot.id} may be outdated (${nowOutdated.join(", ")}).`);
-          else if (wasOutdated.length && !nowOutdated.length) details.push(`Screenshot ${shot.caption ?? shot.id} was confirmed or updated.`);
+          else if (wasOutdated.length && !nowOutdated.length) details.push(`Screenshot ${shot.caption ?? shot.id} is no longer marked outdated.`);
         }
       }
     }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { transformSync } from "esbuild";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -169,7 +169,7 @@ test("changes to pending supplied screenshot instructions are reported", async (
   assert.match(output, /new\.png/);
 });
 
-test("notes report when a supplied screenshot becomes outdated and when it is confirmed", async (t) => {
+test("notes report when a supplied screenshot becomes outdated and when the warning clears", async (t) => {
   const { root, commit, notes } = await fixture(t);
   const sourcePath = "account.txt";
   const hash = (source: string) => createHash("sha256").update(source).digest("hex");
@@ -179,6 +179,34 @@ test("notes report when a supplied screenshot becomes outdated and when it is co
   await writeFile(join(root, sourcePath), "changed");
   const outdated = await commit(22, slide, {}, { login: { image: "same", capturedFor: { [sourcePath]: hash("original") } } });
   const confirmed = await commit(23, slide, {}, { login: { image: "same", capturedFor: { [sourcePath]: hash("changed") } } });
+  await writeFile(join(root, sourcePath), "original");
+  const reverted = await commit(24, slide, {}, { login: { image: "same", capturedFor: { [sourcePath]: hash("original") } } });
   assert.match(notes(original, outdated), /Login.*may be outdated/i);
-  assert.match(notes(outdated, confirmed), /Login.*confirmed/i);
+  assert.match(notes(outdated, confirmed), /Login.*no longer marked outdated/i);
+  assert.match(notes(outdated, reverted), /Login.*no longer marked outdated/i);
+});
+
+test("large supplied-screenshot source files are compared without truncation", async (t) => {
+  const { root, commit, notes } = await fixture(t);
+  const source = "a".repeat(1024 * 1024 + 1);
+  const digest = createHash("sha256").update(source).digest("hex");
+  const slide = '{kind:"feature",title:"Sign in",summary:"Sign in.",shots:[{id:"login",caption:"Login",file:"login.png",instructions:"Capture login.",sources:["account.txt"]}]}';
+  await writeFile(join(root, "account.txt"), source);
+  const original = await commit(25, slide, {}, { login: { image: "same", capturedFor: { "account.txt": digest } } });
+  await writeFile(join(root, "account.txt"), "changed");
+  const changed = await commit(26, slide, {}, { login: { image: "same", capturedFor: { "account.txt": digest } } });
+  assert.match(notes(original, changed), /Login.*may be outdated/i);
+});
+
+test("notes fail when a tracked supplied-screenshot source cannot be read", async (t) => {
+  const { root, git, commit, notes } = await fixture(t);
+  const slide = '{kind:"feature",title:"Sign in",summary:"Sign in.",shots:[{id:"login",caption:"Login",file:"login.png",instructions:"Capture login.",sources:["account.txt"]}]}';
+  await writeFile(join(root, "account.txt"), "original");
+  const digest = createHash("sha256").update("original").digest("hex");
+  const original = await commit(27, slide, {}, { login: { image: "same", capturedFor: { "account.txt": digest } } });
+  const object = git("rev-parse", `${original}:account.txt`);
+  await writeFile(join(root, "account.txt"), "changed");
+  const changed = await commit(28, slide, {}, { login: { image: "same", capturedFor: { "account.txt": digest } } });
+  await unlink(join(root, ".git/objects", object.slice(0, 2), object.slice(2)));
+  assert.throws(() => notes(original, changed));
 });
