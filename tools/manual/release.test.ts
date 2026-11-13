@@ -33,7 +33,13 @@ if (args[0] === 'api') {
   if (fs.existsSync('gh-unavailable')) { console.error('network unavailable'); status = 1; }
   else if (!state.exists) { console.error('release not found'); status = 1; }
   else if (args.includes('assets')) console.log(JSON.stringify({assets:fs.existsSync('missing-asset') ? [] : [{name:'lantern-manual.pdf',digest:'sha256:' + (fs.existsSync('wrong-asset') ? 'e' : 'f').repeat(64)}]}));
-  else console.log(args.includes('targetCommitish') ? 'a'.repeat(40) : args.includes('--json') ? String(state.draft) : 'QA manual, edition 7');
+  else if (args.includes('targetCommitish')) {
+    const f = 'draft-target.json';
+    const target = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : 'a'.repeat(40);
+    if (target === 'invalid') { console.error('draft target unavailable'); status = 1; }
+    else console.log(target);
+  }
+  else console.log(args.includes('--json') ? String(state.draft) : 'QA manual, edition 7');
 } else if (args[1] === 'create') {
   state.exists = true; state.draft = false; state.uploaded = true;
   state.notes = fs.readFileSync(args[args.indexOf('--notes-file') + 1], 'utf8');
@@ -134,6 +140,66 @@ test("release rerun resumes an unpublished draft and uploads the PDF before publ
   assert.ok(state.calls.find((args) => args[1] === "upload")!.includes("--clobber"));
   assert.ok(state.calls.find((args) => args[1] === "edit")!.includes("--latest"));
   assert.match(state.notes, /## What changed/);
+});
+
+test("resuming a draft publishes release notes comparing its own target commit", async (t) => {
+  const fixture = await releaseFixture(t, true);
+  await rm(join(fixture.root, "git"));
+  const git = async (...args: string[]) => (await promisify(execFile)("git", args, {cwd: fixture.root})).stdout.trim();
+  await git("init", "--bare", "remote.git"); await git("init", "-b", "main");
+  await git("config", "user.name", "Manual Test"); await git("config", "user.email", "manual@example.test");
+  await git("remote", "add", "origin", join(fixture.root, "remote.git"));
+  // Track the notes generator so a later `git checkout` does not remove it
+  // as an untracked file.
+  await writeFile(join(fixture.root, "tools/manual/_release-notes.mjs"), await readFile(new URL("./_release-notes.mjs", import.meta.url)));
+  await git("add", "tools/manual/_release-notes.mjs"); await git("commit", "-m", "notes generator");
+  const save = async (edition: number, topics: string[]) => {
+    const slides = topics.map((title) => `{kind:"feature",title:"${title}",summary:"${title} guidance.",tryIt:[],check:[],shots:[]}`).join(",");
+    await writeFile(join(fixture.root, "tools/manual/content.ts"), `export const chapters = [{ title:"Manual", slides:[${slides}] }];`);
+    await writeFile(join(fixture.root, "docs/manual/manifest.json"), JSON.stringify({edition, editionDate:"2026-11-02", deck:`deck-${edition}`, screenshots:{}, supplied:{}}));
+    await git("add", "docs/manual", "tools/manual/content.ts"); await git("commit", "-m", `edition ${edition}`);
+    return git("rev-parse", "HEAD");
+  };
+  await save(4, ["Existing"]); await git("tag", "manual-4");
+  const target = await save(6, ["Existing", "Draft topic"]);
+  await git("checkout", "-b", "work", target);
+  await writeFile(join(fixture.root, "tools/manual/content.ts"), `export const chapters = [{ title:"Manual", slides:[{kind:"feature",title:"Existing",summary:"Existing guidance.",tryIt:[],check:[],shots:[]},{kind:"feature",title:"Draft topic",summary:"Draft topic guidance.",tryIt:[],check:[],shots:[]},{kind:"feature",title:"Later topic",summary:"Later topic guidance.",tryIt:[],check:[],shots:[]}] }];`);
+  await git("add", "tools/manual"); await git("commit", "-m", "later push");
+  await git("checkout", "-q", "main");
+  await git("push", "origin", "HEAD:main", "--tags");
+  await writeFile(join(fixture.root, "draft-target.json"), JSON.stringify(target));
+  await writeFile(join(fixture.root, "releases.json"), JSON.stringify([[{tag_name:"manual-4",draft:false,prerelease:false}]]));
+  console.log("DEBUG notes exists before run:", (await import("node:fs")).existsSync(join(fixture.root, "tools/manual/_release-notes.mjs")));
+  await fixture.run("--publish", "b".repeat(40), target);
+  const state = await fixture.state();
+  assert.equal(state.draft, false);
+  assert.equal(state.uploaded, true);
+  assert.match(state.notes, /What changed since edition 4/);
+  assert.match(state.notes, /Added \*\*Draft topic\*\*/, "the notes must compare the draft's target commit, whose topic set the draft was created from");
+  assert.doesNotMatch(state.notes, /Added \*\*Later topic\*\*/, "the later HEAD push must not change the draft's release notes");
+  assert.doesNotMatch(state.notes, /First published edition/);
+});
+
+test("a failed previous-edition lookup leaves an unpublished draft unpublishable", async (t) => {
+  const fixture = await releaseFixture(t, true);
+  await writeFile(join(fixture.root, "api-unavailable"), "");
+  await assert.rejects(fixture.run());
+  const state = await fixture.state();
+  assert.equal(state.draft, true, "a draft cannot be published when the comparison cannot be made");
+  assert.equal(state.uploaded, false);
+  assert.ok(!state.calls.some((args) => args[1] === "edit"), "no edit call may publish the draft");
+  assert.ok(!state.calls.some((args) => args[1] === "upload"), "no upload call may precede a valid notes comparison");
+});
+
+test("a draft with an unreadable target commit cannot be resumed", async (t) => {
+  const fixture = await releaseFixture(t, true);
+  await writeFile(join(fixture.root, "draft-target.json"), JSON.stringify("invalid"));
+  await assert.rejects(fixture.run(), /target commit/);
+  const state = await fixture.state();
+  assert.equal(state.draft, true);
+  assert.equal(state.uploaded, false);
+  assert.ok(!state.calls.some((args) => args[1] === "upload"));
+  assert.ok(!state.calls.some((args) => args[1] === "edit"));
 });
 
 test("a draft cannot publish a different deck after an unrelated push", async (t) => {
