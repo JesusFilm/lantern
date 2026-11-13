@@ -37,9 +37,8 @@ test("the notes evaluator can read the repository's own content.ts", async (t) =
   const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
   const { commitContent, notes } = await fixture(t);
   const source = await readFile(join(repoRoot, "tools/manual/content.ts"), "utf8");
-  // The release job only installs the runtime dependencies, so transpile the
-  // real content the same way the notes generator will (esbuild is a declared
-  // dependency). The result is committed twice and evaluated in the sandbox.
+  // Transpile the real content as the notes generator does, then commit it
+  // twice and evaluate the two revisions in the isolated fixture.
   const evaluated = transformSync(source, { loader: "ts", format: "esm" }).code;
   const old = await commitContent(1, evaluated);
   const next = await commitContent(2, evaluated);

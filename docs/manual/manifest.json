@@ -3,7 +3,7 @@
   "editionDate": "2026-11-13",
   "deck": "6adc88f01883b32a2510cc31b7ad84da21c1b53ac9c0fafa59c6ebd0d724b1b8",
   "sources": {
-    "fingerprint": "d0ca617269f86d593922823e9ebbf8d4090d752402459dabc64408535de33132",
+    "fingerprint": "b9c4942a324e966ef1f47b9cfdde9fe26666639f00d61130904fbc39a527c78b",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -56,8 +56,8 @@
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
       "docs/PRD.md": "f04636944333a5cf309865ba0a7a033a2bb6f20292e5acda305796022233c262",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
-      "package-lock.json": "153c2e4445cbef80f18c0bcf4eb8cb169b96c5374246b2ac7bae01f191b4426a",
-      "package.json": "992a1a5a01fb2b67495a414d2dd1ebd857e53ef696eb4d14fc5249f3c3e4c3bf",
+      "package-lock.json": "6d1503ca2ab100729a9cab30c6592c64c97d45623445fdb7078d5c943649c4c7",
+      "package.json": "20a96f0390ecbedfd144a2c28e1406858a857d50fc29f9648895e66cb2bcebc8",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/lantern.svg": "3525f31ec77634d4ed9bd979e916ca5b3639199c23cd25578089cb319b1b2d57",
       "public/mission-jesus-geometric.png": "831365bf853db1196611e59f298ba57a8ddae13029adff24fc83ee1172dda410",
@@ -200,7 +200,7 @@
   },
   "pdf": "da0f3acb9a84a0652cde7641e84f98cffd5ba8989361db306bf967225891bddd",
   "verification": {
-    "generatedAt": "2026-11-13T00:59:31.289Z",
+    "generatedAt": "2026-11-13T20:16:18.658Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -254,8 +254,8 @@
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
       "docs/PRD.md": "f04636944333a5cf309865ba0a7a033a2bb6f20292e5acda305796022233c262",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
-      "package-lock.json": "aa69968145bb0d3248b6106b708223ddf834747a70f44e977935ddc4e88662ff",
-      "package.json": "146cd29a3418464bcca5bc39539f23bf06cf08883ab6439d151388b1c6ea7d39",
+      "package-lock.json": "fc7e59279ef3d4e4e81bd7fcf7d43db2e9a7fee623c1788fdbd7fef38e6e90c1",
+      "package.json": "44977d5b8ec71ed1a2b5fd23fd0423914ca9240f7b49d77b99e008baf8056451",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/lantern.svg": "3525f31ec77634d4ed9bd979e916ca5b3639199c23cd25578089cb319b1b2d57",
       "public/mission-jesus-geometric.png": "831365bf853db1196611e59f298ba57a8ddae13029adff24fc83ee1172dda410",
