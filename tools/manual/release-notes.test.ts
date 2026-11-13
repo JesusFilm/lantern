@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { transformSync } from "esbuild";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,8 +24,30 @@ async function fixture(t: TestContext) {
   };
   const command = fileURLToPath(new URL("./_release-notes.mjs", import.meta.url));
   const notes = (old: string, next: string) => execFileSync(process.execPath, [command, old, next], { cwd: root, encoding: "utf8" });
-  return { commit, notes, root, git };
+  const commitContent = async (edition: number, source: string) => {
+    await writeFile(join(root, "tools/manual/content.ts"), source);
+    await writeFile(join(root, "docs/manual/manifest.json"), JSON.stringify({ edition, screenshots: {}, supplied: {} }));
+    git("add", "."); git("commit", "-qm", `edition ${edition}`);
+    return git("rev-parse", "HEAD");
+  };
+  return { commit, notes, root, git, commitContent };
 }
+
+test("the notes evaluator can read the repository's own content.ts", async (t) => {
+  const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
+  const { commitContent, notes } = await fixture(t);
+  const source = await readFile(join(repoRoot, "tools/manual/content.ts"), "utf8");
+  // The release job only installs the runtime dependencies, so transpile the
+  // real content the same way the notes generator will (esbuild is a declared
+  // dependency). The result is committed twice and evaluated in the sandbox.
+  const evaluated = transformSync(source, { loader: "ts", format: "esm" }).code;
+  const old = await commitContent(1, evaluated);
+  const next = await commitContent(2, evaluated);
+  const output = notes(old, next);
+  assert.match(output, /What changed since edition 1/);
+  assert.doesNotMatch(output, /First published edition/, "the evaluator must compare two revisions, not fall back");
+  assert.match(output, /no changes to slide text or screenshots were detected/, "identical revisions must be recognized, not misread");
+});
 
 test("release notes describe a newly documented feature since the previous edition", async (t) => {
   const { commit, notes } = await fixture(t);
