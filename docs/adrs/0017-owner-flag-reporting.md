@@ -3,6 +3,11 @@
 Date: 2026-11-11
 Status: Accepted by Jaco.
 
+Planned partial replacement: [ADR 0018](0018-owner-administration-api.md) extends
+the one-email setting to an owner list. This record describes the deployed
+behavior until that change is released; the flag-page admission and membership
+checks remain in force.
+
 ## Decision
 
 Provide a read-only `/ops/feature-flags` page in the running Lantern environment. It reports registered flag names and resolved states, not preview account addresses. Hosted access requires an admitted session, active department membership and an exact match to the normalized `LANTERN_FLAG_OWNER_EMAIL` environment setting. Explicitly enabled loopback-only local access instead uses its synthetic local account without a session or admission check; the owner email and active membership still must match. Unset means no account can view the page. The environment owner sets the optional value; a malformed value stops startup. Railway remains authoritative for changes.
