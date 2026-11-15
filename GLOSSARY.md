@@ -4,6 +4,12 @@ Language for the member position-focus workflow. This glossary distinguishes the
 
 ## People and access
 
+**Owner**:
+A person entrusted to oversee Lantern in an environment. The current configured
+owner can inspect feature-flag states. The planned administration API extends this
+to a list of owners who can set up departments; owner authority alone does not
+grant access to position focuses. An owner may separately be a career lead.
+
 **Member**:
 An approved participant with active membership of the team who prepares and manages their own position focuses.
 

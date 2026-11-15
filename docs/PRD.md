@@ -74,7 +74,65 @@ PostgreSQL stores account, membership and focus data. Saves detect concurrent ed
 
 Staging receives application and schema changes automatically after a PR merges to main. An opt-in authenticated acceptance journey exercises the deployed build with disposable synthetic accounts and ordinary sessions, without a public login bypass. After hosted rehearsal, the owner may enable automatic production promotion of the latest main SHA with successful CI, readiness, authenticated acceptance and cleanup from the same run. Automatic promotion requires matching advertised staging/production schema versions; schema-changing releases remain manual. Manual promotion of a selected full main SHA remains available. Migrations and the application deploy from that same revision. See [Testing](development/testing.md) for coverage and limits, [Releasing](operations/releasing.md) for operator steps, and the README for provisioning and configuration.
 
-Current work prioritizes reliable delivery and a usable hosted product. New product scope is chosen directly by the owner. Later review cycles, unlocking or copying confirmed focuses, notifications, dashboards, and broader administration need a separate product decision before implementation.
+Current work prioritizes reliable delivery and a usable hosted product. New product scope is chosen directly by the owner. Later review cycles, unlocking or copying confirmed focuses, notifications, dashboards, and administration beyond the planned scope below need a separate product decision before implementation.
+
+## Planned owner administration API
+
+This section is agreed product scope, not delivered behavior. The first API-first
+increment lets an owner set up departments and career leads through a versioned
+HTTP API and an MCP server. It publishes an OpenAPI description; an interactive
+API page, a full CLI, and member-facing focus operations are deferred. An agent
+may perform the requested administrative actions on the owner's behalf without
+an additional confirmation for each write.
+
+### Owners and access
+
+- `LANTERN_FLAG_OWNER_EMAIL` will accept a comma-separated list of exact,
+  normalized email addresses; an existing single-email value continues to work.
+  The same list controls owner API access and the existing feature-flag page.
+  That page retains its approved, signed-in account and active-membership checks.
+- An active, verified human JFP One identity and a Lantern owner-list match authorize all
+  administrative API operations. An owner needs neither ordinary Lantern email
+  approval nor department membership to administer Lantern. There is one owner
+  role, with no separate administrative or audit policies. Owner status alone
+  does not grant focus, review-note or coaching-data access.
+- An owner can assign themselves as career lead; that separate role grants the
+  usual access to current members' focuses in that department. Assignments are
+  audited. An owner-list change takes effect when the updated environment is
+  serving; revoking a JFP One session alone may take until token expiry to affect
+  an already issued token.
+
+### Departments, accounts and membership
+
+- Owners can list, create and view departments, list their members, find
+  registered accounts by email, add eligible registered accounts as members,
+  assign or replace a career lead, demote a lead to member, and list or add
+  approved sign-in emails. Approval can precede the person's first sign-in.
+- An account search returns name, email, account ID and membership status.
+  Assignments target a specific registered account. When an email matches multiple
+  Lantern accounts, do not silently choose or link them; resolve the ambiguity.
+  Existing account linking and sign-in behavior do not change.
+- A department may have no lead, but at most one active career lead. Assignment
+  adds an eligible registered person with no membership or promotes an active
+  member of that department. Replacing the lead is atomic: the former lead
+  remains an ordinary member. Demotion also preserves membership and history.
+  Reject other-department and former memberships; transfers and rejoining remain
+  unsupported. Active department names are unique ignoring case and surrounding
+  whitespace.
+- Deleting departments, removing members and revoking email approval are outside
+  this API increment. Existing administration commands remain available.
+
+### Operations and audit
+
+Record successful administrative reads and writes and denied attempts in PostgreSQL, including the
+actor, action, target, outcome, time and calling client when available, without
+bearer tokens or request secrets. A successful mutation and its audit record commit
+together; record denials where possible. Retain records for 90 days using existing
+trusted database access. Apply configurable rate limits before enabling the API.
+New behavior follows the feature-flag and release procedures.
+
+The agreed routes, technical boundaries, phases and verification requirements are
+in [owner administration API plan](plans/owner-administration-api.md).
 
 ## Release testing scope
 
