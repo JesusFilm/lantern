@@ -47,13 +47,14 @@ every PR.
 ## Record QA's result
 
 Use one `qa:` status at a time; replace the previous status when changing it.
-QA controls these statuses and closes the issue after a passing check.
+QA controls these statuses and records the result; engineering handles issue
+closure after a pass.
 
 | Label | Meaning |
 | --- | --- |
 | `qa: ready` | The change is available for the agreed check and QA has been given the environment and context to test it. |
 | `qa: in progress` | QA is testing the change. |
-| `qa: passed` | QA verified the change; QA can close the issue. |
+| `qa: passed` | QA verified the change; engineering must review the QA comments and close the issue after any requested checks are resolved. |
 | `qa: failed` | The check failed. QA comments with the result so a follow-up can be made. |
 | `qa: blocked` | QA cannot complete the check. QA comments on the blocker. |
 
@@ -63,6 +64,24 @@ the fix ships and availability in the agreed environment is confirmed, return
 the issue to `qa: ready` with updated checks. For a blocker, return it to `qa: ready` once
 the blocker is resolved and the check is available. A person may need to make
 these transitions; do not assume automation will replace a QA-owned status.
+
+## Engineering closure
+
+`qa: passed` is the handoff to engineering to close the GitHub issue. QA leaves
+the issue open after recording the result, following the
+[agreement with Sharon](https://jfp-digital.slack.com/archives/D09N49B36QJ/p1794869996494849?thread_ts=1794856749.220869).
+
+1. Read the issue's current QA status and QA comments, including notes attached
+   to a pass.
+2. Complete any check QA explicitly requests before closure and record its
+   outcome on the issue. Keep the issue open while a requested check is unresolved.
+3. With `qa: passed` and any requested checks resolved, the engineer closes the
+   issue. An engineering agent handling the handoff should perform the closure;
+   no separate confirmation from QA is needed.
+
+An informational note alone does not block closure. Preserve any non-blocking
+follow-up separately when needed. A merged fix or green automated checks alone
+do not replace manual QA sign-off for an issue awaiting QA.
 
 ## New features
 

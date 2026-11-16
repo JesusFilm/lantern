@@ -1,6 +1,6 @@
 # Testing
 
-Use this guide to run tests or explain coverage. [Releasing](../operations/releasing.md) covers promotion decisions and failures.
+Use this guide to run tests or explain coverage. [QA issue workflow](qa-issue-workflow.md) covers manual QA results and engineering issue closure. [Releasing](../operations/releasing.md) covers promotion decisions and failures.
 
 ## Run locally
 
