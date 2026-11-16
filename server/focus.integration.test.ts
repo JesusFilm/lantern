@@ -20,8 +20,8 @@ test("local account and persisted position focuses", async (t) => {
       dept = randomUUID();
     for (const id of [user, other])
       await admin.query(
-        "INSERT INTO users(id,google_sub,email,name) VALUES($1::uuid,$1::text,'person@example.test','Original name')",
-        [id],
+        "INSERT INTO users(id,google_sub,email,name) VALUES($1::uuid,$1::text,$2,'Original name')",
+        [id, id === user ? 'person@example.test' : 'other@example.test'],
       );
     await admin.query(
       "INSERT INTO departments(id,name) VALUES($1,'Engineering')",

@@ -1,7 +1,7 @@
 import type { Pool } from 'pg';
 import { assertDatabaseTarget, assertRuntimePrivileges, identifier, type DatabaseRoles } from './database-privileges.js';
 import { assertSchemaReady } from './schema.js';
-const applicationTables = ['department_direction','approved_emails','departments','login_attempts','memberships','position_focuses','schema_migrations','sessions','users'];
+const applicationTables = ['auth_identity_candidates','department_direction','approved_emails','departments','login_attempts','memberships','position_focuses','schema_migrations','sessions','users'];
 
 export async function verifyDatabase(db: Pool, config: DatabaseRoles & {expectedDatabase:string;schema:string}, scope: keyof DatabaseRoles, expectEmpty = false) {
   const client = await db.connect();

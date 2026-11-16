@@ -44,7 +44,7 @@ missing evidence is the combination of compiled assets, HTTPS sessions, hosted
 runtime, database permissions and persistence. Short-lived ordinary sessions
 test that combination without exposing an impersonation endpoint.
 
-Automating Google credentials adds a separate external dependency and does not
+Automating JFP One credentials adds a separate external dependency and does not
 remove the need for several application roles. A secret-protected public testing
 login would add a credential and authentication surface to the webapp. The
 existing staging schema owner already has the authority to create fixture data;
@@ -52,7 +52,7 @@ using it in the protected runner adds no database grant.
 
 ## Consequences
 
-This is post-login acceptance, not proof of a real Google login. Real Google
+This is post-login acceptance, not proof of a real JFP One login. Real JFP One
 sign-in remains separate acceptance for initial rollout and authentication or
 OAuth-configuration changes. The synthetic lead has normal staging lead
 permissions, including the registered-user directory; its token must remain

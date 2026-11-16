@@ -11,5 +11,5 @@ export interface SessionView {
 export interface RegisteredUser {
   id: string; name: string; email: string;
   department: string | null;
-  status: 'available' | 'member' | 'other-department' | 'former';
+  status: 'available' | 'member' | 'other-department' | 'former' | 'identity-conflict';
 }

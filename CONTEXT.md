@@ -5,7 +5,7 @@ Lantern distinguishes permission to sign in from membership and career-lead auth
 ## Language
 
 **Approved participant**:
-A person whose exact verified Google email has been approved for a particular Lantern environment. Approval permits eligible sign-in; it does not grant membership or career-lead authority.
+A person whose exact verified JFP One email has been approved for a particular Lantern environment. Approval permits eligible sign-in; it does not grant membership or career-lead authority.
 
 **Active member**:
 A participant with current membership in the team who can work on their own position focuses. Ending membership removes team access while preserving their records.

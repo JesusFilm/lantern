@@ -33,7 +33,7 @@ Use TDD and a focused test while changing behavior; run typecheck, build and the
 
 | Area | Behavior checked; source entry points |
 | --- | --- |
-| Identity and access | Signed OIDC ID-token claims through local token/JWKS HTTP fixtures, approval/enrollment, membership, session expiry/revocation and browser account switching. `server/jesusfilm.test.ts`, `server/access.integration.test.ts`, `server/session.browser.test.ts` |
+| Identity and access | Signed OIDC ID-token claims through local token/JWKS HTTP fixtures, approval/enrollment, membership, session expiry/revocation and browser account switching. `server/jesusfilm.test.ts`, `server/access.integration.test.ts`, `server/session.browser.test.ts`, `server/sign-in-collision.integration.test.ts`, `server/auth-recovery.integration.test.ts`, `server/auth-recovery.browser.test.ts` |
 | Feature flags | Setting validation, environment defaults, and that a session lists a flagged feature only for accounts allowed to see it. `server/features.test.ts`, `server/features.integration.test.ts`, `server/feature-operations.integration.test.ts` (owner-only flag reporting with active membership and no preview-email disclosure) |
 | Product workflows | Position-focus drafts, objectives/goals, direction and artwork, career-lead views, confirmation/locking, guide, reload persistence and asynchronous editing races. `server/*integration.test.ts`, `server/*browser.test.ts` |
 | Data and permissions | Real PostgreSQL persistence, stale/forged writes, cross-member/department denial, separated runtime/migration/admin roles, migrations, bootstrap and recovery failure paths. `server/database-*.test.ts`, `server/migration.integration.test.ts` |
@@ -104,3 +104,12 @@ responsive regression suite or automatic visual approval.
 Coaching provider tests use local HTTP fixtures for Qwen-first routing, OpenRouter fallback, cooldown, timeout, malformed output, cancellation and safe errors. Coaching HTTP/browser tests use restricted PostgreSQL roles for atomic save/resume, review snapshots, notes, access isolation and multi-objective preservation. These tests do not evaluate model quality or establish hosted provider connectivity. See [coaching rollout](../operations/coaching.md).
 
 Objective authoring browser journeys cover explicit manual/AI-guided methods, a single objective save with nested goals, editable types, sibling preservation, method switching, cancellation, failure recovery, legacy working-note preservation and member inline review alongside lead snapshot review. The same authenticated acceptance runner now enters assistance through Position focuses. Provider fixtures verify workflow contracts, not the usefulness of generated wording.
+
+Identity cutover regressions cover same-email collision refusal, concurrent first
+sign-ins, ambiguous enrollment through HTTP and the database function, private
+recovery planning by email or explicit mapping, expiring verified-identity receipts, history preservation, stale/wrong-target plans, rollback,
+runtime-role denial and session-cutover replay. Browser journeys exercise
+recovery, retained department/focus access, sign-out, cancellation and retry at
+desktop and phone widths using a fixture identity provider. They do not establish
+real JFP identity continuity or certify a physical phone; follow the
+[identity cutover procedure](../operations/identity-cutover.md) for hosted checks.

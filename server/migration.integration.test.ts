@@ -71,3 +71,27 @@ test('upgrading the hosted baseline preserves existing accounts and requires the
     assert.equal((await db.query('SELECT count(*) FROM users')).rows[0].count, '2');
   } finally { await db.end(); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.end(); }
 });
+
+test('identity enrollment migration preserves legacy duplicates and membership history while refusing new ambiguous assignments', async () => {
+  const admin = createDatabase(process.env.DATABASE_URL!);
+  const schema = `identity_migration_${randomUUID().replaceAll('-', '')}`;
+  await admin.query(`CREATE SCHEMA ${schema}`);
+  const url = new URL(process.env.DATABASE_URL!); url.searchParams.set('options', `-c search_path=${schema}`);
+  const db = createDatabase(url.href);
+  try {
+    await migrate(db);
+    await db.query('DROP FUNCTION guard_membership_identity() CASCADE; DROP TABLE auth_identity_candidates; DELETE FROM schema_migrations WHERE version=11');
+    const lead = randomUUID(), duplicate = randomUUID(), department = randomUUID();
+    await db.query("INSERT INTO users VALUES($1,'legacy','lead@example.test','Original'),($2,'jesusfilm:new','lead@example.test','Duplicate')", [lead, duplicate]);
+    await db.query("INSERT INTO departments(id,name) VALUES($1,'Preserved')", [department]);
+    await db.query("INSERT INTO memberships VALUES($1,$2,'career-lead',NULL)", [lead, department]);
+    const before = (await db.query('SELECT * FROM memberships')).rows;
+    await assert.rejects(assertSchemaReady(db));
+    await migrate(db); await migrate(db); await assertSchemaReady(db);
+    assert.deepEqual((await db.query('SELECT * FROM memberships')).rows, before);
+    assert.equal((await db.query('SELECT id FROM users')).rowCount, 2);
+    await assert.rejects(db.query("INSERT INTO memberships VALUES($1,$2,'member',NULL)", [duplicate, department]), { code: 'P0409' });
+    await db.query('ALTER TABLE memberships DISABLE TRIGGER guard_membership_identity');
+    await assert.rejects(assertSchemaReady(db), /identity guard/);
+  } finally { await db.end(); await admin.query(`DROP SCHEMA ${schema} CASCADE`); await admin.end(); }
+});

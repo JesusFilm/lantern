@@ -31,7 +31,8 @@ test("an explicit administrative Auth match preserves one account, documents and
     assert.equal(created.status, 201);
     const focus = await created.json();
     const peer = await login();
-    assert.notEqual(peer.session.user?.id, f.ids.peer, "matching other emails does not migrate accounts");
+    assert.equal(peer.response.headers.get("location"), "/?signInError=1", "matching email does not create or migrate an account");
+    assert.equal(peer.session.user, null);
     assert.equal(peer.session.department, undefined);
 
     const link = (subject: string, email = "lead@example.test") => promisify(execFile)(process.execPath, ["--import", "tsx", "server/operations.ts", "link-auth", f.ids.lead, subject, email], { env: {
@@ -56,7 +57,7 @@ test("an explicit administrative Auth match preserves one account, documents and
     assert.equal((await fetch(`${origin}/api/focuses/${focus.id}`, { headers: { Cookie: linked.cookie } })).status, 200);
     assert.equal((await login()).session.user?.id, f.ids.lead, "repeat sign-in uses the stable subject");
     identity = { ...identity, sub: "jesusfilm:another-subject" };
-    assert.equal((await login()).session.department, undefined, "a different Auth subject cannot inherit authority by email");
+    assert.equal((await login()).response.headers.get("location"), "/?signInError=1", "a different Auth subject cannot inherit authority by email");
     identity = { ...identity, sub: "jesusfilm:stable-lead", email: "unapproved@example.test" };
     assert.equal((await login()).response.headers.get("location"), "/?signInError=1");
     assert.equal((await fetch(origin + "/auth/google", { redirect: "manual" })).status, 404);

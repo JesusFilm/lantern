@@ -153,6 +153,28 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
       CREATE INDEX focus_progress_notes_focus ON focus_progress_notes(focus_id,section_index,goal_index,ordinal DESC);
       INSERT INTO schema_migrations(version) VALUES(10);`);
     }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=11')).rowCount) {
+      // Additive guard: existing memberships/history survive, including legacy duplicates.
+      // The database function and administrative inserts share this protection.
+      await client.query(`CREATE TABLE auth_identity_candidates (
+          subject text PRIMARY KEY CHECK (subject LIKE 'jesusfilm:%'),
+          email text NOT NULL CHECK (email=lower(btrim(email))), verified_at timestamptz NOT NULL
+        );
+        CREATE FUNCTION guard_membership_identity() RETURNS trigger
+        LANGUAGE plpgsql SET search_path FROM CURRENT AS $guard$
+        BEGIN
+          PERFORM pg_advisory_xact_lock(603106);
+          IF EXISTS (SELECT 1 FROM users target JOIN users other
+            ON lower(btrim(other.email))=lower(btrim(target.email)) AND other.id<>target.id
+            WHERE target.id=NEW.user_id) THEN
+            RAISE EXCEPTION 'This account needs an identity repair before it can be added.' USING ERRCODE='P0409';
+          END IF;
+          RETURN NEW;
+        END $guard$;
+        CREATE TRIGGER guard_membership_identity BEFORE INSERT ON memberships
+          FOR EACH ROW EXECUTE FUNCTION guard_membership_identity();
+        INSERT INTO schema_migrations(version) VALUES(11);`);
+    }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
@@ -162,8 +184,12 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10)');
-  if (result.rowCount !== 10) throw new Error('Required migration is missing.');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10,11)');
+  if (result.rowCount !== 11) throw new Error('Required migration is missing.');
+  const identityGuard = await database.query(`SELECT 1 FROM pg_trigger WHERE tgrelid='memberships'::regclass
+    AND tgname='guard_membership_identity' AND tgenabled='O' AND tgfoid='guard_membership_identity()'::regprocedure`);
+  if (!identityGuard.rowCount) throw new Error('Membership identity guard is missing.');
+  await database.query('SELECT subject,email,verified_at FROM auth_identity_candidates LIMIT 0');
   await database.query('SELECT department_id,mission,mission_image,initiatives,version FROM department_direction LIMIT 0');
   await database.query('SELECT c.document,r.version,n.body,x.user_id FROM coach_checkpoints c,focus_review_requests r,focus_review_notes n,focus_note_reads x LIMIT 0');
   await database.query('SELECT focus_id,section_index,goal_index,author_id,body,created_at,ordinal FROM focus_progress_notes LIMIT 0');

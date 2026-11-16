@@ -81,7 +81,7 @@ migration reversal or custom incident acknowledgement workflow is added.
   see real shared direction and has write-capable permissions. Browser tests that
   issue only reads do not make stolen credentials read-only. Do not add an extra
   department, seeded business records or a new permission model without agreement.
-  Start with readiness and retain human Google-login acceptance for auth changes.
+  Start with readiness and retain human JFP One sign-in acceptance for auth changes.
 - Permanent staging password accounts remain an optional convenience for manual
   testing. Existing code uses private temporary sessions; it does not implement
   password login. Choose that convenience separately from the promotion gate.
@@ -92,5 +92,5 @@ The production-isolated workspace proposal adds account types, row security,
 control credentials, recovery scheduling and cleanup obligations disproportionate
 to the current internal single-team tool. Keeping destructive journeys in staging
 avoids those production changes. Readiness cannot prove authenticated rendering,
-real Google sign-in or every production data condition; those limits are explicit.
+real JFP One sign-in or every production data condition; those limits are explicit.
 The existing exact-revision and cleanup guarantees remain necessary, not optional.

@@ -7,7 +7,9 @@ import { workspaceHistoryIndex } from "./useDraftFocusWorkflow.js";
 const api = <T,>(path: string, body?: unknown) =>
   request<T>(path, body === undefined ? "GET" : "POST", body);
 const explanation = (user: RegisteredUser) =>
-  user.status === "former"
+  user.status === "identity-conflict"
+    ? "Account repair required. Contact your administrator."
+    : user.status === "former"
     ? "Rejoining is not yet supported."
     : user.status === "other-department"
       ? `Member of ${user.department}. Unavailable to add.`
@@ -218,7 +220,7 @@ export function Department({
                   >
                     {user.name} — {user.email}
                     {user.status !== "available"
-                      ? ` · ${user.status === "former" ? "Former member" : "✓ " + user.department}`
+                      ? ` · ${user.status === "identity-conflict" ? "Account repair required" : user.status === "former" ? "Former member" : "✓ " + user.department}`
                       : ""}
                   </option>
                 ))}
@@ -231,7 +233,9 @@ export function Department({
                       <td data-label="Email">{user.email}</td>
                       <td data-label="Membership">
                         <span title={user.department ?? "No department"}>
-                          {user.status === "available"
+                          {user.status === "identity-conflict"
+                            ? user.department ?? "Unassigned"
+                            : user.status === "available"
                             ? "Unassigned"
                             : `${user.status === "former" ? "Former member" : "✓ Member"} · ${user.department}`}
                         </span>
