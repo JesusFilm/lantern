@@ -57,6 +57,7 @@ export interface CoachNote {
 }
 export interface CoachRecord {
   focus: PositionFocus;
+  memberId: string;
   memberName: string;
   checkpoint: CoachCheckpoint | null;
   requests: CoachRequest[];

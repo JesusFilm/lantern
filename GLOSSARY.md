@@ -35,14 +35,14 @@ A titled, dated document describing a member's intended contributions through ob
 A focus still open to its member's edits and discussion with the career lead. It may be incomplete.
 
 **Confirmed position focus**:
-A focus the career lead has confirmed after discussion with the member, establishing an agreed baseline whose content is locked. Confirmation means agreement, not that the goals have been achieved.
+A focus the career lead has confirmed after review and agreement of its current requested saved version, establishing a baseline whose content and review discussion are locked. A career lead may request review of their own focus and self-confirm it; discussion with a senior or manager is optional, with no mandatory second reviewer, note or wait. Offline agreement still requires the request and confirmation steps in Lantern. Previously confirmed focuses remain valid without retrospective requests. Confirmation means agreement, not that the goals have been achieved.
 _Avoid_: Submitted, approved by management, or complete when those imply additional workflow stages.
 
 **Locked-in position focus**:
 The historical term for a confirmed position focus. Later review work preserves this baseline rather than silently rewriting it.
 
 **Review request**:
-A member's explicit invitation to discuss one immutable saved version of their focus. A later save does not silently replace that version; the member sends changes for review separately.
+A focus owner’s explicit request to review one immutable saved version of their focus. It is required before confirmation, including for a career lead’s own focus, and does not itself lock or confirm anything. A lead’s own request appears in their Review requests list for self-review. A later save does not replace the snapshot; the owner must send the latest changes before confirmation. A request note is optional.
 
 **Coaching checkpoint**:
 Private answers and writing retained from the earlier coaching experience. The current UI exposes these as Earlier working notes and can copy their content into a new unsaved objective. It creates no new checkpoints. Career leads cannot read another member's notes; manual saves retain them, and confirmation removes them.
@@ -54,13 +54,16 @@ An authored message attached to a requested version. Notes can be added or soft-
 A member's current status and editable note about an objective or SMART goal in a confirmed focus. It is separate from the agreed focus and from review notes; a career lead may read it.
 
 **Review phase**:
-An occasion to discuss a focus: initial draft/confirmation, midyear adjustment/review, or year-end review/retrospective. Later phase mechanics and dates remain deferred.
+A stage within each of two full cycles per year: preparation, review request and confirmation; a mid-cycle progress check-in; and an end-cycle review. End-cycle renewal deliberately creates a new position focus with carryovers and/or new objectives and goals, preserving the previous baseline. It does not amend the previous cycle’s focus. Scheduling, automatic carryover and cycle tooling are not provided.
+
+**Mid-cycle change**:
+A possible change to agreed objectives or goals before the cycle ends. Amendment versus a new focus and accidental-lock recovery remain undecided in [#169](https://github.com/JesusFilm/lantern/issues/169), to revisit only after all members’ first submissions during December 2026–January 2027. Confirmed content cannot currently be edited or unlocked, including by career leads; unlocking is not an approved future feature.
 
 **Objective**:
 An intended contribution or outcome that gives direction to a member's work or development.
 
-**Normal objective**:
-An objective for the member's contribution in their position. Earlier planning called this a critical mission objective.
+**Contribution objective**:
+An objective for the member’s contribution in their position. At least one Contribution objective with at least one SMART goal is required to request review or confirm; empty, partial and development-only drafts remain saveable. `normal` is the internal storage name, never a user-facing label. Earlier planning called this a critical mission objective.
 
 **Personal-development objective**:
 An optional objective for a capability or behavior the member wants to grow, paired with goals for applying it.
@@ -77,7 +80,7 @@ Work towards useful outcomes, including product work, shared capabilities and ac
 ## Guidance and context
 
 **Guide**:
-Optional instruction supporting objective and SMART-goal writing and the Position Focus procedure, separate from focus authoring. The Procedures topic contains The year, Agree a focus, and Make a change; proposed guidance does not itself enable scheduling or amendment operations.
+Optional instruction supporting objective and SMART-goal writing and the Position Focus procedure, separate from focus authoring. The Procedures topic contains The year, Agree a focus, and Make a change; the agreed two-cycle rhythm does not itself enable scheduling, automatic carryover or amendment operations.
 
 **Example position focus**:
 A concise generic illustration of one objective and two goals. Its targets do not impose requirements on a member's own focus.

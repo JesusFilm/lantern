@@ -10,15 +10,29 @@ import { migrate } from '../../dist/server/schema.js';
 import { runAcceptanceBrowser } from './acceptance-browser.mjs';
 import { withAcceptanceFixture } from './acceptance-fixture.mjs';
 
-async function fixture(work, { rejectFocusSave = false, rejectImageSave = false, directionDelay = 0, coach } = {}) {
+async function fixture(work, { rejectFocusSave = false, rejectImageSave = false, allowUnrequestedConfirmation = false, rejectSelfReview = false, directionDelay = 0, coach } = {}) {
   const database = await privilegeFixture();
   const server = createServer();
   try {
     await migrate(database.migration, database.roles);
-    let sessions;
+    let sessions, actors;
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const origin = `http://127.0.0.1:${server.address().port}`;
     const app = express();
+    if (allowUnrequestedConfirmation) {
+      app.post('/api/department/members/:memberId/focuses/:id/confirm', (request, response, next) => {
+        if (request.params.memberId === actors.member.userId && request.headers.cookie === `lantern-session=${sessions.lead}`)
+          response.status(200).json({ status: 'confirmed' });
+        else next();
+      });
+    }
+    if (rejectSelfReview) {
+      app.post('/api/coach/focuses/:id/request', (request, response, next) => {
+        if (request.headers.cookie === `lantern-session=${sessions.lead}`)
+          response.status(503).json({ error: 'Synthetic self-review failure' });
+        else next();
+      });
+    }
     if (directionDelay) app.get('/api/department/direction', async (_request, _response, next) => {
       await new Promise(resolve => setTimeout(resolve, directionDelay));
       next();
@@ -37,6 +51,7 @@ async function fixture(work, { rejectFocusSave = false, rejectImageSave = false,
     server.on('request', app);
     await withAcceptanceFixture(database.migration, async fixture => {
       sessions = fixture.sessions;
+      actors = fixture.actors;
       await work({ origin, ...fixture });
     });
   } finally {
@@ -67,6 +82,22 @@ test('deployed acceptance exercises built browser assets, persisted workflows an
       assert.ok(!JSON.stringify(checks).includes(token));
     }
   });
+});
+
+test('deployed acceptance rejects a confirmation route that allows a focus without a review request', { timeout: 120000 }, async () => {
+  await fixture(async input => {
+    await assert.rejects(runAcceptanceBrowser(input), { message: 'Staging acceptance failed [review-requests-and-notes].' });
+    for (const token of Object.values(input.sessions)) {
+      const response = await fetch(input.origin + '/api/focuses', { headers: { Cookie: `lantern-session=${token}` } });
+      assert.equal(response.status, 401, 'Sessions are revoked after detecting an unrequested confirmation.');
+    }
+  }, { allowUnrequestedConfirmation: true });
+});
+
+test('deployed acceptance requires the career lead self-review journey to work', { timeout: 120000 }, async () => {
+  await fixture(async input => {
+    await assert.rejects(runAcceptanceBrowser(input), { message: 'Staging acceptance failed [lead-confirmation-lock].' });
+  }, { rejectSelfReview: true });
 });
 
 test('a deployed mission image persistence failure blocks acceptance', { timeout: 60000 }, async () => {

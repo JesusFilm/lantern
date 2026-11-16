@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { PositionFocus } from "../../shared/focus.js";
 import { Dialog } from "./Dialog.js";
 import { api } from "./api.js";
+import { hasReviewableContribution } from "./reviewEligibility.js";
 
 function LockIcon() {
   return <svg className="lock-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -25,6 +26,13 @@ export function FocusConfirmation({
   onConfirmed?: (focus: PositionFocus) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const explanationId = useId();
+  const reviewExplanation = !hasReviewableContribution(focus)
+    ? "Add a Contribution objective with at least one SMART goal before requesting review or confirming."
+    : focus.latestRequestedVersion === focus.version ? undefined
+    : focus.latestRequestedVersion == null
+      ? "Request review of the latest saved version before confirming."
+      : "This focus has changed since review was requested. Request review of the latest saved version before confirming.";
   if (focus.status === "confirmed")
     return (
       <div className="focus-confirmed" role="status">
@@ -35,10 +43,11 @@ export function FocusConfirmation({
     );
   return (
     <>
+      {onConfirmed && reviewExplanation && <p id={explanationId} className="muted">{reviewExplanation}</p>}
       <div className="focus-confirmation-row">
       <span className="focus-draft">Draft</span>
       {onConfirmed && (
-        <button className="primary button-with-icon" onClick={() => setConfirming(true)}>
+        <button className="primary button-with-icon" disabled={!!reviewExplanation} aria-describedby={reviewExplanation ? explanationId : undefined} onClick={() => setConfirming(true)}>
           <LockIcon />Confirm and lock
         </button>
       )}
@@ -47,6 +56,7 @@ export function FocusConfirmation({
         <Dialog
           title="Confirm and lock this focus?"
           saveLabel="Confirm and lock"
+          saveDisabled={!!reviewExplanation}
           saveIcon={<LockIcon />}
           onClose={() => setConfirming(false)}
           onSave={async () => {
@@ -59,7 +69,9 @@ export function FocusConfirmation({
             setConfirming(false);
           }}
         >
-          <p>Confirm after your discussion with {member.id === viewerId ? "your senior or manager" : member.name}.</p>
+          <p>{member.id === viewerId
+            ? "Use this opportunity to review your focus again or discuss it with your senior or manager. You can confirm it yourself."
+            : `Confirm after your discussion with ${member.name}.`}</p>
           <div className="confirmation-summary">
             <h3>Focus summary</h3>
             <dl>
@@ -72,7 +84,7 @@ export function FocusConfirmation({
             <LockIcon />
             <div>
               <h3 id="lock-warning-title">This focus will become read-only.</h3>
-              <p>Locks the title, dates, objectives and goals for both of you.</p>
+              <p>Locks the title, dates, objectives and goals.</p>
               <p>It cannot be edited or unlocked here.</p>
             </div>
           </section>

@@ -397,6 +397,11 @@ export async function runAcceptanceBrowser(
     checks.push(checkpoint);
 
     checkpoint = "review-requests-and-notes";
+    assert.equal(
+      (await write(lead, "post", scopedPath + "/confirm", { version: saved.version })).status(),
+      409,
+    );
+    assert.deepEqual(await json(await read(member, path)), saved);
     await memberPage.goto(origin + "/?focus=" + focusId);
     await memberPage
       .getByRole("button", { name: "Review & discussion", exact: true })
@@ -487,6 +492,33 @@ export async function runAcceptanceBrowser(
       (await write(member, "put", path, draft(confirmed))).status(),
       409,
     );
+    const own = await json(await write(lead, "post", "/api/focuses", {
+      title: `Lead self-review ${runId}`,
+      start: "2027-01-01", end: "2027-06-30",
+      sections: [{ kind: "normal", objective: "Support team development", goals: ["Discuss development with every team member by March."] }],
+    }), 201);
+    const ownPath = `/api/focuses/${own.id}`;
+    const ownConfirmPath = `/api/department/members/${identities.lead.user.id}/focuses/${own.id}/confirm`;
+    assert.equal((await write(lead, "post", ownConfirmPath, { version: own.version })).status(), 409);
+    await leadPage.goto(`${origin}/?focus=${own.id}`);
+    await expect(leadPage.getByRole("button", { name: "Confirm and lock", exact: true })).toBeDisabled();
+    await leadPage.getByRole("button", { name: "Review & discussion", exact: true }).click();
+    await leadPage.getByRole("button", { name: "Send request", exact: true }).click();
+    await expect.poll(async () => {
+      const record = await json(await read(lead, `/api/coach/focuses/${own.id}`));
+      return record.requests.at(-1)?.document.version;
+    }).toBe(own.version);
+    await leadPage.goto(`${origin}/?focus=${own.id}`);
+    await leadPage.getByRole("button", { name: "Confirm and lock", exact: true }).click();
+    await leadPage.getByRole("dialog").getByRole("button", { name: "Confirm and lock", exact: true }).click();
+    await expect(leadPage.getByRole("dialog")).toBeHidden();
+    await leadPage.reload();
+    await expect(leadPage.getByText(/Confirmed by /)).toBeVisible();
+    const ownConfirmed = await json(await read(lead, ownPath));
+    assert.equal(ownConfirmed.status, "confirmed");
+    assert.equal(ownConfirmed.confirmedBy.id, identities.lead.user.id);
+    assert.deepEqual(ownConfirmed.sections, own.sections);
+    assert.equal((await write(lead, "put", ownPath, draft(ownConfirmed))).status(), 409);
     checks.push(checkpoint);
 
     checkpoint = identities.peer.coachAvailable

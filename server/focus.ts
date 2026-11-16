@@ -12,7 +12,8 @@ import { readDirection } from "./direction.js";
 import { validateInitiativeAppearance } from "../shared/initiative-appearance.js";
 
 const columns = `id,title,to_char(period_start,'YYYY-MM-DD') AS start,to_char(period_end,'YYYY-MM-DD') AS end,sections,version,updated_at AS "updatedAt",status,confirmed_at AS "confirmedAt",
-  (SELECT jsonb_build_object('id',u.id,'name',u.name) FROM users u WHERE u.id=confirmed_by) AS "confirmedBy"`;
+  (SELECT jsonb_build_object('id',u.id,'name',u.name) FROM users u WHERE u.id=confirmed_by) AS "confirmedBy",
+  (SELECT max(r.version) FROM focus_review_requests r WHERE r.focus_id=position_focuses.id) AS "latestRequestedVersion"`;
 export async function readOwnedFocus(
   db: Pool | PoolClient,
   userId: string,
@@ -112,10 +113,10 @@ export function focusStore(db: Pool) {
             [id],
           )
         ).rows[0];
-        if (latestRequest && latestRequest.version !== focus.version)
+        if (!latestRequest || latestRequest.version !== focus.version)
           throw new AccessError(
             409,
-            "Ask the member to send their latest saved changes before confirming.",
+            "Send the latest saved version for review before confirming.",
           );
         validateFocus({
           title: focus.title,
@@ -130,7 +131,7 @@ export function focusStore(db: Pool) {
         )
           throw new AccessError(
             400,
-            "Add a Normal objective with at least one SMART goal before confirming.",
+            "Add a Contribution objective with at least one SMART goal before confirming.",
           );
         const result = await client.query(
           `UPDATE position_focuses SET status='confirmed',confirmed_at=now(),confirmed_by=$2,

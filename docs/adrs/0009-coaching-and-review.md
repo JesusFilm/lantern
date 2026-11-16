@@ -17,9 +17,11 @@ a request and use per-user read acknowledgments. Focus writes, notes and confirm
 share server-enforced authority and transaction locking. Current authoring and
 discussion behavior is defined in the [PRD](../PRD.md).
 Require the latest requested version to match the latest saved version before
-confirmation whenever a request exists. Enforce that rule in the shared confirmation
-path and a database guard covering older instances during rollout. Existing manual
-confirmation without a request remains supported.
+confirmation; a missing request also prevents confirmation, including for a career
+lead’s own focus. Enforce that rule in the shared confirmation path and a database
+guard covering older instances during rollout. Existing confirmed history remains
+valid without retrospective requests. See the [PRD](../PRD.md) for the current
+confirmation policy.
 
 Keep model access behind a server-only provider interface with bounded HTTP calls
 and output validation. Use the existing Qwen gateway protocol first, then OpenRouter

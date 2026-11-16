@@ -4,7 +4,7 @@ import { chromium, expect } from "@playwright/test";
 import { createServer } from "vite";
 import { coachingFixture, draft } from "./coach-test-support.js";
 
-test("confirmation names another member but directs the lead's own focus to their senior or manager", async () => {
+test("confirmation distinguishes another member from optional self-review even with identical names", async () => {
   const f = await coachingFixture();
   const vite = await createServer({ server: { middlewareMode: { server: f.server }, hmr: { server: f.server } }, appType: "spa" });
   f.app.use(vite.middlewares);
@@ -23,6 +23,7 @@ test("confirmation names another member but directs the lead's own focus to thei
       const response = await f.request(actor, "/api/focuses", "POST", { ...draft, title: `${actor}'s agreement` });
       assert.equal(response.status, 201);
       const focus = await response.json();
+      assert.equal((await f.request(actor, `/api/coach/focuses/${focus.id}/request`, "POST", { version: focus.version })).status, 200);
       const paths = [`/?page=department&member=${f.ids[actor]}&memberFocus=${focus.id}`];
       if (actor === "lead") paths.unshift(`/?focus=${focus.id}`);
       for (const path of paths) {
@@ -30,9 +31,11 @@ test("confirmation names another member but directs the lead's own focus to thei
         await page.getByRole("button", { name: "Confirm and lock", exact: true }).click();
         const dialog = page.getByRole("dialog");
         await expect(dialog.getByText(actor === "lead"
-          ? "Confirm after your discussion with your senior or manager."
+          ? "Use this opportunity to review your focus again or discuss it with your senior or manager. You can confirm it yourself."
           : "Confirm after your discussion with Morgan Lee.", { exact: true })).toBeVisible();
         await expect(dialog.getByText("Morgan Lee", { exact: true })).toBeVisible();
+        await expect(dialog.getByText("Locks the title, dates, objectives and goals.", { exact: true })).toBeVisible();
+        await expect(dialog.getByText(/both of you/)).toHaveCount(0);
         await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
         assert.equal((await (await f.request(actor, `/api/focuses/${focus.id}`)).json()).status, "draft");
       }

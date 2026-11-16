@@ -38,24 +38,30 @@ test("Guide Procedures distinguishes unavailable revisions from current confirma
     await expect(procedures).toHaveAttribute('aria-expanded', 'false');
     await procedures.click();
     await expect(procedures).toHaveAttribute('aria-expanded', 'true');
+    await expect(memberPage.getByText('Six months of focus. A conversation each quarter.', {exact:true})).toBeVisible();
+    await expect(memberPage.getByText('Proposed', {exact:true})).toHaveCount(0);
     const navigation = memberPage.getByLabel('Steps within Procedures');
     await expect(navigation.getByRole('button')).toHaveCount(3);
     await expect(navigation.getByRole('button', {name: 'The year', exact: true})).toHaveAttribute('aria-current', 'step');
     await expect(memberPage.getByRole('img', {name: 'Position Focus annual cycle'})).toBeVisible();
     await expect(memberPage.getByText('Focus 01 · Jan–Jun', {exact:true})).toBeVisible();
     await expect(memberPage.getByText('Focus 02 · Jul–Dec', {exact:true})).toBeVisible();
+    await expect(memberPage.getByText('Create a new focus for each half-year. Renewal preserves the previous cycle’s agreed focus and history.', {exact:true})).toBeVisible();
     for (const text of ['Two focuses.', 'One year.', 'Keep moving. Keep talking.', 'Writing guide', 'Amend together, anytime.', 'Illustrative annual rhythm']) {
       await expect(memberPage.getByText(text, {exact:true})).toHaveCount(0);
     }
     await navigation.getByRole('button', {name:'Agree a focus', exact:true}).click();
     await expect(memberPage.getByRole('heading', {name:'Start each half together.'})).toBeFocused();
-    await expect(memberPage.getByRole('list', {name:'Agree a focus'}).getByRole('listitem')).toHaveCount(4);
+    await expect(memberPage.getByRole('list', {name:'Agree a focus'}).getByRole('listitem')).toHaveText(['DraftMember', 'Request reviewMember', 'Discuss & agreeTogether', 'ConfirmCareer lead']);
+    await expect(memberPage.getByText('Request review of the latest saved version before confirmation, including for a career lead’s own focus. Send any later saved changes for review again. After an offline agreement, still request review and confirm in Lantern, immediately or later.', {exact:true})).toBeVisible();
     await expect(memberPage.getByText('One agreed focus for the next six months.', {exact:true})).toHaveCount(0);
     await navigation.getByRole('button', {name:'Make a change',exact:true}).click();
     await expect(memberPage.getByRole('heading', {name:'Confirmed focuses stay locked.'})).toBeFocused();
     await expect(memberPage.getByText('Confirmed focuses can’t be edited or unlocked, even by a career lead.', {exact:true})).toBeVisible();
-    await expect(memberPage.getByText('Proposed revision flow · Not available yet', {exact:true})).toBeVisible();
-    await expect(memberPage.getByRole('list', {name:'Make a change'})).toContainText('Unlock revisionCareer lead');
+    await expect(memberPage.getByText('Change policy · Not decided', {exact:true})).toBeVisible();
+    await expect(memberPage.getByRole('list', {name:'Make a change'})).toHaveCount(0);
+    await expect(memberPage.getByText('Unlock revision', {exact:true})).toHaveCount(0);
+    await expect(memberPage.getByText('The policy for changing a confirmed focus is still undecided, including whether to amend it or create a new focus.', {exact:true})).toBeVisible();
     await expect(memberPage.getByText('Keep the agreed version until the revision is confirmed.', {exact:true})).toHaveCount(0);
     await expect(memberPage.getByRole('button', {name:'Next layout'})).toHaveCount(0);
     await memberPage.getByRole('button',{name:'Objectives',exact:true}).click();
@@ -80,15 +86,16 @@ test("Guide Procedures distinguishes unavailable revisions from current confirma
     assert.ok(yearPanel && yearNavigationEnd && yearNavigationEnd.y + yearNavigationEnd.height <= yearPanel.y, 'landscape navigation must stay above the year circle');
     await phoneNavigation.getByRole('button',{name:'Make a change',exact:true}).click();
     const lastStep = await phoneNavigation.getByRole('button',{name:'Make a change',exact:true}).boundingBox();
-    const panel = await phone.getByRole('list',{name:'Make a change'}).locator('..').boundingBox();
+    const panel = await phone.getByRole('heading',{name:'Confirmed focuses stay locked.'}).locator('..').boundingBox();
     assert.ok(lastStep && panel && lastStep.y + lastStep.height <= panel.y, 'landscape procedure navigation must not overlap content');
     await phone.setViewportSize({width:320,height:568});
     await phoneNavigation.getByRole('button',{name:'Agree a focus',exact:true}).click();
     await expect(phone.getByText('Draft',{exact:true})).toBeInViewport();
     await phoneNavigation.getByRole('button',{name:'Make a change',exact:true}).click();
     await expect(phone.getByText('Confirmed focuses can’t be edited or unlocked, even by a career lead.', {exact:true})).toBeInViewport();
-    await expect(phone.getByText('Proposed revision flow · Not available yet', {exact:true})).toBeInViewport();
-    await expect(phone.getByText('Unlock revision',{exact:true})).toBeInViewport();
+    await expect(phone.getByText('Change policy · Not decided', {exact:true})).toBeInViewport();
+    await expect(phone.getByText('Unlock revision',{exact:true})).toHaveCount(0);
+    await expect(phone.getByText('The policy for changing a confirmed focus is still undecided, including whether to amend it or create a new focus.', {exact:true})).toBeVisible();
     await phoneNavigation.getByRole('button',{name:'The year',exact:true}).click();
     await expect(phone.getByRole('img',{name:'Position Focus annual cycle'})).toBeInViewport();
     const january = await phone.getByRole('listitem').filter({hasText:'JAN'}).boundingBox();
@@ -108,7 +115,7 @@ test("Guide Procedures distinguishes unavailable revisions from current confirma
     await expect(leadPage.getByRole('img',{name:'Position Focus annual cycle'})).toBeVisible();
     await leadPage.getByLabel('Steps within Procedures').getByRole('button',{name:'Make a change',exact:true}).click();
     await expect(leadPage.getByText('Confirmed focuses can’t be edited or unlocked, even by a career lead.', {exact:true})).toBeVisible();
-    await expect(leadPage.getByText('Proposed revision flow · Not available yet', {exact:true})).toBeVisible();
+    await expect(leadPage.getByText('Change policy · Not decided', {exact:true})).toBeVisible();
 
   } finally {
     await browser.close(); await vite?.close(); server.closeAllConnections();

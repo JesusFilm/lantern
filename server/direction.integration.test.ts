@@ -256,6 +256,7 @@ test("department direction persists through the authenticated HTTP interface", a
       assert.equal((await request(member, path, "PUT", newlyAlignedObjective)).status, 400);
       const retained = await request(member, path, "PUT", { ...draft, version: focus.version });
       assert.equal(retained.status, 200); focus = await retained.json() as PositionFocus;
+      assert.equal((await request(member, `/api/coach/focuses/${focus.id}/request`, "POST", { version: focus.version })).status, 200);
       const confirmed = await request(lead, `/api/department/members/${member}/focuses/${focus.id}/confirm`, "POST", { version: focus.version });
       assert.equal(confirmed.status, 200); focus = await confirmed.json() as PositionFocus;
       direction.initiatives[1]!.name = "New partner direction";
@@ -290,6 +291,7 @@ test("department direction persists through the authenticated HTTP interface", a
       assert.equal(created.status, 201);
       let focus = await created.json() as PositionFocus;
       assert.deepEqual(focus.sections[0]!.alignment!.initiatives[0]!.appearance, { icon: "sprout", color: "#267c65" });
+      assert.equal((await request(member, `/api/coach/focuses/${focus.id}/request`, "POST", { version: focus.version })).status, 200);
       const confirmed = await request(lead, `/api/department/members/${member}/focuses/${focus.id}/confirm`, "POST", { version: focus.version });
       assert.equal(confirmed.status, 200); focus = await confirmed.json() as PositionFocus;
       direction.initiatives[1]!.appearance = { icon: "heart", color: "#d13d46" };

@@ -8,7 +8,7 @@ export function FocusProcess() {
       <div className="process-graphic">
         <ol role="list" className="process-stages">
           <li><FileText aria-hidden="true" /><span>Prepare a small draft</span></li>
-          <li><MessagesSquare aria-hidden="true" /><span>Talk it through together</span></li>
+          <li><MessagesSquare aria-hidden="true" /><span>Request review and discuss</span></li>
           <li><LockKeyhole aria-hidden="true" /><span>Agree, then confirm</span></li>
         </ol>
         <span className="process-forward process-first" aria-hidden="true"><ArrowRight /><ArrowDown /></span>
@@ -23,7 +23,7 @@ export function FocusProcess() {
         </svg>
         <span className="process-refine-label">Refine before confirming</span>
       </div>
-      <figcaption className="visually-hidden">Discuss your draft with your career lead and refine it together as needed. Once you agree, your career lead confirms and locks the focus.</figcaption>
+      <figcaption className="visually-hidden">Save your draft and request review of that version. Discuss and refine it as needed, requesting review again after saving changes. Your career lead confirms and locks the latest requested version.</figcaption>
     </figure>
   );
 }

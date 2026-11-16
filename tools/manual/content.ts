@@ -14,6 +14,11 @@ const click = (...names: string[]) => async (page: Page) => {
 const heading = (name: string, level = 1) => (page: Page): Locator => page.getByRole("heading", { name, exact: true, level }).first();
 const role = (kind: "button" | "link" | "checkbox" | "textbox" | "radio" | "group" | "region", name: string) => (page: Page) =>
   page.getByRole(kind, { name, exact: true }).first();
+const openReview = (title: string) => async (page: Page) => {
+  await page.locator("section.cp-card").filter({ has: page.getByRole("heading", { name: title, exact: true }) }).getByRole("button", { name: "Review focus", exact: true }).click();
+};
+const samsReview = openReview("Sam Patel · Sam's 2027 focus");
+const ownReview = openReview("Your review request · Morgan's first half 2027");
 const draft = (ids: { draftFocus: string }) => "/?focus=" + ids.draftFocus;
 /** Long desktop pages: scroll frames cropped to the content column, so text stays legible on a slide. */
 const longPage = { kind: "frames", crop: ".workspace", maxFrames: 3 } as const;
@@ -64,7 +69,7 @@ export const chapters: Chapter[] = [
         people: [
           { name: "Aroha Ngata", role: "Member · Engineering", text: "Has a confirmed focus for the second half of 2026 and is drafting one for 2027." },
           { name: "Sam Patel", role: "Member · Engineering", text: "Has sent two versions of a focus to the career lead for review." },
-          { name: "Morgan Lee", role: "Career lead · Engineering", text: "Reviews and confirms Engineering's focuses and manages the department." },
+          { name: "Morgan Lee", role: "Career lead · Engineering", text: "Reviews Engineering’s focuses, has a separate own review request, and manages the department." },
           { name: "Riley Chen", role: "Career lead · Design", text: "Leads a different department and must not see Engineering's focuses." },
           { name: "Casey Brown", role: "No department yet", text: "Has signed in but is waiting for a career lead to add them." },
         ],
@@ -283,7 +288,7 @@ export const chapters: Chapter[] = [
   },
   {
     title: "Review and agreement",
-    summary: "A member sends a saved version for review. The member and career lead discuss it in notes, and the career lead confirms and locks the agreed focus.",
+    summary: "Everyone requests review of the current saved version before confirmation, including career leads. Offline agreement still requires these steps. Notes are optional; a lead can confirm immediately or later.",
     slides: [
       {
         kind: "feature",
@@ -294,7 +299,8 @@ export const chapters: Chapter[] = [
         check: [
           "The career lead sees the request under Review requests.",
           "A focus without a Contribution objective and goal cannot be sent.",
-          "After further edits you can send the newer version.",
+          "A request without a note succeeds and leaves an editable draft.",
+          "After edits, send the newer saved version before confirmation.",
         ],
         shots: [{ id: "review-request", persona: "member", path: draft, act: click("Review & discussion"), ready: heading("Request review", 2), mode: longPage, highlight: ['role=textbox[name="Note to career lead · optional"]', 'role=button[name="Send request"]'], caption: "Review & discussion" }],
       },
@@ -302,10 +308,10 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Review requests",
         roles: ["Career lead"],
-        summary: "Career leads see every review request in their department, with its status and whether there are new notes.",
+        summary: "Career leads see department review requests, including their own, with status and new notes.",
         tryIt: ["Sign in as the career lead.", "Open **Review requests**.", "Choose ① **Review focus**."],
         check: [
-          "Only your department's members appear.",
+          "Only your department appears, including your own requested focus.",
           "“New notes” clears once you have read them.",
           "Confirmed focuses show as Confirmed.",
         ],
@@ -322,31 +328,57 @@ export const chapters: Chapter[] = [
           "Notes cannot be edited, only deleted by their author.",
           "The member sees the lead's note under Review & discussion.",
         ],
-        shots: [{ id: "lead-review", persona: "lead", path: "/?page=reviews", act: click("Review focus"), ready: heading("Changes since previous request", 2), mode: longPage, highlight: ['role=heading[name="Changes since previous request"]', 'role=button[name="+ Add note"]'], caption: "Reviewing Sam's request" }],
+        shots: [{ id: "lead-review", persona: "lead", path: "/?page=reviews", act: samsReview, ready: heading("Changes since previous request", 2), mode: longPage, highlight: ['role=heading[name="Changes since previous request"]', 'role=button[name="+ Add note"]'], caption: "Reviewing Sam's request" }],
       },
       {
         kind: "feature",
         title: "Confirm and lock a focus",
         roles: ["Career lead"],
-        summary: "After the conversation, the career lead ticks ① the agreement box and ② confirms. The focus and its review discussion become read-only for both people.",
-        tryIt: ["In a review, tick **We have discussed and agreed this focus.**", "Choose **Confirm focus**.", "Open the focus as the member."],
+        summary: "After agreement, tick ① and ② confirm the current requested version. Offline agreement still needs a request. Content and discussion lock.",
+        tryIt: ["Open a request and tick the agreement box.", "Choose **Confirm focus**.", "Reload as the member."],
         check: [
-          "The member sees Confirmed by the lead, with the date.",
-          "The focus stays read-only. Progress flag: focus-progress; hidden in production until released.",
-          "Confirming an older version than the latest request is refused.",
+          "The confirmer and date persist.",
+          "Content and discussion stay locked for leads too.",
+          "Stale or concurrent attempts leave a usable draft.",
+          "Older confirmations need no retroactive request.",
         ],
         shots: [
           {
             id: "lead-confirm",
             persona: "lead",
             path: "/?page=reviews",
-            act: async (page) => { await click("Review focus")(page); await page.getByRole("checkbox", { name: "We have discussed and agreed this focus." }).check(); },
+            act: async (page) => { await samsReview(page); await page.getByRole("checkbox", { name: "We have discussed and agreed this focus." }).check(); },
             ready: role("button", "Confirm focus"),
             mode: { kind: "element", target: (p) => p.getByRole("button", { name: "Confirm focus" }).locator("xpath=.."), padding: 24 },
             highlight: ['role=checkbox[name="We have discussed and agreed this focus."]', 'role=button[name="Confirm focus"]'],
             caption: "Ready to confirm",
           },
           { id: "focus-confirmed", persona: "member", path: confirmed, ready: heading("Second half 2026"), mode: longPage, caption: "Confirmed, as the member sees it" },
+        ],
+      },
+      {
+        kind: "feature",
+        title: "When confirmation is unavailable",
+        roles: ["Member", "Career lead"],
+        summary: "Save partial drafts freely. Confirmation needs a Contribution objective with a SMART goal and a review request matching the latest saved version.",
+        tryIt: ["Try blank, no-goal and development-only drafts.", "View an unrequested draft as its career lead.", "Edit a requested focus without sending changes.", "Add missing content and send the latest version."],
+        check: ["No unusable confirmation action or dialog is offered.", "Inline reasons say Contribution and work on phones.", "Sending the latest version restores eligibility.", "Direct ineligible attempts preserve the draft."],
+        shots: [
+          { id: "confirm-incomplete", persona: "lead", path: (ids) => "/?focus=" + ids.incompleteFocus, ready: heading("Morgan's unfinished draft"), caption: "Missing Contribution objective and goal" },
+          { id: "confirm-unrequested", persona: "lead", device: "phone", path: (ids) => `/?page=department&member=${ids.member}&memberFocus=${ids.draftFocus}`, ready: heading("First half 2027"), caption: "Request the saved version first" },
+          { id: "confirm-unsent", persona: "lead", path: (ids) => `/?page=department&member=${ids.peer}&memberFocus=${ids.staleReviewFocus}`, ready: heading("Changes not yet sent"), caption: "Send the latest saved changes" },
+        ],
+      },
+      {
+        kind: "feature",
+        title: "Review and confirm your own focus",
+        roles: ["Career lead"],
+        summary: "Request review, then self-confirm immediately or later. Senior/manager discussion is optional; no second account, note or wait is required.",
+        tryIt: ["Request your saved focus without a note.", "Open your focus in **Review requests**.", "Review and tick the self-review box.", "Confirm and reload; check your name and date."],
+        check: ["Requesting leaves an editable draft.", "Request, ① note and lock copy fit self-review.", "After edits, send the latest version again.", "Members cannot self-confirm or read others’ requests."],
+        shots: [
+          { id: "own-review-request", persona: "lead", device: "phone", path: (ids) => "/?focus=" + ids.leadOwnRequestedFocus, act: click("Review & discussion"), ready: heading("Request review", 2), mode: { kind: "element", target: ".cp-request", padding: 16 }, highlight: ['role=textbox[name="Review note · optional"]'], caption: "Your own review request; a note is optional" },
+          { id: "own-review-confirm", persona: "lead", path: "/?page=reviews", act: async (page) => { await ownReview(page); await page.getByRole("checkbox", { name: "I have reviewed this focus and am ready to confirm it.", exact: true }).check(); }, ready: role("button", "Confirm focus"), mode: { kind: "element", target: ".cp-confirm", padding: 24 }, caption: "Self-review before confirmation" },
         ],
       },
       {
@@ -366,19 +398,19 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Confirm from a position focus",
         roles: ["Career lead"],
-        summary: "The confirmation dialog identifies whose focus will lock and reminds you who to discuss it with.",
-        tryIt: ["Open a member's draft from Department.", "Choose **Confirm and lock**, then **Cancel**.", "Repeat with your own draft in Position focuses."],
+        summary: "A lead can confirm only the current requested version with a Contribution objective and SMART goal. The dialog identifies whose focus will lock; no unlock is available.",
+        tryIt: ["Open a current requested focus from Department.", "Choose **Confirm and lock**, then **Cancel**.", "Repeat with your own requested focus.", "Use fresh examples to complete each lock and reload."],
         check: [
           "Another member's dialog names that member.",
-          "Your own says **your senior or manager**.",
-          "The summary still names the focus owner.",
-          "Cancel leaves the focus editable.",
+          "Your own wording does not imply two reviewers.",
+          "Cancel preserves the draft; a completed lock survives reload.",
+          "Confirmation retains the correct owner, confirmer and time.",
         ],
         shots: [
           {
             id: "member-confirm-dialog",
             persona: "lead",
-            path: (ids) => `/?page=department&member=${ids.member}&memberFocus=${ids.draftFocus}`,
+            path: (ids) => `/?page=department&member=${ids.peer}&memberFocus=${ids.reviewFocus}`,
             act: click("Confirm and lock"),
             ready: (p) => p.getByRole("dialog"),
             mode: { kind: "viewport", ...dialog },
@@ -387,20 +419,11 @@ export const chapters: Chapter[] = [
           {
             id: "own-confirm-dialog",
             persona: "lead",
-            act: async (page) => {
-              const origin = new URL(page.url()).origin;
-              const response = await page.request.post(origin + "/api/focuses", {
-                headers: { Origin: origin },
-                data: { title: "Leadership focus 2027", start: "2027-01-01", end: "2027-12-31", sections: [{ kind: "normal", objective: "Support the team's development", goals: ["Hold a development conversation with each member by March."] }] },
-              });
-              if (response.status() !== 201) throw new Error("Could not create the lead's synthetic focus");
-              await page.goto(origin + "/?focus=" + (await response.json()).id);
-              await click("Confirm and lock")(page);
-            },
+            path: (ids) => "/?focus=" + ids.leadOwnRequestedFocus,
+            act: click("Confirm and lock"),
             ready: (p) => p.getByRole("dialog"),
             mode: { kind: "viewport", ...dialog },
-            caption: "Your own focus",
-            mutates: true,
+            caption: "Your own current requested focus",
           },
         ],
       },
@@ -489,7 +512,7 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Start here",
         roles: ["Member", "Career lead"],
-        summary: "The first topic shows the draft → conversation → confirmation process and how to choose initiatives.",
+        summary: "The first topic shows the draft → request review → agreement → confirmation process and how to choose initiatives.",
         tryIt: ["Open **Guide** in the sidebar.", "Read **Start here**.", "Move between topics with the topic buttons."],
         check: ["Each topic opens without reloading the page.", "The first-focus prompt on Position focuses opens this topic.", "Text is readable at 200% browser zoom."],
         shots: [{ id: "guide-start", persona: "member", path: "/?page=guide", ready: heading("Your first position focus"), mode: longPage, caption: "Start here" }],
@@ -508,14 +531,26 @@ export const chapters: Chapter[] = [
       },
       {
         kind: "feature",
-        title: "Strategic initiatives and procedures",
+        title: "Strategic initiatives",
         roles: ["Member", "Career lead"],
-        summary: "Strategic initiatives lists the department's active initiatives with their current descriptions. Procedures outlines the yearly rhythm (marked Proposed).",
-        tryIt: ["Open **Strategic initiatives** and choose an initiative.", "Open **Procedures** and its three steps."],
-        check: ["Archived initiatives are not listed.", "A missing description shows a clear empty state.", "Procedures screens show the Proposed label.", "Make a change says confirmed focuses cannot be edited or unlocked; revisions are unavailable."],
+        summary: "Strategic initiatives lists the department’s active initiatives with their current descriptions.",
+        tryIt: ["Open **Strategic initiatives** and choose an initiative."],
+        check: ["Archived initiatives are not listed.", "A missing description shows a clear empty state."],
         shots: [
           { id: "guide-initiatives", persona: "member", path: "/?page=guide", act: click("Strategic initiatives"), ready: role("button", "Strategic initiatives"), caption: "Strategic initiatives" },
-          { id: "guide-procedures", persona: "member", path: "/?page=guide", act: click("Procedures", "Make a change"), ready: heading("Confirmed focuses stay locked.", 2), caption: "Proposed revisions — not available yet" },
+        ],
+      },
+      {
+        kind: "feature",
+        title: "Two cycles, preserved history",
+        roles: ["Member", "Career lead"],
+        summary: "Each cycle has confirmation, a mid-cycle check-in and an end-cycle review. Then deliberately create a new focus with carryovers and/or new goals; the previous focus stays locked.",
+        tryIt: ["Open **Procedures → The year**.", "Read **Agree a focus**, including offline and self-review.", "Read **Make a change** on desktop and phone."],
+        check: ["Both cycles show check-in, end review and a new focus.", "Agreement still requires a current-version request.", "Mid-cycle changes and lock recovery await a decision after all first submissions (Dec 2026–Jan 2027).", "No unlock, automatic carryover or cycle tooling is promised."],
+        shots: [
+          { id: "guide-year", persona: "member", path: "/?page=guide", act: click("Procedures", "The year"), ready: heading("The year", 2), mode: { kind: "element", target: ".procedure-year", padding: 16 }, caption: "Two full cycles per year" },
+          { id: "guide-agree", persona: "lead", path: "/?page=guide", act: click("Procedures", "Agree a focus"), ready: (p) => p.getByRole("list", { name: "Agree a focus", exact: true }), mode: { kind: "element", target: ".procedure-flow-panel", padding: 16 }, caption: "Request before confirmation" },
+          { id: "guide-procedures", persona: "member", device: "phone", path: "/?page=guide", act: click("Procedures", "Make a change"), ready: heading("Confirmed focuses stay locked.", 2), mode: { kind: "element", target: ".procedure-flow-panel", padding: 16 }, caption: "Confirmed history stays locked" },
         ],
       },
     ],

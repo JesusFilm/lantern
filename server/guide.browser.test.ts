@@ -47,14 +47,17 @@ test('Guide browser acceptance: independent walkthroughs, navigation, context, e
       await page.getByRole('button', { name: 'Finish walkthrough' }).click();
       await expect(page.getByRole('button', { name: /Open objective walkthrough/ })).toBeVisible();
     });
-    await t.test('objective walkthrough covers internal work, discovery, gaps and agreement without a default cadence', async () => {
+    await t.test('objective walkthrough covers internal work, discovery, review requests and two cycles with locked confirmation', async () => {
       await page.getByRole('button', { name: /Open objective walkthrough/ }).click();
       await expect(page.getByRole('button', { name: 'Back', exact: true })).toBeDisabled();
       for (const title of ['Connect your work to the mission', 'Internal contributions count', 'When direction is still unclear', 'Turn gaps into next steps', 'Agree a focus you can revisit']) {
         await page.getByRole('button', { name: 'Next →', exact: true }).click();
         await expect(page.getByRole('heading', { name: title })).toBeVisible();
       }
-      await expect(page.getByText('There is no default schedule or fixed first-review interval.', { exact: false })).toBeVisible();
+      await expect(page.getByText('Everyone must request review of the latest saved version before confirmation', { exact: false })).toBeVisible();
+      await expect(page.getByText('There are two full cycles per year:', { exact: false })).toBeVisible();
+      await expect(page.getByText('Confirmed content and review discussion stay locked, including for career leads.', { exact: false })).toBeVisible();
+      await expect(page.getByText(/can revise (?:it )?together/)).toHaveCount(0);
       await expect(page.getByText('Lock-in completes your position focus for the cycle.', { exact: false })).toBeVisible();
       await page.getByRole('button', { name: 'SMART goals', exact: true }).click();
       await expect(page.getByRole('status')).toHaveText('Step 1 of 7');
@@ -71,7 +74,8 @@ test('Guide browser acceptance: independent walkthroughs, navigation, context, e
       await expect(page.getByText('By Month 2: compare two build options', { exact: false })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Leadership development assignment · optional' })).toBeVisible();
       await page.getByRole('link', { name: 'Review, agreement and timing' }).click();
-      await expect(page.getByText('Actual departmental review timing has not been supplied here.', { exact: false })).toBeVisible();
+      await expect(page.getByText('There are two full cycles per year, each with confirmation, a mid-cycle check-in and an end-cycle review.', { exact: false })).toBeVisible();
+      await expect(page.getByText('Then deliberately create a new focus with carryovers and/or new goals, preserving the previous baseline.', { exact: false })).toBeVisible();
     });
     await t.test('missing context is omitted and does not remove the objective requirement', async () => {
       await page.goto(origin + '/?context=none');
