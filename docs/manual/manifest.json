@@ -1,9 +1,9 @@
 {
-  "edition": 50,
+  "edition": 51,
   "editionDate": "2026-11-16",
-  "deck": "9facc4c938290a746ae8422c0d56a403b9ea869cdde039cdb655218db4d72fa0",
+  "deck": "2e11b9c709bb31ba6cbeb9d24b9f60062578946dc216d49d2ec0dee083356835",
   "sources": {
-    "fingerprint": "dacac8c0230271165c14de4f9416c2f26f22696464da800b9c9c93cf1f7cdfcc",
+    "fingerprint": "b0bda7b3526edf824abbaf6bad72171b65f32d44ec5d5eea14af9550f75f4e1a",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -66,7 +66,7 @@
       "server/admission.ts": "66f8ed1c7ec91ac98b6f6ebf66d87912985ee180d354eda36a2b1846f86bf316",
       "server/app.ts": "ebe54273e790c6584523f09f1d45489fe35736f219726dea0bb2b15b3b4a8468",
       "server/auth-link.ts": "378284c38d3cad72c80fb889cf09b75fded6c6ac291dcf8c5056a3522dd4edf0",
-      "server/auth-recovery.ts": "ae47cb1a9ccc2f04aa661515902b6f3ec163a9553f10c5c9beebb77854569d2c",
+      "server/auth-recovery.ts": "91b16ccb58d61de3331ed03cc769080ab03cc96e093a446c7ddfead184d660ee",
       "server/bootstrap-database.ts": "98068f7b5aecec50064fd7be1019adf1e55bb63a14b38b30f8e16a51c945ba86",
       "server/coach-contract.ts": "34b0902bb5ebbc46bf369c95e4027abee8e5073b3acda5d498da30fdb69cc583",
       "server/coach-http.ts": "bac32f4c7d18d6bf172fae9e12473f5bba2834f5773d0cabd903639f369c3d23",
@@ -145,7 +145,7 @@
     "department-people.png": "7fb4187b48b3fa1d2838c062789e0632d91d2d9510ba73b5de2f4bf12cdb195a",
     "feature-flags-owner.png": "fe40efc1894d875d6f2263e05f6244f22321f6d4e9d3afa30b96a77666c37175",
     "focus-confirmed-1.png": "0acf4b0e51c690fa1bc70f35d220d6549455ed91054c4058261b13fb847767cc",
-    "focus-confirmed-2.png": "7fcd30492a92a4e776b4632257e55a7ecca672944000a8099a01f3a735efccc7",
+    "focus-confirmed-2.png": "223c5f37c700866fc96d0e410b825a89a62978e8bf699e7e9857685c0c5e132a",
     "focus-draft-1.png": "8f3dec8b47392e6e45d255f1d4b00de11b942249bc8b0e6707734e01995c091c",
     "focus-draft-2.png": "848dc13d1e64b46b861e2144fb5ab12c234b438cdf87cba2f33297e2a2627d7f",
     "focus-list.png": "8b51801fc6f82aed3a4eb0071b58880243a7f26653ca1022d575898bfccff064",
@@ -199,9 +199,9 @@
       }
     }
   },
-  "pdf": "dd6e10b2e8be9b65e28a7610627bb9b2271cc00284149d8d90a9288a02b17da3",
+  "pdf": "0797b2aeb6693d287b525d48f7b9692ffab6bb16fe526c36bf09bd24d6c39d62",
   "verification": {
-    "generatedAt": "2026-11-16T01:48:06.919Z",
+    "generatedAt": "2026-11-16T01:57:52.591Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -265,7 +265,7 @@
       "server/admission.ts": "66f8ed1c7ec91ac98b6f6ebf66d87912985ee180d354eda36a2b1846f86bf316",
       "server/app.ts": "ebe54273e790c6584523f09f1d45489fe35736f219726dea0bb2b15b3b4a8468",
       "server/auth-link.ts": "378284c38d3cad72c80fb889cf09b75fded6c6ac291dcf8c5056a3522dd4edf0",
-      "server/auth-recovery.ts": "ae47cb1a9ccc2f04aa661515902b6f3ec163a9553f10c5c9beebb77854569d2c",
+      "server/auth-recovery.ts": "91b16ccb58d61de3331ed03cc769080ab03cc96e093a446c7ddfead184d660ee",
       "server/bootstrap-database.ts": "98068f7b5aecec50064fd7be1019adf1e55bb63a14b38b30f8e16a51c945ba86",
       "server/coach-contract.ts": "34b0902bb5ebbc46bf369c95e4027abee8e5073b3acda5d498da30fdb69cc583",
       "server/coach-http.ts": "bac32f4c7d18d6bf172fae9e12473f5bba2834f5773d0cabd903639f369c3d23",
