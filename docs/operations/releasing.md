@@ -62,22 +62,14 @@ staging `AUTH_CLIENT_ID=jfp_lantern_staging` without deploying an older revision
 then release and complete a real approved-user sign-in at
 `/auth/jesusfilm`. Verify denial for unapproved accounts and access isolation.
 
-Before production, privately verify the existing Lantern account ID and exact
-email against trusted Auth records with `emailVerified=true` and a human actor.
-Use the separate administrative connection and the new revision:
+Complete existing-account migration and duplicate recovery using the
+[identity cutover procedure](identity-cutover.md). Schema 11 adds an enrollment
+guard without rewriting existing accounts or memberships; deploy it before using
+the recovery tooling. Production needs a manual schema release. Privately verify
+trusted JFP identity mappings, review and apply the account plans, and perform
+the coordinated session cutover. Finish the real approved-user journey in #142
+before production release. Readiness and fixture sessions cannot prove it.
 
-```sh
-npm run access:ops -- link-auth USER_UUID RAW_AUTH_SUBJECT VERIFIED_EMAIL
-```
-
-Run the guarded match during the coordinated production cutover, before that
-person's first new-provider sign-in. It retains the account ID and history,
-revokes old sessions, and refuses a conflicting match. Set production
-`AUTH_CLIENT_ID=jfp_lantern_production` and release the verified SHA. No client
-secret or schema change is needed. Remove retired Google client settings after
-the cutover. Verify the matched person retains their original department, role
-and documents; readiness smoke cannot establish this.
-
-Do not roll back the provider without an explicit account-binding recovery plan:
-the matching operation intentionally refuses changing an existing Auth binding.
-See [ADR 0015](../adrs/0015-jesus-film-identity.md).
+Remove retired Google client settings with the environment owner after the
+cutover. Do not roll back the provider or remove schema 11's protection without
+an explicit compatible recovery plan. See [ADR 0019](../adrs/0019-sign-in-collision-recovery.md).

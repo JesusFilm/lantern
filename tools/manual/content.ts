@@ -60,7 +60,7 @@ export const chapters: Chapter[] = [
       {
         kind: "people",
         title: "The people in the screenshots",
-        lead: "The screenshots follow five fictional people in a local demonstration. QA uses their own Jesus Film accounts in the staging QA department.",
+        lead: "The screenshots use fictional people in a local demonstration. QA uses their own Jesus Film accounts in the staging QA department.",
         people: [
           { name: "Aroha Ngata", role: "Member · Engineering", text: "Has a confirmed focus for the second half of 2026 and is drafting one for 2027." },
           { name: "Sam Patel", role: "Member · Engineering", text: "Has sent two versions of a focus to the career lead for review." },
@@ -82,7 +82,7 @@ export const chapters: Chapter[] = [
         summary: "Signed-out visitors go straight to Jesus Film Auth before Lantern loads, with a fresh login prompt. Only approved accounts can sign in.",
         tryIt: ["Open the staging address in a private window.", "The server sends you straight to Jesus Film Auth, without a Lantern loading screen.", "Sign in to your test Jesus Film account."],
         check: [
-          "You return to Lantern signed in, with your name in the sidebar.",
+          "Returning users keep their original department, role and focuses.",
           "An account that is not approved returns to the retry screen with “Sign-in could not be completed”.",
           "Cancelling at Jesus Film Auth also returns with that message.",
           "Reloading keeps you signed in.",
@@ -436,6 +436,7 @@ export const chapters: Chapter[] = [
           "The person appears under People and can open Position focuses.",
           "People in another department cannot be added.",
           "Former members cannot currently rejoin.",
+          "Account repair required means an administrator must resolve the duplicate before it can be added.",
         ],
         shots: [{ id: "department-add", persona: "lead", path: "/?page=department", act: click("Add user"), ready: heading("Add a registered user", 2), mode: longPage, caption: "Add user" }],
       },

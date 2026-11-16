@@ -126,11 +126,12 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     const user = await requireUser(req);
     const department = await membership(db, user.id);
     if (department?.role !== 'career-lead') throw new AccessError(403, 'Only the career lead can browse registered users.');
-    const result = await db.query(`SELECT u.id,u.name,u.email,d.name AS department,m.department_id,m.deleted_at
+    const result = await db.query(`SELECT u.id,u.name,u.email,d.name AS department,m.department_id,m.deleted_at,
+      count(*) OVER (PARTITION BY lower(btrim(u.email)))>1 AS identity_conflict
       FROM users u LEFT JOIN memberships m ON m.user_id=u.id LEFT JOIN departments d ON d.id=m.department_id
       ORDER BY lower(u.email),u.id`);
     res.json(result.rows.map((row): RegisteredUser => ({ id: row.id, name: row.name, email: row.email, department: row.department,
-      status: !row.department_id ? 'available' : row.department_id !== department.id ? 'other-department' : row.deleted_at ? 'former' : 'member' })));
+      status: row.identity_conflict ? 'identity-conflict' : !row.department_id ? 'available' : row.department_id !== department.id ? 'other-department' : row.deleted_at ? 'former' : 'member' })));
   });
   router.post('/api/department/members', async (req, res) => {
     const user = await requireUser(req);

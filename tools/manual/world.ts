@@ -218,6 +218,10 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     })) as PositionFocus;
     await call("peer", reviewPath + "/request", "POST", { version: revised.version, note: "Updated the goals with measures." });
 
+    // Reproduce a legacy cutover collision that new sign-ins can no longer create.
+    for (const subject of ['manual:legacy-alex', 'jesusfilm:manual-alex']) {
+      await fixture.admin.query("INSERT INTO users(id,google_sub,email,name) VALUES($1,$2,'alex.taylor@example.test','Alex Taylor')", [randomUUID(), subject]);
+    }
     await pinTimestamps(fixture.bootstrap);
     return {
       origin,

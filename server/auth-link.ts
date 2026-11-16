@@ -10,9 +10,11 @@ export async function linkJesusFilmIdentity(db: Pool, userId: string, subject: s
   const client = await db.connect();
   try {
     await client.query("BEGIN");
+    await client.query('SELECT pg_advisory_xact_lock(603106)');
     const result = await client.query("SELECT id,email,google_sub FROM users WHERE id=$1 FOR UPDATE", [userId]);
     const user = result.rows[0] as { id: string; email: string; google_sub: string } | undefined;
     if (!user || normalizeEmail(user.email) !== email || !await isAdmitted(client, { email })) throw new Error();
+    if ((await client.query('SELECT 1 FROM users WHERE lower(btrim(email))=$1 AND id<>$2 LIMIT 1', [email, userId])).rowCount) throw new Error();
     if (user.google_sub !== principal) {
       if (user.google_sub.startsWith("jesusfilm:")) throw new Error();
       await client.query("UPDATE users SET google_sub=$1 WHERE id=$2", [principal, userId]);
