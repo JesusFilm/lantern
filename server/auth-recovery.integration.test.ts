@@ -75,7 +75,7 @@ test('planned administrative recovery preserves the original account and focus, 
 });
 
 test('recovery refuses stale, conflicting and populated plans without changing accounts or sessions', async t => {
-  for (const scenario of ['wrong-target', 'wrong-email', 'wrong-binding', 'third-account', 'duplicate-history', 'runtime-role', 'write-failure', 'unapproved']) {
+  for (const scenario of ['wrong-target', 'wrong-email', 'wrong-binding', 'third-account', 'duplicate-history', 'duplicate-subject-history', 'runtime-role', 'write-failure', 'unapproved']) {
     await t.test(scenario, async () => {
       const f = await recoveryFixture();
       try {
@@ -94,6 +94,11 @@ test('recovery refuses stale, conflicting and populated plans without changing a
             GRANT SELECT,INSERT ON additional_history TO ${f.roles.admin}`);
           await f.admin.query('INSERT INTO additional_history VALUES($1)', [f.duplicate]);
         }
+        if (scenario === 'duplicate-subject-history') {
+          await f.migration.query(`CREATE TABLE subject_history(actor_subject text REFERENCES users(google_sub) ON DELETE CASCADE);
+            GRANT SELECT,INSERT ON subject_history TO ${f.roles.admin}`);
+          await f.admin.query("INSERT INTO subject_history VALUES('jesusfilm:verified-lead')");
+        }
         if (scenario === 'write-failure') await f.migration.query(`CREATE FUNCTION refuse_binding() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Private synthetic failure'; END $$;
           CREATE TRIGGER refuse_binding BEFORE UPDATE OF google_sub ON users FOR EACH ROW EXECUTE FUNCTION refuse_binding()`);
         const before = (await f.admin.query('SELECT * FROM users ORDER BY id')).rows;
@@ -108,6 +113,7 @@ test('recovery refuses stale, conflicting and populated plans without changing a
         });
         assert.deepEqual((await f.admin.query('SELECT * FROM users ORDER BY id')).rows, before);
         assert.deepEqual((await f.admin.query('SELECT * FROM sessions ORDER BY token_hash')).rows, sessions);
+        if (scenario === 'duplicate-subject-history') assert.equal((await f.admin.query('SELECT actor_subject FROM subject_history')).rowCount, 1);
       } finally { await f.close(); }
     });
   }

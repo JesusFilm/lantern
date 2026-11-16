@@ -51,13 +51,16 @@ async function requireEmptyDuplicate(client: PoolClient, id: string) {
   // Inspect every FK, including historical authors/readers and future tables.
   // Unexpected or inaccessible dependencies fail closed; no cascading deletion.
   const references = await client.query(`SELECT n.nspname AS schema,c.relname AS table,a.attname AS column,
-    cardinality(f.conkey) AS columns
+    cardinality(f.conkey) AS columns,referenced.attname AS referenced_column
     FROM pg_constraint f JOIN pg_class c ON c.oid=f.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace
     JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=f.conkey[1]
+    JOIN pg_attribute referenced ON referenced.attrelid=f.confrelid AND referenced.attnum=f.confkey[1]
     WHERE f.contype='f' AND f.confrelid='users'::regclass`);
   const current = await target(client);
   for (const reference of references.rows) {
-    if (reference.columns !== 1) throw new Error(refused);
+    // Only single-column references to the account UUID are supported. Never
+    // compare a different referenced key (such as google_sub) with a UUID.
+    if (reference.columns !== 1 || reference.referenced_column !== 'id') throw new Error(refused);
     if (reference.schema === current.schema && reference.table === 'sessions' && reference.column === 'user_id') continue;
     const present = await client.query(`SELECT 1 FROM ${identifier(reference.schema)}.${identifier(reference.table)} WHERE ${identifier(reference.column)}=$1 LIMIT 1`, [id]);
     if (present.rowCount) throw new Error(refused);

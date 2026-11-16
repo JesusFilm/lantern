@@ -76,7 +76,7 @@ npm run access:ops -- apply-auth-recovery /private/path/explicit-plan.json
 Application revalidates its target, expected binding, approved email, all other
 same-email/claimed-subject accounts, and duplicate dependencies. A duplicate
 must have no membership, owned focus, confirmation, authorship, acknowledgment
-or other business reference. Future foreign-key dependencies also fail closed.
+or other business reference. Future foreign-key dependencies also fail closed. References to non-UUID user keys or composite keys require separate recovery review.
 Sessions alone are allowed and are revoked for both accounts. Deleting the empty
 duplicate and binding the original commit atomically. Original profile,
 membership, documents, department scope and history are unchanged. Reapplying a
