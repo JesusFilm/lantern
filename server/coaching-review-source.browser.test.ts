@@ -37,7 +37,7 @@ test("member review status distinguishes unsent changes from confirmation", asyn
     for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 667, height: 375 }, { width: 768, height: 1024 }, { width: 1280, height: 900 }]) {
       await page.setViewportSize(viewport);
       await expect(resendGuidance).toBeVisible();
-      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, `No horizontal overflow at ${viewport.width}px`);
+      assert.equal(await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), true, `No horizontal overflow at ${viewport.width}px`);
     }
     await page.getByRole("button", { name: "Review & discussion", exact: true }).click();
     await page.getByRole("button", { name: "Send changes for review", exact: true }).click();
