@@ -1,9 +1,9 @@
 {
-  "edition": 56,
-  "editionDate": "2026-11-17",
-  "deck": "bea9d7fb22312e766ce592c719b349fbad4060498d440137d6385a6ed90c7443",
+  "edition": 57,
+  "editionDate": "2026-11-18",
+  "deck": "f9b52357efbcc8be3276369bcb6a66d1697edbbef8c6fc847068de086261223e",
   "sources": {
-    "fingerprint": "df772b0a5c9988005de9cdc002b9279687a68c0bcdb8522db3cfcf47600ba36d",
+    "fingerprint": "8a72afb66ab8741be8951953a4a37fb5d70ecb0a4c60c35fff798835daff2cf4",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -15,7 +15,7 @@
       "client/coach/status-badge.css": "9f57090f86c8fa1fbec58b9e25d8fdf3e5a15a1af040adfaf5c268106484a0a1",
       "client/coach/useFocusRecord.ts": "affc509d95c2fc420b850618e31a7f19af1764a7b079f8a22261ce4091ef248c",
       "client/guide.css": "edf26307fb3cfafaa9477b3b6437b4a83e30ba2dd0ca7ecc19646984022e8e64",
-      "client/main.tsx": "6352a0449fcd71811d28823534ab5cc430a0c8aac1d8654fd97d513fef293a09",
+      "client/main.tsx": "6a8a7b093bc6a3d9aeed7f10f161d32da3efd726f36bcee66cd3a3a7286bd31b",
       "client/style.css": "cf9c9dbcfc34cf5f143cd5366c2db06538eb4359fb8d8905a49bbbff2631ef92",
       "client/workspace/Account.tsx": "536badbace7fd902a5d885b8672f6d7bd02a235b6c5419b4337d885132fa0113",
       "client/workspace/Department.tsx": "2776336529c1e7b47dee92d23373b6bd6b479eaeefc29c958fe5f63adc563a5b",
@@ -38,7 +38,7 @@
       "client/workspace/ObjectiveEditor.tsx": "716fb93b20a2b9d2ee39786ce8d2c8ca67f63406ba29a0de3549d8407728b723",
       "client/workspace/ObjectiveType.tsx": "bd84d8608f07f41cd22d5a53d9b6b7ce7102e77d410afc1eb2432fc1603bad79",
       "client/workspace/ProceduresGuide.tsx": "de06387243a2cbf53b07152c03ead408dd966482f64913623083bb01229b8cbf",
-      "client/workspace/Sidebar.tsx": "debc393525a5714e236ad2553a61110890300bf37a125fcfab55eee8433088a2",
+      "client/workspace/Sidebar.tsx": "78d2983e82e7cf752ae6edaa61d30919f59c6606d02cc91db4f7fd4d0502e49e",
       "client/workspace/TeamDirection.tsx": "8e8a413df63e272dc1993dd17a04dcfbef290aa19d2a53718ffce4b216808278",
       "client/workspace/api.ts": "603f533823af19fdba3e8521980e926b6aae17b3fe19ee39507bb280b98a4113",
       "client/workspace/appearance.ts": "6f4247a8c1623311c9d91bd7ea1fdacbfe7c645f54a252da5da2bd756ba838c9",
@@ -115,7 +115,7 @@
       "shared/progress.ts": "40c546a3765427e1cdd0fea8ab1af4234283109916ee3523d1748317ac1730a6",
       "tools/manual/capture.ts": "63dee34bb22e33bf74057819c8634fe23a2dc2a29005e909e843d11dcae39d0f",
       "tools/manual/check.ts": "c55570e91934a21ba6b71afffb3ad81182524e766f476379ef9c2a249cc04331",
-      "tools/manual/content.ts": "846089e261958f6654003127e9313ff7c83c925b2896de2c1c14beffb6c41d5d",
+      "tools/manual/content.ts": "7d095064cbd290c350911b690c1b955d6a188130e1168ebbb590100910cb9737",
       "tools/manual/finalize.ts": "36517029e491fc3b2d158dd5c64d9cacd1083e092d181ecc9bdbb78a66218c42",
       "tools/manual/freshness.ts": "b65e196bc27ffba22e5e5cc8b0f5363f8d019f7e7a75a97fc44b4ddf99d77131",
       "tools/manual/generate.ts": "d8dee24ae0db8c35195c598c254d1a3e73791b85df16e31a400259cdc041e39a",
@@ -198,7 +198,7 @@
     "review-request-1.png": "9d70215541de9535597abfbd315a2544d1f9472c9dca7bf9b496f193f95c8aee",
     "review-request-2.png": "1b9de875c4450d1220f3a6ef2d668dbea21bea38ab5525733f65d2f30a63f0ed",
     "sidebar-collapsed.png": "d166732635f4529c233b42810ecbde337cfe822b2b23b5d988ca89d9c04dcfea",
-    "sign-in.png": "67ef56e7442321da3431ba49ddd126d1aec59b5a12e041730a21c569d0fda468"
+    "sign-in.png": "eac872390222d17a9553eb3cab9c9f427c727696342eaf2a2fcad378d2f0daf2"
   },
   "supplied": {
     "jesusfilm-sign-in": {
@@ -211,9 +211,9 @@
       }
     }
   },
-  "pdf": "81da198e8dd69c9785ea4a114279bcbfa2a06420a69b88afb208ec15237ce6e1",
+  "pdf": "68ae67b060c568aae1c1f5474894e20ab7c8e66bb111144ba11b10b7ed19ded5",
   "verification": {
-    "generatedAt": "2026-11-17T02:31:37.250Z",
+    "generatedAt": "2026-11-17T15:04:54.940Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -226,7 +226,7 @@
       "client/coach/status-badge.css": "9f57090f86c8fa1fbec58b9e25d8fdf3e5a15a1af040adfaf5c268106484a0a1",
       "client/coach/useFocusRecord.ts": "affc509d95c2fc420b850618e31a7f19af1764a7b079f8a22261ce4091ef248c",
       "client/guide.css": "edf26307fb3cfafaa9477b3b6437b4a83e30ba2dd0ca7ecc19646984022e8e64",
-      "client/main.tsx": "6352a0449fcd71811d28823534ab5cc430a0c8aac1d8654fd97d513fef293a09",
+      "client/main.tsx": "6a8a7b093bc6a3d9aeed7f10f161d32da3efd726f36bcee66cd3a3a7286bd31b",
       "client/style.css": "cf9c9dbcfc34cf5f143cd5366c2db06538eb4359fb8d8905a49bbbff2631ef92",
       "client/workspace/Account.tsx": "536badbace7fd902a5d885b8672f6d7bd02a235b6c5419b4337d885132fa0113",
       "client/workspace/Department.tsx": "2776336529c1e7b47dee92d23373b6bd6b479eaeefc29c958fe5f63adc563a5b",
@@ -249,7 +249,7 @@
       "client/workspace/ObjectiveEditor.tsx": "716fb93b20a2b9d2ee39786ce8d2c8ca67f63406ba29a0de3549d8407728b723",
       "client/workspace/ObjectiveType.tsx": "bd84d8608f07f41cd22d5a53d9b6b7ce7102e77d410afc1eb2432fc1603bad79",
       "client/workspace/ProceduresGuide.tsx": "de06387243a2cbf53b07152c03ead408dd966482f64913623083bb01229b8cbf",
-      "client/workspace/Sidebar.tsx": "debc393525a5714e236ad2553a61110890300bf37a125fcfab55eee8433088a2",
+      "client/workspace/Sidebar.tsx": "78d2983e82e7cf752ae6edaa61d30919f59c6606d02cc91db4f7fd4d0502e49e",
       "client/workspace/TeamDirection.tsx": "8e8a413df63e272dc1993dd17a04dcfbef290aa19d2a53718ffce4b216808278",
       "client/workspace/api.ts": "603f533823af19fdba3e8521980e926b6aae17b3fe19ee39507bb280b98a4113",
       "client/workspace/appearance.ts": "6f4247a8c1623311c9d91bd7ea1fdacbfe7c645f54a252da5da2bd756ba838c9",
@@ -326,7 +326,7 @@
       "shared/progress.ts": "40c546a3765427e1cdd0fea8ab1af4234283109916ee3523d1748317ac1730a6",
       "tools/manual/capture.ts": "63dee34bb22e33bf74057819c8634fe23a2dc2a29005e909e843d11dcae39d0f",
       "tools/manual/check.ts": "c55570e91934a21ba6b71afffb3ad81182524e766f476379ef9c2a249cc04331",
-      "tools/manual/content.ts": "846089e261958f6654003127e9313ff7c83c925b2896de2c1c14beffb6c41d5d",
+      "tools/manual/content.ts": "7d095064cbd290c350911b690c1b955d6a188130e1168ebbb590100910cb9737",
       "tools/manual/finalize.ts": "36517029e491fc3b2d158dd5c64d9cacd1083e092d181ecc9bdbb78a66218c42",
       "tools/manual/freshness.ts": "b65e196bc27ffba22e5e5cc8b0f5363f8d019f7e7a75a97fc44b4ddf99d77131",
       "tools/manual/generate.ts": "d8dee24ae0db8c35195c598c254d1a3e73791b85df16e31a400259cdc041e39a",

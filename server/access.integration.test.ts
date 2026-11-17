@@ -249,8 +249,8 @@ test('OIDC boundary, persistent access, assignment restrictions and browser jour
       nextIdentity = 'invalid';
       await memberPage.getByRole('button', { name: 'Sign out' }).click();
       await expect(memberPage.getByRole('link', { name: 'Sign in with Jesus Film' })).toBeVisible();
-      await expect(navigation.getByRole('button')).toHaveText(['Account']);
-      await expect(navigation.getByRole('button', { name: 'Account', exact: true })).toHaveAttribute('aria-current', 'page');
+      await expect(navigation.getByRole('button', { name: 'Account', exact: true })).toHaveCount(0);
+      await expect(navigation.locator('[aria-current="page"]')).toHaveCount(0);
       await leadPage.setViewportSize({ width: 390, height: 844 });
       await leadPage.getByRole('button', { name: 'Add user', exact: true }).click();
       await expect(leadPage.getByRole('button', { name: 'Add selected user' })).toBeVisible();
