@@ -507,6 +507,11 @@ export function ObjectiveEditor({
           onChange={(e) => onChange({ type: "text", text: e.target.value })}
         />
       </div>
+      {redesigned && method === "guided" && stage === "objective" && <button type="button" disabled={busy || !edit.text.trim()} onClick={() => void guidedRequest("objective", { ...context(), entry: "objective" }, result => {
+        if (result.objective) update({ type: "objective-values", values: { text: result.objective } });
+        setRecommended(result.recommendedKind);
+        setRecommendedInitiatives(result.initiativeIds ?? []);
+      }, "objective")}>Improve objective with AI</button>}
       <ObjectiveTypeChoices
         kind={edit.kind}
         recommended={method === "guided" ? recommended : undefined}

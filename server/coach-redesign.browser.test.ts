@@ -146,7 +146,7 @@ test("switching methods during a refinement question preserves manual edits and 
 });
 
 test("coach drafts using the Guide without asking the member how to refine it", async () => {
-  const f = await world(() => ({ objective: "Help trainers deliver accessible workshops.", initiativeIds: [] }));
+  const f = await world(stage => ({ objective: stage === "objective" ? "Help trainers run accessible workshops." : "Help trainers deliver accessible workshops.", initiativeIds: [] }));
   try {
     const { page } = f;
     await page.getByRole("radio", { name: "Contribution", exact: true }).check();
@@ -155,6 +155,11 @@ test("coach drafts using the Guide without asking the member how to refine it", 
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Help trainers deliver accessible workshops.");
     await expect(page.getByLabel("How should the coach refine this wording?")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Refine wording", exact: true })).toHaveCount(0);
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByRole("button", { name: "Improve objective with AI", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Help trainers run accessible workshops.");
+    assert.equal(f.calls.at(-1)?.stage, "objective");
+    assert.equal(f.calls.at(-1)?.context.concern, "");
   } finally { await f.close(); }
 });
 

@@ -8,7 +8,7 @@ const guidePrinciples = [
     guideContent.objectives.steps.find(step => step.id === id)!.paragraphs.slice(Number(from), Number(to))),
   ...[["specific", 0, 1], ["measurable", 0, 2], ["achievable", 0, 1], ["relevant", 0, 2], ["time-bound", 0, 1], ["development", 0, 2]].flatMap(([id, from, to]) =>
     guideContent.smart.steps.find(step => step.id === id)!.paragraphs.slice(Number(from), Number(to))),
-];
+].map(text => text.replace("A count can help this viewer task; other goals can use", "Goals can use"));
 
 const stages: Record<CoachStage, string> = {
   clarify: `Turn the member's rough work description into an editable objective as early as possible. Preserve their actual intent and scope, without adding commitments or facts. If their intent is sufficiently clear, return objective, recommendedKind, initiativeIds and ready=true. Identify a useful missing decision briefly in concern. If the intended work or learning is genuinely unclear, ask one short question; after an answer, draft using what is known and identify gaps in concern. Do not invent an outcome or beneficiary.`,

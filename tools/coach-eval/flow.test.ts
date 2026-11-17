@@ -119,7 +119,7 @@ test("replay preserves historical request context and stops on unresolved refine
 
 test("redesigned flow improves an existing objective using the Guide without asking for instructions", async () => {
   const { coach, calls } = scripted({ objective: [{ objective: "Help trainers run accessible workshops." }], actions: [{ actions: ["Review workshop materials"], suggestedDate: "2027-04-30" }] });
-  const { outcome } = await runCurrentFlow({ ...base, existing: { objective: "Accessible workshops", kind: "normal" }, improvement: "", goals: [] }, coach, member, { redesigned: true });
+  const { outcome } = await runCurrentFlow({ ...base, existing: { objective: "Accessible workshops", kind: "normal" }, improvement: "Make it shorter", goals: [] }, coach, member, { redesigned: true });
   assert.equal(calls[0]!.stage, "objective");
   assert.equal(calls[0]!.context.concern, "");
   assert.equal(outcome.objective, "Help trainers run accessible workshops.");

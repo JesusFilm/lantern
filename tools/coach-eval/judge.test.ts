@@ -28,3 +28,10 @@ test("judge sees the saved alignment and goals that the coach received during re
   assert.match(rendered, /Member, saved alignment.*Other \(none apply\)/);
   assert.match(rendered, /Member, existing goals.*Keep the supplied goal/);
 });
+
+
+test("redesigned existing-objective transcript does not invent an improvement request", () => {
+  const scenario = scenarios.find(s => s.id === "already-useful")!;
+  const rendered = renderTranscript({ ...transcript, flow: "redesigned", scenario: scenario.id }, scenario);
+  assert.doesNotMatch(rendered, /Member, what to improve/);
+});

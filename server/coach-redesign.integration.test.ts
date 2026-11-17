@@ -32,7 +32,7 @@ test("redesigned review uses department context without example leakage and is h
     assert.match(system, /Personal development/);
     assert.match(system, /Express the useful change you intend to make, who it serves/);
     assert.match(system, /Do not force a numerical target just to make a goal look measurable/);
-    assert.doesNotMatch(system, /Test 20 viewers/);
+    assert.doesNotMatch(system, /Test 20 viewers|this viewer task/);
     assert.deepEqual(await response.json(), { review: "Add a goal showing how you will apply this learning." });
   } finally { await f.close(); }
 });
