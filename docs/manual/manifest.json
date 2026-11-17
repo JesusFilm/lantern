@@ -1,7 +1,7 @@
 {
-  "edition": 55,
+  "edition": 56,
   "editionDate": "2026-11-17",
-  "deck": "5eded8ca6e79919aef77efc1e1b92cd28c712f9bb56e98e778992067901dac75",
+  "deck": "bea9d7fb22312e766ce592c719b349fbad4060498d440137d6385a6ed90c7443",
   "sources": {
     "fingerprint": "df772b0a5c9988005de9cdc002b9279687a68c0bcdb8522db3cfcf47600ba36d",
     "files": {
@@ -202,18 +202,18 @@
   },
   "supplied": {
     "jesusfilm-sign-in": {
-      "image": null,
+      "image": "da2bd73523ff4cfc879354ba4c7752b80076161eab1a5347dcfa57e18d32381b",
       "capturedFor": {
-        "server/jesusfilm.ts": "bee926f020b58c0edc16c87a7f592231f00e6f497122737e410d0f070fca9b69",
-        "server/access.ts": "2b91c1de1de038c18de3ec5e86f68306f02ae5862ad524ddd0ba6bdc3f6ffb09",
+        "server/jesusfilm.ts": "2c85ef39ad8dd846421b44b374f874b6c4a4aee1c453b5a71cedc3e67c4dc308",
+        "server/access.ts": "fc35ca06d08411f3e4a716d9a048eba7979020a6bba8b082e7229f398bdf6af9",
         "server/admission.ts": "66f8ed1c7ec91ac98b6f6ebf66d87912985ee180d354eda36a2b1846f86bf316",
-        "server/accounts.ts": "522f0732d570bf3975009341fa1ceb491d508215a93f46b69de1d6c7c306da4d"
+        "server/accounts.ts": "f45cc93913adc488ad2bc66c0b3e307b067734bec542e566bb76ee440b224c51"
       }
     }
   },
-  "pdf": "c9fd78dbb35a778c4bcc12db6f6c9f44d83cae297e0b0b600c1b9cbb35ba5323",
+  "pdf": "81da198e8dd69c9785ea4a114279bcbfa2a06420a69b88afb208ec15237ce6e1",
   "verification": {
-    "generatedAt": "2026-11-17T01:12:30.230Z",
+    "generatedAt": "2026-11-17T02:31:37.250Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
