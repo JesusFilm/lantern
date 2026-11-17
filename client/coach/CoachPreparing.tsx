@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
-export type CoachStage = "clarify" | "objective" | "actions" | "goal";
+export type CoachStage = "clarify" | "objective" | "actions" | "goal" | "review";
 const labels: Record<CoachStage, string> = {
   clarify: "Finding the next useful question",
   objective: "Shaping your objective",
   actions: "Exploring possible next steps",
   goal: "Putting your goal into words",
+  review: "Checking your objective and goals",
 };
 
 export function CoachPreparing({

@@ -5,7 +5,7 @@ import { direction, initiativeName, type Scenario } from "./scenarios.js";
 import { complete } from "./targets.js";
 import type { Transcript } from "./types.js";
 
-export const rubricVersion = "2026-11-17.1";
+export const rubricVersion = "2026-11-17.2";
 export const defaultJudge = "openai/gpt-6.1-sol";
 export const dimensions = ["faithfulness", "clarification", "objective", "goals", "type", "alignment", "role"] as const;
 export type Dimension = (typeof dimensions)[number];
@@ -53,7 +53,7 @@ const quote = (text: string) => JSON.stringify(text);
 /** A readable transcript for the judge and for human review. */
 export function renderTranscript(transcript: Transcript, scenario: Scenario): string {
   const lines: string[] = [
-    `Member role: ${scenario.role}`,
+    `Member role (evaluation metadata, not shown to the coach unless the member mentions it): ${scenario.role}`,
     `Focus period: ${scenario.focus.start} to ${scenario.focus.end}. Today: ${transcript.today}.`,
     `Department mission: ${direction.mission}`,
     "Strategic initiatives:",
@@ -88,8 +88,9 @@ export function renderTranscript(transcript: Transcript, scenario: Scenario): st
     }
     const s = turn.suggestion!;
     const concern = s.concern ? ` Concern: ${quote(s.concern)}` : "";
-    if (s.ready === false && s.question)
+    if (s.question)
       lines.push(`[Coach question] ${quote(s.question)}${s.options?.length ? " Options: " + s.options.map(quote).join(" | ") : ""}${concern}`);
+    else if (turn.stage === "review") lines.push(`[Coach review] ${quote(s.review ?? "")}${concern}`);
     else if (turn.stage === "actions")
       lines.push(`[Coach goal ideas] ${(s.actions ?? []).map((a, i) => `${i + 1}. ${quote(a)}`).join(" ")} Suggested date: ${s.suggestedDate ?? "none"}.${concern}`);
     else if (turn.stage === "goal") lines.push(`[Coach goal] ${quote(s.goal ?? "")}${concern}`);

@@ -1,7 +1,7 @@
 import type { CoachCheckpoint, CoachSuggestion } from "../../shared/coach.js";
 import type { ObjectiveKind } from "../../shared/focus.js";
 
-export type CoachStage = "clarify" | "objective" | "actions" | "goal";
+export type CoachStage = "clarify" | "objective" | "actions" | "goal" | "review";
 
 export type AttemptOutcome =
   | "ok"
@@ -26,7 +26,7 @@ export interface Attempt {
   content?: string;
 }
 
-export type FlowStep = "work" | "question" | "refine" | "actions" | "goal";
+export type FlowStep = "work" | "question" | "refine" | "actions" | "goal" | "review";
 
 export interface CoachTurn {
   type: "coach";

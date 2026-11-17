@@ -45,7 +45,7 @@ The historical term for a confirmed position focus. Later review work preserves 
 A focus owner’s explicit request to review one immutable saved version of their focus. It is required before confirmation, including for a career lead’s own focus, and does not itself lock or confirm anything. A lead’s own request appears in their Review requests list for self-review. A later save does not replace the snapshot; the owner must send the latest changes before confirmation. A request note is optional.
 
 **Coaching checkpoint**:
-Private answers and writing retained from the earlier coaching experience. The current UI exposes these as Earlier working notes and can copy their content into a new unsaved objective. It creates no new checkpoints. Career leads cannot read another member's notes; manual saves retain them, and confirmation removes them.
+Private answers and writing retained from the earlier coaching experience. The current authoring UI retains these without exposing an Earlier working notes interface and creates no new checkpoints. Career leads cannot read another member's notes; manual saves retain them, and confirmation removes them.
 
 **Review note**:
 An authored message attached to a requested version. Notes can be added or soft-deleted by their author, never edited. A note is not confirmation.
@@ -70,6 +70,12 @@ An optional objective for a capability or behavior the member wants to grow, pai
 
 **Leadership objective**:
 An optional objective for developing leadership through a practical assignment, paired with goals for its outcomes.
+
+**Discovery objective**:
+An objective explicitly focused on finding out an unknown need or useful direction. It states the uncertainty honestly and does not imply that research, access or another person’s participation has already been agreed.
+
+**Member role type**:
+A planned description of a member’s profession or work, such as engineer, QA, evangelist, lector or trainer. It provides coaching context and grants no permissions. Account configuration is tracked in [#102](https://github.com/JesusFilm/lantern/issues/102); currently members describe their work to the coach.
 
 **SMART goal**:
 A specific, measurable, achievable, relevant and time-bound goal supporting an objective. These qualities do not require five separate written fields or universal numerical targets.

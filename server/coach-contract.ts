@@ -1,6 +1,6 @@
 import type { CoachCheckpoint, CoachSuggestion } from "../shared/coach.js";
 import { AccessError } from "./membership.js";
-export type CoachStage = "clarify" | "objective" | "actions" | "goal";
+export type CoachStage = "clarify" | "objective" | "actions" | "goal" | "review";
 export const date = (value: unknown): value is string =>
   typeof value === "string" &&
   /^\d{4}-\d{2}-\d{2}$/.test(value) &&
@@ -14,14 +14,18 @@ const text = (v: unknown, max = 4000): v is string =>
   typeof v === "string" && v.length <= max;
 const texts = (v: unknown, max = 6) =>
   Array.isArray(v) && v.length <= max && v.every((x) => text(x, 1000));
-export function validateCheckpoint(value: unknown): CoachCheckpoint {
+export function validateCheckpoint(value: unknown, maxAnswers = 3, maxCharacters = 32000): CoachCheckpoint {
   const fail = (): never => {
     throw new AccessError(
       400,
       "Check the coaching fields and dates before saving.",
     );
   };
-  if (!object(value) || JSON.stringify(value).length > 32000) return fail();
+  if (!object(value)) return fail();
+  if (JSON.stringify(value).length > maxCharacters) {
+    if (maxCharacters > 32000) throw new AccessError(400, "This coaching context is too long. Shorten it or continue writing manually; your draft is unchanged.");
+    return fail();
+  }
   const fields = [
     "work",
     "question",
@@ -63,7 +67,7 @@ export function validateCheckpoint(value: unknown): CoachCheckpoint {
     return fail();
   if (
     !Array.isArray(value.answers) ||
-    value.answers.length > 3 ||
+    value.answers.length > maxAnswers ||
     value.answers.some(
       (a) =>
         !object(a) ||
@@ -116,12 +120,17 @@ export function validateSuggestion(
   stage: CoachStage,
   value: unknown,
   initiativeIds: string[],
+  redesigned = false,
 ): CoachSuggestion {
   const fail = (): never => {
     throw new Error("Invalid coach response");
   };
   if (!object(value)) return fail();
-  const fields = ["question", "objective", "goal", "title", "concern"];
+  // Optional empty strings carry no meaning; they are not a provider failure.
+  if (redesigned) value = Object.fromEntries(Object.entries(value).filter(([key, item]) =>
+    !["question", "objective", "goal", "title", "concern", "review", "suggestedDate", "recommendedKind"].includes(key) || typeof item !== "string" || item.trim()));
+  if (!object(value)) return fail();
+  const fields = ["question", "objective", "goal", "title", "concern", ...(redesigned ? ["review"] : [])];
   if (
     Object.keys(value).some(
       (k) =>
@@ -161,18 +170,18 @@ export function validateSuggestion(
   if (value.suggestedDate !== undefined && !date(value.suggestedDate))
     return fail();
   if (
-    stage === "clarify" &&
+    !redesigned && stage === "clarify" &&
     !(value.ready === false ? value.question : value.objective)
   )
     return fail();
-  if (
+  if (!redesigned && (
     (stage === "objective" && !value.objective) ||
     (stage === "actions" &&
       (!Array.isArray(value.actions) ||
         value.actions.length < 2 ||
         !date(value.suggestedDate))) ||
     (stage === "goal" && !value.goal)
-  )
+  ))
     return fail();
   if (
     value.recommendedKind !== undefined &&
@@ -181,6 +190,12 @@ export function validateSuggestion(
     )
   )
     return fail();
+  if (redesigned && value.ready === false && !value.question && !value.concern) return fail();
+  if (redesigned && !value.question && !value.concern) {
+    const output = stage === "actions" ? Array.isArray(value.actions) && value.actions.length > 0 && date(value.suggestedDate)
+      : stage === "goal" ? value.goal : stage === "review" ? value.review : value.objective;
+    if (!output) return fail();
+  }
   const result = value as CoachSuggestion;
   if (result.initiativeIds?.some((id) => !initiativeIds.includes(id)))
     return fail();

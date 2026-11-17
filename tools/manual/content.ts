@@ -34,6 +34,7 @@ const jesusFilmSignIn: Supplied = {
 };
 const guided = async (page: Page) => {
   await click("+ Add objective", "Guide with AI")(page);
+  await page.getByRole("radio", { name: "Contribution", exact: true }).check();
   await page.getByLabel("Your work", { exact: true }).fill("I look after our deployment pipeline. When deployments fail, engineers often lose hours working out why.");
 };
 const planGoal = async (page: Page) => {
@@ -249,12 +250,12 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Guide with AI: from your work to an objective",
         roles: ["Member"],
-        summary: "Move through **Your work → Objective → SMART goals → Check objective**. AI suggests wording and initiatives; you choose what fits.",
-        tryIt: ["Choose **+ Add objective**, then **Guide with AI**.", "Describe your work in a sentence or two.", "Review the suggestion; choose an initiative or Other."],
+        summary: "Choose an objective type, then describe your work. **coach-redesign** is hidden in production until released; **coach** must also be available.",
+        tryIt: ["Choose **+ Add objective**, then **Guide with AI**.", "Choose a type or Not sure; describe your work and role.", "Review the suggestion; choose an initiative or Other."],
         check: [
-          "AI recommendations are labelled, not selected.",
+          "Recommendations offer a switch; your type stays selected.",
           "Next requires an initiative or Other; choosing either clears the error.",
-          "Back keeps text and goals. Slow replies can be cancelled.",
+          "Concerns stay visible; questions can continue past three answers.",
         ],
         shots: [
           { id: "guided-work", persona: "member", path: draft, act: guided, ready: (p) => p.getByLabel("Your work", { exact: true }), caption: "Your work" },
@@ -265,12 +266,12 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Guide with AI: goals and final check",
         roles: ["Member"],
-        summary: "For each goal the AI suggests ① actions and a target date, then drafts the goal wording to check. Nothing is saved until **Save objective**.",
-        tryIt: ["At SMART goals, choose **Add SMART goal**.", "Pick or write an action and date, then **Next**.", "Edit the goal, **Add to objective**, then **Next** to the check."],
+        summary: "**coach-redesign** suggests goal ideas immediately and reviews the pending objective. Hidden in production until released; requires **coach**.",
+        tryIt: ["At SMART goals, select an idea or **Add SMART goal**.", "Pick or write an action and date, then **Next**.", "Edit the goal, **Add to objective**, then **Next** to the check."],
         check: [
-          "Saved wording matches what you saw, including your edits.",
-          "If the AI cannot reply, a message explains you can continue manually.",
-          "Your text is kept when you switch to Write myself.",
+          "Dates outside the focus period are rejected.",
+          "Review shows feedback without changing wording.",
+          "No goals warns but permits saving; failure keeps your writing.",
         ],
         shots: [
           { id: "guided-goals", persona: "member", path: draft, act: planGoal, ready: heading("Plan a SMART goal", 2), highlight: ['role=group[name="Choose an action"]'], caption: "Planning a goal" },

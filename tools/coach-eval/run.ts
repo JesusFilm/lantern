@@ -110,8 +110,8 @@ async function transcripts() {
         ...meta,
         created: meta.created ?? new Date().toISOString(),
         commit: git("rev-parse", "--short", "HEAD") + (git("status", "--porcelain") ? "+dirty" : ""),
-        promptHash: createHash("sha256").update(coachPrompt(direction).replace(/Current date: \S+/, "")).digest("hex").slice(0, 12),
-        flow: "main ObjectiveEditor",
+        promptHash: createHash("sha256").update(coachPrompt(direction, true).replace(/Current date: \S+/, "")).digest("hex").slice(0, 12),
+        flow: "coach-redesign ObjectiveEditor",
         targets: { ...(meta.targets as object), ...Object.fromEntries(chosen.map((id) => [id, targets[id]])) },
       },
       null,
@@ -129,7 +129,7 @@ async function transcripts() {
     if (spending() >= maxCost) return void skipped++;
     const started = Date.now();
     try {
-      const result = await runCurrentFlow(scenario, coachCaller(targets[target]!, env), memberFor(scenario, env));
+      const result = await runCurrentFlow(scenario, coachCaller(targets[target]!, env, true), memberFor(scenario, env), { redesigned: true });
       const transcript: Transcript = {
         scenario: scenario.id,
         target,
@@ -184,6 +184,7 @@ async function judge() {
 function report() {
   const dir = runDirectory();
   const model = args.get("judge") ?? defaultJudge;
+  const redesigned = existsSync(join(dir, "run.json")) && readJson<{ flow?: string }>(join(dir, "run.json")).flow?.startsWith("coach-redesign") === true;
   const rows: Row[] = loadTranscripts(dir).flatMap((transcript) => {
     const scenario = scenarios.find((s) => s.id === transcript.scenario);
     if (!scenario) return [];
@@ -192,7 +193,7 @@ function report() {
     return [{
       transcript,
       scenario,
-      checks: checkTranscript(transcript, scenario),
+      checks: checkTranscript(transcript, scenario, redesigned),
       ...(judgment && judgment.transcriptHash === transcriptHash(transcript) ? { judgment } : {}),
     }];
   });
@@ -202,7 +203,7 @@ function report() {
     title: `Coach evaluation: ${args.get("run")}`,
     labels,
     ...(rows.some((r) => r.judgment) ? { judge: model } : {}),
-    notes: [`Commit ${meta.commit ?? "unknown"}, prompt ${meta.promptHash ?? "unknown"}, ${scenarios.length} scenarios, rubric ${rubricVersion}.`],
+    notes: [`Commit ${meta.commit ?? "unknown"}, prompt ${meta.promptHash ?? "unknown"}, ${new Set(rows.map(r => r.transcript.scenario)).size} scenarios, rubric ${rubricVersion}.`],
   });
   writeFileSync(join(dir, "report.md"), markdown);
   writeFileSync(join(dir, "report.json"), JSON.stringify(summaries, null, 2));

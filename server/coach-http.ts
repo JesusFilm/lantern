@@ -1,3 +1,4 @@
+import { coachContextLimits } from "../shared/coach.js";
 import { Router } from "express";
 import type { Request } from "express";
 import type { Pool } from "pg";
@@ -8,6 +9,7 @@ import { coachPrompt } from "./coach-prompt.js";
 import { readDirection } from "./direction.js";
 import { CoachUnavailable, type CoachProvider } from "./coach-provider.js";
 import {
+  date,
   validateSuggestion,
   type CoachStage,
   validateCheckpoint,
@@ -18,6 +20,7 @@ export function coachRoutes(
   requireUser: (req: Request) => Promise<{ id: string; email: string }>,
   provider?: CoachProvider,
   offered: (user: { email: string }) => boolean = () => true,
+  redesigned: (user: { email: string }) => boolean = () => false,
 ) {
   const router = Router(),
     store = coachStore(db);
@@ -187,17 +190,21 @@ export function coachRoutes(
         503,
         "Coaching is unavailable. You can continue writing manually.",
       );
+    const enhanced = redesigned(user);
     const body = req.body;
+    if (body?.stage === "review" && !enhanced) throw new AccessError(404, "Not found.");
     if (
       !body ||
       Object.keys(body).some(
         (k) => !["stage", "context", "focusId", "version"].includes(k),
       ) ||
-      !["clarify", "objective", "actions", "goal"].includes(body.stage)
+      !["clarify", "objective", "actions", "goal", ...(enhanced ? ["review"] : [])].includes(body.stage)
     )
       throw new AccessError(400, "Choose a valid coaching step.");
-    const context = validateCheckpoint(body.context),
+    const context = validateCheckpoint(body.context, enhanced ? coachContextLimits.answers : 3, enhanced ? coachContextLimits.characters : 32000),
       stage = body.stage as CoachStage;
+    if (enhanced && stage === "goal" && (!date(context.date) || context.date < context.start || context.date > context.end))
+      throw new AccessError(400, "Choose a target date within this position focus period.");
     if (body.focusId !== undefined) {
       if (
         typeof body.focusId !== "string" ||
@@ -232,13 +239,14 @@ export function coachRoutes(
     try {
       const direction = await readDirection(db, actor);
       const suggestion = await provider.suggest(
-        coachPrompt(direction),
+        coachPrompt(direction, enhanced, stage),
         JSON.stringify({ stage, context }),
         (v) =>
           validateSuggestion(
             stage,
             v,
             direction.initiatives.filter((i) => !i.archived).map((i) => i.id),
+            enhanced,
           ),
         abort.signal,
       );

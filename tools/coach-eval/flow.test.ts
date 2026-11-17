@@ -86,3 +86,37 @@ test("an unavailable coach is retried once and ends the session", async () => {
   assert.equal(turns.length, 2);
   assert.equal(outcome.completed, false);
 });
+
+test("redesigned replay keeps clarifying, carries goal answers and calls review", async () => {
+  const { coach, calls } = scripted({
+    clarify: [...[0, 1, 2, 3].map(i => ({ question: `Missing fact ${i}?`, ready: false })), { objective: "Help trainers", ready: true }],
+    actions: [{ actions: ["Try captions"], suggestedDate: "2027-02-01" }],
+    goal: [{ question: "Which session?", concern: "Choose a session." }, { goal: "By 1 February 2027, try captions in my session." }],
+    review: [{ review: "Check the session date." }],
+  });
+  const { outcome } = await runCurrentFlow({ ...base, typeChoice: "personal-development", goals: [{ action: 0 }] }, coach, { answer: async () => "My session" }, { redesigned: true });
+  assert.deepEqual(calls.map(c => c.stage), ["clarify", "clarify", "clarify", "clarify", "clarify", "actions", "goal", "goal", "review"]);
+  assert.equal(calls[0]!.context.kind, "personal-development");
+  assert.equal(calls[7]!.context.action, "Try captions");
+  assert.equal(calls[7]!.context.answers.length, 5);
+  assert.equal(calls[8]!.context.siblings?.length, 1);
+  assert.equal(outcome.completed, true);
+});
+
+test("replay preserves historical request context and stops on unresolved refinement", async () => {
+  const { coach } = scripted({
+    clarify: [{ ready: true, objective: "Help staff" }],
+    actions: [{ actions: ["Try captions"], suggestedDate: "2027-02-01" }],
+    goal: [{ goal: "By 1 February 2027, try captions." }],
+    review: [{ review: "Useful goal." }],
+  });
+  const { turns } = await runCurrentFlow({ ...base, goals: [{ action: 0 }] }, coach, member, { redesigned: true });
+  const requests = turns.filter(t => t.type === "coach");
+  assert.deepEqual(requests[0]!.context.siblings, []);
+  assert.deepEqual(requests[2]!.context.siblings, []);
+  assert.deepEqual(requests[3]!.context.siblings, ["By 1 February 2027, try captions."]);
+  const paused = scripted({ objective: [{ concern: "Please clarify the intended beneficiary." }] });
+  const { outcome } = await runCurrentFlow({ ...base, existing: { objective: "Help staff", kind: "normal" }, improvement: "Clearer", goals: [] }, paused.coach, member, { redesigned: true });
+  assert.equal(outcome.completed, false);
+  assert.deepEqual(paused.calls.map(c => c.stage), ["objective"]);
+});

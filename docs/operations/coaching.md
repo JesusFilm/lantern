@@ -26,6 +26,11 @@ model calls, `preview` offers coaching only to the accounts in `LANTERN_PREVIEW_
 and `on` offers it to everyone. With no setting it is off in production. On staging an
 unset coach is offered whenever both keys are present.
 
+`coach-redesign` separately selects the updated prompt, type-first flow, flexible
+clarification and model-backed objective check. It defaults on locally/on staging
+and off in production; `coach` still controls all inference availability. Its
+review stage answers 404 for accounts without this flag. Qwen remains primary.
+
 `COACH_ENABLED` is retired and no longer read. While that variable is still set, the
 release configuration check refuses to deploy unless `LANTERN_FEATURES` sets `coach`,
 so a release cannot silently change who is offered coaching. Add the `coach` setting
@@ -47,8 +52,9 @@ Create model-scoped LiteLLM keys for `coding`. Set separate rate/spend limits fo
 both environments at each provider; use an appropriate funded OpenRouter key.
 Set OpenRouter's permitted models/provider data policy for the organization's
 requirements before real personnel data is used. The application sends current
-member coaching fields, department mission/active initiatives and the writing
-Guide to either provider. It does not send review notes, other members' documents,
+member coaching fields and department mission/active initiatives to either
+provider. The legacy flow also sends writing Guide excerpts; `coach-redesign`
+uses concise policy and stage-specific instructions without illustrative examples. It does not send review notes, other members' documents,
 images, account email addresses or external project context. Provider-side logging
 and retention are controlled in the provider account, not by Lantern.
 

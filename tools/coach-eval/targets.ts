@@ -138,7 +138,7 @@ export function needsOpenRouter(target: Target) {
 }
 
 /** Calls the shipped prompt, provider and response contract for one coach turn. */
-export function coachCaller(target: Target, env: EvalEnvironment): CoachCall {
+export function coachCaller(target: Target, env: EvalEnvironment, redesigned = false): CoachCall {
   const config = providerConfig(target, env);
   const ids = direction.initiatives.filter((i) => !i.archived).map((i) => i.id);
   return async (stage, context) => {
@@ -150,7 +150,7 @@ export function coachCaller(target: Target, env: EvalEnvironment): CoachCall {
     const validate = (value: unknown) => {
       const attempt = attempts.at(-1);
       try {
-        const result = validateSuggestion(stage, value, ids);
+        const result = validateSuggestion(stage, value, ids, redesigned);
         if (attempt) attempt.outcome = "ok";
         return result;
       } catch (error) {
@@ -160,7 +160,7 @@ export function coachCaller(target: Target, env: EvalEnvironment): CoachCall {
     };
     try {
       const suggestion = await scope.run({ attempts, target, models }, () =>
-        provider.suggest(coachPrompt(direction), JSON.stringify({ stage, context }), validate),
+        provider.suggest(coachPrompt(direction, redesigned, stage), JSON.stringify({ stage, context }), validate),
       );
       return { ok: true, suggestion, elapsedMs: Math.round(performance.now() - started), attempts };
     } catch (error) {

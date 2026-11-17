@@ -100,6 +100,7 @@ export function FocusWorkspace({
         edit={edit}
         initialMethod={method}
         available={coachAvailable}
+        redesigned={session.features.includes("coach-redesign")}
         onChange={change}
         onSave={saveEdit}
         onCancel={cancel}

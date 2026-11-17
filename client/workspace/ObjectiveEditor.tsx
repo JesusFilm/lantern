@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import type { CoachCheckpoint, CoachSuggestion } from "../../shared/coach.js";
+import { coachContextLimits, type CoachCheckpoint, type CoachSuggestion } from "../../shared/coach.js";
 import type { EditChange, ObjectiveEdit } from "./useDraftFocusWorkflow.js";
-import { ObjectiveType, ObjectiveTypeChoices } from "./ObjectiveType.js";
+import { objectiveTypes, ObjectiveType, ObjectiveTypeChoices } from "./ObjectiveType.js";
 import { AlignmentSummary, InitiativeChoices } from "./InitiativeChoices.js";
 import { CoachPreparing, type CoachStage } from "../coach/CoachPreparing.js";
 import { api } from "./api.js";
@@ -42,6 +42,7 @@ export function ObjectiveEditor({
   edit,
   initialMethod,
   available,
+  redesigned = false,
   onChange,
   onSave,
   onCancel,
@@ -50,11 +51,16 @@ export function ObjectiveEditor({
   edit: ObjectiveEdit;
   initialMethod: AuthoringMethod;
   available: boolean;
+  redesigned?: boolean;
   onChange: (change: EditChange) => void;
   onSave: () => Promise<unknown>;
   onCancel: () => void;
   onRetryInitiatives: () => void;
 }) {
+  const [chosenKind, setChosenKind] = useState<CoachCheckpoint["kind"] | "unsure">(edit.text.trim() ? edit.kind : undefined);
+  const [concern, setConcern] = useState("");
+  const [review, setReview] = useState("");
+  const pendingReply = useRef<{ stage: CoachStage; input: CoachCheckpoint; origin: Stage; apply: (reply: CoachSuggestion) => void } | null>(null);
   const [method, setMethod] = useState(initialMethod);
   const [stage, setStage] = useState<Stage>(
     edit.text.trim() ? "refine" : "work",
@@ -141,14 +147,14 @@ export function ObjectiveEditor({
       answer,
       options,
       objective: edit.text,
-      kind: edit.kind,
+      kind: redesigned && chosenKind === "unsure" ? undefined : edit.kind,
       initiatives: edit.alignment.initiatives.map((i) => i.id),
       other: edit.alignment.other,
       actions: plan.actions,
       action: plan.action,
       date: plan.date,
       goal: plan.text,
-      siblings: edit.goals.slice(0, 12).map((g) => g.slice(0, 500)),
+      siblings: redesigned ? edit.goals : edit.goals.slice(0, 12).map((g) => g.slice(0, 500)),
       title: edit.source.title,
       start: edit.source.start,
       end: edit.source.end,
@@ -157,6 +163,10 @@ export function ObjectiveEditor({
     };
   }
   async function suggest(requestStage: CoachStage, input = context()) {
+    if (redesigned && JSON.stringify(input).length > coachContextLimits.characters) {
+      setError("This coaching context is too long. Shorten it or continue writing manually; your draft is unchanged.");
+      return;
+    }
     if (!available) {
       setError(
         "AI guidance is unavailable. You can write this objective yourself.",
@@ -180,7 +190,10 @@ export function ObjectiveEditor({
         },
         controller.current.signal,
       );
-      if (requestId === epoch.current) return result;
+      if (requestId === epoch.current) {
+        if (redesigned) setConcern(result.concern ?? "");
+        return result;
+      }
     } catch (e) {
       if (requestId === epoch.current) setError((e as Error).message);
     } finally {
@@ -208,7 +221,7 @@ export function ObjectiveEditor({
   function switchMethod(next: AuthoringMethod) {
     // A partially written goal becomes an ordinary editable goal when leaving guidance.
     // It is never silently excluded from Save objective.
-    if (next === "manual" && (stage === "action" || stage === "goal")) {
+    if (next === "manual" && (stage === "action" || stage === "goal" || pendingReply.current?.origin === "action")) {
       if (
         plan.edited &&
         plan.text &&
@@ -225,6 +238,8 @@ export function ObjectiveEditor({
     } else if (next === "guided" && !enteredGuidance.current)
       setStage(edit.text.trim() ? "refine" : "work");
     if (next === "guided") enteredGuidance.current = true;
+    if (pendingReply.current && pendingReply.current.origin !== "action") setStage(pendingReply.current.origin);
+    pendingReply.current = null;
     setMethod(next);
     setError("");
   }
@@ -242,14 +257,57 @@ export function ObjectiveEditor({
   }
   function answerQuestion(value: string) {
     setAnswer(value);
-    const cached = exploration.current.get(JSON.stringify([work, answers]));
+    const cached = exploration.current.get(JSON.stringify([work, answers, ...(redesigned ? [chosenKind] : [])]));
     if (cached) cached.answer = value;
+  }
+  async function guidedRequest(requestStage: CoachStage, input: CoachCheckpoint, apply: (reply: CoachSuggestion) => void, origin = stage): Promise<boolean> {
+    const reply = await suggest(requestStage, input);
+    if (!reply) return false;
+    if (reply.question) {
+      pendingReply.current = { stage: requestStage, input, apply, origin };
+      setQuestion(reply.question);
+      setOptions(reply.options ?? []);
+      setAnswer("");
+      setStage("question");
+    } else {
+      pendingReply.current = null;
+      setStage(origin);
+      apply(reply);
+    }
+    return true;
+  }
+  async function openGoals() {
+    setStage("goals");
+    if (!redesigned || edit.goals.length) return;
+    await guidedRequest("actions", { ...context(), entry: "goal", action: "", goal: "", actions: [] }, reply => {
+      if (reply.actions?.length) setPlan({ actions: reply.actions, action: "", date: boundedDate(reply.suggestedDate), text: "" });
+    }, "goals");
+  }
+  function boundedDate(value?: string) {
+    return value && value >= edit.source.start && value <= edit.source.end ? value : edit.source.end;
   }
   async function next() {
     setError("");
+    if (redesigned && stage === "question" && pendingReply.current) {
+      if (answers.length >= coachContextLimits.answers) { setError("We still need more context. Go back or continue writing manually."); return; }
+      const pending = pendingReply.current;
+      const nextAnswers = [...answers, { question, answer }];
+      if (await guidedRequest(pending.stage, { ...pending.input, answers: nextAnswers, question, answer }, pending.apply, pending.origin)) setAnswers(nextAnswers);
+      return;
+    }
     if (stage === "refine") {
       if (!improvement.trim()) {
-        setStage("goals");
+        await openGoals();
+        return;
+      }
+      if (redesigned) {
+        await guidedRequest("objective", { ...context(), entry: "objective", concern: improvement }, result => {
+          if (!result.objective) return;
+          update({ type: "objective-values", values: { text: result.objective } });
+          setRecommended(result.recommendedKind);
+          setRecommendedInitiatives(result.initiativeIds ?? []);
+          setStage("objective");
+        });
         return;
       }
       const result = await suggest("objective", {
@@ -270,15 +328,19 @@ export function ObjectiveEditor({
       return;
     }
     if (stage === "work" || stage === "question") {
+      if (redesigned && answers.length >= coachContextLimits.answers) {
+        setError("We still need more context. You can go back to describe your work or continue writing manually.");
+        return;
+      }
       const nextAnswers =
         stage === "question" ? [...answers, { question, answer }] : answers;
       const input = { ...context(), answers: nextAnswers };
-      const cacheKey = JSON.stringify([work, nextAnswers]);
+      const cacheKey = JSON.stringify([work, nextAnswers, ...(redesigned ? [chosenKind] : [])]);
       const cached = exploration.current.get(cacheKey);
       const result =
         cached?.suggestion ??
         (await suggest(
-          nextAnswers.length >= 3 ? "objective" : "clarify",
+          !redesigned && nextAnswers.length >= 3 ? "objective" : "clarify",
           input,
         ));
       if (!result) return;
@@ -298,6 +360,7 @@ export function ObjectiveEditor({
         setRecommendedInitiatives(result.initiativeIds ?? []);
         setStage("objective");
       } else {
+        if (redesigned && !result.question) return;
         setQuestion(result.question ?? "Who benefits from this work?");
         setOptions(result.options ?? []);
         setAnswer(cached?.answer ?? "");
@@ -308,17 +371,32 @@ export function ObjectiveEditor({
         setError(alignmentError);
         return;
       }
-      setStage("goals");
+      await openGoals();
     } else if (stage === "goals") {
       if (edit.goals.some((g) => !g.trim())) {
         setError("Write or remove the empty SMART goal before continuing.");
         return;
       }
-      setStage("check");
+      if (redesigned) {
+        await guidedRequest("review", context(), reply => {
+          if (reply.review || reply.concern) { setReview(reply.review ?? ""); setStage("check"); }
+        });
+      } else setStage("check");
     } else if (stage === "action") {
+      if (redesigned && (!plan.date || plan.date < edit.source.start || plan.date > edit.source.end)) {
+        setError("Choose a target date within this position focus period."); return;
+      }
       const signature = plan.action + "\n" + plan.date;
       if (plan.text && plan.generatedFor === signature) {
         setStage("goal");
+        return;
+      }
+      if (redesigned) {
+        await guidedRequest("goal", { ...context(), entry: "goal" }, reply => {
+          if (!reply.goal) return;
+          setPlan(old => ({ ...old, text: reply.goal!, generatedFor: signature, edited: false }));
+          setStage("goal");
+        });
         return;
       }
       const result = await suggest("goal", { ...context(), entry: "goal" });
@@ -345,6 +423,16 @@ export function ObjectiveEditor({
       action: "",
       goal: "",
     };
+    if (redesigned) {
+      if (plan.actions.length) { setStage("action"); return; }
+      setPlan({ actions: [], action: "", date: edit.source.end, text: "" });
+      await guidedRequest("actions", clean, reply => {
+        if (!reply.actions?.length) return;
+        setPlan({ actions: reply.actions, action: "", date: boundedDate(reply.suggestedDate), text: "" });
+        setStage("action");
+      });
+      return;
+    }
     const result = await suggest("actions", clean);
     if (result) {
       setPlan({
@@ -358,7 +446,11 @@ export function ObjectiveEditor({
   }
   function back() {
     setError("");
-    if (stage === "question") {
+    if (redesigned && pendingReply.current) {
+      setStage(pendingReply.current.origin);
+      pendingReply.current = null;
+      setConcern("");
+    } else if (stage === "question") {
       const previous = answers.at(-1);
       if (previous) {
         setAnswers(answers.slice(0, -1));
@@ -415,8 +507,11 @@ export function ObjectiveEditor({
       <ObjectiveTypeChoices
         kind={edit.kind}
         recommended={method === "guided" ? recommended : undefined}
-        onChange={(kind) => onChange({ type: "kind", kind })}
+        onChange={(kind) => { onChange({ type: "kind", kind }); setChosenKind(kind); }}
       />
+      {redesigned && method === "guided" && recommended && (recommended !== edit.kind || chosenKind === "unsure") && (
+        <p>The coach suggests {objectiveTypes[recommended].label}. <button type="button" onClick={() => { onChange({ type: "kind", kind: recommended }); setChosenKind(recommended); }}>Switch to {objectiveTypes[recommended].label}</button></p>
+      )}
       <InitiativeChoices
         selection={edit.alignment}
         readiness={edit.initiatives}
@@ -461,6 +556,10 @@ export function ObjectiveEditor({
           </div>
         ))}
       </div>
+      {redesigned && method === "guided" && stage === "goals" && !!plan.actions.length && <div className="guided-choices">
+        <h3>Possible goals</h3>
+        {plan.actions.map(action => <button type="button" key={action} onClick={() => { setPlan({ ...plan, action, text: "" }); setStage("action"); }}>{action}</button>)}
+      </div>}
       <button type="button" onClick={() => void addGoal()}>
         Add SMART goal
       </button>
@@ -497,7 +596,7 @@ export function ObjectiveEditor({
         </h1>
         {method !== "choose" && (
           <div className="authoring-method">
-            <span>{method === "guided" ? "AI guided" : "Manual"}</span>
+            <span aria-current={redesigned ? "true" : undefined}>{redesigned ? `Current method: ${method === "guided" ? "Guide with AI" : "Write myself"}` : method === "guided" ? "AI guided" : "Manual"}</span>
             {available && (
               <button
                 type="button"
@@ -507,7 +606,7 @@ export function ObjectiveEditor({
                   switchMethod(method === "manual" ? "guided" : "manual")
                 }
               >
-                {method === "manual" ? "Guide with AI" : "Write myself"}
+                {redesigned ? "Switch to " : ""}{method === "manual" ? "Guide with AI" : "Write myself"}
               </button>
             )}
           </div>
@@ -556,6 +655,13 @@ export function ObjectiveEditor({
               <>
                 {stage === "work" && (
                   <div className="field">
+                    {redesigned && <fieldset className="objective-types">
+                      <legend>What type of objective are you drafting?</legend>
+                      {([...Object.keys(objectiveTypes), "unsure"] as Array<keyof typeof objectiveTypes | "unsure">).map(kind => <label className="type-choice" key={kind}>
+                        <input type="radio" name="starting-kind" checked={chosenKind === kind} onChange={() => { setChosenKind(kind); if (kind !== "unsure") onChange({ type: "kind", kind }); }} />
+                        <span>{kind === "unsure" ? "Not sure" : objectiveTypes[kind].label}</span>
+                      </label>)}
+                    </fieldset>}
                     <label htmlFor="project-work">Your work</label>
                     <textarea
                       id="project-work"
@@ -660,6 +766,8 @@ export function ObjectiveEditor({
                       <input
                         id="goal-date"
                         type="date"
+                        min={redesigned ? edit.source.start : undefined}
+                        max={redesigned ? edit.source.end : undefined}
                         value={plan.date}
                         onChange={(e) =>
                           setPlan({ ...plan, date: e.target.value })
@@ -693,6 +801,8 @@ export function ObjectiveEditor({
                   </section>
                 )}
                 {stage === "check" && (
+                  <>
+                  {redesigned && review && <section aria-label="Coach review"><h2>Coach review</h2><p>{review}</p></section>}
                   <FocusObjective
                     focus={{
                       ...edit.source,
@@ -708,10 +818,13 @@ export function ObjectiveEditor({
                     }}
                     index={edit.section}
                   />
+                  </>
                 )}
               </>
             )}
           </fieldset>
+          {redesigned && concern && method === "guided" && <p role="status">{concern}</p>}
+          {redesigned && canSave && !edit.goals.some(g => g.trim()) && <p role="status">No SMART goals yet. You can save this draft and add goals later. Goals make the objective actionable.</p>}
           {error && <p role="alert">{error}</p>}
           <div className="authoring-actions">
             <button type="button" disabled={busy} onClick={cancel}>
@@ -764,7 +877,7 @@ export function ObjectiveEditor({
                 className="primary"
                 disabled={
                   busy ||
-                  (stage === "work" && !work.trim()) ||
+                  (stage === "work" && (!work.trim() || (redesigned && !chosenKind))) ||
                   (stage === "question" && !answer.trim()) ||
                   (stage === "objective" && !edit.text.trim()) ||
                   (stage === "action" && (!plan.action.trim() || !plan.date))

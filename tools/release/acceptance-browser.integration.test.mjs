@@ -10,7 +10,7 @@ import { migrate } from '../../dist/server/schema.js';
 import { runAcceptanceBrowser } from './acceptance-browser.mjs';
 import { withAcceptanceFixture } from './acceptance-fixture.mjs';
 
-async function fixture(work, { rejectFocusSave = false, rejectImageSave = false, allowUnrequestedConfirmation = false, rejectSelfReview = false, directionDelay = 0, coach } = {}) {
+async function fixture(work, { rejectFocusSave = false, rejectImageSave = false, allowUnrequestedConfirmation = false, rejectSelfReview = false, directionDelay = 0, coach, redesigned = true } = {}) {
   const database = await privilegeFixture();
   const server = createServer();
   try {
@@ -46,7 +46,7 @@ async function fixture(work, { rejectFocusSave = false, rejectImageSave = false,
         else next();
       });
     }
-    app.use(createApp(database.runtime, { origin, coach, features: resolveFeatureConfig({}, 'stage') }));
+    app.use(createApp(database.runtime, { origin, coach, features: resolveFeatureConfig({ LANTERN_FEATURES: `coach-redesign=${redesigned ? 'on' : 'off'}` }, 'stage') }));
     app.use(express.static('dist/client'));
     server.on('request', app);
     await withAcceptanceFixture(database.migration, async fixture => {
@@ -136,17 +136,18 @@ async function withProvider(work, { primaryFails = false, bothFail = false } = {
     let raw = '';
     for await (const chunk of request) raw += chunk;
     const body = JSON.parse(raw);
-    const { stage } = JSON.parse(body.messages.at(-1).content);
+    const { stage, context } = JSON.parse(body.messages.at(-1).content);
     calls.push({ path: request.url, stage });
     if (bothFail || (primaryFails && request.url === '/primary/v1/messages')) {
       response.writeHead(503).end('{}'); return;
     }
-    const value = stage === 'clarify'
+    const value = stage === 'clarify' && !context.answers.length
       ? { ready: false, question: 'Who benefits from this work?', options: ['Engineers'] }
-      : stage === 'objective'
+      : stage === 'objective' || stage === 'clarify'
         ? { objective: 'Help engineers diagnose build failures', title: 'Synthetic diagnostics', initiativeIds: [] }
         : stage === 'actions'
           ? { actions: ['Review three failed builds', 'Try clearer diagnostic messages'], suggestedDate: '2026-11-30' }
+          : stage === 'review' ? { review: 'The goal supports this objective.' }
           : { goal: 'Review three failed builds by the selected date and record diagnostic steps.' };
     response.setHeader('Content-Type', 'application/json');
     response.end(JSON.stringify(request.url.startsWith('/primary')
@@ -167,16 +168,17 @@ async function withProvider(work, { primaryFails = false, bothFail = false } = {
   }
 }
 
-for (const primaryFails of [false, true]) {
-  test(`deployed coaching journey saves and submits generated work (${primaryFails ? 'fallback' : 'primary'})`, { timeout: 120000 }, async () => {
+for (const redesigned of [false, true]) for (const primaryFails of [false, true]) {
+  test(`deployed coaching journey saves and submits generated work (${primaryFails ? 'fallback' : 'primary'}, ${redesigned ? 'redesigned' : 'legacy'})`, { timeout: 120000 }, async () => {
     await withProvider(async (coach, calls) => {
       await fixture(async input => {
         const checks = await runAcceptanceBrowser(input);
         assert.ok(checks.includes('coaching-enabled-journey'));
         assert.ok(!checks.includes('coaching-disabled-manual'));
         assert.ok(calls.some(call => call.stage === 'goal'));
+        assert.equal(calls.some(call => call.stage === 'review'), redesigned);
         assert.equal(calls.some(call => call.path.startsWith('/fallback')), primaryFails);
-      }, { coach });
+      }, { coach, redesigned });
     }, { primaryFails });
   });
 }

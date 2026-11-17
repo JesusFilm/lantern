@@ -721,4 +721,22 @@ export const scenarios: Scenario[] = [
       ],
     },
   },
+  {
+    id: "spanish-professional-development",
+    issues: ["#104"],
+    summary: "A trainer wants Spanish for a clearly described professional use.",
+    role: "Trainer",
+    focus: cycle,
+    work: "I train Spanish-speaking volunteer facilitators. I use an interpreter now and want to develop my Spanish so I can explain our existing workshop exercises and answer basic questions myself. I can practise the exercise instructions with the bilingual colleague who already prepares sessions with me; this is about learning, not promising fluency or removing the interpreter.",
+    member: { answers: ["I want to practise explaining our existing workshop exercises and use my colleague's feedback on whether the instructions are understandable."] },
+    typeChoice: "personal-development",
+    goals: [{ action: "Practise explaining an existing workshop exercise in Spanish with my colleague and use feedback on whether my instructions are understandable.", date: "2027-02-15" }],
+    expect: {
+      kind: "personal-development",
+      criteria: [
+        "Treats Spanish as valid professional development because the trainer has explained its use; does not reject it as a holiday hobby.",
+        "Preserves the learning intent and interpreter support without promising fluency, adding lesson quotas or inventing new arrangements.",
+      ],
+    },
+  },
 ];

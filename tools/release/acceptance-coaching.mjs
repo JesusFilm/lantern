@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { expect } from "@playwright/test";
 
 // Ordinary authenticated routes; the enclosing fixture owns synthetic cleanup.
-export async function runCoachingJourney({ context, origin, runId, enabled }) {
+export async function runCoachingJourney({ context, origin, runId, enabled, redesigned = false }) {
   const page = await context.newPage();
   const title = `Synthetic coaching ${runId}`;
   await page.goto(origin + "/");
@@ -10,14 +10,18 @@ export async function runCoachingJourney({ context, origin, runId, enabled }) {
     .getByRole("button", { name: "New position focus", exact: true })
     .click();
   await page.getByLabel("Document title").fill(title);
-  await page.getByLabel("Period starts").fill("2026-10-01");
-  await page.getByLabel("Period ends").fill("2027-03-31");
+  const today = new Date().toISOString().slice(0, 10);
+  const end = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
+  await page.getByLabel("Period starts").fill(today);
+  await page.getByLabel("Period ends").fill(end);
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   assert.equal(typeof enabled, "boolean");
   const focusId = new URL(page.url()).searchParams.get("focus");
   assert.ok(focusId);
+  let modelTurns = 0;
   async function modelTurn(button) {
+    assert.ok(++modelTurns <= 10, "Coaching acceptance exceeded its turn budget.");
     const [response] = await Promise.all([
       page.waitForResponse(
         (response) =>
@@ -30,6 +34,13 @@ export async function runCoachingJourney({ context, origin, runId, enabled }) {
     assert.equal(response.status(), 200);
     await expect(page.getByRole("dialog")).toBeHidden({ timeout: 60000 });
   }
+  async function answerFollowups() {
+    const answer = page.getByLabel("Your answer", { exact: true });
+    while (await answer.isVisible()) {
+      await answer.fill("I maintain the synthetic build diagnostics tool. I can review three failed builds with engineers and record which troubleshooting steps help them find causes sooner.");
+      await modelTurn(page.getByRole("button", { name: "Next", exact: true }));
+    }
+  }
   await page
     .getByRole("button", { name: "Add objective", exact: true })
     .click();
@@ -37,6 +48,7 @@ export async function runCoachingJourney({ context, origin, runId, enabled }) {
     await page
       .getByRole("button", { name: "Guide with AI", exact: true })
       .click();
+    if (redesigned) await page.getByRole("radio", { name: "Contribution", exact: true }).check();
     await page
       .getByLabel("Your work", { exact: true })
       .fill(
@@ -81,10 +93,16 @@ export async function runCoachingJourney({ context, origin, runId, enabled }) {
     .inputValue();
   let goal;
   if (enabled) {
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-    await modelTurn(
-      page.getByRole("button", { name: "Add SMART goal", exact: true }),
-    );
+    const next = page.getByRole("button", { name: "Next", exact: true });
+    const addGoal = page.getByRole("button", { name: "Add SMART goal", exact: true });
+    if (redesigned) {
+      await modelTurn(next);
+      await answerFollowups();
+      await addGoal.click();
+    } else {
+      await next.click();
+      await modelTurn(addGoal);
+    }
     const targetDate = new Date(Date.now() + 30 * 86400000)
       .toISOString()
       .slice(0, 10);
@@ -94,12 +112,14 @@ export async function runCoachingJourney({ context, origin, runId, enabled }) {
       targetDate,
     );
     await modelTurn(page.getByRole("button", { name: "Next", exact: true }));
+    if (redesigned) await answerFollowups();
     goal = await page.getByLabel("SMART goal", { exact: true }).inputValue();
     assert.ok(goal.trim());
     await page
       .getByRole("button", { name: "Add to objective", exact: true })
       .click();
-    await page.getByRole("button", { name: "Next", exact: true }).click();
+    if (redesigned) { await modelTurn(next); await answerFollowups(); }
+    else await next.click();
     await expect(
       page.getByRole("heading", { name: "Check objective", exact: true }),
     ).toBeVisible();

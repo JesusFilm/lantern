@@ -48,9 +48,9 @@ export interface Checks {
 }
 
 const ids = direction.initiatives.map((i) => i.id);
-const valid = (stage: CoachStage, value: unknown) => {
+const valid = (stage: CoachStage, value: unknown, redesigned = false) => {
   try {
-    validateSuggestion(stage, value, ids);
+    validateSuggestion(stage, value, ids, redesigned);
     return true;
   } catch {
     return false;
@@ -58,7 +58,7 @@ const valid = (stage: CoachStage, value: unknown) => {
 };
 
 /** Explains why a parsed reply failed the shipped response contract. */
-export function schemaCause(stage: CoachStage, content: string): string {
+export function schemaCause(stage: CoachStage, content: string, redesigned = false): string {
   let value: Record<string, unknown>;
   try {
     value = JSON.parse(content.replace(/<think>[\s\S]*?<\/think>/g, "").trim().replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, ""));
@@ -66,20 +66,20 @@ export function schemaCause(stage: CoachStage, content: string): string {
     return "invalid JSON";
   }
   if (!value || typeof value !== "object" || Array.isArray(value)) return "not an object";
-  if (stage === "goal" && !value.goal && typeof value.concern === "string" && value.concern.trim()) return "concern without goal";
-  if (stage !== "clarify" && value.ready === false && typeof value.question === "string") return "question where a draft is required";
-  if (value.recommendedKind !== undefined && !["normal", "personal-development", "leadership"].includes(String(value.recommendedKind)) && valid(stage, { ...value, recommendedKind: undefined }))
+  if (!redesigned && stage === "goal" && !value.goal && typeof value.concern === "string" && value.concern.trim()) return "concern without goal";
+  if (!redesigned && stage !== "clarify" && value.ready === false && typeof value.question === "string") return "question where a draft is required";
+  if (value.recommendedKind !== undefined && !["normal", "personal-development", "leadership"].includes(String(value.recommendedKind)) && valid(stage, { ...value, recommendedKind: undefined }, redesigned))
     return "unknown objective type";
   const withoutEmpty = Object.fromEntries(
     Object.entries(value).filter(([, v]) => v !== "" && v !== null && !(Array.isArray(v) && v.length === 0)),
   );
-  if (valid(stage, withoutEmpty)) return "empty or null optional field";
-  const allowed = ["question", "objective", "goal", "title", "concern", "ready", "options", "actions", "initiativeIds", "suggestedDate", "recommendedKind"];
+  if (valid(stage, withoutEmpty, redesigned)) return "empty or null optional field";
+  const allowed = ["question", "objective", "goal", "title", "concern", "ready", "options", "actions", "initiativeIds", "suggestedDate", "recommendedKind", ...(redesigned ? ["review"] : [])];
   const known = Object.fromEntries(Object.entries(withoutEmpty).filter(([k]) => allowed.includes(k)));
-  if (valid(stage, known)) return "unexpected field";
+  if (valid(stage, known, redesigned)) return "unexpected field";
   const trimmed = Object.fromEntries(Object.entries(known).map(([k, v]) => [k, Array.isArray(v) && k !== "initiativeIds" ? v.slice(0, 3) : v]));
-  if (valid(stage, trimmed)) return "more than three items";
-  if (Array.isArray(trimmed.initiativeIds) && valid(stage, { ...trimmed, initiativeIds: trimmed.initiativeIds.filter((id) => ids.includes(String(id))) }))
+  if (valid(stage, trimmed, redesigned)) return "more than three items";
+  if (Array.isArray(trimmed.initiativeIds) && valid(stage, { ...trimmed, initiativeIds: trimmed.initiativeIds.filter((id) => ids.includes(String(id))) }, redesigned))
     return "unknown initiative";
   if (stage === "actions" && (!Array.isArray(trimmed.actions) || trimmed.actions.length < 2)) return "fewer than two actions";
   if (stage === "clarify" && trimmed.ready === false && !trimmed.question) return "not ready without a question";
@@ -87,7 +87,7 @@ export function schemaCause(stage: CoachStage, content: string): string {
   return "other";
 }
 
-export function checkTranscript(transcript: Transcript, scenario: Scenario): Checks {
+export function checkTranscript(transcript: Transcript, scenario: Scenario, redesigned = false): Checks {
   const coach = transcript.turns.filter((t): t is CoachTurn => t.type === "coach");
   const attempts: Record<string, number> = {};
   const schemaCauses: Record<string, number> = {};
@@ -95,13 +95,13 @@ export function checkTranscript(transcript: Transcript, scenario: Scenario): Che
     for (const attempt of turn.attempts) {
       attempts[attempt.outcome] = (attempts[attempt.outcome] ?? 0) + 1;
       if (attempt.outcome === "schema" || attempt.outcome === "unparseable") {
-        const cause = attempt.content ? schemaCause(turn.stage, attempt.content) : "no content";
+        const cause = attempt.content ? schemaCause(turn.stage, attempt.content, redesigned) : "no content";
         schemaCauses[cause] = (schemaCauses[cause] ?? 0) + 1;
       }
     }
   const succeeded = coach.filter((t) => t.ok);
   const questions = succeeded
-    .filter((t) => t.suggestion?.ready === false && t.suggestion.question)
+    .filter((t) => (redesigned || t.suggestion?.ready === false) && t.suggestion?.question)
     .map((t) => t.suggestion!.question!);
   const objectiveTurn = succeeded.find((t) => (t.step === "work" || t.step === "question") && t.suggestion?.objective && t.suggestion.ready !== false);
   const { outcome } = transcript;
@@ -138,7 +138,7 @@ export function checkTranscript(transcript: Transcript, scenario: Scenario): Che
         }
       : {}),
     concernExpected: !!scenario.expect.concern,
-    concernRaised: outcome.plans.some((plan) => plan.concerns.length > 0),
+    concernRaised: outcome.plans.some((plan) => plan.concerns.length > 0) || (redesigned && succeeded.some(t => !!t.suggestion?.concern)),
     dateIssues,
   };
 }

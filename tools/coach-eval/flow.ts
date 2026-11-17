@@ -1,4 +1,4 @@
-import type { CoachCheckpoint, CoachSuggestion } from "../../shared/coach.js";
+import { coachContextLimits, type CoachCheckpoint, type CoachSuggestion } from "../../shared/coach.js";
 import type { ObjectiveKind } from "../../shared/focus.js";
 import { validateCheckpoint } from "../../server/coach-contract.js";
 import type { Scenario } from "./scenarios.js";
@@ -21,14 +21,15 @@ export async function runCurrentFlow(
   scenario: Scenario,
   coach: CoachCall,
   member: Member,
-  options: { retries?: number } = {},
+  options: { retries?: number; redesigned?: boolean } = {},
 ): Promise<{ turns: Turn[]; outcome: Outcome }> {
   const retries = options.retries ?? 1;
+  const redesigned = options.redesigned ?? false;
   const turns: Turn[] = [];
   const focus = { ...scenario.focus, version: 3 };
   const edit = {
     text: scenario.existing?.objective ?? "",
-    kind: (scenario.existing?.kind ?? "normal") as ObjectiveKind,
+    kind: (scenario.existing?.kind ?? (redesigned && !["keep", "recommended"].includes(scenario.typeChoice) ? scenario.typeChoice : "normal")) as ObjectiveKind,
     initiatives: [] as string[],
     other: false,
     goals: [...(scenario.existing?.goals ?? [])],
@@ -53,14 +54,14 @@ export async function runCurrentFlow(
     answer,
     options: choices,
     objective: edit.text,
-    kind: edit.kind,
+    kind: redesigned && scenario.typeChoice === "recommended" && !edit.text ? undefined : edit.kind,
     initiatives: [...edit.initiatives],
     other: edit.other,
     actions: plan.actions,
     action: plan.action,
     date: plan.date,
     goal: plan.text,
-    siblings: edit.goals.slice(0, 12).map((g) => g.slice(0, 500)),
+    siblings: redesigned ? [...edit.goals] : edit.goals.slice(0, 12).map((g) => g.slice(0, 500)),
     title: focus.title,
     start: focus.start,
     end: focus.end,
@@ -88,7 +89,7 @@ export async function runCurrentFlow(
     input: CoachCheckpoint,
   ): Promise<CoachSuggestion | undefined> {
     try {
-      validateCheckpoint(structuredClone(input));
+      validateCheckpoint(structuredClone(input), redesigned ? coachContextLimits.answers : 3, redesigned ? coachContextLimits.characters : 32000);
     } catch {
       turns.push({ type: "coach", step, stage, context: input, ok: false, error: "request-rejected", elapsedMs: 0, attempts: [] });
       return undefined;
@@ -96,7 +97,17 @@ export async function runCurrentFlow(
     for (let attempt = 0; attempt <= retries; attempt++) {
       const result = await coach(stage, input);
       turns.push({ type: "coach", step, stage, context: input, ...result });
-      if (result.ok && result.suggestion) return result.suggestion;
+      if (result.ok && result.suggestion) {
+        if (redesigned && stage !== "clarify" && result.suggestion.question) {
+          if (answers.length >= 12) return result.suggestion;
+          const q = result.suggestion.question;
+          const a = await member.answer(q, result.suggestion.options ?? []);
+          answers = [...answers, { question: q, answer: a }];
+          turns.push({ type: "member", step: "answer", text: a });
+          return ask(step, stage, { ...input, answers, question: q, answer: a });
+        }
+        return result.suggestion;
+      }
     }
     return undefined;
   }
@@ -124,6 +135,7 @@ export async function runCurrentFlow(
         concern: scenario.improvement,
       });
       if (!result) return { turns, outcome: outcome("coach unavailable") };
+      if (redesigned && !result.objective) return { turns, outcome: outcome("refinement needs member context") };
       // Refinement replaces the wording only; type and alignment stay as saved.
       if (result.objective) edit.text = result.objective;
       recommendedKind = result.recommendedKind;
@@ -137,7 +149,8 @@ export async function runCurrentFlow(
     let step: "work" | "question" = "work";
     for (;;) {
       const nextAnswers = step === "question" ? [...answers, { question, answer }] : answers;
-      const stage: CoachStage = nextAnswers.length >= 3 ? "objective" : "clarify";
+      if (redesigned && nextAnswers.length > 12) return { turns, outcome: outcome("clarification limit; manual continuation available") };
+      const stage: CoachStage = !redesigned && nextAnswers.length >= 3 ? "objective" : "clarify";
       const result = await ask(step, stage, { ...context(), answers: nextAnswers });
       if (!result) return { turns, outcome: outcome("coach unavailable") };
       answers = nextAnswers;
@@ -147,6 +160,7 @@ export async function runCurrentFlow(
         recommendedInitiatives = result.initiativeIds ?? [];
         break;
       }
+      if (redesigned && !result.question) return { turns, outcome: outcome("coach raised a concern; member revision needed") };
       question = result.question ?? "Who benefits from this work?";
       choices = result.options ?? [];
       answer = await member.answer(question, choices);
@@ -156,19 +170,24 @@ export async function runCurrentFlow(
     chooseObjectiveFields();
   }
 
+  let ideas = redesigned && !edit.goals.length ? await ask("actions", "actions", {
+    ...context(), entry: "goal", actions: [], action: "", goal: "",
+  }) : undefined;
   for (const choice of scenario.goals) {
-    const suggested = await ask("actions", "actions", {
+    const suggested = ideas ?? await ask("actions", "actions", {
       ...context(),
       entry: "goal",
       actions: [],
       action: "",
       goal: "",
     });
+    ideas = undefined;
     if (!suggested) return { turns, outcome: outcome("coach unavailable") };
+    if (redesigned && !suggested.actions?.length) return { turns, outcome: outcome("goal needs member context") };
     plan = {
       actions: suggested.actions ?? [],
       action: "",
-      date: suggested.suggestedDate ?? focus.end,
+      date: redesigned && suggested.suggestedDate && (suggested.suggestedDate < focus.start || suggested.suggestedDate > focus.end) ? focus.end : suggested.suggestedDate ?? focus.end,
       text: "",
     };
     const action =
@@ -186,12 +205,20 @@ export async function runCurrentFlow(
     plans.push(record);
     plan = { ...plan, action, date };
     turns.push({ type: "member", step: "plan", text: JSON.stringify({ action, date }) });
+    if (redesigned && (date < focus.start || date > focus.end)) {
+      record.concerns.push("Choose a target date within this position focus period.");
+      return { turns, outcome: outcome("target date outside focus period; member correction needed") };
+    }
     const written = await ask("goal", "goal", { ...context(), entry: "goal" });
-    if (!written?.goal) return { turns, outcome: outcome("coach unavailable") };
+    if (!written?.goal) return { turns, outcome: outcome(written ? "goal needs member context" : "coach unavailable") };
     record.goal = written.goal;
     if (written.concern) record.concerns.push(written.concern);
     edit.goals.push(written.goal);
     plan = { actions: [], action: "", date: plan.date, text: "" };
+  }
+  if (redesigned) {
+    const checked = await ask("review", "review", context());
+    if (!checked?.review && !checked?.concern) return { turns, outcome: outcome("review unavailable") };
   }
   return { turns, outcome: outcome() };
 }
