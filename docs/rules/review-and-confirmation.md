@@ -34,7 +34,7 @@ In effect · Owner decision, 17 Nov 2026 · [#153](https://github.com/JesusFilm/
 
 Saving does not request review or confirm agreement; requesting review does not confirm it. Confirmation records agreement after review. Agreement can be reached offline, but the explicit request and confirmation in Lantern are still required; a note, waiting period and second reviewer are not mandatory. For a career lead's own focus, discussion with a senior or manager is optional (RC-06).
 
-Current interface and enforcement: the member-focus confirmation dialog refers to a discussion, but Lantern does not verify that a conversation occurred. The owner and career lead can use review notes; see RC-11. This observation does not change the expected agreement or establish a new approval step.
+Current interface and enforcement: the member-focus confirmation dialog refers to a discussion. In the review-request view, a career lead confirming a member's focus must tick an attestation that they discussed and agreed it; a lead confirming their own focus attests that they reviewed it. The server does not independently verify a conversation or agreement. The owner and career lead can use review notes; see RC-11. These interface details do not change the expected agreement or establish a second reviewer.
 
 Rationale (inferred): requesting and confirming are deliberate actions by the focus owner and career lead.
 
