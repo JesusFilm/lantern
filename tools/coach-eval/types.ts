@@ -71,6 +71,7 @@ export interface Outcome {
 }
 
 export interface Transcript {
+  flow?: "legacy" | "redesigned";
   scenario: string;
   target: string;
   repeat: number;

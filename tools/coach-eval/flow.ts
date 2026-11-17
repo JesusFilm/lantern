@@ -218,6 +218,7 @@ export async function runCurrentFlow(
   }
   if (redesigned) {
     const checked = await ask("review", "review", context());
+    if (checked?.question) return { turns, outcome: outcome("review needs member context") };
     if (!checked?.review && !checked?.concern) return { turns, outcome: outcome("review unavailable") };
   }
   return { turns, outcome: outcome() };

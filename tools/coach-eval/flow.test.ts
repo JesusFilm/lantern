@@ -120,3 +120,13 @@ test("replay preserves historical request context and stops on unresolved refine
   assert.equal(outcome.completed, false);
   assert.deepEqual(paused.calls.map(c => c.stage), ["objective"]);
 });
+
+test("an outstanding review question at the answer limit is not a completed session", async () => {
+  const { coach } = scripted({
+    clarify: [...Array.from({ length: 12 }, (_, i) => ({ question: `Fact ${i}?`, ready: false })), { objective: "Help staff", ready: true }],
+    actions: [{ actions: ["Check needs"], suggestedDate: "2027-02-01" }],
+    review: [{ question: "Who can help?", concern: "More context is needed." }],
+  });
+  const { outcome } = await runCurrentFlow({ ...base, goals: [] }, coach, { answer: async () => "Not sure" }, { redesigned: true });
+  assert.equal(outcome.completed, false);
+});

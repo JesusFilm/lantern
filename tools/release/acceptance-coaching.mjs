@@ -4,6 +4,13 @@ import { expect } from "@playwright/test";
 // Ordinary authenticated routes; the enclosing fixture owns synthetic cleanup.
 export async function runCoachingJourney({ context, origin, runId, enabled, redesigned = false }) {
   const page = await context.newPage();
+  let modelTurns = 0;
+  // Bound every POST, including retries started by ordinary editor controls.
+  await page.route("**/api/coach/suggest", async route => {
+    if (route.request().method() === "POST" && ++modelTurns > 10) {
+      await route.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "Acceptance coaching turn limit reached." }) });
+    } else await route.continue();
+  });
   const title = `Synthetic coaching ${runId}`;
   await page.goto(origin + "/");
   await page
@@ -19,9 +26,7 @@ export async function runCoachingJourney({ context, origin, runId, enabled, rede
   assert.equal(typeof enabled, "boolean");
   const focusId = new URL(page.url()).searchParams.get("focus");
   assert.ok(focusId);
-  let modelTurns = 0;
   async function modelTurn(button) {
-    assert.ok(++modelTurns <= 10, "Coaching acceptance exceeded its turn budget.");
     const [response] = await Promise.all([
       page.waitForResponse(
         (response) =>
@@ -58,7 +63,8 @@ export async function runCoachingJourney({ context, origin, runId, enabled, rede
     await modelTurn(next);
     const objectiveField = page.getByLabel("Objective", { exact: true }),
       answer = page.getByLabel("Your answer", { exact: true });
-    for (let turn = 0; turn < 3; turn++) {
+    if (redesigned) await answerFollowups();
+    else for (let turn = 0; turn < 3; turn++) {
       await expect(objectiveField.or(answer)).toBeVisible();
       if (await objectiveField.isVisible()) break;
       await answer.fill(

@@ -130,7 +130,7 @@ test('deployed acceptance waits for delayed initiative choices before editing an
   }, { directionDelay: 750 });
 });
 
-async function withProvider(work, { primaryFails = false, bothFail = false } = {}) {
+async function withProvider(work, { primaryFails = false, bothFail = false, budgetProbe = false, clarificationQuestions = 1 } = {}) {
   const calls = [];
   const upstream = createServer(async (request, response) => {
     let raw = '';
@@ -141,7 +141,10 @@ async function withProvider(work, { primaryFails = false, bothFail = false } = {
     if (bothFail || (primaryFails && request.url === '/primary/v1/messages')) {
       response.writeHead(503).end('{}'); return;
     }
-    const value = stage === 'clarify' && !context.answers.length
+    const value = budgetProbe && stage === 'actions' && calls.filter(c => c.stage === 'actions').length === 1
+      ? { concern: 'Choose an action within your control.' }
+      : budgetProbe && stage === 'goal' ? { question: 'What evidence will you record?', ready: false }
+      : stage === 'clarify' && context.answers.length < clarificationQuestions
       ? { ready: false, question: 'Who benefits from this work?', options: ['Engineers'] }
       : stage === 'objective' || stage === 'clarify'
         ? { objective: 'Help engineers diagnose build failures', title: 'Synthetic diagnostics', initiativeIds: [] }
@@ -193,4 +196,27 @@ test('a provider outage blocks enabled coaching acceptance and revokes synthetic
       }
     }, { coach });
   }, { bothFail: true });
+});
+
+
+test('deployed coaching caps all inference paths at ten requests, including retrying concern-only goal ideas', { timeout: 120000 }, async () => {
+  await withProvider(async (coach, calls) => {
+    await fixture(async input => {
+      await assert.rejects(runAcceptanceBrowser(input), { message: 'Staging acceptance failed [coaching-enabled-journey].' });
+      assert.equal(calls.length, 10);
+      assert.equal(calls.filter(call => call.stage === 'actions').length, 2);
+    }, { coach });
+  }, { budgetProbe: true });
+});
+
+
+test('deployed redesigned coaching can answer four clarification questions before drafting', { timeout: 120000 }, async () => {
+  await withProvider(async (coach, calls) => {
+    await fixture(async input => {
+      const checks = await runAcceptanceBrowser(input);
+      assert.ok(checks.includes('coaching-enabled-journey'));
+      assert.equal(calls.filter(call => call.stage === 'clarify').length, 5);
+      assert.equal(calls.length, 8);
+    }, { coach });
+  }, { clarificationQuestions: 4 });
 });

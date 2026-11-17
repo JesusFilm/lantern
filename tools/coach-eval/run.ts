@@ -64,10 +64,11 @@ function readJson<T>(file: string): T {
 
 function loadTranscripts(dir: string, only?: string[]): Transcript[] {
   const root = join(dir, "transcripts");
+  const flow: Transcript["flow"] = existsSync(join(dir, "run.json")) && readJson<{ flow?: string }>(join(dir, "run.json")).flow?.startsWith("coach-redesign") ? "redesigned" : "legacy";
   if (!existsSync(root)) return [];
   return readdirSync(root)
     .filter((target) => !only || only.includes(target))
-    .flatMap((target) => readdirSync(join(root, target)).map((file) => readJson<Transcript>(join(root, target, file))))
+    .flatMap((target) => readdirSync(join(root, target)).map((file) => ({ ...readJson<Transcript>(join(root, target, file)), flow })))
     .sort((a, b) => a.target.localeCompare(b.target) || a.scenario.localeCompare(b.scenario) || a.repeat - b.repeat);
 }
 
@@ -131,6 +132,7 @@ async function transcripts() {
     try {
       const result = await runCurrentFlow(scenario, coachCaller(targets[target]!, env, true), memberFor(scenario, env), { redesigned: true });
       const transcript: Transcript = {
+        flow: "redesigned",
         scenario: scenario.id,
         target,
         repeat,

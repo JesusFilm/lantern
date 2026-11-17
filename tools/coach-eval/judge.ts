@@ -88,7 +88,10 @@ export function renderTranscript(transcript: Transcript, scenario: Scenario): st
     }
     const s = turn.suggestion!;
     const concern = s.concern ? ` Concern: ${quote(s.concern)}` : "";
-    if (s.question)
+    const showsQuestion = s.question && (turn.stage === "clarify"
+      ? !(s.objective && s.ready !== false)
+      : transcript.flow === "redesigned");
+    if (showsQuestion && s.question)
       lines.push(`[Coach question] ${quote(s.question)}${s.options?.length ? " Options: " + s.options.map(quote).join(" | ") : ""}${concern}`);
     else if (turn.stage === "review") lines.push(`[Coach review] ${quote(s.review ?? "")}${concern}`);
     else if (turn.stage === "actions")
