@@ -26,12 +26,25 @@ test("member review status distinguishes unsent changes from confirmation", asyn
     const status = page.locator(".focus-review-actions");
     await page.goto(f.origin + "/?focus=" + focus.id);
     await expect(status).toContainText("Review requested");
+    const resendGuidance = page.getByText("You have changed this focus since sending it for review. Open Review & discussion and send the latest saved version before it can be confirmed.", { exact: true });
+    await expect(resendGuidance).toHaveCount(0);
     const updated = await f.request("member", "/api/focuses/" + focus.id, "PUT", { ...draft, title: "Updated review status", version: focus.version });
     assert.equal(updated.status, 200);
     const next = await updated.json();
     await page.reload();
     await expect(status).toContainText("Changes not sent");
-    assert.equal((await f.request("member", path + "/request", "POST", { version: next.version })).status, 200);
+    await expect(resendGuidance).toBeVisible();
+    for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 667, height: 375 }, { width: 768, height: 1024 }, { width: 1280, height: 900 }]) {
+      await page.setViewportSize(viewport);
+      await expect(resendGuidance).toBeVisible();
+      assert.equal(await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth"), true, `No horizontal overflow at ${viewport.width}px`);
+    }
+    await page.getByRole("button", { name: "Review & discussion", exact: true }).click();
+    await page.getByRole("button", { name: "Send changes for review", exact: true }).click();
+    await page.getByRole("button", { name: "← Position focuses", exact: true }).click();
+    await page.getByRole("button", { name: "Updated review status", exact: true }).click();
+    await expect(status).toContainText("Review requested");
+    await expect(resendGuidance).toHaveCount(0);
     assert.equal((await f.request("lead", path + "/confirm", "POST", { version: next.version })).status, 200);
     const record = await (await f.request("member", path)).json();
     assert.equal(record.focus.version, next.version + 1);
