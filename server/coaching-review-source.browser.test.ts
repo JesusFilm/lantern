@@ -154,6 +154,11 @@ test("review navigation preserves dirty notes when discard is declined", async (
       },
     );
     assert.equal(requested.status, 200);
+    // A new saved version enables the request composer while keeping discussion available.
+    assert.equal((await f.request("member", "/api/focuses/" + source.id, "PUT", {
+      title: source.title, start: source.start, end: source.end,
+      sections: source.sections, version: source.version,
+    })).status, 200);
     const context = await browser.newContext();
     await context.addCookies([
       { name: "lantern-session", value: "member", url: f.origin },

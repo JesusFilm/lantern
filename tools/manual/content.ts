@@ -298,11 +298,33 @@ export const chapters: Chapter[] = [
         tryIt: ["Open a draft with a Contribution objective and at least one goal.", "Choose **Review & discussion**.", "Add an optional ① note and choose ② **Send request**."],
         check: [
           "The career lead sees the request under Review requests.",
-          "A focus without a Contribution objective and goal cannot be sent.",
+          "Sending disables note entry; a failed send retains the note for retry.",
           "A request without a note succeeds and leaves an editable draft.",
           "After edits, send the newer saved version before confirmation.",
         ],
         shots: [{ id: "review-request", persona: "member", path: draft, act: click("Review & discussion"), ready: heading("Request review", 2), mode: longPage, highlight: ['role=textbox[name="Note to career lead · optional"]', 'role=button[name="Send request"]'], caption: "Review & discussion" }],
+      },
+      {
+        kind: "feature",
+        title: "When a review request is unavailable",
+        roles: ["Member", "Career lead"],
+        summary: "Notes remain optional. Note and Send share one disabled state and an accessible reason.",
+        tryIt: ["As each role, open review for blank, development-only and no-goal drafts.", "Save a Contribution with a SMART goal; reopen review."],
+        check: ["Reason is beside Send; above it on phones.", "Saving enables both without sending.", "Sending, stale, requested and locked states explain why both are disabled.", "With retained text, open **Copy unsent note** and select/copy using the keyboard."],
+        shots: [
+          { id: "request-missing-contribution", persona: "member", path: (ids) => "/?focus=" + ids.missingContributionFocus, act: click("Review & discussion"), ready: heading("Request review", 2), mode: { kind: "element", target: ".cp-request", padding: 16 }, caption: "Member: missing Contribution objective" },
+          { id: "request-missing-goal", persona: "lead", device: "phone", path: (ids) => "/?focus=" + ids.incompleteFocus, act: click("Review & discussion"), ready: heading("Request review", 2), mode: { kind: "element", target: ".cp-request", padding: 0 }, caption: "Own focus: Contribution needs a goal" },
+          {
+            id: "request-readiness-recovered", persona: "member", path: (ids) => "/?focus=" + ids.missingContributionFocus, mutates: true,
+            act: async (page) => {
+              await click("Edit objective")(page);
+              await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+              await click("Save objective", "Review & discussion")(page);
+            },
+            ready: (page) => page.locator('.cp-request button:not([disabled])').filter({ hasText: "Send request" }),
+            mode: { kind: "element", target: ".cp-request", padding: 16 }, caption: "Saved Contribution and goal: ready, note optional",
+          },
+        ],
       },
       {
         kind: "feature",
@@ -364,7 +386,7 @@ export const chapters: Chapter[] = [
         tryIt: ["Try blank, no-goal and development-only drafts.", "View an unrequested draft as its career lead.", "Edit a requested focus without sending changes.", "Add missing content and send the latest version."],
         check: ["No unusable confirmation action or dialog is offered.", "Inline reasons say Contribution and work on phones.", "Sending the latest version restores eligibility.", "Direct ineligible attempts preserve the draft."],
         shots: [
-          { id: "confirm-incomplete", persona: "lead", path: (ids) => "/?focus=" + ids.incompleteFocus, ready: heading("Morgan's unfinished draft"), caption: "Missing Contribution objective and goal" },
+          { id: "confirm-incomplete", persona: "lead", path: (ids) => "/?focus=" + ids.incompleteFocus, ready: heading("Morgan's unfinished draft"), caption: "Contribution objective needs a SMART goal" },
           { id: "confirm-unrequested", persona: "lead", device: "phone", path: (ids) => `/?page=department&member=${ids.member}&memberFocus=${ids.draftFocus}`, ready: heading("First half 2027"), caption: "Request the saved version first" },
           { id: "confirm-unsent", persona: "lead", path: (ids) => `/?page=department&member=${ids.peer}&memberFocus=${ids.staleReviewFocus}`, ready: heading("Changes not yet sent"), caption: "Send the latest saved changes" },
         ],
@@ -377,7 +399,7 @@ export const chapters: Chapter[] = [
         tryIt: ["Request your saved focus without a note.", "Open your focus in **Review requests**.", "Review and tick the self-review box.", "Confirm and reload; check your name and date."],
         check: ["Requesting leaves an editable draft.", "Request, ① note and lock copy fit self-review.", "After edits, send the latest version again.", "Members cannot self-confirm or read others’ requests."],
         shots: [
-          { id: "own-review-request", persona: "lead", device: "phone", path: (ids) => "/?focus=" + ids.leadOwnRequestedFocus, act: click("Review & discussion"), ready: heading("Request review", 2), mode: { kind: "element", target: ".cp-request", padding: 16 }, highlight: ['role=textbox[name="Review note · optional"]'], caption: "Your own review request; a note is optional" },
+          { id: "own-review-request", persona: "lead", device: "phone", path: (ids) => "/?focus=" + ids.leadOwnRequestedFocus, act: click("Review & discussion"), ready: heading("Request review", 2), mode: { kind: "element", target: ".cp-request", padding: 0 }, highlight: ['role=textbox[name="Review note · optional"]'], caption: "Your own review request; a note is optional" },
           { id: "own-review-confirm", persona: "lead", path: "/?page=reviews", act: async (page) => { await ownReview(page); await page.getByRole("checkbox", { name: "I have reviewed this focus and am ready to confirm it.", exact: true }).check(); }, ready: role("button", "Confirm focus"), mode: { kind: "element", target: ".cp-confirm", padding: 24 }, caption: "Self-review before confirmation" },
         ],
       },

@@ -72,6 +72,14 @@ export function CoachWorkspace({
     request = record?.requests.at(-1),
     locked = record?.focus.status === "confirmed";
   const ownReview = record?.memberId === actor && session.department?.role === "career-lead";
+  const staleDisplayedVersion = record && displayedVersion !== undefined && displayedVersion !== record.focus.version;
+  const requestUnavailableReason = !record ? ""
+    : locked ? "This focus is confirmed and locked. No further review requests can be sent."
+    : busy ? "Sending your review request. Please wait."
+    : staleDisplayedVersion ? "This focus has changed. Return to the focus and reload before requesting review."
+    : request?.document.version === record.focus.version ? "Review has already been requested for this saved version. You can add a note in Review discussion."
+    : !hasReviewableContribution(record.focus) ? "Add a Contribution objective with at least one SMART goal before requesting review."
+    : "";
   const displayedFocus = view === "review" && request ? record?.focus.id : undefined;
   const unreadIds = JSON.stringify(displayedFocus
     ? record!.notes.filter(n => !record!.readIds.includes(n.id)).map(n => n.id)
@@ -389,13 +397,6 @@ export function CoachWorkspace({
           <h2 id="request-review-title">Request review</h2>
           {ownReview && <p className="cp-muted">Use this opportunity to review your focus again or discuss it with your senior or manager. You can confirm it yourself.</p>}
           {request && comparison(request.document, record.focus)}
-          {displayedVersion !== undefined && displayedVersion !== record.focus.version && <p role="alert">This focus has changed. Return to the focus and reload before requesting review.</p>}
-          {!hasReviewableContribution(record.focus) && (
-            <p>
-              Add a Contribution objective with at least one SMART goal before
-              requesting review.
-            </p>
-          )}
           {request && (
             <button className="link" onClick={() => void review(record)}>
               Review discussion
@@ -405,19 +406,24 @@ export function CoachWorkspace({
           <textarea
             id="review-note"
             value={note}
-            disabled={!!busy}
+            disabled={!!requestUnavailableReason}
+            aria-describedby={requestUnavailableReason ? "request-readiness" : undefined}
             onChange={(e) => setNote(e.target.value)}
           />
-          <div className="cp-nav cp-request-actions">
+          {requestUnavailableReason && note && !busy && (
+            <details className="cp-unsent-note">
+              <summary>Copy unsent note</summary>
+              <label htmlFor="unsent-review-note">Unsent note · select and copy</label>
+              <textarea id="unsent-review-note" value={note} readOnly onFocus={(e) => e.currentTarget.select()} />
+            </details>
+          )}
+          <div className="cp-nav cp-request-actions" title={requestUnavailableReason || undefined}>
+            {requestUnavailableReason && <p id="request-readiness" className="cp-muted" role={staleDisplayedVersion ? "alert" : undefined}>{requestUnavailableReason}</p>}
             <button
               className="primary"
-              disabled={
-                !!busy ||
-                locked ||
-                (displayedVersion !== undefined && displayedVersion !== record.focus.version) ||
-                request?.document.version === record.focus.version ||
-                !hasReviewableContribution(record.focus)
-              }
+              aria-describedby={requestUnavailableReason ? "request-readiness" : undefined}
+              title={requestUnavailableReason || undefined}
+              disabled={!!requestUnavailableReason}
               onClick={async () => {
                 const r = await mutation("/request", "POST", {
                   version: record.focus.version,

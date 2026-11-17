@@ -62,9 +62,23 @@
 }
 .cp-request-actions {
   justify-content: flex-end;
+  gap: var(--space-4);
   margin-top: var(--space-3);
   padding-top: 0;
   border: 0;
+}
+.cp-request-actions > p {
+  flex: 1;
+  margin: 0;
+}
+.cp-request-actions > button {
+  flex-shrink: 0;
+}
+@media (max-width: 620px) {
+  .cp-request-actions > p,
+  .cp-request-actions > button {
+    flex: 0 0 100%;
+  }
 }
 .cp-request {
   padding: var(--panel-padding);
