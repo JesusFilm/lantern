@@ -36,11 +36,11 @@ Live runs read credentials from ~/.config/lantern/coach-eval.env (override with
 COACH_EVAL_ENV): OPENROUTER_API_KEY, QWEN_TOKEN_FILE and AI_GATEWAY_CHAT_BASE_URL.
 Keep that file private and outside Git; results never include credentials.
 
-    npm run coach:eval -- budget
-    npm run coach:eval -- transcripts --run NAME --targets qwen,gemini-flash --repeats 3
-    npm run coach:eval -- judge --run NAME
-    npm run coach:eval -- report --run NAME
-    npm run coach:eval -- review --run NAME --count 20
+    node --import tsx tools/coach-eval/run.ts budget
+    node --import tsx tools/coach-eval/run.ts transcripts --run NAME --targets qwen,gemini-flash --repeats 3
+    node --import tsx tools/coach-eval/run.ts judge --run NAME
+    node --import tsx tools/coach-eval/run.ts report --run NAME
+    node --import tsx tools/coach-eval/run.ts review --run NAME --count 20
 
 Results go to ~/.local/state/lantern-coach-eval/NAME (override with COACH_EVAL_RUNS).
 Commands skip finished transcripts and judgments, so rerunning resumes an interrupted
@@ -51,3 +51,6 @@ Keep Qwen concurrency low because the gateway is shared.
 To evaluate a change, run the same scenarios and repeats on the base and changed
 revisions with the same judge, then compare the reports. Add a scenario for each new
 coaching problem before fixing it.
+
+CI typechecks the harness and runs its offline tests in the typecheck job. The tools
+are deliberately not package scripts, so the QA manual's source fingerprint is unaffected.
