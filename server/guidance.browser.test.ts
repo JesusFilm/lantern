@@ -59,6 +59,15 @@ test(
       const errors: string[] = [];
       page.on("pageerror", (error) => errors.push(error.message));
 
+      await t.test("served guide requires review and does not promise confirmed amendments", async () => {
+        const response = await page.request.get(origin + "/api/guide");
+        assert.equal(response.status(), 200);
+        const content = JSON.stringify(await response.json());
+        assert.match(content, /latest saved version/i);
+        assert.match(content, /request.{0,60}review/i);
+        assert.doesNotMatch(content, /can revise (?:it )?together/i);
+      });
+
       await t.test(
         "an empty workspace explains the process without creating a focus",
         async () => {
@@ -107,9 +116,11 @@ test(
           await expect(
             process.getByText("Once agreed", { exact: true }),
           ).toBeVisible();
+          await expect(page.getByText("Request review of the latest saved version before confirmation. If you save more changes, send them for review again.", { exact: true })).toBeVisible();
+          await expect(page.getByText("Career leads request review of their own focus too. Review it again or discuss it with your senior or manager; you can confirm it yourself without another reviewer or a note.", { exact: true })).toBeVisible();
           await expect(process.getByRole("listitem")).toHaveText([
             "Prepare a small draft",
-            "Talk it through together",
+            "Request review and discuss",
             "Agree, then confirm",
           ]);
           assert.deepEqual(

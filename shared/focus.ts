@@ -31,6 +31,8 @@ export interface PositionFocus extends Omit<FocusDraft, "sections"> {
   version: number;
   updatedAt: string;
   status: "draft" | "confirmed";
+  // Server-derived review state; absent on historical snapshots.
+  latestRequestedVersion?: number | null;
   confirmedAt: string | null;
   confirmedBy: { id: string; name: string } | null;
 }

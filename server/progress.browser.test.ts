@@ -26,6 +26,7 @@ test('member records status and goal note; lead reads progress after reload', {t
   const mc=await browser.newContext({viewport:{width:390,height:844},hasTouch:true}),lc=await browser.newContext();
   await mc.addCookies([{name:'lantern-session',value:member,url:origin}]);await lc.addCookies([{name:'lantern-session',value:lead,url:origin}]);
   const created=await mc.request.post(origin+'/api/focuses',{headers:{Origin:origin},data:{title:'Annual focus',start:'2026-01-01',end:'2026-12-31',sections:[{kind:'normal',objective:'Help onboarding',goals:['Publish a guide']},{kind:'normal',objective:'Improve support',goals:['Update support notes']}]}});const focus=await created.json();
+  assert.equal((await mc.request.post(`${origin}/api/coach/focuses/${focus.id}/request`,{headers:{Origin:origin},data:{version:1}})).status(),200);
   assert.equal((await lc.request.post(`${origin}/api/department/members/${member}/focuses/${focus.id}/confirm`,{headers:{Origin:origin},data:{version:1}})).status(),200);
   const page=await mc.newPage();
   await page.route('**/api/focuses/*/progress',route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Progress temporarily unavailable.'})}));
@@ -127,6 +128,7 @@ test('hidden progress leaves member and lead focus views unchanged', {timeout:45
   const app=createApp(f.runtime,{origin});vite=await viteServer({server:{middlewareMode:{server},hmr:{server}},appType:'spa'});app.use(vite.middlewares);server.on('request',app);
   const mc=await browser.newContext(),lc=await browser.newContext();await mc.addCookies([{name:'lantern-session',value:member,url:origin}]);await lc.addCookies([{name:'lantern-session',value:lead,url:origin}]);
   const response=await mc.request.post(origin+'/api/focuses',{headers:{Origin:origin},data:{title:'Annual focus',start:'2026-01-01',end:'2026-12-31',sections:[{kind:'normal',objective:'Help onboarding',goals:['Publish a guide']}]}});const focus=await response.json();
+  assert.equal((await mc.request.post(`${origin}/api/coach/focuses/${focus.id}/request`,{headers:{Origin:origin},data:{version:1}})).status(),200);
   assert.equal((await lc.request.post(`${origin}/api/department/members/${member}/focuses/${focus.id}/confirm`,{headers:{Origin:origin},data:{version:1}})).status(),200);
   const page=await mc.newPage();await page.goto(`${origin}/?page=focuses&focus=${focus.id}`);await expect(page.getByText('Help onboarding',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Progress & notes'})).toHaveCount(0);
   const leadPage=await lc.newPage();await leadPage.goto(`${origin}/?page=department&member=${member}&memberFocus=${focus.id}`);await expect(leadPage.getByText('Help onboarding',{exact:true})).toBeVisible();await expect(leadPage.getByRole('button',{name:'Progress & notes'})).toHaveCount(0);

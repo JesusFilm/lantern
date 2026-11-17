@@ -26,6 +26,7 @@ export function memberFocusReader(db: Pool) {
         SELECT f.id,f.title,to_char(f.period_start,'YYYY-MM-DD') AS start,
           to_char(f.period_end,'YYYY-MM-DD') AS end,f.sections,f.version,f.updated_at AS "updatedAt",
           f.status,f.confirmed_at AS "confirmedAt",
+          (SELECT max(r.version) FROM focus_review_requests r WHERE r.focus_id=f.id) AS "latestRequestedVersion",
           (SELECT jsonb_build_object('id',lead.id,'name',lead.name) FROM users lead WHERE lead.id=f.confirmed_by) AS "confirmedBy"
         FROM position_focuses f WHERE f.user_id=u.id AND f.department_id=d.id
           AND ($3::text IS NULL OR f.id::text=$3)

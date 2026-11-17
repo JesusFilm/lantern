@@ -89,6 +89,10 @@ test(
       );
       assert.equal(response.status(), 201);
       const focus = (await response.json()) as PositionFocus;
+      const requestReview = async (context: typeof memberContext, id: string, version: number) => {
+        assert.equal((await context.request.post(`${origin}/api/coach/focuses/${id}/request`, { headers: { Origin: origin }, data: { version } })).status(), 200);
+      };
+      await requestReview(memberContext, focus.id, focus.version);
       await memberPage.goto(origin + "/?page=focuses&focus=" + focus.id);
       await expect(
         memberPage.getByRole("button", {
@@ -223,20 +227,8 @@ test(
           "&memberFocus=" +
           partial.id,
       );
-      await leadPage
-        .getByRole("button", { name: "Confirm and lock", exact: true })
-        .click();
-      await leadPage
-        .getByRole("dialog")
-        .getByRole("button", { name: "Confirm and lock", exact: true })
-        .click();
-      await expect(
-        leadPage.getByRole("dialog").getByRole("alert"),
-      ).toContainText("Normal objective");
-      await leadPage
-        .getByRole("dialog")
-        .getByRole("button", { name: "Cancel", exact: true })
-        .click();
+      await expect(leadPage.getByRole("button", { name: "Confirm and lock", exact: true })).toBeDisabled();
+      await expect(leadPage.getByText("Add a Contribution objective with at least one SMART goal before requesting review or confirming.", { exact: true })).toBeVisible();
       assert.equal(
         (
           await memberContext.request.put(
@@ -246,6 +238,8 @@ test(
         ).status(),
         200,
       );
+
+      await requestReview(memberContext, partial.id, 2);
 
       // A stale confirmation cannot lock unseen changes; reopen, then retry a storage failure.
       await leadPage.reload();
@@ -275,6 +269,8 @@ test(
         .getByRole("dialog")
         .getByRole("button", { name: "Cancel", exact: true })
         .click();
+      await leadPage.reload();
+      await requestReview(memberContext, partial.id, 3);
       await leadPage.reload();
       await f.migration.query(
         "ALTER TABLE position_focuses ADD CONSTRAINT synthetic_browser_failure CHECK (title <> 'Revised agreement' OR status='draft')",
@@ -307,6 +303,7 @@ test(
         },
       );
       const own = (await ownResponse.json()) as PositionFocus;
+      await requestReview(leadContext, own.id, own.version);
       await leadPage.goto(origin + "/?focus=" + own.id);
       await leadPage
         .getByRole("button", { name: "Confirm and lock", exact: true })

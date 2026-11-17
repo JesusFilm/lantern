@@ -6,6 +6,7 @@ import { objectiveTypes } from "../workspace/ObjectiveType.js";
 import { FocusDocument } from "../workspace/FocusDocument.js";
 import { formatFocusDate } from "../workspace/focusDate.js";
 import { api } from "../workspace/api.js";
+import { hasReviewableContribution } from "../workspace/reviewEligibility.js";
 import { StatusBadge } from "./StatusBadge.js";
 import "./coach.css";
 import "./status-badge.css";
@@ -70,6 +71,7 @@ export function CoachWorkspace({
   const record = records.find((r) => r.focus.id === selected),
     request = record?.requests.at(-1),
     locked = record?.focus.status === "confirmed";
+  const ownReview = record?.memberId === actor && session.department?.role === "career-lead";
   const displayedFocus = view === "review" && request ? record?.focus.id : undefined;
   const unreadIds = JSON.stringify(displayedFocus
     ? record!.notes.filter(n => !record!.readIds.includes(n.id)).map(n => n.id)
@@ -364,7 +366,7 @@ export function CoachWorkspace({
           {records.map((r) => (
             <section className="cp-card" key={r.focus.id}>
               <h2>
-                {r.memberName} · {r.requests.at(-1)?.document.title ?? r.focus.title}
+                {r.memberId === actor ? "Your review request" : r.memberName} · {r.requests.at(-1)?.document.title ?? r.focus.title}
               </h2>
               <div className="cp-row">
                 <StatusBadge status={r.focus.status === "confirmed" ? "confirmed" : "review-requested"} />
@@ -385,11 +387,10 @@ export function CoachWorkspace({
       {view === "request" && record && (
         <section className="cp-request" aria-labelledby="request-review-title">
           <h2 id="request-review-title">Request review</h2>
+          {ownReview && <p className="cp-muted">Use this opportunity to review your focus again or discuss it with your senior or manager. You can confirm it yourself.</p>}
           {request && comparison(request.document, record.focus)}
           {displayedVersion !== undefined && displayedVersion !== record.focus.version && <p role="alert">This focus has changed. Return to the focus and reload before requesting review.</p>}
-          {!record.focus.sections.some(
-            (s) => s.kind === "normal" && s.goals.length,
-          ) && (
+          {!hasReviewableContribution(record.focus) && (
             <p>
               Add a Contribution objective with at least one SMART goal before
               requesting review.
@@ -400,7 +401,7 @@ export function CoachWorkspace({
               Review discussion
             </button>
           )}
-          <label htmlFor="review-note">Note to career lead · optional</label>
+          <label htmlFor="review-note">{ownReview ? "Review note · optional" : "Note to career lead · optional"}</label>
           <textarea
             id="review-note"
             value={note}
@@ -415,9 +416,7 @@ export function CoachWorkspace({
                 locked ||
                 (displayedVersion !== undefined && displayedVersion !== record.focus.version) ||
                 request?.document.version === record.focus.version ||
-                !record.focus.sections.some(
-                  (s) => s.kind === "normal" && s.goals.length,
-                )
+                !hasReviewableContribution(record.focus)
               }
               onClick={async () => {
                 const r = await mutation("/request", "POST", {
@@ -443,7 +442,7 @@ export function CoachWorkspace({
         <>
           {lead ? <h1>{request.document.title}</h1> : !confirmedView && <h2>Review discussion</h2>}
           {lead && (
-            <p className="muted">{record.memberName}’s position focus</p>
+            <p className="muted">{ownReview ? "Your position focus" : `${record.memberName}’s position focus`}</p>
           )}
           <div className="cp-row cp-between">
             {lead ? <div className="cp-row"><StatusBadge status={locked ? "confirmed" : "review-requested"} />{!locked && record.focus.version !== request.document.version && <StatusBadge status="unsent-changes" />}{record.notes.some(n => n.authorId !== actor && !n.deletedAt && !record.readIds.includes(n.id)) && <StatusBadge status="new-notes" />}<span className="cp-muted">{locked ? "Requested version " + request.document.version : "Draft " + request.document.version}</span></div> : !locked && <span className="cp-muted">{"Review requested · Draft " + request.document.version}</span>}
@@ -459,6 +458,9 @@ export function CoachWorkspace({
               {old && comparison(old, request.document)}
               <FocusDocument focus={request.document} />
               {!locked && (
+                <>
+                {record.focus.version !== request.document.version && <p className="cp-muted">This focus has changed since review was requested. Request review of the latest saved version before confirming.</p>}
+                {ownReview && <p className="cp-muted">Use this opportunity to review your focus again or discuss it with your senior or manager. You can confirm it yourself.</p>}
                 <div className="cp-confirm">
                   <label>
                     <input
@@ -472,7 +474,7 @@ export function CoachWorkspace({
                         )
                       }
                     />
-                    We have discussed and agreed this focus.
+                    {ownReview ? "I have reviewed this focus and am ready to confirm it." : "We have discussed and agreed this focus."}
                   </label>
                   <button
                     className="primary"
@@ -480,9 +482,7 @@ export function CoachWorkspace({
                       confirmed !== request.document.version ||
                       !!busy ||
                       record.focus.version !== request.document.version ||
-                      !record.focus.sections.some(
-                        (s) => s.objective.trim() && s.goals.length,
-                      )
+                      !hasReviewableContribution(record.focus)
                     }
                     onClick={() =>
                       void mutation("/confirm", "POST", {
@@ -493,6 +493,7 @@ export function CoachWorkspace({
                     Confirm focus
                   </button>
                 </div>
+                </>
               )}
             </>
           )}

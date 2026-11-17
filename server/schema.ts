@@ -175,6 +175,24 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
           FOR EACH ROW EXECUTE FUNCTION guard_membership_identity();
         INSERT INTO schema_migrations(version) VALUES(11);`);
     }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=12')).rowCount) {
+      // Protect draft transitions from older application instances during replacement.
+      // Existing confirmed baselines are not revalidated or rewritten.
+      await client.query(`CREATE OR REPLACE FUNCTION guard_focus_review() RETURNS trigger
+        LANGUAGE plpgsql SET search_path FROM CURRENT AS $guard$
+        DECLARE requested integer;
+        BEGIN
+          IF NEW.status='confirmed' AND OLD.status='draft' THEN
+            SELECT version INTO requested FROM focus_review_requests WHERE focus_id=OLD.id ORDER BY version DESC LIMIT 1;
+            IF requested IS DISTINCT FROM OLD.version THEN
+              RAISE EXCEPTION 'Send the latest saved version for review before confirming.' USING ERRCODE='P0409';
+            END IF;
+            DELETE FROM coach_checkpoints WHERE focus_id=OLD.id;
+          END IF;
+          RETURN NEW;
+        END $guard$;
+        INSERT INTO schema_migrations(version) VALUES(12);`);
+    }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
@@ -184,8 +202,11 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10,11)');
-  if (result.rowCount !== 11) throw new Error('Required migration is missing.');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10,11,12)');
+  if (result.rowCount !== 12) throw new Error('Required migration is missing.');
+  const reviewGuard = await database.query(`SELECT 1 FROM pg_trigger WHERE tgrelid='position_focuses'::regclass
+    AND tgname='guard_focus_review' AND tgenabled='O' AND tgfoid='guard_focus_review()'::regprocedure`);
+  if (!reviewGuard.rowCount) throw new Error('Focus review guard is missing.');
   const identityGuard = await database.query(`SELECT 1 FROM pg_trigger WHERE tgrelid='memberships'::regclass
     AND tgname='guard_membership_identity' AND tgenabled='O' AND tgfoid='guard_membership_identity()'::regprocedure`);
   if (!identityGuard.rowCount) throw new Error('Membership identity guard is missing.');

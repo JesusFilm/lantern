@@ -653,3 +653,31 @@ test("the coach feature decides who is offered coaching and who may reach the mo
     }
   }
 });
+
+test('review records and lists identify the server-resolved owner even when member names match', async () => {
+  const f=await coachingFixture();
+  try {
+    await f.admin.query("UPDATE users SET name='Same name' WHERE id=ANY($1::uuid[])",[[f.ids.member,f.ids.lead]]);
+    for(const owner of ['member','lead'] as const) {
+      const created=await f.request(owner,'/api/focuses','POST',draft);
+      assert.equal(created.status,201);
+      const focus=await created.json(),path=`/api/coach/focuses/${focus.id}`;
+      const requested=await f.request(owner,path+'/request','POST',{version:1});
+      assert.equal(requested.status,200);
+      assert.equal((await requested.json()).memberId,f.ids[owner]);
+      for(const actor of [owner,'lead']) {
+        const record=await f.request(actor,path+`?memberId=${f.ids.peer}`);
+        assert.equal(record.status,200);
+        const data=await record.json();
+        assert.equal(data.memberName,'Same name');
+        assert.equal(data.memberId,f.ids[owner]);
+      }
+      const ownList=await (await f.request(owner,'/api/coach/focuses')).json();
+      assert.equal(ownList.find((record:any)=>record.focus.id===focus.id).memberId,f.ids[owner]);
+      assert.equal((await f.request('peer',path)).status,404);
+      assert.equal((await f.request('outsider',path)).status,404);
+    }
+    const leadList=await (await f.request('lead','/api/coach/focuses?view=lead')).json();
+    assert.deepEqual(leadList.map((record:any)=>record.memberId).sort(),[f.ids.lead,f.ids.member].sort());
+  } finally {await f.close();}
+});

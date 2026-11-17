@@ -60,6 +60,7 @@ export function coachStore(db: Pool) {
       ).rows.map((r) => r.id);
       return {
         focus,
+        memberId: a.owner,
         memberName: a.name,
         checkpoint: checkpoint ?? null,
         requests,

@@ -1,5 +1,5 @@
 import type { Ref } from 'react';
-import { ArrowRight, Check, LockKeyhole, MessageCircle, Pencil, UnlockKeyhole } from 'lucide-react';
+import { ArrowRight, LockKeyhole, MessageCircle, Pencil } from 'lucide-react';
 import './procedures-guide.css';
 
 export const procedureSections = ['The year', 'Agree a focus', 'Make a change'] as const;
@@ -34,32 +34,35 @@ function YearCircle({ headingRef }: { headingRef: Ref<HTMLHeadingElement> }) {
       </ol>
     </div>
     <div className="procedure-year-key"><span><i aria-hidden="true" />Focus 01 · Jan–Jun</span><span><i aria-hidden="true" />Focus 02 · Jul–Dec</span></div>
+    <p>Create a new focus for each half-year. Renewal preserves the previous cycle’s agreed focus and history.</p>
   </section>;
 }
 
 function AgreementFlow({ amendment, headingRef }: { amendment: boolean; headingRef: Ref<HTMLHeadingElement> }) {
-  const stages = amendment ? [
-    { icon: UnlockKeyhole, title: 'Unlock revision', who: 'Career lead' },
-    { icon: Pencil, title: 'Amend', who: 'Member' },
-    { icon: MessageCircle, title: 'Agree', who: 'Together' },
-    { icon: LockKeyhole, title: 'Lock in', who: 'Career lead' },
-  ] : [
+  if (amendment) return <section className="procedure-flow-panel">
+    <p className="procedure-timing">Change policy · Not decided</p>
+    <h2 ref={headingRef} tabIndex={-1}>Confirmed focuses stay locked.</h2>
+    <p>Confirmed focuses can’t be edited or unlocked, even by a career lead.</p>
+    <p>The policy for changing a confirmed focus is still undecided, including whether to amend it or create a new focus.</p>
+  </section>;
+  const stages = [
     { icon: Pencil, title: 'Draft', who: 'Member' },
-    { icon: MessageCircle, title: 'Discuss', who: 'Together' },
-    { icon: Check, title: 'Agree', who: 'Together' },
-    { icon: LockKeyhole, title: 'Lock in', who: 'Career lead' },
+    { icon: MessageCircle, title: 'Request review', who: 'Member' },
+    { icon: MessageCircle, title: 'Discuss & agree', who: 'Together' },
+    { icon: LockKeyhole, title: 'Confirm', who: 'Career lead' },
   ];
   return <section className="procedure-flow-panel">
-    <p className="procedure-timing">{amendment ? 'Proposed revision flow · Not available yet' : 'January & July'}</p>
-    <h2 ref={headingRef} tabIndex={-1}>{amendment ? 'Confirmed focuses stay locked.' : 'Start each half together.'}</h2>
-    {amendment && <p>Confirmed focuses can’t be edited or unlocked, even by a career lead.</p>}
-    <ol className="procedure-flow" aria-label={amendment ? 'Make a change' : 'Agree a focus'}>
+    <p className="procedure-timing">January & July</p>
+    <h2 ref={headingRef} tabIndex={-1}>Start each half together.</h2>
+    <ol className="procedure-flow" aria-label="Agree a focus">
       {stages.map((stage, i) => <li key={stage.title}>
         <span className="procedure-flow-icon"><stage.icon size={28} aria-hidden="true" /></span>
         {i < stages.length - 1 && <ArrowRight className="procedure-flow-arrow" size={19} aria-hidden="true" />}
         <strong>{stage.title}</strong><span className="procedure-role">{stage.who}</span>
       </li>)}
     </ol>
+      <p>Request review of the latest saved version before confirmation, including for a career lead’s own focus. Send any later saved changes for review again. After an offline agreement, still request review and confirm in Lantern, immediately or later.</p>
+      <p>For your own focus as career lead, review it again or discuss it with your senior or manager. You can confirm it yourself without another reviewer or a note.</p>
   </section>;
 }
 

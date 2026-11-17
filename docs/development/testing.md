@@ -57,8 +57,8 @@ The [browser runner](../../tools/release/acceptance-browser.mjs) records these t
 | `focus-authoring-persistence` | Create a focus, edit title, add/edit an initiative-aligned objective and SMART goal; reload and check browser plus API persistence. |
 | `authorization-isolation` | Reject another person's direct focus reads/writes and cross-department lead access; allow the scoped lead view; reject member confirmation. |
 | `stale-and-forged-writes` | Reject an old version, forged ownership and foreign Origin; verify the document is unchanged. |
-| `review-requests-and-notes` | Member requests review of a saved focus; lead adds a note; member reads it; verify snapshot persistence, read acknowledgments and participant isolation. No live model is called. |
-| `lead-confirmation-lock` | Lead confirms; both views show the locked document without editing controls and an API edit is rejected. |
+| `review-requests-and-notes` | Reject confirmation before a review request and verify the draft is unchanged. Member requests review of a saved focus; lead adds a note; member reads it; verify snapshot persistence, read acknowledgments and participant isolation. No live model is called. |
+| `lead-confirmation-lock` | Lead confirms the member's requested version; both views show the locked document and an API edit is rejected. The lead then creates their own focus, is blocked before requesting review, sends a request without a note, and self-confirms. Reload and HTTP reads verify self-attribution, content and the edit lock. |
 | `coaching-disabled-manual` / `coaching-enabled-journey` | A second synthetic member creates, saves, reopens and submits a draft. With coaching off, verify inference returns 503 and manual authoring works. With coaching on, use the deployed providers for contribution questions, objective/action suggestions and a member-edited date; verify generated content persists and is submitted. |
 | `account-and-guide` | Edit/reload the member's display name; open the guide and example. |
 | `browser-errors` | Require no page JavaScript errors during the journey. |

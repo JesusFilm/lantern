@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { chromium, type Browser } from "@playwright/test";
-import { capture, contextOptions, watchPage } from "./capture.js";
+import { capture, contextOptions, watchPage, type CaptureMode } from "./capture.js";
 
 let browser: Browser;
 before(async () => { browser = await chromium.launch(); });
@@ -120,6 +120,40 @@ test("content that arrives after a delayed request is captured once it has settl
     assert.equal(await page.textContent("#t"), "Loaded content");
     assert.ok(frame!.image.length > 0);
   } finally { await close(); }
+});
+
+test("capture measures settled content after an in-flight request grows the page", async (t) => {
+  const modes: CaptureMode[] = [
+    { kind: "frames" },
+    { kind: "viewport", crop: "main", cropPadding: 0 },
+    { kind: "tall" },
+    { kind: "element", target: "main", padding: 0 },
+  ];
+  for (const mode of modes) await t.test(mode.kind, async () => {
+    const long = mode.kind === "frames" || mode.kind === "tall";
+    const { page, watcher, close } = await open(`<body style="margin:0"><main style="width:200px">${rows(4)}</main></body>`);
+    try {
+      await page.route("**/growing", async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        await route.fulfill({ body: rows(long ? 40 : 10), headers: { "access-control-allow-origin": "*" } });
+      });
+      const requested = page.waitForRequest("**/growing");
+      await page.evaluate(() => {
+        void fetch("https://manual.invalid/growing").then((r) => r.text()).then((html) => {
+          document.querySelector("main")!.innerHTML = html;
+        });
+      });
+      await requested;
+      const frames = await capture(page, mode, { watcher });
+      if (mode.kind === "frames") {
+        const max = await page.evaluate(() => document.scrollingElement!.scrollHeight - innerHeight);
+        assert.equal(frames.at(-1)!.scrollTop, max, "the last frame reaches the end of the loaded content");
+        await assertCovered(page, frames, undefined, { top: 0, bottom: 0 });
+      } else {
+        assert.deepEqual(frames[0]!.viewport, long ? { width: 400, height: 1600 } : { width: 200, height: 400 }, "capture includes the loaded content, not the loading placeholder dimensions");
+      }
+    } finally { await close(); }
+  });
 });
 
 test("page errors and failed requests make the capture fail", async () => {

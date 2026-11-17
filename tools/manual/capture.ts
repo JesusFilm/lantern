@@ -222,6 +222,8 @@ export async function capture(page: Page, mode: CaptureMode, options: Options): 
   // Tooling may wrap functions passed to page.evaluate with a module helper; define it in the page.
   await page.evaluate("globalThis.__name ??= (fn) => fn");
   await page.addStyleTag({ content: stillStyle });
+  // Pending content must settle before planning scroll positions or measuring crops.
+  await quiet(page, options.watcher, Date.now() + (options.stableTimeoutMs ?? 8000));
   const viewport = page.viewportSize()!;
   if (mode.kind === "viewport") {
     if (!mode.keepScroll) await page.evaluate(() => window.scrollTo(0, 0));

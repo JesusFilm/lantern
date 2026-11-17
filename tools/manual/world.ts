@@ -66,7 +66,7 @@ export interface ManualWorld {
   origin: string;
   /** Session cookie value for a persona, or undefined for a signed-out visitor. */
   session(persona: Persona | "anonymous"): string | undefined;
-  ids: Record<Persona, string> & { draftFocus: string; reviewFocus: string; confirmedFocus: string };
+  ids: Record<Persona, string> & { draftFocus: string; reviewFocus: string; confirmedFocus: string; leadOwnRequestedFocus: string; incompleteFocus: string; staleReviewFocus: string };
   close(): Promise<void>;
 }
 
@@ -218,6 +218,27 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     })) as PositionFocus;
     await call("peer", reviewPath + "/request", "POST", { version: revised.version, note: "Updated the goals with measures." });
 
+    // Keep self-review separate from Sam's two-version discussion fixture.
+    const leadOwnRequested = (await call("lead", "/api/focuses", "POST", {
+      title: "Morgan's first half 2027",
+      start: "2027-01-01",
+      end: "2027-06-30",
+      sections: [{ kind: "normal", objective: "Support the team's development.", goals: ["By 31 March 2027, hold a development conversation with each member."], alignment: { initiatives: [initiative("Role Clarity And Growth")], other: false } }],
+    } satisfies FocusDraft)) as PositionFocus;
+    await call("lead", `/api/coach/focuses/${leadOwnRequested.id}/request`, "POST", { version: leadOwnRequested.version });
+
+    const incomplete = (await call("lead", "/api/focuses", "POST", {
+      title: "Morgan's unfinished draft", start: "2027-01-01", end: "2027-06-30", sections: [],
+    } satisfies FocusDraft)) as PositionFocus;
+
+    const staleDraft: FocusDraft = {
+      title: "Changes not yet sent", start: "2027-01-01", end: "2027-06-30",
+      sections: [{ kind: "normal", objective: "Make onboarding easier.", goals: ["By 31 March 2027, publish an onboarding checklist."], alignment: { initiatives: [initiative("Team Connectedness")], other: false } }],
+    };
+    const staleReview = (await call("peer", "/api/focuses", "POST", staleDraft)) as PositionFocus;
+    await call("peer", `/api/coach/focuses/${staleReview.id}/request`, "POST", { version: staleReview.version });
+    await call("peer", `/api/focuses/${staleReview.id}`, "PUT", { ...staleDraft, version: staleReview.version, sections: [{ ...staleDraft.sections[0], goals: ["By 30 April 2027, trial an onboarding checklist with two new starters."] }] });
+
     // Reproduce a legacy cutover collision that new sign-ins can no longer create.
     for (const subject of ['manual:legacy-alex', 'jesusfilm:manual-alex']) {
       await fixture.admin.query("INSERT INTO users(id,google_sub,email,name) VALUES($1,$2,'alex.taylor@example.test','Alex Taylor')", [randomUUID(), subject]);
@@ -226,7 +247,7 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     return {
       origin,
       session: (persona) => (persona === "anonymous" ? undefined : persona),
-      ids: { ...ids, draftFocus: draft.id, reviewFocus: review.id, confirmedFocus: confirmed.id },
+      ids: { ...ids, draftFocus: draft.id, reviewFocus: review.id, confirmedFocus: confirmed.id, leadOwnRequestedFocus: leadOwnRequested.id, incompleteFocus: incomplete.id, staleReviewFocus: staleReview.id },
       async close() {
         server.closeAllConnections();
         await new Promise<void>((done) => server.close(() => done()));

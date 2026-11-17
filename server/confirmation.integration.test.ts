@@ -7,7 +7,8 @@ import {migrate} from './schema.js';
 import {createApp} from './app.js';
 import {hash} from './access.js';
 import {resolveFeatureConfig} from './features.js';
-import type {PositionFocus} from '../shared/focus.js';
+import type {PositionFocus,MemberFocusList,MemberFocusDetail} from '../shared/focus.js';
+import type {CoachRecord} from '../shared/coach.js';
 
 const draft = {title:'Agreed annual focus',start:'2026-01-01',end:'2026-12-31',sections:[
   {kind:'normal',objective:'Support onboarding',goals:['Publish a guide by June']},
@@ -35,15 +36,20 @@ async function fixture(feature = 'on') {
       const response=await request(actor,'/api/focuses','POST',content); assert.equal(response.status,201);
       return await response.json() as PositionFocus;
     };
+    const requestReview=async(focus:PositionFocus,owner=member)=>{
+      const response=await request(owner,`/api/coach/focuses/${focus.id}/request`,'POST',{version:focus.version});
+      assert.equal(response.status,200);
+      return (await response.json() as {focus:PositionFocus}).focus;
+    };
     const confirm=(id:string,version:number,actor:string=lead,owner:string=member)=>request(actor,`/api/department/members/${owner}/focuses/${id}/confirm`,'POST',{version});
-    return {...f,server,origin,request,create,confirm,lead,member,peer,outsider,team,otherTeam,async close(){server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await f.close();}};
+    return {...f,server,origin,request,create,requestReview,confirm,lead,member,peer,outsider,team,otherTeam,async close(){server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await f.close();}};
   } catch(error) {server.closeAllConnections();server.close();await f.close();throw error;}
 }
 
 test('hidden focus progress denies all progress routes while the confirmed focus remains readable',async()=>{
   const f=await fixture('off');
   try {
-    const focus=await f.create();assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    const focus=await f.requestReview(await f.create());assert.equal((await f.confirm(focus.id,focus.version)).status,200);
     assert.equal((await f.request(f.member,`/api/focuses/${focus.id}`)).status,200);
     assert.equal((await f.request(f.member,`/api/focuses/${focus.id}/progress`)).status,404);
     assert.equal((await f.request(f.lead,`/api/department/members/${f.member}/focuses/${focus.id}/progress`)).status,404);
@@ -54,7 +60,7 @@ test('hidden focus progress denies all progress routes while the confirmed focus
 test('progress preview is limited to the server-resolved allowed account',async()=>{
   const f=await fixture('preview');
   try {
-    const focus=await f.create();assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    const focus=await f.requestReview(await f.create());assert.equal((await f.confirm(focus.id,focus.version)).status,200);
     assert.equal((await f.request(f.member,`/api/focuses/${focus.id}/progress`)).status,200);
     assert.equal((await f.request(f.lead,`/api/department/members/${f.member}/focuses/${focus.id}/progress`)).status,404);
     assert.equal((await f.request(f.peer,`/api/focuses/${focus.id}/progress`)).status,404);
@@ -64,7 +70,7 @@ test('progress preview is limited to the server-resolved allowed account',async(
 test('lead confirms an agreed focus; both views persist the baseline and owner updates are locked',async()=>{
   const f=await fixture();
   try {
-    const focus=await f.create();
+    const focus=await f.requestReview(await f.create());
     assert.equal(focus.status,'draft');
     assert.equal(focus.confirmedAt,null);
     assert.equal(focus.confirmedBy,null);
@@ -91,11 +97,11 @@ test('partial drafts stay editable and confirmation validates the saved focus an
   try {
     for(const sections of [[],[{kind:'normal',objective:'Partial objective',goals:[]}],[{kind:'leadership',objective:'Optional objective',goals:['A goal']} ]]) {
       const focus=await f.create(f.member,{...draft,sections});
-      assert.equal((await f.confirm(focus.id,focus.version)).status,400);
+      assert.equal((await f.confirm(focus.id,focus.version)).status,409);
       assert.deepEqual(await (await f.request(f.member,`/api/focuses/${focus.id}`)).json(),focus);
       assert.equal((await f.request(f.member,`/api/focuses/${focus.id}`,'PUT',{...draft,version:focus.version})).status,200);
     }
-    const focus=await f.create();
+    const focus=await f.requestReview(await f.create());
     for(const body of [null,{},[],{version:0},{version:'1'},{version:1.5},{version:1,role:'career-lead'},{version:1,confirmedBy:f.outsider},{version:1,status:'confirmed'}]) {
       const response=await f.request(f.lead,`/api/department/members/${f.member}/focuses/${focus.id}/confirm`,'POST',body);
       assert.equal(response.status,400,JSON.stringify(body));
@@ -107,14 +113,14 @@ test('partial drafts stay editable and confirmation validates the saved focus an
 test('duplicate confirmation preserves original metadata and concurrent save/confirm has one winner',async()=>{
   const f=await fixture();
   try {
-    const focus=await f.create();
+    const focus=await f.requestReview(await f.create());
     const confirmed=await (await f.confirm(focus.id,1)).json() as PositionFocus;
     const duplicate=await f.confirm(focus.id,confirmed.version);
     assert.equal(duplicate.status,200);
     assert.deepEqual(await duplicate.json(),confirmed);
     assert.equal((await f.confirm(focus.id,1)).status,409);
     for(let run=0;run<4;run++) {
-      const racing=await f.create();
+      const racing=await f.requestReview(await f.create());
       const [save,confirm]=await Promise.all([
         f.request(f.member,`/api/focuses/${racing.id}`,'PUT',{...draft,title:'Newer draft',version:1}),
         f.confirm(racing.id,1),
@@ -124,7 +130,11 @@ test('duplicate confirmation preserves original metadata and concurrent save/con
       assert.equal(current.version,2);
       assert.equal(current.title,save.status===200?'Newer draft':draft.title);
       assert.equal(current.status,confirm.status===200?'confirmed':'draft');
-      if(save.status===200) assert.equal((await f.confirm(racing.id,2)).status,200);
+      if(save.status===200) {
+        assert.equal((await f.confirm(racing.id,2)).status,409);
+        await f.requestReview(current);
+        assert.equal((await f.confirm(racing.id,2)).status,200);
+      }
       const baseline=await (await f.request(f.member,`/api/focuses/${racing.id}`)).json() as PositionFocus;
       for(const patch of [{title:'Changed'}, {start:'2026-02-01'}, {end:'2026-11-01'}, {sections:[]}, {sections:[{kind:'normal',objective:'Changed objective',goals:['Changed goal']}]}]) {
         const rejected=await f.request(f.member,`/api/focuses/${racing.id}`,'PUT',{...draft,...patch,version:baseline.version});
@@ -138,7 +148,7 @@ test('duplicate confirmation preserves original metadata and concurrent save/con
 test('confirmation requires the active lead and same-team current member; denial and storage failure preserve drafts',async()=>{
   const f=await fixture();
   try {
-    const focus=await f.create();
+    const focus=await f.requestReview(await f.create());
     for(const [actor,status] of [['',401],[f.member,403],[f.peer,403],[f.outsider,404]] as const)
       assert.equal((await f.confirm(focus.id,1,actor)).status,status);
     for(const owner of [f.peer,'unknown']) assert.equal((await f.confirm(focus.id,1,f.lead,owner)).status,404);
@@ -160,7 +170,7 @@ test('confirmation requires the active lead and same-team current member; denial
     await f.migration.query('ALTER TABLE position_focuses DROP CONSTRAINT synthetic_write_failure');
     assert.deepEqual(await (await f.request(f.member,`/api/focuses/${focus.id}`)).json(),focus);
     assert.equal((await f.confirm(focus.id,1)).status,200);
-    const own=await f.create(f.lead);
+    const own=await f.requestReview(await f.create(f.lead),f.lead);
     assert.equal((await f.confirm(own.id,1,f.lead,f.lead)).status,200);
     const locked=await (await f.request(f.lead,`/api/focuses/${own.id}`)).json() as PositionFocus;
     assert.equal((await f.request(f.lead,`/api/focuses/${own.id}`,'PUT',{...draft,version:locked.version})).status,409);
@@ -181,9 +191,10 @@ test('migration upgrades existing drafts without data loss and confirmed state s
     try {
       assert.equal((await fetch(health)).status,503);
       await migrate(f.migration,f.roles);
-      const ready=await fetch(health);assert.equal(ready.status,200);assert.equal(ready.headers.get('x-lantern-schema'),'11');
+      const ready=await fetch(health);assert.equal(ready.status,200);assert.equal(ready.headers.get('x-lantern-schema'),'12');
     } finally {healthServer.closeAllConnections();await new Promise<void>(r=>healthServer.close(()=>r()));}
     assert.deepEqual(await (await f.request(f.member,`/api/focuses/${existing.id}`)).json(),existing);
+    await f.requestReview(existing);
     const confirmed=await (await f.confirm(existing.id,1)).json();
     await migrate(f.migration,f.roles);
     f.server.removeAllListeners('request');
@@ -196,7 +207,7 @@ test('migration upgrades existing drafts without data loss and confirmed state s
 test('a member records progress for a confirmed goal and can read it after reload', async () => {
   const f=await fixture();
   try {
-    const focus=await f.create();
+    const focus=await f.requestReview(await f.create());
     assert.equal((await f.confirm(focus.id,focus.version)).status,200);
     const path=`/api/focuses/${focus.id}/progress`;
     const entryPath=`/api/focuses/${focus.id}/progress-entry`;
@@ -211,7 +222,7 @@ test('a member records progress for a confirmed goal and can read it after reloa
 test('progress statuses and notes stay scoped to the confirmed focus and its participants', async () => {
   const f=await fixture();
   try {
-    const focus=await f.create(), path=`/api/focuses/${focus.id}/progress`;
+    const focus=await f.requestReview(await f.create()), path=`/api/focuses/${focus.id}/progress`;
     const leadPath=`/api/department/members/${f.member}/focuses/${focus.id}/progress`;
     const entryPath=`/api/focuses/${focus.id}/progress-entry`;
     // Progress is unavailable on drafts: the owner's read reaches the draft check and answers
@@ -257,7 +268,7 @@ test('progress statuses and notes stay scoped to the confirmed focus and its par
 test('stale progress status changes do not overwrite a newer update', async () => {
  const f=await fixture();
  try {
-  const focus=await f.create();assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+  const focus=await f.requestReview(await f.create());assert.equal((await f.confirm(focus.id,focus.version)).status,200);
   const path=`/api/focuses/${focus.id}/progress-entry`;
   const base={section:0,goal:0,status:'achieved',body:'Stale status note',revision:null,noteRevision:null};
   const first=await f.request(f.member,path,'PUT',base);assert.equal(first.status,200);
@@ -274,7 +285,7 @@ test('stale progress status changes do not overwrite a newer update', async () =
 test('one progress edit saves status and current note together, detects stale edits, and clears both', async () => {
  const f=await fixture();
  try {
-  const focus=await f.create();assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+  const focus=await f.requestReview(await f.create());assert.equal((await f.confirm(focus.id,focus.version)).status,200);
   const path=`/api/focuses/${focus.id}/progress-entry`;
   const initial={section:0,goal:0,status:'in-progress',body:'Draft is ready',revision:null,noteRevision:null};
   const saved=await f.request(f.member,path,'PUT',initial);assert.equal(saved.status,200);
@@ -301,10 +312,130 @@ test('one progress edit saves status and current note together, detects stale ed
 test('changing only the progress status preserves the current note and its date', async () => {
  const f=await fixture();
  try {
-  const focus=await f.create();assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+  const focus=await f.requestReview(await f.create());assert.equal((await f.confirm(focus.id,focus.version)).status,200);
   const path=`/api/focuses/${focus.id}/progress-entry`;
   const first=await (await f.request(f.member,path,'PUT',{section:0,goal:0,status:null,body:'A useful finding',revision:null,noteRevision:null})).json() as {status:{revision:string};note:{revision:string;createdAt:string}};
   const changed=await f.request(f.member,path,'PUT',{section:0,goal:0,status:'in-progress',body:'A useful finding',revision:first.status.revision,noteRevision:first.note.revision});assert.equal(changed.status,200);
   const result=await changed.json() as {note:{revision:string;createdAt:string}};assert.equal(result.note.revision,first.note.revision);assert.equal(result.note.createdAt,first.note.createdAt);
  } finally {await f.close();}
+});
+
+test('every confirmation route requires a review request even for the lead own focus', async () => {
+  const f=await fixture();
+  try {
+    for (const owner of [f.member,f.lead]) {
+      const focus=await f.create(owner);
+      const paths=[`/api/department/members/${owner}/focuses/${focus.id}/confirm`,`/api/coach/focuses/${focus.id}/confirm`];
+      for (const path of paths) {
+        const response=await f.request(f.lead,path,'POST',{version:focus.version});
+        assert.equal(response.status,409);
+        assert.match((await response.json() as {error:string}).error,/send.*latest saved.*review/i);
+      }
+      assert.deepEqual(await (await f.request(owner,`/api/focuses/${focus.id}`)).json(),focus);
+      const requested=await f.request(owner,`/api/coach/focuses/${focus.id}/request`,'POST',{version:focus.version});
+      assert.equal(requested.status,200);
+      const review=await requested.json() as {focus:PositionFocus;notes:unknown[]};
+      assert.equal(review.focus.status,'draft');
+      assert.deepEqual(review.notes,[]);
+      assert.equal((await f.request(f.lead,paths[owner===f.member?0:1]!,'POST',{version:focus.version})).status,200);
+    }
+  } finally {await f.close();}
+});
+
+test('owner and lead reads identify the requested version and a later save needs a new request', async () => {
+  const f=await fixture();
+  try {
+    const focus=await f.create();
+    const ownerPath=`/api/focuses/${focus.id}`, reviewPath=`/api/coach/focuses/${focus.id}`;
+    const leadPath=`/api/department/members/${f.member}/focuses`;
+    async function checkReads(requestedVersion:number|null,version:number) {
+      const own=await (await f.request(f.member,ownerPath)).json() as PositionFocus;
+      const list=await (await f.request(f.member,'/api/focuses')).json() as PositionFocus[];
+      const lead=await (await f.request(f.lead,`${leadPath}/${focus.id}`)).json() as MemberFocusDetail;
+      const leadList=await (await f.request(f.lead,leadPath)).json() as MemberFocusList;
+      for(const current of [own,list[0]!,lead.focus,leadList.focuses[0]!]) {
+        assert.equal(current.latestRequestedVersion,requestedVersion);
+        assert.equal(current.version,version);
+      }
+    }
+    await checkReads(null,1);
+    assert.equal((await f.request(f.member,reviewPath+'/request','POST',{version:1})).status,200);
+    await checkReads(1,1);
+    const saved=await f.request(f.member,ownerPath,'PUT',{...draft,title:'Changed after request',version:1});
+    assert.equal(saved.status,200);
+    assert.equal((await saved.json() as PositionFocus).latestRequestedVersion,1);
+    await checkReads(1,2);
+    for(const path of [`${leadPath}/${focus.id}/confirm`,reviewPath+'/confirm'])
+      assert.equal((await f.request(f.lead,path,'POST',{version:2})).status,409);
+    assert.equal((await f.request(f.member,reviewPath+'/request','POST',{version:1})).status,409);
+    assert.equal((await f.request(f.peer,reviewPath+'/request','POST',{version:2})).status,404);
+    assert.equal((await f.request(f.lead,reviewPath+'/request','POST',{version:2})).status,404);
+    assert.equal((await f.request(f.member,reviewPath+'/request','POST',{version:2})).status,200);
+    await checkReads(2,2);
+    const requested=await (await f.request(f.member,reviewPath)).json() as CoachRecord;
+    assert.equal(requested.requests[0]!.document.title,draft.title);
+    assert.equal(requested.requests[1]!.document.title,'Changed after request');
+    assert.equal((await f.confirm(focus.id,2)).status,200);
+    await checkReads(2,3);
+    assert.equal((await f.confirm(focus.id,3)).status,200);
+  } finally {await f.close();}
+});
+
+test('confirmation still validates Contribution content in a previously requested saved draft', async () => {
+  const f=await fixture();
+  try {
+    for(const sections of [[],[{kind:'normal',objective:'Partial contribution',goals:[]}],[{kind:'leadership',objective:'Optional objective',goals:['A goal']}]]) {
+      const focus=await f.create();
+      assert.equal((await f.request(f.member,`/api/coach/focuses/${focus.id}/request`,'POST',{version:1})).status,200);
+      // Represent invalid persisted content from an older writer; observe rejection through HTTP.
+      await f.admin.query('UPDATE position_focuses SET sections=$2 WHERE id=$1',[focus.id,JSON.stringify(sections)]);
+      const before=await (await f.request(f.member,`/api/focuses/${focus.id}`)).json();
+      const response=await f.confirm(focus.id,1);
+      assert.equal(response.status,400);
+      assert.deepEqual(await response.json(),{error:'Add a Contribution objective with at least one SMART goal before confirming.'});
+      assert.deepEqual(await (await f.request(f.member,`/api/focuses/${focus.id}`)).json(),before);
+    }
+  } finally {await f.close();}
+});
+
+test('readiness advertises schema 12 and refuses a missing review migration or disabled guard', async () => {
+  const f=await fixture();
+  try {
+    f.server.removeAllListeners('request');
+    f.server.on('request',createApp(f.runtime,{origin:f.origin},{revision:'test'}));
+    const ready=await fetch(f.origin+'/health');
+    assert.equal(ready.status,200);
+    assert.equal(ready.headers.get('x-lantern-schema'),'12');
+    await f.migration.query('DELETE FROM schema_migrations WHERE version=12');
+    assert.equal((await fetch(f.origin+'/health')).status,503);
+    await migrate(f.migration,f.roles);
+    assert.equal((await fetch(f.origin+'/health')).status,200);
+    await f.migration.query('ALTER TABLE position_focuses DISABLE TRIGGER guard_focus_review');
+    assert.equal((await fetch(f.origin+'/health')).status,503);
+    await f.migration.query('ALTER TABLE position_focuses ENABLE TRIGGER guard_focus_review');
+    assert.equal((await fetch(f.origin+'/health')).status,200);
+  } finally {await f.close();}
+});
+
+test('a legacy confirmed focus without request history remains readable, locked and idempotently confirmed', async () => {
+  const f=await fixture();
+  try {
+    // Seed a pre-rule baseline directly, as already-confirmed records need no backfill.
+    const id=randomUUID();
+    await f.admin.query(`INSERT INTO position_focuses(id,user_id,department_id,title,period_start,period_end,sections,status,version,confirmed_at,confirmed_by)
+      VALUES($1,$2,$3,$4,$5,$6,$7,'confirmed',2,now(),$8)`,[id,f.member,f.team,draft.title,draft.start,draft.end,JSON.stringify(draft.sections),f.lead]);
+    const own=await (await f.request(f.member,`/api/focuses/${id}`)).json() as PositionFocus;
+    assert.equal(own.status,'confirmed');
+    assert.equal(own.latestRequestedVersion,null);
+    const lead=await (await f.request(f.lead,`/api/department/members/${f.member}/focuses/${id}`)).json() as MemberFocusDetail;
+    assert.deepEqual(lead.focus,own);
+    const confirmation=await f.confirm(id,own.version);
+    assert.equal(confirmation.status,200);
+    assert.deepEqual(await confirmation.json(),own);
+    const review=await f.request(f.lead,`/api/coach/focuses/${id}/confirm`,'POST',{version:own.version});
+    assert.equal(review.status,200);
+    assert.deepEqual((await review.json() as CoachRecord).focus,own);
+    assert.equal((await f.request(f.member,`/api/focuses/${id}`,'PUT',{...draft,title:'Cannot change baseline',version:own.version})).status,409);
+    assert.deepEqual(await (await f.request(f.member,`/api/focuses/${id}`)).json(),own);
+  } finally {await f.close();}
 });

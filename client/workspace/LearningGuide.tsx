@@ -115,7 +115,7 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
               : "Build a SMART goal"}
         </h1>
       </header>
-      {topic === "Procedures" && <div className="procedure-header-copy"><p>Six months of focus. A conversation each quarter.</p><span className="procedure-proposed">Proposed</span></div>}
+      {topic === "Procedures" && <div className="procedure-header-copy"><p>Six months of focus. A conversation each quarter.</p></div>}
       <div className="guide-layout">
         <div className="guide-navigation">
           <div className="area-heading">Guide topics</div>
@@ -189,6 +189,8 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
                 </section>
                 <section className="explanation">
                   <h3>Good to know</h3>
+                  <p>Request review of the latest saved version before confirmation. If you save more changes, send them for review again.</p>
+                  <p>Career leads request review of their own focus too. Review it again or discuss it with your senior or manager; you can confirm it yourself without another reviewer or a note.</p>
                   <p>Saved drafts are visible to you and your career lead. Once your lead confirms, the focus can’t be edited or unlocked.</p>
                 </section>
                 <button className="guide-example-link" onClick={() => { setEngineering(true); choose("Example"); }}>See an engineering example →</button>

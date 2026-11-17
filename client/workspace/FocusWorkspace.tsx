@@ -122,7 +122,7 @@ export function FocusWorkspace({
         <>
           <FocusHeading
             key={"heading-" + focus.id}
-            focus={focus}
+            focus={record ? { ...focus, latestRequestedVersion: record.requests.at(-1)?.document.version ?? null } : focus}
             member={member}
             onBack={() => { if (leaveReview()) select(); }}
             onMetadata={reviewing ? undefined : () => begin({ type: "metadata" })}
