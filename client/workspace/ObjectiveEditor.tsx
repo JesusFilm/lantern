@@ -347,8 +347,9 @@ export function ObjectiveEditor({
       if (!cached)
         exploration.current.set(cacheKey, { suggestion: result, answer: "" });
       setAnswers(nextAnswers);
-      if (redesigned && !result.objective && (!result.question || (stage === "question" && nextAnswers.length >= 1))) {
-        update({ type: "objective-values", values: { text: work } });
+      if (redesigned && (!result.objective || result.ready === false) && (!result.question || (stage === "question" && nextAnswers.length >= 1))) {
+        if (objectiveBasis.current !== cacheKey) update({ type: "objective-values", values: { text: work } });
+        objectiveBasis.current = cacheKey;
         setConcern([result.concern, result.question].filter(Boolean).join(" "));
         setStage("objective");
         return;

@@ -154,7 +154,7 @@ export async function runCurrentFlow(
       const result = await ask(step, stage, { ...context(), answers: nextAnswers });
       if (!result) return { turns, outcome: outcome("coach unavailable") };
       answers = nextAnswers;
-      if (redesigned && !result.objective && (!result.question || step === "question")) {
+      if (redesigned && (!result.objective || result.ready === false) && (!result.question || step === "question")) {
         edit.text = work;
         break;
       }

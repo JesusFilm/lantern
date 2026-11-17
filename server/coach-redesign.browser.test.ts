@@ -31,7 +31,7 @@ async function world(reply: (stage: string, context: CoachCheckpoint) => CoachSu
 
 test("member can continue editing their own wording when the coach keeps asking questions", async () => {
   const f = await world((_stage, context) => context.answers.length < 2
-    ? { question: `What would help your training work? ${context.answers.length + 1}`, concern: "Connect this learning to your work.", ready: false }
+    ? { question: `What would help your training work? ${context.answers.length + 1}`, concern: "Connect this learning to your work.", ready: false, ...(context.answers.length ? { objective: "A draft that is not ready" } : {}) }
     : { objective: "Develop language skills to support Spanish-speaking trainers.", recommendedKind: "personal-development", initiativeIds: [] });
   try {
     const { page } = f;
@@ -52,6 +52,12 @@ test("member can continue editing their own wording when the coach keeps asking 
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("I train Spanish-speaking colleagues and want to learn Spanish.");
     await expect(page.getByText(/What would help your training work\? 2/)).toBeVisible();
     assert.deepEqual(f.calls.map(c => c.stage), Array(2).fill("clarify"));
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByLabel("Objective", { exact: true }).fill("My edited objective");
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited objective");
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited objective");
     await expect(page.getByRole("radio", { name: "Contribution", exact: true })).toBeChecked();
     await page.getByRole("radio", { name: "Personal development", exact: true }).check();
     await page.getByLabel("Other — none of these apply").check();
