@@ -20,3 +20,11 @@ test("judge sees what each editor actually displayed when a reply contains a que
   assert.match(redesigned, /Hidden question/);
   assert.doesNotMatch(redesigned, /Coach goal ideas/);
 });
+
+test("judge sees the saved alignment and goals that the coach received during refinement", () => {
+  const existing = scenarios.find(s => s.id === "already-useful")!;
+  const turns = transcript.turns.map(t => t.type === "coach" ? { ...t, context: { ...t.context, other: true, siblings: ["Keep the supplied goal"] } } : t);
+  const rendered = renderTranscript({ ...transcript, scenario: existing.id, turns }, existing);
+  assert.match(rendered, /Member, saved alignment.*Other \(none apply\)/);
+  assert.match(rendered, /Member, existing goals.*Keep the supplied goal/);
+});

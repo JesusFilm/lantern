@@ -3,7 +3,7 @@
   "editionDate": "2026-11-17",
   "deck": "560c3bbf11d0cff5ce811860577c892c3e7f49da8d449443ce7bd972dda12c10",
   "sources": {
-    "fingerprint": "b7c163ee8f9e1587de16a5b1de7b075b724c90bc92c5d032bb72495c244f8067",
+    "fingerprint": "49b6e46e0041a6dfce209eae4a3b7997b1a1298d47d4b3c732409dd95e331aaf",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -69,7 +69,7 @@
       "server/auth-link.ts": "378284c38d3cad72c80fb889cf09b75fded6c6ac291dcf8c5056a3522dd4edf0",
       "server/auth-recovery.ts": "91b16ccb58d61de3331ed03cc769080ab03cc96e093a446c7ddfead184d660ee",
       "server/bootstrap-database.ts": "98068f7b5aecec50064fd7be1019adf1e55bb63a14b38b30f8e16a51c945ba86",
-      "server/coach-contract.ts": "28fc5cc2860d3b2005d9fed9f40ada190ee2265672b2c18f6130f105acafa23d",
+      "server/coach-contract.ts": "518a06bd17c0edbdd5ba28271539cc8de30fe225b5ee07000d4881a62523e82b",
       "server/coach-guidance.ts": "b6a67c1657a5e672a13f3d311160b8e96f2f6726d0017ab87f971a14740ea4c2",
       "server/coach-http.ts": "ac8c379667fc4da19c727aa52949f0797dcdde27e72dd144d8eb63eac4f60b57",
       "server/coach-prompt.ts": "47b5d9c073ddad3de3c1ff332e99847e69fec9130d1ec92bb7bcea46c9bd0349",
@@ -214,7 +214,7 @@
   },
   "pdf": "a75fe33a26f11ab75b3a9e0e957a2b1e419946fdc53e42881ec9e63437381558",
   "verification": {
-    "generatedAt": "2026-11-17T08:06:47.629Z",
+    "generatedAt": "2026-11-17T08:13:59.116Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -281,7 +281,7 @@
       "server/auth-link.ts": "378284c38d3cad72c80fb889cf09b75fded6c6ac291dcf8c5056a3522dd4edf0",
       "server/auth-recovery.ts": "91b16ccb58d61de3331ed03cc769080ab03cc96e093a446c7ddfead184d660ee",
       "server/bootstrap-database.ts": "98068f7b5aecec50064fd7be1019adf1e55bb63a14b38b30f8e16a51c945ba86",
-      "server/coach-contract.ts": "28fc5cc2860d3b2005d9fed9f40ada190ee2265672b2c18f6130f105acafa23d",
+      "server/coach-contract.ts": "518a06bd17c0edbdd5ba28271539cc8de30fe225b5ee07000d4881a62523e82b",
       "server/coach-guidance.ts": "b6a67c1657a5e672a13f3d311160b8e96f2f6726d0017ab87f971a14740ea4c2",
       "server/coach-http.ts": "ac8c379667fc4da19c727aa52949f0797dcdde27e72dd144d8eb63eac4f60b57",
       "server/coach-prompt.ts": "47b5d9c073ddad3de3c1ff332e99847e69fec9130d1ec92bb7bcea46c9bd0349",

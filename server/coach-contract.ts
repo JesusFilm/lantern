@@ -14,6 +14,10 @@ const text = (v: unknown, max = 4000): v is string =>
   typeof v === "string" && v.length <= max;
 const texts = (v: unknown, max = 6) =>
   Array.isArray(v) && v.length <= max && v.every((x) => text(x, 1000));
+// Match dates explicitly: Date.parse also accepts method phrases containing a date.
+const month = "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)";
+const day = "\\d{1,2}(?:st|nd|rd|th)?";
+const modelDeadline = new RegExp(`^By (?:\\d{4}-\\d{2}-\\d{2}|${day} ${month} \\d{4}|${month} ${day},? \\d{4}),\\s*`, "i");
 export function validateCheckpoint(value: unknown, maxAnswers = 3, maxCharacters = 32000): CoachCheckpoint {
   const fail = (): never => {
     throw new AccessError(
@@ -201,8 +205,7 @@ export function validateSuggestion(
   const result = value as CoachSuggestion;
   if (redesigned && context) {
     if (result.goal && date(context.date)) {
-      const prefix = /^By ([^,\n]{1,60}(?:,\s*\d{4})?),\s*/i.exec(result.goal);
-      const action = prefix && Number.isFinite(Date.parse(prefix[1]!)) ? result.goal.slice(prefix[0].length) : result.goal;
+      const action = result.goal.replace(modelDeadline, "");
       if (!action.trim()) return fail();
       const label = new Date(context.date + "T12:00:00Z").toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
       result.goal = `By ${label}, ${action}`;
