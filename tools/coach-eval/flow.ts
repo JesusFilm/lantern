@@ -128,11 +128,11 @@ export async function runCurrentFlow(
 
   if (scenario.existing) {
     edit.other = true;
-    if (scenario.improvement?.trim()) {
+    if (redesigned || scenario.improvement?.trim()) {
       const result = await ask("refine", "objective", {
         ...context(),
         entry: "objective",
-        concern: scenario.improvement,
+        concern: scenario.improvement ?? "",
       });
       if (!result) return { turns, outcome: outcome("coach unavailable") };
       if (redesigned && !result.objective) return { turns, outcome: outcome("refinement needs member context") };

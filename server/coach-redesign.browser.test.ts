@@ -128,40 +128,33 @@ test("switching methods during a refinement question preserves manual edits and 
     assert.equal(response.status, 200);
     await page.reload();
     await page.getByRole("button", { name: "Guide with AI", exact: true }).click();
-    await page.getByLabel("What would you like to improve about this objective?").fill("Make the outcome clearer");
-    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("What would you like to improve about this objective?")).toHaveCount(0);
+    await page.getByRole("button", { name: "Improve objective", exact: true }).click();
     await expect(page.getByLabel("Your answer", { exact: true })).toBeVisible();
     await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
     await page.getByRole("button", { name: "Switch to Write myself", exact: true }).click();
     await page.getByLabel("Objective", { exact: true }).fill("Help trainers explain workshop exercises clearly");
     await page.getByRole("button", { name: "Switch to Guide with AI", exact: true }).click();
-    await expect(page.getByLabel("What would you like to improve about this objective?")).toBeVisible();
+    await expect(page.getByText("The coach will use the Guide to suggest a clearer objective.")).toBeVisible();
     await expect(page.getByText("Help trainers explain workshop exercises clearly", { exact: true })).toBeVisible();
     assert.equal(f.calls.length, 1);
-    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByRole("button", { name: "Improve objective", exact: true }).click();
     await expect(page.getByLabel("Your answer", { exact: true })).toBeVisible();
     assert.equal(f.calls.at(-1)?.stage, "objective");
     assert.equal(f.calls.at(-1)?.context.objective, "Help trainers explain workshop exercises clearly");
   } finally { await f.close(); }
 });
 
-test("member can request a wording revision from the editable objective", async () => {
-  const f = await world((stage, context) => stage === "objective"
-    ? { objective: "Help trainers deliver accessible workshops.", initiativeIds: [] }
-    : { objective: "Make workshops accessible for trainers.", initiativeIds: [] });
+test("coach drafts using the Guide without asking the member how to refine it", async () => {
+  const f = await world(() => ({ objective: "Help trainers deliver accessible workshops.", initiativeIds: [] }));
   try {
     const { page } = f;
     await page.getByRole("radio", { name: "Contribution", exact: true }).check();
     await page.getByLabel("Your work", { exact: true }).fill("I help trainers make workshops accessible.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
-    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Make workshops accessible for trainers.");
-    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
-    await page.getByLabel("How should the coach refine this wording?").fill("Make it shorter");
-    await expect(page.getByLabel("How should the coach refine this wording?")).toHaveValue("Make it shorter");
-    await page.getByRole("button", { name: "Refine wording", exact: true }).click();
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Help trainers deliver accessible workshops.");
-    assert.equal(f.calls.at(-1)?.context.concern, "Make it shorter");
-    assert.equal(f.calls.at(-1)?.context.objective, "Make workshops accessible for trainers.");
+    await expect(page.getByLabel("How should the coach refine this wording?")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Refine wording", exact: true })).toHaveCount(0);
   } finally { await f.close(); }
 });
 

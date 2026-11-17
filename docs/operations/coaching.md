@@ -53,7 +53,7 @@ Set OpenRouter's permitted models/provider data policy for the organization's
 requirements before real personnel data is used. The application sends current
 member coaching fields and department mission/active initiatives to either
 provider. The legacy flow also sends writing Guide excerpts; `coach-redesign`
-uses concise policy and stage-specific instructions without illustrative examples. It does not send review notes, other members' documents,
+uses the Guide’s objective and SMART goal principles with stage-specific instructions, omitting illustrative examples. It does not send review notes, other members' documents,
 images, account email addresses or external project context. Provider-side logging
 and retention are controlled in the provider account, not by Lantern.
 

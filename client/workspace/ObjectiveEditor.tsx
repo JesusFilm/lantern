@@ -66,7 +66,6 @@ export function ObjectiveEditor({
   );
   const enteredGuidance = useRef(initialMethod === "guided");
   const [improvement, setImprovement] = useState("");
-  const [wordingRequest, setWordingRequest] = useState("");
   const exploration = useRef(
     new Map<string, { suggestion: CoachSuggestion; answer: string }>(),
   );
@@ -296,7 +295,7 @@ export function ObjectiveEditor({
       return;
     }
     if (stage === "refine") {
-      if (!improvement.trim()) {
+      if (!redesigned && !improvement.trim()) {
         await openGoals();
         return;
       }
@@ -508,15 +507,6 @@ export function ObjectiveEditor({
           onChange={(e) => onChange({ type: "text", text: e.target.value })}
         />
       </div>
-      {redesigned && method === "guided" && stage === "objective" && <div className="field">
-        <label htmlFor="wording-request">How should the coach refine this wording?</label>
-        <textarea id="wording-request" maxLength={4000} value={wordingRequest} onChange={e => setWordingRequest(e.target.value)} />
-        <button type="button" disabled={busy || !wordingRequest.trim() || !edit.text.trim()} onClick={() => void guidedRequest("objective", { ...context(), entry: "objective", concern: wordingRequest }, result => {
-          if (result.objective) update({ type: "objective-values", values: { text: result.objective } });
-          setRecommended(result.recommendedKind);
-          setRecommendedInitiatives(result.initiativeIds ?? []);
-        }, "objective")}>Refine wording</button>
-      </div>}
       <ObjectiveTypeChoices
         kind={edit.kind}
         recommended={method === "guided" ? recommended : undefined}
@@ -718,7 +708,7 @@ export function ObjectiveEditor({
                       <p>{edit.text}</p>
                       <AlignmentSummary alignment={pendingAlignment} />
                     </div>
-                    <div className="field">
+                    {redesigned ? <p>The coach will use the Guide to suggest a clearer objective.</p> : <div className="field">
                       <label htmlFor="objective-improvement">
                         What would you like to improve about this objective?
                       </label>
@@ -729,7 +719,7 @@ export function ObjectiveEditor({
                         value={improvement}
                         onChange={(e) => setImprovement(e.target.value)}
                       />
-                    </div>
+                    </div>}
                   </>
                 )}
                 {stage === "objective" && fields}
@@ -883,6 +873,7 @@ export function ObjectiveEditor({
                 Add to objective
               </button>
             )}
+            {redesigned && method === "guided" && stage === "refine" && <button type="button" disabled={busy} onClick={() => void openGoals()}>Continue without changes</button>}
             {method === "guided" && stage !== "goal" && stage !== "check" && (
               <button
                 type="button"
@@ -896,7 +887,7 @@ export function ObjectiveEditor({
                 }
                 onClick={() => void next()}
               >
-                Next
+                {redesigned && stage === "refine" ? "Improve objective" : "Next"}
               </button>
             )}
           </div>
