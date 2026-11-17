@@ -90,7 +90,7 @@ function App() {
       window.removeEventListener("popstate", pop);
     };
   }, []);
-  const activePage = session?.user ? page : "account";
+  const activePage = session?.user ? page : "";
   return (
     <>
       <Sidebar session={session} activePage={activePage} onNavigate={navigatePage} />

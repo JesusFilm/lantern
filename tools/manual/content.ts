@@ -90,6 +90,7 @@ export const chapters: Chapter[] = [
           "Returning users keep their original department, role and focuses.",
           "An account that is not approved returns to the retry screen with “Sign-in could not be completed”.",
           "Cancelling at Jesus Film Auth also returns with that message.",
+          "The retry screen offers sign-in, without an Account navigation item.",
           "Reloading keeps you signed in.",
         ],
         shots: [
