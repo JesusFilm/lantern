@@ -24,6 +24,11 @@ test("rejected replies are explained by the contract rule they break", () => {
   assert.equal(schemaCause("clarify", "Who benefits?"), "invalid JSON");
 });
 
+test("redesigned rejection diagnostics use the supplied date and allow one goal idea", () => {
+  assert.equal(schemaCause("actions", '{"actions":["Review reports"],"extra":"unsupported"}', true, { date: "2027-01-15", end: "2027-04-30" }), "unexpected field");
+  assert.equal(schemaCause("actions", '{"actions":[]}', true), "no goal ideas");
+});
+
 test("dates outside the focus period and goals with a changed date are reported", () => {
   const scenario = scenarios.find((s) => s.id === "goal-dates-outside-period")!;
   const transcript: Transcript = {

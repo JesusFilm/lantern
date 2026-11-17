@@ -1,4 +1,5 @@
 import { validateSuggestion } from "../../server/coach-contract.js";
+import type { CoachCheckpoint } from "../../shared/coach.js";
 import { direction, initiativeName, type Scenario } from "./scenarios.js";
 import type { CoachStage, CoachTurn, Transcript } from "./types.js";
 
@@ -48,9 +49,9 @@ export interface Checks {
 }
 
 const ids = direction.initiatives.map((i) => i.id);
-const valid = (stage: CoachStage, value: unknown, redesigned = false) => {
+const valid = (stage: CoachStage, value: unknown, redesigned = false, context?: Pick<CoachCheckpoint, "date" | "end">) => {
   try {
-    validateSuggestion(stage, value, ids, redesigned);
+    validateSuggestion(stage, value, ids, redesigned, context);
     return true;
   } catch {
     return false;
@@ -58,7 +59,8 @@ const valid = (stage: CoachStage, value: unknown, redesigned = false) => {
 };
 
 /** Explains why a parsed reply failed the shipped response contract. */
-export function schemaCause(stage: CoachStage, content: string, redesigned = false): string {
+export function schemaCause(stage: CoachStage, content: string, redesigned = false, context?: Pick<CoachCheckpoint, "date" | "end">): string {
+  const accepted = (reply: unknown) => valid(stage, reply, redesigned, context);
   let value: Record<string, unknown>;
   try {
     value = JSON.parse(content.replace(/<think>[\s\S]*?<\/think>/g, "").trim().replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, ""));
@@ -68,20 +70,20 @@ export function schemaCause(stage: CoachStage, content: string, redesigned = fal
   if (!value || typeof value !== "object" || Array.isArray(value)) return "not an object";
   if (!redesigned && stage === "goal" && !value.goal && typeof value.concern === "string" && value.concern.trim()) return "concern without goal";
   if (!redesigned && stage !== "clarify" && value.ready === false && typeof value.question === "string") return "question where a draft is required";
-  if (value.recommendedKind !== undefined && !["normal", "personal-development", "leadership"].includes(String(value.recommendedKind)) && valid(stage, { ...value, recommendedKind: undefined }, redesigned))
+  if (value.recommendedKind !== undefined && !["normal", "personal-development", "leadership"].includes(String(value.recommendedKind)) && accepted({ ...value, recommendedKind: undefined }))
     return "unknown objective type";
   const withoutEmpty = Object.fromEntries(
     Object.entries(value).filter(([, v]) => v !== "" && v !== null && !(Array.isArray(v) && v.length === 0)),
   );
-  if (valid(stage, withoutEmpty, redesigned)) return "empty or null optional field";
+  if (accepted(withoutEmpty)) return "empty or null optional field";
   const allowed = ["question", "objective", "goal", "title", "concern", "ready", "options", "actions", "initiativeIds", "suggestedDate", "recommendedKind", ...(redesigned ? ["review"] : [])];
   const known = Object.fromEntries(Object.entries(withoutEmpty).filter(([k]) => allowed.includes(k)));
-  if (valid(stage, known, redesigned)) return "unexpected field";
+  if (accepted(known)) return "unexpected field";
   const trimmed = Object.fromEntries(Object.entries(known).map(([k, v]) => [k, Array.isArray(v) && k !== "initiativeIds" ? v.slice(0, 3) : v]));
-  if (valid(stage, trimmed, redesigned)) return "more than three items";
-  if (Array.isArray(trimmed.initiativeIds) && valid(stage, { ...trimmed, initiativeIds: trimmed.initiativeIds.filter((id) => ids.includes(String(id))) }, redesigned))
+  if (accepted(trimmed)) return "more than three items";
+  if (Array.isArray(trimmed.initiativeIds) && accepted({ ...trimmed, initiativeIds: trimmed.initiativeIds.filter((id) => ids.includes(String(id))) }))
     return "unknown initiative";
-  if (stage === "actions" && (!Array.isArray(trimmed.actions) || trimmed.actions.length < 2)) return "fewer than two actions";
+  if (stage === "actions" && !(redesigned && (trimmed.question || trimmed.concern)) && (!Array.isArray(trimmed.actions) || trimmed.actions.length < (redesigned ? 1 : 2))) return redesigned ? "no goal ideas" : "fewer than two actions";
   if (stage === "clarify" && trimmed.ready === false && !trimmed.question) return "not ready without a question";
   if (stage === "clarify" && trimmed.ready !== false && !trimmed.objective) return "ready without an objective";
   return "other";
@@ -95,7 +97,7 @@ export function checkTranscript(transcript: Transcript, scenario: Scenario, rede
     for (const attempt of turn.attempts) {
       attempts[attempt.outcome] = (attempts[attempt.outcome] ?? 0) + 1;
       if (attempt.outcome === "schema" || attempt.outcome === "unparseable") {
-        const cause = attempt.content ? schemaCause(turn.stage, attempt.content, redesigned) : "no content";
+        const cause = attempt.content ? schemaCause(turn.stage, attempt.content, redesigned, turn.context) : "no content";
         schemaCauses[cause] = (schemaCauses[cause] ?? 0) + 1;
       }
     }
