@@ -58,6 +58,10 @@ test("member can continue editing their own wording when the coach keeps asking 
     await page.getByRole("button", { name: "Back", exact: true }).click();
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited objective");
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await page.getByLabel("Your answer", { exact: true }).fill("I support the current workshop.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited objective");
     await expect(page.getByRole("radio", { name: "Contribution", exact: true })).toBeChecked();
     await page.getByRole("radio", { name: "Personal development", exact: true }).check();
     await page.getByLabel("Other — none of these apply").check();

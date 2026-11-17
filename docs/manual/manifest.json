@@ -1,9 +1,9 @@
 {
-  "edition": 61,
+  "edition": 62,
   "editionDate": "2026-11-17",
-  "deck": "db92cdd53a6be286c81a672fd5eb0881f79cd17cc20ef869e6879fe756c233b7",
+  "deck": "9a9db7be809fcf95488b7fc2d04101b17dd53645477de54105f0ee4ed2916bbf",
   "sources": {
-    "fingerprint": "aac26a2420f3515a2010ae96158ebef206189d694db8179b93c3e4d028cdae02",
+    "fingerprint": "0a87c6ebfa86a06bb8f6aad014663e05bf533957ddf1392e3a9604fc2ec219d8",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -35,7 +35,7 @@
       "client/workspace/MemberFocuses.tsx": "c08deec2430f99237fff844f474cb9c4fedf1e6e641cfba7edaaf89580a11a03",
       "client/workspace/MissionBanner.tsx": "317c8886f63b10c398e69ccccf4ce77234383b99910a2a92d7fd8db3e9389b6a",
       "client/workspace/MissionImageDialog.tsx": "27adf5505b6ed72ba704e63ff324bf3f4db9bdd957cb861c6a56b8b6e2bdcc3e",
-      "client/workspace/ObjectiveEditor.tsx": "ab095491eb56216019c7566eabca67e12adab62a3579132670d94eadc19ec46b",
+      "client/workspace/ObjectiveEditor.tsx": "8046802903939e3a1efdb767770844180afa82837fa627ca60ec1e6437b9dbf9",
       "client/workspace/ObjectiveType.tsx": "bd84d8608f07f41cd22d5a53d9b6b7ce7102e77d410afc1eb2432fc1603bad79",
       "client/workspace/ProceduresGuide.tsx": "de06387243a2cbf53b07152c03ead408dd966482f64913623083bb01229b8cbf",
       "client/workspace/Sidebar.tsx": "debc393525a5714e236ad2553a61110890300bf37a125fcfab55eee8433088a2",
@@ -175,7 +175,7 @@
     "lead-review-1.png": "0f06159cbfc6c931d5184a563900822ddc58718a98b3430ee1e2dbb30627842f",
     "lead-review-2.png": "d5ed96747d4656515905bd6a4dea50ff2643ba449c76121bfaff1ad8221787f4",
     "lead-reviews.png": "af6d3c905bb675c174e1eb0bd04a3001080b520c7729bb052b8172c6577fac0e",
-    "member-confirm-dialog.png": "3743b148a45782e5b6055b58c3bf3c941982e0f27363175fc1057182d66810ae",
+    "member-confirm-dialog.png": "19dd4d0e6a27291a4dd7b90711dca55ccbcb26d6a41a7f03d045d9891b77cf99",
     "mission-image.png": "bb3a2eefb5de50cb8cb7ab767abe7e84661e7a0e3fe44700ba57c4c4495d6e6a",
     "objective-choice.png": "7fc9f21bc224510e80af0132c5e421d8380d4dc74595c549cd9dd30a3b183885",
     "objective-manual-1.png": "65716b9f9437fe57fda38f6b975868e4208b15143d7f72209d1298be080ca777",
@@ -212,9 +212,9 @@
       }
     }
   },
-  "pdf": "6c7df17003a9bfb40757b8554e2e025a55454bf508c505f3e3eea8cb8256eb4e",
+  "pdf": "4cdf9d28b3ceab412f50c78778f1293e8cce7e07ab92d1a03d7a0e25edfa8c1e",
   "verification": {
-    "generatedAt": "2026-11-17T09:29:54.823Z",
+    "generatedAt": "2026-11-17T09:33:19.288Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -247,7 +247,7 @@
       "client/workspace/MemberFocuses.tsx": "c08deec2430f99237fff844f474cb9c4fedf1e6e641cfba7edaaf89580a11a03",
       "client/workspace/MissionBanner.tsx": "317c8886f63b10c398e69ccccf4ce77234383b99910a2a92d7fd8db3e9389b6a",
       "client/workspace/MissionImageDialog.tsx": "27adf5505b6ed72ba704e63ff324bf3f4db9bdd957cb861c6a56b8b6e2bdcc3e",
-      "client/workspace/ObjectiveEditor.tsx": "ab095491eb56216019c7566eabca67e12adab62a3579132670d94eadc19ec46b",
+      "client/workspace/ObjectiveEditor.tsx": "8046802903939e3a1efdb767770844180afa82837fa627ca60ec1e6437b9dbf9",
       "client/workspace/ObjectiveType.tsx": "bd84d8608f07f41cd22d5a53d9b6b7ce7102e77d410afc1eb2432fc1603bad79",
       "client/workspace/ProceduresGuide.tsx": "de06387243a2cbf53b07152c03ead408dd966482f64913623083bb01229b8cbf",
       "client/workspace/Sidebar.tsx": "debc393525a5714e236ad2553a61110890300bf37a125fcfab55eee8433088a2",
