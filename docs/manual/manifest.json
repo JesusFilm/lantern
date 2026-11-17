@@ -3,7 +3,7 @@
   "editionDate": "2026-11-17",
   "deck": "bea9d7fb22312e766ce592c719b349fbad4060498d440137d6385a6ed90c7443",
   "sources": {
-    "fingerprint": "df772b0a5c9988005de9cdc002b9279687a68c0bcdb8522db3cfcf47600ba36d",
+    "fingerprint": "f90a13925150e334401c9c0a7b598d660e2dba6fdb2a08705422b1cc4481a454",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -55,7 +55,7 @@
       "client/workspace/usePhoneLayout.ts": "eda4b107cebeca888fbf15d99ada307b256711ae56c4100e5b184b72467447bf",
       "client/workspace/useSwipeNavigation.ts": "3afbeefed498f713fc7e42e6d8fcc313dba7d8dd20a2f3aca59631d23820d420",
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
-      "docs/PRD.md": "cc2cb11ab6b6e76fec4885cebbf2e723f38f665d40ea6ff1fabba03391bcf494",
+      "docs/PRD.md": "4924b9dfb99d401b30d379804868818f29e6d6a84339f98bd64ec10d98fc8f98",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
       "package-lock.json": "6d1503ca2ab100729a9cab30c6592c64c97d45623445fdb7078d5c943649c4c7",
       "package.json": "20a96f0390ecbedfd144a2c28e1406858a857d50fc29f9648895e66cb2bcebc8",
@@ -213,7 +213,7 @@
   },
   "pdf": "81da198e8dd69c9785ea4a114279bcbfa2a06420a69b88afb208ec15237ce6e1",
   "verification": {
-    "generatedAt": "2026-11-17T02:31:37.250Z",
+    "generatedAt": "2026-11-17T10:16:32.949Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -266,7 +266,7 @@
       "client/workspace/usePhoneLayout.ts": "eda4b107cebeca888fbf15d99ada307b256711ae56c4100e5b184b72467447bf",
       "client/workspace/useSwipeNavigation.ts": "3afbeefed498f713fc7e42e6d8fcc313dba7d8dd20a2f3aca59631d23820d420",
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
-      "docs/PRD.md": "cc2cb11ab6b6e76fec4885cebbf2e723f38f665d40ea6ff1fabba03391bcf494",
+      "docs/PRD.md": "4924b9dfb99d401b30d379804868818f29e6d6a84339f98bd64ec10d98fc8f98",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
       "package-lock.json": "fc7e59279ef3d4e4e81bd7fcf7d43db2e9a7fee623c1788fdbd7fef38e6e90c1",
       "package.json": "44977d5b8ec71ed1a2b5fd23fd0423914ca9240f7b49d77b99e008baf8056451",

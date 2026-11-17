@@ -18,9 +18,11 @@ Load the relevant guide when its task applies; follow its source links only for 
 | Link issues in a PR, hand work to QA, or handle QA results and issue closure | [QA issue workflow](docs/development/qa-issue-workflow.md): labels, release evidence, checks, retesting and engineering closure |
 | Merge, release, change schema or delivery switches, or recover a failed release | [Releasing](docs/operations/releasing.md): automatic/manual paths, evidence and recovery |
 | Review a change or modify workflows, release tooling or agent instructions | [Change review](docs/operations/review-gate.md): independent inspection, protected changes and owner authority |
-| Change product or data-model behavior | [PRD](docs/PRD.md), [domain terms](GLOSSARY.md), [priorities](docs/ROADMAP.md) |
+| Find, document or change intended product behavior | [Business rules](docs/rules/README.md), [PRD](docs/PRD.md), [domain terms](GLOSSARY.md), [priorities](docs/ROADMAP.md) |
 | Add behavior users would notice, or release or remove a flagged feature | [Feature flags](docs/development/feature-flags.md): when to flag, guarding routes, testing both states, release and removal |
 | Change product source or prepare a QA hand-off | [QA manual](docs/development/manual.md): check coverage and wording, update affected slides and screenshots, then regenerate |
 | Choose/change an architectural approach or record a decision | [ADR instructions](docs/adrs/AGENTS.md) |
+
+Agents may draft and maintain business rules; only the owner approves their meaning. Record mismatches and unresolved decisions rather than silently choosing.
 
 Keep guides focused on current instructions. Replace obsolete guidance and remove completed plans; keep execution history in PRs/CI evidence and historical decisions in ADRs with links to their replacements.

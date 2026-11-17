@@ -7,4 +7,4 @@ The owner sets the next task directly. This roadmap expresses priorities without
 3. **Add owner administration.** Deliver the [approved administration API and MCP plan](plans/owner-administration-api.md) in phases, including JFP One authorization and verified delivery.
 4. **Scope weekly reporting.** Agree the reporting behavior and visibility described in the [PRD](PRD.md#proposed-weekly-reporting), then choose a bounded implementation with the owner.
 
-Future review cycles and administration beyond the agreed owner scope remain undecided. Record consequential technical decisions using the ADR process rather than growing an implicit implementation backlog.
+The agreed review cycle and deferred mid-cycle decisions are recorded in the [business rules](rules/review-and-confirmation.md). Administration beyond the agreed owner scope remains undecided. Record consequential technical decisions using the ADR process rather than growing an implicit implementation backlog.
