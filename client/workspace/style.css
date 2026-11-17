@@ -2037,6 +2037,10 @@ dialog .initiative-description-field textarea {
   gap: 12px 16px;
   margin: 24px 0;
 }
+.focus-review-guidance {
+  flex-basis: 100%;
+  margin: 0;
+}
 
 .phone-focus-heading + .focus-review-actions {
   margin-top: 0;
