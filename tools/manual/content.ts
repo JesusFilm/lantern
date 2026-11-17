@@ -255,7 +255,7 @@ export const chapters: Chapter[] = [
         check: [
           "Recommendations offer a switch; your type stays selected.",
           "Next requires an initiative or Other; choosing either clears the error.",
-          "Concerns stay visible; questions can continue past three answers.",
+          "Concerns stay visible; refine the draft or edit it yourself.",
         ],
         shots: [
           { id: "guided-work", persona: "member", path: draft, act: guided, ready: (p) => p.getByLabel("Your work", { exact: true }), caption: "Your work" },
@@ -266,11 +266,11 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Guide with AI: goals and final check",
         roles: ["Member"],
-        summary: "**coach-redesign** suggests goal ideas immediately and reviews the pending objective. Hidden in production until released; requires **coach**.",
+        summary: "**coach-redesign** suggests goal ideas immediately. Check the finished draft before saving. Hidden in production until released; requires **coach**.",
         tryIt: ["At SMART goals, select an idea or **Add SMART goal**.", "Pick or write an action and date, then **Next**.", "Edit the goal, **Add to objective**, then **Next** to the check."],
         check: [
           "Dates outside the focus period are rejected.",
-          "Review shows feedback without changing wording.",
+          "Check shows your objective and goals without changing wording.",
           "No goals warns but permits saving; failure keeps your writing.",
         ],
         shots: [

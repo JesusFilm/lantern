@@ -179,7 +179,7 @@ for (const redesigned of [false, true]) for (const primaryFails of [false, true]
         assert.ok(checks.includes('coaching-enabled-journey'));
         assert.ok(!checks.includes('coaching-disabled-manual'));
         assert.ok(calls.some(call => call.stage === 'goal'));
-        assert.equal(calls.some(call => call.stage === 'review'), redesigned);
+        assert.equal(calls.some(call => call.stage === 'review'), false);
         assert.equal(calls.some(call => call.path.startsWith('/fallback')), primaryFails);
       }, { coach, redesigned });
     }, { primaryFails });
@@ -210,13 +210,13 @@ test('deployed coaching caps all inference paths at ten requests, including retr
 });
 
 
-test('deployed redesigned coaching can answer four clarification questions before drafting', { timeout: 120000 }, async () => {
+test("deployed redesigned coaching preserves the member's wording if clarification continues", { timeout: 120000 }, async () => {
   await withProvider(async (coach, calls) => {
     await fixture(async input => {
       const checks = await runAcceptanceBrowser(input);
       assert.ok(checks.includes('coaching-enabled-journey'));
-      assert.equal(calls.filter(call => call.stage === 'clarify').length, 5);
-      assert.equal(calls.length, 8);
+      assert.equal(calls.filter(call => call.stage === 'clarify').length, 2);
+      assert.equal(calls.length, 4);
     }, { coach });
   }, { clarificationQuestions: 4 });
 });

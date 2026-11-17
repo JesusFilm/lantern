@@ -55,9 +55,7 @@ coaching problem before fixing it.
 CI typechecks the harness and runs its offline tests in the typecheck job. The tools
 are deliberately not package scripts, so the QA manual's source fingerprint is unaffected.
 
-The CLI now replays `coach-redesign`: type first, up to twelve clarification
-answers (never a forced draft), goal-level questions, immediate goal ideas, date
-validation and model-backed review. The legacy replay remains available in
+The CLI now replays `coach-redesign`: type first, at most one initial follow-up before returning the member’s own wording for editing, goal-level questions, immediate goal ideas and date validation. The final check does not call a model. The legacy replay remains available in
 `runCurrentFlow` with `redesigned: false` for baseline regression tests.
 Saved baseline runs remain unchanged. An intentionally uncooperative scripted
 member or an out-of-period date can end incomplete with a useful warning;

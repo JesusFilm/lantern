@@ -87,19 +87,15 @@ test("an unavailable coach is retried once and ends the session", async () => {
   assert.equal(outcome.completed, false);
 });
 
-test("redesigned replay keeps clarifying, carries goal answers and calls review", async () => {
+test("redesigned replay falls back to member wording after one follow-up and skips model review", async () => {
   const { coach, calls } = scripted({
-    clarify: [...[0, 1, 2, 3].map(i => ({ question: `Missing fact ${i}?`, ready: false })), { objective: "Help trainers", ready: true }],
+    clarify: [{ question: "Who benefits?", ready: false }, { question: "What changes?", ready: false }],
     actions: [{ actions: ["Try captions"], suggestedDate: "2027-02-01" }],
-    goal: [{ question: "Which session?", concern: "Choose a session." }, { goal: "By 1 February 2027, try captions in my session." }],
-    review: [{ review: "Check the session date." }],
+    goal: [{ goal: "By 1 February 2027, try captions." }],
   });
-  const { outcome } = await runCurrentFlow({ ...base, typeChoice: "personal-development", goals: [{ action: 0 }] }, coach, { answer: async () => "My session" }, { redesigned: true });
-  assert.deepEqual(calls.map(c => c.stage), ["clarify", "clarify", "clarify", "clarify", "clarify", "actions", "goal", "goal", "review"]);
-  assert.equal(calls[0]!.context.kind, "personal-development");
-  assert.equal(calls[7]!.context.action, "Try captions");
-  assert.equal(calls[7]!.context.answers.length, 5);
-  assert.equal(calls[8]!.context.siblings?.length, 1);
+  const { outcome } = await runCurrentFlow({ ...base, goals: [{ action: 0 }] }, coach, { answer: async () => "Trainers" }, { redesigned: true });
+  assert.deepEqual(calls.map(c => c.stage), ["clarify", "clarify", "actions", "goal"]);
+  assert.equal(outcome.objective, "testing");
   assert.equal(outcome.completed, true);
 });
 
@@ -114,19 +110,9 @@ test("replay preserves historical request context and stops on unresolved refine
   const requests = turns.filter(t => t.type === "coach");
   assert.deepEqual(requests[0]!.context.siblings, []);
   assert.deepEqual(requests[2]!.context.siblings, []);
-  assert.deepEqual(requests[3]!.context.siblings, ["By 1 February 2027, try captions."]);
+  assert.equal(requests.length, 3);
   const paused = scripted({ objective: [{ concern: "Please clarify the intended beneficiary." }] });
   const { outcome } = await runCurrentFlow({ ...base, existing: { objective: "Help staff", kind: "normal" }, improvement: "Clearer", goals: [] }, paused.coach, member, { redesigned: true });
   assert.equal(outcome.completed, false);
   assert.deepEqual(paused.calls.map(c => c.stage), ["objective"]);
-});
-
-test("an outstanding review question at the answer limit is not a completed session", async () => {
-  const { coach } = scripted({
-    clarify: [...Array.from({ length: 12 }, (_, i) => ({ question: `Fact ${i}?`, ready: false })), { objective: "Help staff", ready: true }],
-    actions: [{ actions: ["Check needs"], suggestedDate: "2027-02-01" }],
-    review: [{ question: "Who can help?", concern: "More context is needed." }],
-  });
-  const { outcome } = await runCurrentFlow({ ...base, goals: [] }, coach, { answer: async () => "Not sure" }, { redesigned: true });
-  assert.equal(outcome.completed, false);
 });

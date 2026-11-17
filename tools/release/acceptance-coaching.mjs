@@ -124,8 +124,7 @@ export async function runCoachingJourney({ context, origin, runId, enabled, rede
     await page
       .getByRole("button", { name: "Add to objective", exact: true })
       .click();
-    if (redesigned) { await modelTurn(next); await answerFollowups(); }
-    else await next.click();
+    await next.click();
     await expect(
       page.getByRole("heading", { name: "Check objective", exact: true }),
     ).toBeVisible();

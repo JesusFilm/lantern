@@ -19,6 +19,7 @@ async function world(reply: (stage: string, context: CoachCheckpoint) => CoachSu
   const context = await browser.newContext();
   await context.addCookies([{ name: "lantern-session", value: "member", url: f.origin }]);
   const page = await context.newPage();
+  page.setDefaultTimeout(5000);
   const focus = await (await f.request("member", "/api/focuses", "POST", {
     title: "Trainer focus", start: "2026-11-01", end: "2027-04-30", sections: [],
   })).json();
@@ -28,8 +29,8 @@ async function world(reply: (stage: string, context: CoachCheckpoint) => CoachSu
   return { ...f, calls, page, focus, async close() { await browser.close(); await vite.close(); await f.close(); } };
 }
 
-test("member chooses a type first, can clarify beyond three answers and explicitly switches type before saving without goals", async () => {
-  const f = await world((_stage, context) => context.answers.length < 4
+test("member can continue editing their own wording when the coach keeps asking questions", async () => {
+  const f = await world((_stage, context) => context.answers.length < 2
     ? { question: `What would help your training work? ${context.answers.length + 1}`, concern: "Connect this learning to your work.", ready: false }
     : { objective: "Develop language skills to support Spanish-speaking trainers.", recommendedKind: "personal-development", initiativeIds: [] });
   try {
@@ -41,17 +42,18 @@ test("member chooses a type first, can clarify beyond three answers and explicit
     await expect(page.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
     await page.getByRole("radio", { name: "Contribution", exact: true }).check();
     await page.getByRole("button", { name: "Next", exact: true }).click();
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 1; i++) {
       await expect(page.getByRole("heading", { name: `What would help your training work? ${i + 1}`, exact: true })).toBeVisible();
       await expect(page.getByText("Connect this learning to your work.", { exact: true })).toBeVisible();
       await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
       await page.getByLabel("Your answer", { exact: true }).fill(`Practice ${i + 1} with the trainers I already support.`);
       await page.getByRole("button", { name: "Next", exact: true }).click();
     }
-    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Develop language skills to support Spanish-speaking trainers.");
-    assert.deepEqual(f.calls.map(c => c.stage), Array(5).fill("clarify"));
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("I train Spanish-speaking colleagues and want to learn Spanish.");
+    await expect(page.getByText(/What would help your training work\? 2/)).toBeVisible();
+    assert.deepEqual(f.calls.map(c => c.stage), Array(2).fill("clarify"));
     await expect(page.getByRole("radio", { name: "Contribution", exact: true })).toBeChecked();
-    await page.getByRole("button", { name: "Switch to Personal development", exact: true }).click();
+    await page.getByRole("radio", { name: "Personal development", exact: true }).check();
     await page.getByLabel("Other — none of these apply").check();
     await expect(page.getByText(/No SMART goals yet\. You can save/)).toBeVisible();
     await page.getByRole("button", { name: "Save objective", exact: true }).click();
@@ -63,7 +65,7 @@ test("member chooses a type first, can clarify beyond three answers and explicit
   } finally { await f.close(); }
 });
 
-test("goal ideas appear immediately, questions preserve the selected action, dates stay in period and review does not rewrite the draft", async () => {
+test("goal ideas preserve the selected action and date, and the final check needs no model call", async () => {
   const f = await world((stage, context) => {
     if (stage === "clarify") return { objective: "Help trainers deliver accessible workshops.", recommendedKind: "normal", initiativeIds: [] };
     if (stage === "actions") return { actions: ["Try the workshop materials with captions"], suggestedDate: "2027-03-15" };
@@ -93,10 +95,8 @@ test("goal ideas appear immediately, questions preserve the selected action, dat
     await expect(page.getByLabel("SMART goal", { exact: true })).toContainText("introductory session");
     await page.getByRole("button", { name: "Add to objective", exact: true }).click();
     await page.getByRole("button", { name: "Next", exact: true }).click();
-    await expect(page.getByText("The goal supports the objective. Check that the session date is feasible.", { exact: true })).toBeVisible();
-    await expect(page.getByText("Confirm the session date before requesting review.", { exact: true })).toBeVisible();
-    const review = f.calls.find(c => c.stage === "review");
-    assert.equal(review?.context.siblings?.length, 1);
+    await expect(page.getByRole("heading", { name: "Check objective", exact: true })).toBeVisible();
+    assert.equal(f.calls.some(c => c.stage === "review"), false);
     assert.equal(f.calls.filter(c => c.stage === "goal").at(-1)?.context.action, "Try the workshop materials with captions");
     await page.getByRole("button", { name: "Save objective", exact: true }).click();
     await expect(page.getByRole("region", { name: "Add objective", exact: true })).toHaveCount(0);
@@ -132,5 +132,37 @@ test("switching methods during a refinement question preserves manual edits and 
     await expect(page.getByLabel("Your answer", { exact: true })).toBeVisible();
     assert.equal(f.calls.at(-1)?.stage, "objective");
     assert.equal(f.calls.at(-1)?.context.objective, "Help trainers explain workshop exercises clearly");
+  } finally { await f.close(); }
+});
+
+test("member can request a wording revision from the editable objective", async () => {
+  const f = await world((stage, context) => stage === "objective"
+    ? { objective: "Help trainers deliver accessible workshops.", initiativeIds: [] }
+    : { objective: "Make workshops accessible for trainers.", initiativeIds: [] });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I help trainers make workshops accessible.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Make workshops accessible for trainers.");
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByLabel("How should the coach refine this wording?").fill("Make it shorter");
+    await expect(page.getByLabel("How should the coach refine this wording?")).toHaveValue("Make it shorter");
+    await page.getByRole("button", { name: "Refine wording", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Help trainers deliver accessible workshops.");
+    assert.equal(f.calls.at(-1)?.context.concern, "Make it shorter");
+    assert.equal(f.calls.at(-1)?.context.objective, "Make workshops accessible for trainers.");
+  } finally { await f.close(); }
+});
+
+test("a concern without a draft still lets the member edit their own words", async () => {
+  const f = await world(() => ({ concern: "Describe how this learning supports your work." }));
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Personal development", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I want to learn Spanish.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("I want to learn Spanish.");
+    await expect(page.getByText("Describe how this learning supports your work.", { exact: true })).toBeVisible();
   } finally { await f.close(); }
 });

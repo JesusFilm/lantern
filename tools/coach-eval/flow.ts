@@ -154,6 +154,10 @@ export async function runCurrentFlow(
       const result = await ask(step, stage, { ...context(), answers: nextAnswers });
       if (!result) return { turns, outcome: outcome("coach unavailable") };
       answers = nextAnswers;
+      if (redesigned && !result.objective && (!result.question || step === "question")) {
+        edit.text = work;
+        break;
+      }
       if (result.objective && result.ready !== false) {
         edit.text = result.objective;
         recommendedKind = result.recommendedKind;
@@ -215,11 +219,6 @@ export async function runCurrentFlow(
     if (written.concern) record.concerns.push(written.concern);
     edit.goals.push(written.goal);
     plan = { actions: [], action: "", date: plan.date, text: "" };
-  }
-  if (redesigned) {
-    const checked = await ask("review", "review", context());
-    if (checked?.question) return { turns, outcome: outcome("review needs member context") };
-    if (!checked?.review && !checked?.concern) return { turns, outcome: outcome("review unavailable") };
   }
   return { turns, outcome: outcome() };
 }

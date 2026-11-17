@@ -27,9 +27,8 @@ and `on` offers it to everyone. With no setting it is off in production. On stag
 unset coach is offered whenever both keys are present.
 
 `coach-redesign` separately selects the updated prompt, type-first flow, flexible
-clarification and model-backed objective check. It defaults on locally/on staging
-and off in production; `coach` still controls all inference availability. Its
-review stage answers 404 for accounts without this flag. Qwen remains primary.
+focused clarification and a member-controlled objective check. It defaults on locally/on staging
+and off in production; `coach` still controls all inference availability. The final check does not call a model. Qwen remains primary.
 
 `COACH_ENABLED` is retired and no longer read. While that variable is still set, the
 release configuration check refuses to deploy unless `LANTERN_FEATURES` sets `coach`,
