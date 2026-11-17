@@ -1,6 +1,8 @@
 # Review, confirmation and the cycle
 
-These rules describe the agreed position-focus process. The owner decisions in [#153](https://github.com/JesusFilm/lantern/issues/153), [#130](https://github.com/JesusFilm/lantern/issues/130), [#89](https://github.com/JesusFilm/lantern/issues/89) and [#169](https://github.com/JesusFilm/lantern/issues/169) are the decision record. Screen details remain in the [PRD](../PRD.md).
+These rules cover review, confirmation and the position-focus cycle. The owner decisions in [#153](https://github.com/JesusFilm/lantern/issues/153), [#130](https://github.com/JesusFilm/lantern/issues/130), [#89](https://github.com/JesusFilm/lantern/issues/89) and [#169](https://github.com/JesusFilm/lantern/issues/169) are the decision record where cited. Other entries link to current documentation and do not by themselves establish a separate owner decision. Screen details remain in the [PRD](../PRD.md); other areas have not yet been migrated into the catalogue.
+
+Find the rule: [request and content requirements](#rc-01-confirmation-needs-a-request-for-the-current-saved-version) · [agreement and optional discussion](#rc-04-saving-requesting-and-confirming-are-separate-actions) · [career lead self-confirmation](#rc-06-career-leads-review-and-confirm-their-own-focus) · [locking and progress](#rc-08-confirmation-locks-the-agreement-and-discussion) · [cycle and renewal](#rc-12-two-full-cycles-per-year) · [mid-cycle and accidental-lock decisions](#open-and-deferred-decisions).
 
 ## Rules
 
@@ -30,7 +32,9 @@ Why: a locked focus without required content would remain empty for the cycle.
 ### RC-04 Saving, requesting and confirming are separate actions
 In effect · Owner decision, 17 Nov 2026 · [#153](https://github.com/JesusFilm/lantern/issues/153)
 
-Saving does not request review or confirm agreement; requesting review does not confirm it. A note, waiting period and second reviewer are not mandatory, including after offline agreement.
+Saving does not request review or confirm agreement; requesting review does not confirm it. Confirmation records agreement after review. Agreement can be reached offline, but the explicit request and confirmation in Lantern are still required; a note, waiting period and second reviewer are not mandatory. For a career lead's own focus, discussion with a senior or manager is optional (RC-06).
+
+Current interface and enforcement: the member-focus confirmation dialog refers to a discussion, but Lantern does not verify that a conversation occurred. The owner and career lead can use review notes; see RC-11. This observation does not change the expected agreement or establish a new approval step.
 
 Rationale (inferred): requesting and confirming are deliberate actions by the focus owner and career lead.
 
@@ -72,7 +76,7 @@ Rationale (inferred): progress can change after agreement without rewriting it.
 ### RC-10 Confirmation removes private coaching checkpoints
 In effect · [ADR 0010](../adrs/0010-integrated-focus-assistance.md)
 
-Confirmation removes the owner's private coaching checkpoint. A failed confirmation leaves it intact; a career lead cannot read another member's checkpoint.
+Confirmation removes the owner's private coaching checkpoint. A failed confirmation attempt does not itself remove it; another concurrent successful confirmation may already have done so. A career lead cannot read another member's checkpoint.
 
 Why: not recorded in the cited decision.
 
@@ -116,7 +120,7 @@ Why: people need to understand how to become ready without losing their work. Se
 ### RC-D1 Changing a confirmed focus mid-cycle
 Deferred · revisit after all members' first submissions in Dec 2026–Jan 2027 · [#169](https://github.com/JesusFilm/lantern/issues/169)
 
-Question: amend a confirmed focus, or require a new position focus? The decision must also address who initiates and authorizes changes, review and confirmation, preservation of the prior agreement, discussion, progress and goal references, and how people identify the current focus. Current behavior: confirmed content cannot be edited or unlocked, including by career leads. Unlocking is not an approved future feature.
+Question: amend a confirmed focus, or require a new position focus? The decision must also address who initiates and authorizes changes, review and confirmation, preservation of the prior agreement, discussion, progress and goal references, and how people identify the current focus. Current behavior: confirmed content cannot be edited or unlocked, including by career leads. Unlocking is not an approved future feature. The mid-cycle check-in reviews progress; the distinct end-cycle renewal creates a new focus and retains history (RC-12–RC-14). Scheduling, automatic carryover and cycle tooling are not provided.
 
 ### RC-D2 Recovering from an accidental confirmation
 Deferred with RC-D1 · [#169](https://github.com/JesusFilm/lantern/issues/169)
@@ -127,6 +131,11 @@ Question: how should accidental confirmation be recovered, and should that diffe
 Open · [#169](https://github.com/JesusFilm/lantern/issues/169)
 
 Question: are January and July fixed cycle boundaries, or illustrative guidance? The owner decision establishes two cycles per year; the Guide depicts six-month cycles. The decision does not specify exact duration or calendar boundaries.
+
+### RC-Q2 Disagreement and escalation guidance
+Open · owner decision status not established
+
+The [current Guide text](../../server/guide-content.ts) describes a human escalation when a member and career lead cannot agree. Its status as an owner-approved business rule has not been established. Lantern's current confirmation checks do not independently verify agreement or provide a separate escalation or override workflow. Do not infer from this open question that the Guide text is approved, or that its absence from this catalogue means no guidance exists.
 
 ## Retired IDs
 

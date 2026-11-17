@@ -1,6 +1,6 @@
 # Business rules
 
-These area files record product decisions: what should happen, why, and the exceptions. The [PRD](../PRD.md) indexes migrated areas. Rules in areas not yet listed still live in the existing product documents.
+These area files record product decisions: what should happen, why, and the exceptions. The [PRD](../PRD.md) indexes migrated areas. The catalogue is partial: its silence on a question does not mean that no rule or guidance exists. For areas not yet migrated, consult the PRD, glossary and relevant guidance; distinguish an owner decision from observed implementation or guidance, and report an unresolved provenance rather than assuming either approval or a lack of policy.
 
 - [Review, confirmation and the cycle](review-and-confirmation.md)
 
