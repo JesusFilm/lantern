@@ -5,7 +5,7 @@ import { direction, initiativeName, type Scenario } from "./scenarios.js";
 import { complete } from "./targets.js";
 import type { Transcript } from "./types.js";
 
-export const rubricVersion = "2026-11-17.4";
+export const rubricVersion = "2026-11-17.5";
 export const defaultJudge = "openai/gpt-6.1-sol";
 export const dimensions = ["faithfulness", "clarification", "objective", "goals", "type", "alignment", "role"] as const;
 export type Dimension = (typeof dimensions)[number];
@@ -73,7 +73,8 @@ export function renderTranscript(transcript: Transcript, scenario: Scenario): st
       lines.push(`[Member, saved alignment] ${saved.other ? "Other (none apply)" : saved.initiatives.map(initiativeName).join(", ") || "Not selected"}`);
       if (saved.siblings?.length) lines.push(`[Member, existing goals] ${saved.siblings.map(quote).join(" | ")}`);
     }
-    if (transcript.flow !== "redesigned") lines.push(`[Member, what to improve] ${quote(scenario.improvement ?? "")}`);
+    const improvement = transcript.flow === "redesigned" ? saved?.concern : scenario.improvement;
+    if (improvement) lines.push(`[Member, what to improve] ${quote(improvement)}`);
   } else lines.push(`[Member, your work] ${quote(scenario.work ?? "")}`);
   for (const turn of transcript.turns) {
     if (turn.type === "member") {

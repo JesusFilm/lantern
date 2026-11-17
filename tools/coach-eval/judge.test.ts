@@ -34,4 +34,7 @@ test("redesigned existing-objective transcript does not invent an improvement re
   const scenario = scenarios.find(s => s.id === "already-useful")!;
   const rendered = renderTranscript({ ...transcript, flow: "redesigned", scenario: scenario.id }, scenario);
   assert.doesNotMatch(rendered, /Member, what to improve/);
+  const turns = transcript.turns.map(t => t.type === "coach" ? { ...t, context: { ...t.context, concern: "Keep this shorter" } } : t);
+  const historical = renderTranscript({ ...transcript, flow: "redesigned", scenario: scenario.id, turns }, scenario);
+  assert.match(historical, /Member, what to improve.*Keep this shorter/);
 });
