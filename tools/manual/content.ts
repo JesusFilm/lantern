@@ -418,6 +418,15 @@ export const chapters: Chapter[] = [
       },
       {
         kind: "feature",
+        title: "Read progress from a review request",
+        roles: ["Career lead"],
+        summary: "Confirmed requests show the member's current progress alongside the locked review discussion.",
+        tryIt: ["Open **Review requests** and review a confirmed focus.", "Check status badges in **Focus**.", "Choose ① **Progress & notes** to read the member's notes."],
+        check: ["Statuses and notes match the Department view.", "The lead cannot edit another member's progress.", "Earlier draft snapshots do not show current statuses."],
+        shots: [{ id: "lead-review-progress", persona: "lead", path: "/?page=reviews", act: async (page) => { await openReview("Aroha Ngata · Second half 2026")(page); await click("Progress & notes")(page); }, ready: (page) => page.getByText("The runbook draft is ready for the team's feedback.", { exact: true }), mode: { kind: "viewport", crop: ".workspace" }, highlight: ['role=button[name="Progress & notes"]'], caption: "Progress in a confirmed request" }],
+      },
+      {
+        kind: "feature",
         title: "Confirm from a position focus",
         roles: ["Career lead"],
         summary: "A lead can confirm only the current requested version with a Contribution objective and SMART goal. The dialog identifies whose focus will lock; no unlock is available.",
