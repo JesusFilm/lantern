@@ -66,7 +66,7 @@ export interface ManualWorld {
   origin: string;
   /** Session cookie value for a persona, or undefined for a signed-out visitor. */
   session(persona: Persona | "anonymous"): string | undefined;
-  ids: Record<Persona, string> & { draftFocus: string; reviewFocus: string; confirmedFocus: string; leadOwnRequestedFocus: string; incompleteFocus: string; staleReviewFocus: string };
+  ids: Record<Persona, string> & { draftFocus: string; reviewFocus: string; confirmedFocus: string; leadOwnRequestedFocus: string; incompleteFocus: string; missingContributionFocus: string; staleReviewFocus: string };
   close(): Promise<void>;
 }
 
@@ -228,7 +228,13 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     await call("lead", `/api/coach/focuses/${leadOwnRequested.id}/request`, "POST", { version: leadOwnRequested.version });
 
     const incomplete = (await call("lead", "/api/focuses", "POST", {
-      title: "Morgan's unfinished draft", start: "2027-01-01", end: "2027-06-30", sections: [],
+      title: "Morgan's unfinished draft", start: "2027-01-01", end: "2027-06-30",
+      sections: [{ kind: "normal", objective: "Support the team's development.", goals: [], alignment: { initiatives: [initiative("Role Clarity And Growth")], other: false } }],
+    } satisfies FocusDraft)) as PositionFocus;
+
+    const missingContribution = (await call("member", "/api/focuses", "POST", {
+      title: "Aroha's unfinished draft", start: "2027-01-01", end: "2027-06-30",
+      sections: [{ kind: "personal-development", objective: "Make deployment failures easier to resolve.", goals: ["By 30 April 2027, publish runbooks for the three most common deployment failures."], alignment: { initiatives: [initiative("Rethink How We Build")], other: false } }],
     } satisfies FocusDraft)) as PositionFocus;
 
     const staleDraft: FocusDraft = {
@@ -247,7 +253,7 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     return {
       origin,
       session: (persona) => (persona === "anonymous" ? undefined : persona),
-      ids: { ...ids, draftFocus: draft.id, reviewFocus: review.id, confirmedFocus: confirmed.id, leadOwnRequestedFocus: leadOwnRequested.id, incompleteFocus: incomplete.id, staleReviewFocus: staleReview.id },
+      ids: { ...ids, draftFocus: draft.id, reviewFocus: review.id, confirmedFocus: confirmed.id, leadOwnRequestedFocus: leadOwnRequested.id, incompleteFocus: incomplete.id, missingContributionFocus: missingContribution.id, staleReviewFocus: staleReview.id },
       async close() {
         server.closeAllConnections();
         await new Promise<void>((done) => server.close(() => done()));
