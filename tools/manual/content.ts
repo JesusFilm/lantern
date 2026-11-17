@@ -307,6 +307,15 @@ export const chapters: Chapter[] = [
       },
       {
         kind: "feature",
+        title: "Send changes for review",
+        roles: ["Member", "Career lead"],
+        summary: "After you change a requested focus, the draft explains how to send the latest saved version again.",
+        tryIt: ["Request review, then edit and save the focus.", "Choose **Review & discussion**, then **Send changes for review**."],
+        check: ["Changes not sent and the resend guidance appear on the draft.", "Sending the latest version clears the guidance and restores confirmation eligibility."],
+        shots: [{ id: "owner-unsent-review", persona: "peer", path: (ids) => "/?focus=" + ids.staleReviewFocus, ready: heading("Changes not yet sent"), mode: { kind: "element", target: ".focus-review-actions", padding: 16 }, caption: "Send the latest saved version" }],
+      },
+      {
+        kind: "feature",
         title: "When a review request is unavailable",
         roles: ["Member", "Career lead"],
         summary: "Notes remain optional. Note and Send share one disabled state and an accessible reason.",
