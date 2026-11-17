@@ -150,7 +150,7 @@ export function coachCaller(target: Target, env: EvalEnvironment, redesigned = f
     const validate = (value: unknown) => {
       const attempt = attempts.at(-1);
       try {
-        const result = validateSuggestion(stage, value, ids, redesigned);
+        const result = validateSuggestion(stage, value, ids, redesigned, context);
         if (attempt) attempt.outcome = "ok";
         return result;
       } catch (error) {

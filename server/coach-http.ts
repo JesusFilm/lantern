@@ -247,6 +247,7 @@ export function coachRoutes(
             v,
             direction.initiatives.filter((i) => !i.archived).map((i) => i.id),
             enhanced,
+            context,
           ),
         abort.signal,
       );

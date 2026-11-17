@@ -74,3 +74,22 @@ test("a not-ready draft without a usable question or concern is rejected", async
     assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: checkpoint })).status, 503);
   } finally { await f.close(); }
 });
+
+test("Lantern owns provisional and selected dates even when the coach supplies different dates", async () => {
+  let suppliedGoal = "";
+  const coach: CoachProvider = { async suggest(_s, context, validate) {
+    return validate(JSON.parse(context).stage === "actions"
+      ? { actions: ["Review failure reports"], suggestedDate: "2020-01-01" }
+      : { goal: suppliedGoal });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const actions = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context: checkpoint })).json();
+    assert.equal(actions.suggestedDate, checkpoint.end);
+    for (const prefix of ["", "By 1 January 2027, ", "By January 1, 2027, ", "By 2027-01-01, "]) {
+      suppliedGoal = prefix + "review failure reports.";
+      const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint })).json();
+      assert.equal(goal.goal, "By 30 November 2026, review failure reports.");
+    }
+  } finally { await f.close(); }
+});

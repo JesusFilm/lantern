@@ -121,6 +121,7 @@ export function validateSuggestion(
   value: unknown,
   initiativeIds: string[],
   redesigned = false,
+  context?: Pick<CoachCheckpoint, "date" | "end">,
 ): CoachSuggestion {
   const fail = (): never => {
     throw new Error("Invalid coach response");
@@ -167,6 +168,7 @@ export function validateSuggestion(
     const choices = value[key] as string[] | undefined;
     if (choices && choices.some((choice) => !choice.trim())) return fail();
   }
+  if (redesigned && context && Array.isArray(value.actions) && value.actions.length) value.suggestedDate = context.end;
   if (value.suggestedDate !== undefined && !date(value.suggestedDate))
     return fail();
   if (
@@ -197,6 +199,15 @@ export function validateSuggestion(
     if (!output) return fail();
   }
   const result = value as CoachSuggestion;
+  if (redesigned && context) {
+    if (result.goal && date(context.date)) {
+      const prefix = /^By ([^,\n]{1,60}(?:,\s*\d{4})?),\s*/i.exec(result.goal);
+      const action = prefix && Number.isFinite(Date.parse(prefix[1]!)) ? result.goal.slice(prefix[0].length) : result.goal;
+      if (!action.trim()) return fail();
+      const label = new Date(context.date + "T12:00:00Z").toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+      result.goal = `By ${label}, ${action}`;
+    }
+  }
   if (result.initiativeIds?.some((id) => !initiativeIds.includes(id)))
     return fail();
   return result;
