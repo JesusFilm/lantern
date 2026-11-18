@@ -47,8 +47,8 @@ export function Sidebar({ session, activePage, onNavigate }: {
       { id: "focuses", label: "Position focuses", icon: FileText },
       ...(session.department?.role === "career-lead" ? [{ id: "reviews", label: "Review requests", icon: ClipboardCheck }] : []),
       { id: "guide", label: "Guide", icon: BookOpen },
+      { id: "account", label: "Account", icon: UserRound },
     ] : []),
-    { id: "account", label: "Account", icon: UserRound },
     ...(session?.department?.role === "career-lead" && !session.localAccess ? [{ id: "department", label: "Department", icon: Building2 }] : []),
   ];
   const toggleLabel = collapsed ? "Expand sidebar" : "Collapse sidebar";

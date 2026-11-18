@@ -4,6 +4,7 @@ import type { PositionFocus } from "../../shared/focus.js";
 import type { SessionView } from "../../shared/access.js";
 import { objectiveTypes } from "../workspace/ObjectiveType.js";
 import { FocusDocument } from "../workspace/FocusDocument.js";
+import { FocusProgress } from "../workspace/FocusProgress.js";
 import { formatFocusDate } from "../workspace/focusDate.js";
 import { api } from "../workspace/api.js";
 import { hasReviewableContribution } from "../workspace/reviewEligibility.js";
@@ -462,7 +463,9 @@ export function CoachWorkspace({
                 </details>
               )}
               {old && comparison(old, request.document)}
-              <FocusDocument focus={request.document} />
+              {locked ? <FocusProgress key={record.focus.id} focus={record.focus} memberId={record.memberId} enabled={session.features.includes("focus-progress")}>
+                <FocusDocument focus={request.document} />
+              </FocusProgress> : <FocusDocument focus={request.document} />}
               {!locked && (
                 <>
                 {record.focus.version !== request.document.version && <p className="cp-muted">This focus has changed since review was requested. Request review of the latest saved version before confirming.</p>}

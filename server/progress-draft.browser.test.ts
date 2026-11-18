@@ -69,6 +69,7 @@ test("confirmed focus status badges do not appear on earlier-draft review snapsh
     await leadPage.goto(origin + "/?page=reviews");
     await expect(leadPage.getByRole("heading", { name: "Member · Annual focus" })).toBeVisible();
     await leadPage.getByRole("button", { name: "Review focus", exact: true }).click();
+    await expect(leadPage.getByRole("button", { name: "Progress & notes", exact: true })).toHaveCount(0);
     await leadPage.getByRole("checkbox", { name: "We have discussed and agreed this focus." }).check();
     await leadPage.getByRole("button", { name: "Confirm focus", exact: true }).click();
     await expect(leadPage.getByText("Confirmed", { exact: true })).toBeVisible();
@@ -78,6 +79,7 @@ test("confirmed focus status badges do not appear on earlier-draft review snapsh
     const goal = page.getByRole("region", { name: "Objective 1" }).getByRole("region", { name: "SMART goal 1" });
     await goal.getByRole("button", { name: "Add note", exact: true }).click();
     await page.getByLabel("Status", { exact: true }).selectOption("achieved");
+    await page.getByLabel("Progress note").fill("The sessions are complete.");
     await page.getByRole("button", { name: "Save progress", exact: true }).click();
     await expect(goal.getByRole("button", { name: "Edit progress", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Focus", exact: true }).click();
@@ -90,6 +92,17 @@ test("confirmed focus status badges do not appear on earlier-draft review snapsh
     await expect(earlier.getByText("Achieved", { exact: true })).toHaveCount(0);
     // The draft-1 snapshot lists "Publish a guide" first; the badge must not sit next to it.
     await expect(earlier.locator("p", { hasText: "Publish a guide" })).toBeVisible();
+    // The same confirmed focus reached through Review requests exposes current progress.
+    await leadPage.goto(origin + "/?page=reviews");
+    await leadPage.getByRole("button", { name: "Review focus", exact: true }).click();
+    await expect(leadPage.getByText("Achieved", { exact: true })).toBeVisible();
+    await leadPage.getByRole("button", { name: "Progress & notes", exact: true }).click();
+    await expect(leadPage.getByText("The sessions are complete.")).toBeVisible();
+    await expect(leadPage.getByRole("button", { name: "Edit progress", exact: true })).toHaveCount(0);
+    await leadPage.reload();
+    await leadPage.getByRole("button", { name: "Review focus", exact: true }).click();
+    await leadPage.getByRole("button", { name: "Progress & notes", exact: true }).click();
+    await expect(leadPage.getByText("The sessions are complete.")).toBeVisible();
   } finally {
     await browser.close();
     await vite?.close();

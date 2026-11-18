@@ -2,7 +2,7 @@ import type { Ref } from 'react';
 import { ArrowRight, LockKeyhole, MessageCircle, Pencil } from 'lucide-react';
 import './procedures-guide.css';
 
-export const procedureSections = ['The year', 'Agree a focus', 'Make a change'] as const;
+export const procedureSections = ['The year', 'Agree a focus'] as const;
 export type ProcedureSection = typeof procedureSections[number];
 
 const milestones = [
@@ -34,22 +34,15 @@ function YearCircle({ headingRef }: { headingRef: Ref<HTMLHeadingElement> }) {
       </ol>
     </div>
     <div className="procedure-year-key"><span><i aria-hidden="true" />Focus 01 · Jan–Jun</span><span><i aria-hidden="true" />Focus 02 · Jul–Dec</span></div>
-    <p>Create a new focus for each half-year. Renewal preserves the previous cycle’s agreed focus and history.</p>
   </section>;
 }
 
-function AgreementFlow({ amendment, headingRef }: { amendment: boolean; headingRef: Ref<HTMLHeadingElement> }) {
-  if (amendment) return <section className="procedure-flow-panel">
-    <p className="procedure-timing">Change policy · Not decided</p>
-    <h2 ref={headingRef} tabIndex={-1}>Confirmed focuses stay locked.</h2>
-    <p>Confirmed focuses can’t be edited or unlocked, even by a career lead.</p>
-    <p>The policy for changing a confirmed focus is still undecided, including whether to amend it or create a new focus.</p>
-  </section>;
+function AgreementFlow({ headingRef }: { headingRef: Ref<HTMLHeadingElement> }) {
   const stages = [
     { icon: Pencil, title: 'Draft', who: 'Member' },
-    { icon: MessageCircle, title: 'Request review', who: 'Member' },
-    { icon: MessageCircle, title: 'Discuss & agree', who: 'Together' },
-    { icon: LockKeyhole, title: 'Confirm', who: 'Career lead' },
+    { icon: MessageCircle, title: 'Request review', who: 'Member', note: 'Repeat after saving changes' },
+    { icon: MessageCircle, title: 'Review & agree', who: 'Together or lead self-review' },
+    { icon: LockKeyhole, title: 'Confirm', who: 'Career lead', note: 'Can confirm own focus' },
   ];
   return <section className="procedure-flow-panel">
     <p className="procedure-timing">January & July</p>
@@ -59,15 +52,15 @@ function AgreementFlow({ amendment, headingRef }: { amendment: boolean; headingR
         <span className="procedure-flow-icon"><stage.icon size={28} aria-hidden="true" /></span>
         {i < stages.length - 1 && <ArrowRight className="procedure-flow-arrow" size={19} aria-hidden="true" />}
         <strong>{stage.title}</strong><span className="procedure-role">{stage.who}</span>
+        {stage.note && <span className="procedure-role procedure-flow-note">{stage.note}</span>}
       </li>)}
     </ol>
-      <p>Request review of the latest saved version before confirmation, including for a career lead’s own focus. Send any later saved changes for review again. After an offline agreement, still request review and confirm in Lantern, immediately or later.</p>
-      <p>For your own focus as career lead, review it again or discuss it with your senior or manager. You can confirm it yourself without another reviewer or a note.</p>
+    <p className="procedure-flow-reminder">Even with offline agreement, the current version needs a review request and confirmation in Lantern.</p>
   </section>;
 }
 
 export function ProceduresGuide({ section, headingRef }: { section: ProcedureSection; headingRef: Ref<HTMLHeadingElement> }) {
   return section === 'The year'
     ? <YearCircle headingRef={headingRef} />
-    : <AgreementFlow amendment={section === 'Make a change'} headingRef={headingRef} />;
+    : <AgreementFlow headingRef={headingRef} />;
 }

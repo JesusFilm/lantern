@@ -14,7 +14,7 @@ grant access to position focuses. An owner may separately be a career lead.
 An approved participant with active membership of the team who prepares and manages their own position focuses.
 
 **Career lead**:
-The person supporting members' development who can read their focuses and confirm an agreed baseline after discussion. The supported setup has one active career lead per department; this is an application role, not a database administrator.
+The person supporting members' development who can read their focuses and confirm an agreed baseline after review. The supported setup has one active career lead per department; this is an application role, not a database administrator.
 
 **Approved account**:
 A verified Jesus Film account whose exact normalized email is approved in the environment’s database. All environments admit approved personal and work accounts without a domain restriction. Approval permits eligible sign-in; membership and career-lead authority are separate grants. Jesus Film sign-in creates the account; approval alone creates neither an account nor a membership.
@@ -35,17 +35,17 @@ A titled, dated document describing a member's intended contributions through ob
 A focus still open to its member's edits and discussion with the career lead. It may be incomplete.
 
 **Confirmed position focus**:
-A focus the career lead has confirmed after review and agreement of its current requested saved version, establishing a baseline whose content and review discussion are locked. A career lead may request review of their own focus and self-confirm it; discussion with a senior or manager is optional, with no mandatory second reviewer, note or wait. Offline agreement still requires the request and confirmation steps in Lantern. Previously confirmed focuses remain valid without retrospective requests. Confirmation means agreement, not that the goals have been achieved.
+A focus confirmed as the agreed, locked baseline. Confirmation records agreement, not achievement. See the [review and confirmation rules](docs/rules/review-and-confirmation.md).
 _Avoid_: Submitted, approved by management, or complete when those imply additional workflow stages.
 
 **Locked-in position focus**:
 The historical term for a confirmed position focus. Later review work preserves this baseline rather than silently rewriting it.
 
 **Review request**:
-A focus owner’s explicit request to review one immutable saved version of their focus. It is required before confirmation, including for a career lead’s own focus, and does not itself lock or confirm anything. A lead’s own request appears in their Review requests list for self-review. A later save does not replace the snapshot; the owner must send the latest changes before confirmation. A request note is optional.
+A focus owner’s explicit request to review one immutable saved version of their focus. See the [review and confirmation rules](docs/rules/review-and-confirmation.md).
 
 **Coaching checkpoint**:
-Private answers and writing retained from the earlier coaching experience. The current authoring UI retains these without exposing an Earlier working notes interface and creates no new checkpoints. Career leads cannot read another member's notes; manual saves retain them, and confirmation removes them.
+Private answers and writing retained from the earlier coaching experience. The current UI has no Earlier working notes interface and creates no new checkpoints. Career leads cannot read another member's notes; manual saves retain them, and confirmation removes them.
 
 **Review note**:
 An authored message attached to a requested version. Notes can be added or soft-deleted by their author, never edited. A note is not confirmation.
@@ -54,10 +54,10 @@ An authored message attached to a requested version. Notes can be added or soft-
 A member's current status and editable note about an objective or SMART goal in a confirmed focus. It is separate from the agreed focus and from review notes; a career lead may read it.
 
 **Review phase**:
-A stage within each of two full cycles per year: preparation, review request and confirmation; a mid-cycle progress check-in; and an end-cycle review. End-cycle renewal deliberately creates a new position focus with carryovers and/or new objectives and goals, preserving the previous baseline. It does not amend the previous cycle’s focus. Scheduling, automatic carryover and cycle tooling are not provided.
+A stage in the focus cycle. The [cycle rules](docs/rules/review-and-confirmation.md) describe the stages and renewal.
 
 **Mid-cycle change**:
-A possible change to agreed objectives or goals before the cycle ends. Amendment versus a new focus and accidental-lock recovery remain undecided in [#169](https://github.com/JesusFilm/lantern/issues/169), to revisit only after all members’ first submissions during December 2026–January 2027. Confirmed content cannot currently be edited or unlocked, including by career leads; unlocking is not an approved future feature.
+A possible change to agreed objectives or goals before the cycle ends. The [mid-cycle decision](docs/rules/review-and-confirmation.md#rc-d1-changing-a-confirmed-focus-mid-cycle) is deferred.
 
 **Objective**:
 An intended contribution or outcome that gives direction to a member's work or development.
@@ -86,7 +86,7 @@ Work towards useful outcomes, including product work, shared capabilities and ac
 ## Guidance and context
 
 **Guide**:
-Optional instruction supporting objective and SMART-goal writing and the Position Focus procedure, separate from focus authoring. The Procedures topic contains The year, Agree a focus, and Make a change; the agreed two-cycle rhythm does not itself enable scheduling, automatic carryover or amendment operations.
+Optional instruction supporting objective and SMART-goal writing and the Position Focus procedure, separate from focus authoring. The Procedures topic contains The year and Agree a focus; the agreed two-cycle rhythm does not itself enable scheduling, automatic carryover or amendment operations.
 
 **Example position focus**:
 A concise generic illustration of one objective and two goals. Its targets do not impose requirements on a member's own focus.

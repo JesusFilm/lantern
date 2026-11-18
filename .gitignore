@@ -7,7 +7,7 @@ dist/
 .DS_Store
 coverage/
 
-# Generated design exports; retained source/history lives in the prototype worktree.
+# Generated design exports.
 output/
 
 # Generated release metadata/evidence (CI artifacts only).
