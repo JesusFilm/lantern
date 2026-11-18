@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Sparkles } from "lucide-react";
-import { coachContextLimits, type CoachCheckpoint, type CoachSuggestion } from "../../shared/coach.js";
+import { coachContextLimits, type CoachCheckpoint, type CoachSuggestion, type ObjectiveAssessment } from "../../shared/coach.js";
 import type { EditChange, ObjectiveEdit } from "./useDraftFocusWorkflow.js";
 import { objectiveTypes, ObjectiveType, ObjectiveTypeChoices } from "./ObjectiveType.js";
 import { AlignmentSummary, InitiativeChoices } from "./InitiativeChoices.js";
@@ -62,6 +62,7 @@ export function ObjectiveEditor({
   const [concern, setConcern] = useState("");
   const [addressingConcern, setAddressingConcern] = useState(false);
   const [concernDetails, setConcernDetails] = useState("");
+  const [assessment, setAssessment] = useState<{ checks?: ObjectiveAssessment; text: string; kind: ObjectiveEdit["kind"] }>();
   const pendingReply = useRef<{ stage: CoachStage; input: CoachCheckpoint; origin: Stage; apply: (reply: CoachSuggestion) => void } | null>(null);
   const [method, setMethod] = useState(initialMethod);
   const [stage, setStage] = useState<Stage>(
@@ -196,6 +197,12 @@ export function ObjectiveEditor({
       );
       if (requestId === epoch.current) {
         if (redesigned) setConcern(result.concern ?? "");
+        if (redesigned && (requestStage === "clarify" || requestStage === "objective") && result.objective) {
+          setAssessment({ checks: result.assessment, text: result.objective, kind: edit.kind });
+        }
+        if (redesigned && requestStage === "review" && input.entry === "objective") {
+          setAssessment({ checks: result.assessment, text: input.objective, kind: edit.kind });
+        }
         return result;
       }
     } catch (e) {
@@ -293,8 +300,9 @@ export function ObjectiveEditor({
       setError("There is too much coaching context. You can continue editing your objective manually.");
       return;
     }
-    const nextAnswers = [...answers, ...feedbackAnswers, { question: concern, answer: concernDetails }];
-    if (await guidedRequest("objective", { ...context(), entry: "objective", answers: nextAnswers, question: concern, answer: concernDetails }, result => {
+    const feedback = concern || Object.values(assessment?.checks ?? {}).find(check => check.status !== "met")?.note || "Additional context for the objective";
+    const nextAnswers = [...answers, ...feedbackAnswers, { question: feedback, answer: concernDetails }];
+    if (await guidedRequest("objective", { ...context(), entry: "objective", answers: nextAnswers, question: feedback, answer: concernDetails }, result => {
       if (!result.objective) return;
       update({ type: "objective-values", values: { text: result.objective } });
       setRecommended(result.recommendedKind);
@@ -598,6 +606,8 @@ export function ObjectiveEditor({
       </button>
     </section>
   );
+  const assessmentStale = !!assessment && (assessment.text !== edit.text || assessment.kind !== edit.kind);
+  const checks = assessmentStale ? undefined : assessment?.checks;
   const stageNumber =
     stage === "work" || stage === "question"
       ? 0
@@ -858,10 +868,24 @@ export function ObjectiveEditor({
               </>
             )}
           </fieldset>
-          {redesigned && concern && method === "guided" && stage !== "work" && <section className="coach-feedback" aria-label="AI coach feedback">
+          {redesigned && method === "guided" && stage !== "work" && (concern || stage === "objective") && <section className="coach-feedback" aria-label="AI coach feedback">
             <h2><Sparkles aria-hidden="true" size={18} /> AI coach feedback</h2>
-            <p role="status">{concern}</p>
-            {stage === "objective" && (addressingConcern ? <div className="field">
+            {stage === "objective" && (assessmentStale ?
+              <p role="status">Your objective or type changed since the coach checked it. The earlier checks may no longer apply.</p> : checks ? <>
+                <p>{Object.values(checks).every(check => check.status === "met") && !concern ? "The main elements are in place. You can continue to SMART goals." : "Here is what the coach found. You can respond or continue with your draft."}</p>
+                <ul className="coach-checks">
+                  {([ ["purpose", "Your contribution"], ["people", "Who benefits and how"], ["alignment", edit.kind === "normal" ? "Connection to the mission" : "Connection to your work"] ] as const).map(([key, label]) => {
+                    const check = checks[key];
+                    return <li key={key} className={`coach-check coach-check-${check.status}`}>
+                      <div><span aria-hidden="true">{check.status === "met" ? "✓" : check.status === "needs_attention" ? "!" : "?"}</span> <strong>{label}</strong> — <span>{check.status === "met" ? "Met" : check.status === "needs_attention" ? "Needs attention" : "Not sure"}</span></div>
+                      <p>{check.note}</p>
+                    </li>;
+                  })}
+                </ul>
+              </> : <p role="status">The coach did not provide an assessment for this draft. You can continue or add context.</p>)}
+            {concern && <p role="status">{stage === "objective" && assessmentStale ? "Earlier feedback: " : ""}{concern}</p>}
+            {stage === "objective" && !checks && <button type="button" disabled={busy || !edit.text.trim()} onClick={() => void suggest("review", { ...context(), entry: "objective" })}>Check this objective</button>}
+            {stage === "objective" && (concern || !checks || Object.values(checks).some(check => check.status !== "met")) && (addressingConcern ? <div className="field">
               <label htmlFor="concern-details">Details for the coach</label>
               <small>Optional. The coach will use your answer to update the objective.</small>
               <textarea id="concern-details" maxLength={4000} value={concernDetails} onChange={e => setConcernDetails(e.target.value)} disabled={busy} />

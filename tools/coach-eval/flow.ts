@@ -141,7 +141,7 @@ export async function runCurrentFlow(
       if (result.objective) edit.text = result.objective;
       recommendedKind = result.recommendedKind;
       recommendedInitiatives = result.initiativeIds ?? [];
-      draftConcern = result.concern ?? "";
+      draftConcern = result.concern ?? Object.values(result.assessment ?? {}).find(check => check.status !== "met")?.note ?? "";
       if (scenario.typeChoice === "recommended" && recommendedKind) edit.kind = recommendedKind;
       else if (scenario.typeChoice !== "keep" && scenario.typeChoice !== "recommended")
         edit.kind = scenario.typeChoice;
@@ -155,7 +155,7 @@ export async function runCurrentFlow(
       const stage: CoachStage = !redesigned && nextAnswers.length >= 3 ? "objective" : "clarify";
       const result = await ask(step, stage, { ...context(), answers: nextAnswers });
       if (!result) return { turns, outcome: outcome("coach unavailable") };
-      draftConcern = result.concern ?? result.question ?? "";
+      draftConcern = result.concern ?? result.question ?? Object.values(result.assessment ?? {}).find(check => check.status !== "met")?.note ?? "";
       answers = nextAnswers;
       if (redesigned && (!result.objective || result.ready === false) && (!result.question || step === "question")) {
         edit.text = work;

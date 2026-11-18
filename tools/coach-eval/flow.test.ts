@@ -136,3 +136,19 @@ test("redesigned replay can answer draft feedback and revise the objective", asy
   assert.deepEqual(calls[1]?.context.answers.at(-1), { question: "Who will use it?", answer: "online seekers" });
   assert.equal(outcome.objective, "Build a video app for online seekers.");
 });
+
+test("redesigned replay can answer a checklist gap without a separate concern", async () => {
+  const { coach, calls } = scripted({
+    clarify: [{ objective: "Build a video app.", assessment: {
+      purpose: { status: "met", note: "Build the app." },
+      people: { status: "needs_attention", note: "Who will use it?" },
+      alignment: { status: "uncertain", note: "More context is needed." },
+    } }],
+    objective: [{ objective: "Build a video app for seekers." }],
+    actions: [{ actions: ["Test the app"] }],
+  });
+  const { outcome } = await runCurrentFlow({ ...base, goals: [], respondToFeedback: true }, coach, { answer: async () => "seekers" }, { redesigned: true });
+  assert.equal(calls[1]?.stage, "objective");
+  assert.deepEqual(calls[1]?.context.answers.at(-1), { question: "Who will use it?", answer: "seekers" });
+  assert.equal(outcome.objective, "Build a video app for seekers.");
+});

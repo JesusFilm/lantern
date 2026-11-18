@@ -76,7 +76,7 @@ export function schemaCause(stage: CoachStage, content: string, redesigned = fal
     Object.entries(value).filter(([, v]) => v !== "" && v !== null && !(Array.isArray(v) && v.length === 0)),
   );
   if (accepted(withoutEmpty)) return "empty or null optional field";
-  const allowed = ["question", "objective", "goal", "title", "concern", "ready", "options", "actions", "initiativeIds", "suggestedDate", "recommendedKind", ...(redesigned ? ["review"] : [])];
+  const allowed = ["question", "objective", "goal", "title", "concern", "ready", "options", "actions", "initiativeIds", "suggestedDate", "recommendedKind", ...(redesigned ? ["review", "assessment"] : [])];
   const known = Object.fromEntries(Object.entries(withoutEmpty).filter(([k]) => allowed.includes(k)));
   if (accepted(known)) return "unexpected field";
   const trimmed = Object.fromEntries(Object.entries(known).map(([k, v]) => [k, Array.isArray(v) && k !== "initiativeIds" ? v.slice(0, 3) : v]));

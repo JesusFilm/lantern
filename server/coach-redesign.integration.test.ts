@@ -124,3 +124,28 @@ test("coaching receives current initiative descriptions from the member's depart
     assert.doesNotMatch(prompts[1]!, /Understand external viewer needs/);
   } finally { await f.close(); }
 });
+
+test("objective checks use the Guide mission when department mission is blank and invalid checks do not approve a draft", async () => {
+  let prompt = "";
+  let reply: unknown = { ready: false, assessment: {
+    purpose: { status: "met", note: "The contribution is clear." },
+    people: { status: "met", note: "Viewers are named." },
+    alignment: { status: "met", note: "The intended outcome supports the mission." },
+  } };
+  const coach: CoachProvider = { async suggest(system, _context, validate) { prompt = system; return validate(reply); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const request = () => f.request("member", "/api/coach/suggest", "POST", { stage: "review", context: { ...checkpoint, entry: "objective" } });
+    const checked = await request();
+    assert.equal(checked.status, 200);
+    assert.equal((await checked.json()).assessment.alignment.status, "met");
+    assert.match(prompt, /Organizational mission from Lantern's Guide:.*everyone, everywhere can encounter Jesus/);
+    assert.match(prompt, /Department context:.*"mission":""/);
+    reply = { objective: "A useful draft", assessment: { purpose: { status: "met", note: "Clear." } } };
+    const partial = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: checkpoint });
+    assert.equal(partial.status, 200);
+    assert.equal((await partial.json()).assessment, undefined);
+    reply = { assessment: { purpose: { status: "met", note: "Clear." } } };
+    assert.equal((await request()).status, 503);
+  } finally { await f.close(); }
+});

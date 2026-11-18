@@ -255,7 +255,8 @@ export const chapters: Chapter[] = [
         check: [
           "Recommendations offer a switch; your type stays selected.",
           "Next requires an initiative or Other; choosing either clears the error.",
-          "Answer AI feedback and update, or continue without answering.",
+          "Check the three coach assessments; answer gaps or continue.",
+          "Edits make earlier checks stale; check again without rewriting.",
           "Back then Try again requests a new draft.",
         ],
         shots: [

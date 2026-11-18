@@ -147,10 +147,21 @@ export function validateSuggestion(
           "initiativeIds",
           "suggestedDate",
           "recommendedKind",
+          ...(redesigned ? ["assessment"] : []),
         ].includes(k),
     )
   )
     return fail();
+  if (value.assessment !== undefined) {
+    const assessment = value.assessment;
+    const valid = object(assessment) && Object.keys(assessment).length === 3 && ["purpose", "people", "alignment"].every(key => {
+      const item = assessment[key];
+      return object(item) && Object.keys(item).every(k => k === "status" || k === "note") &&
+        ["met", "needs_attention", "uncertain"].includes(String(item.status)) && text(item.note, 500) && !!item.note.trim();
+    });
+    // A malformed optional assessment must never discard an otherwise usable draft.
+    if (!valid) delete value.assessment;
+  }
   if (
     fields.some(
       (k) =>
@@ -196,10 +207,10 @@ export function validateSuggestion(
     )
   )
     return fail();
-  if (redesigned && value.ready === false && !value.question && !value.concern) return fail();
+  if (redesigned && value.ready === false && !value.question && !value.concern && !(stage === "review" && value.assessment)) return fail();
   if (redesigned && !value.question && !value.concern) {
     const output = stage === "actions" ? Array.isArray(value.actions) && value.actions.length > 0 && date(value.suggestedDate)
-      : stage === "goal" ? value.goal : stage === "review" ? value.review : value.objective;
+      : stage === "goal" ? value.goal : stage === "review" ? value.review || value.assessment : value.objective;
     if (!output) return fail();
   }
   const result = value as CoachSuggestion;

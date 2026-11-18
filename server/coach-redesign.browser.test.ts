@@ -209,6 +209,42 @@ test("coach feedback is identifiable and distinct from the missing-goals warning
   } finally { await f.close(); }
 });
 
+test("objective feedback shows the coach's three checks and a clear ready state", async () => {
+  const f = await world((_stage, context) => context.entry === "objective"
+    ? { objective: "Create gospel videos for seekers to encounter Jesus.", assessment: { purpose: { status: "met", note: "The contribution is clear." }, people: { status: "met", note: "Seekers and the intended benefit are clear." }, alignment: { status: "met", note: "This supports the mission." } } }
+    : { objective: "Create gospel videos.", assessment: { purpose: { status: "met", note: "The contribution is clear." }, people: { status: "needs_attention", note: "Who will the videos help?" }, alignment: { status: "uncertain", note: "The department mission is unavailable." } } });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("Create gospel videos.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    const feedback = page.getByRole("region", { name: "AI coach feedback" });
+    await expect(feedback).toContainText("Who will the videos help?");
+    await expect(feedback).toContainText("The department mission is unavailable.");
+    await expect(feedback).toContainText("Needs attention");
+    await expect(feedback).toContainText("Not sure");
+    await page.getByRole("button", { name: "Help me address this", exact: true }).click();
+    await page.getByLabel("Details for the coach", { exact: true }).fill("They help online seekers encounter Jesus.");
+    await page.getByRole("button", { name: "Update objective", exact: true }).click();
+    await expect(feedback).toContainText("The main elements are in place");
+    await expect(feedback.getByText("Met", { exact: true })).toHaveCount(3);
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByRole("radio", { name: "Leadership", exact: true }).check();
+    await expect(feedback).toContainText("changed since the coach checked it");
+    await page.getByRole("button", { name: "Check this objective", exact: true }).click();
+    await expect(feedback).toContainText("Connection to your work");
+    assert.equal(f.calls.at(-1)?.context.kind, "leadership");
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByLabel("Objective", { exact: true }).fill("A substantially different objective");
+    await expect(feedback).not.toContainText("The main elements are in place");
+    await expect(feedback).toContainText("changed since the coach checked it");
+    await page.getByRole("button", { name: "Check this objective", exact: true }).click();
+    await expect(feedback).toContainText("The main elements are in place");
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("A substantially different objective");
+    assert.equal(f.calls.at(-1)?.stage, "review");
+  } finally { await f.close(); }
+});
+
 test("member can give the coach a missing detail and revise the current objective", async () => {
   const f = await world((stage, context) => stage === "clarify"
     ? { objective: "Build a video application.", concern: "Who will use the application?", initiativeIds: [] }
@@ -323,5 +359,26 @@ test("a failed retry keeps the edited draft available", async () => {
     await page.getByRole("button", { name: "Return to draft", exact: true }).click();
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited objective");
     assert.equal(f.calls.length, 2);
+  } finally { await f.close(); }
+});
+
+test("a missing assessment is not approval and can be checked without rewriting a development objective", async () => {
+  const f = await world(stage => stage === "review" ? { assessment: {
+    purpose: { status: "met", note: "The learning is clear." },
+    people: { status: "met", note: "The trainers benefit." },
+    alignment: { status: "met", note: "This supports the member's work." },
+  } } : { objective: "Learn Spanish to support the trainers I work with." });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Personal development", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("Learn Spanish to support my trainers.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    const feedback = page.getByRole("region", { name: "AI coach feedback" });
+    await expect(feedback).toContainText("did not provide an assessment");
+    await expect(feedback).not.toContainText("The main elements are in place");
+    await page.getByRole("button", { name: "Check this objective", exact: true }).click();
+    await expect(feedback).toContainText("Connection to your work");
+    await expect(feedback).toContainText("The main elements are in place");
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Learn Spanish to support the trainers I work with.");
   } finally { await f.close(); }
 });

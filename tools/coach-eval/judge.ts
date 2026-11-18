@@ -107,6 +107,9 @@ export function renderTranscript(transcript: Transcript, scenario: Scenario): st
       lines.push(
         `[Coach draft] Objective: ${quote(s.objective ?? "")}. Recommended type: ${s.recommendedKind ? typeLabel[s.recommendedKind] : "none"}. Recommended initiatives: ${(s.initiativeIds ?? []).map(initiativeName).join(", ") || "none"}.${concern}`,
       );
+    if (transcript.flow === "redesigned" && s.assessment && !showsQuestion) {
+      for (const [key, check] of Object.entries(s.assessment)) lines.push(`[Coach check: ${key}] ${check.status}: ${quote(check.note)}`);
+    }
   }
   const { outcome } = transcript;
   lines.push(

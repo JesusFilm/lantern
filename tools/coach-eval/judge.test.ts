@@ -38,3 +38,14 @@ test("redesigned existing-objective transcript does not invent an improvement re
   const historical = renderTranscript({ ...transcript, flow: "redesigned", scenario: scenario.id, turns }, scenario);
   assert.match(historical, /Member, what to improve.*Keep this shorter/);
 });
+
+test("judge can assess the objective checklist shown to the member", () => {
+  const turns: Transcript["turns"] = [{ type: "coach", step: "work", stage: "clarify", context, ok: true, elapsedMs: 1, attempts: [], suggestion: { objective: "Help viewers.", assessment: {
+    purpose: { status: "met", note: "The contribution is clear." },
+    people: { status: "needs_attention", note: "How will viewers benefit?" },
+    alignment: { status: "uncertain", note: "Mission is not available." },
+  } } }];
+  const rendered = renderTranscript({ ...transcript, flow: "redesigned", turns }, scenarios[0]!);
+  assert.match(rendered, /people.*needs_attention.*How will viewers benefit/);
+  assert.match(rendered, /alignment.*uncertain.*Mission is not available/);
+});

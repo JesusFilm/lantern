@@ -448,6 +448,15 @@ dialog [role="alert"] {
   font-size: var(--text-body);
 }
 .coach-feedback p { margin: 0; }
+.coach-feedback > button, .coach-feedback > .field { margin-top: var(--space-3); margin-right: var(--space-2); }
+.coach-checks { list-style: none; padding: 0; margin: var(--space-3) 0; display: grid; gap: var(--space-3); }
+.coach-check > div { font-size: var(--text-small); }
+.coach-check > p { margin: var(--space-1) 0 0; color: var(--muted); font-size: var(--text-small); }
+.coach-check-met > div { color: #167449; }
+.coach-check-needs_attention > div { color: #a52e39; }
+.coach-check-uncertain > div { color: var(--muted); }
+[data-theme="dark"] .coach-check-met > div { color: #a9e8c6; }
+[data-theme="dark"] .coach-check-needs_attention > div { color: #ffb2aa; }
 .coach-feedback + [role="status"] { margin-top: var(--space-4); }
 .authoring-fields :is(input, textarea, select, button),
 .objective-editor > [role="alert"] {
