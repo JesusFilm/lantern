@@ -4,7 +4,7 @@ Use this guide to run tests or explain coverage. [QA issue workflow](qa-issue-wo
 
 ## Run locally
 
-Requires the Node version supported by [package.json](../../package.json), Docker Compose and Chromium. From the repository root:
+Requires the Node version supported by [package.json](../../package.json), Python 3, Docker Compose and Chromium. From the repository root:
 
 ```sh
 npm ci
@@ -19,7 +19,7 @@ Use the synthetic loopback owner connection in `.env.example`. Tests create isol
 
 The local database is disposable. Tests build their own data, and local startup adds the Engineering initiatives. When the database gets in the way (other credentials, an old version or leftover data), reset it with `docker compose --env-file .env.example down -v`, then run the `up` command above. Keep your private `.env` files, which hold settings rather than data. If another server already uses the port, stop it first.
 
-`test:local` uses Node's test runner, including tests that launch Playwright; `npx playwright test` is not the suite entry point. Build first: release integration tests import compiled server code and browser assets. A focused run uses the same fixture and runner, for example:
+`test:local` uses Node's test runner, including tests that launch Playwright and the Python ticket-board installer test; `npx playwright test` is not the suite entry point. Build first: release integration tests import compiled server code and browser assets. A focused run uses the same fixture and runner, for example:
 
 ```sh
 node --env-file=.env.example --import tsx --test --test-concurrency=1 tools/release/acceptance-browser.integration.test.mjs

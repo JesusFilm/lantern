@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -6,6 +7,10 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { createTicketBoardApp } from './app.js';
 import { parseTicket, loadTickets } from './tickets.js';
+
+test('macOS installer records the current checkout in a new registry entry', () => {
+  execFileSync('python3', ['-B', '-m', 'unittest', 'tools/ticket-board/macos/test_install.py'], { stdio: 'pipe' });
+});
 
 async function withTracker(run: (repository: string, issues: string) => Promise<void>) {
   const repository = await mkdtemp(join(tmpdir(), 'career-lead-tickets-'));
