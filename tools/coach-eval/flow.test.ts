@@ -87,19 +87,19 @@ test("an unavailable coach is retried once and ends the session", async () => {
   assert.equal(outcome.completed, false);
 });
 
-test("redesigned replay checks fallback wording after one follow-up without a final review call", async () => {
+test("redesigned replay falls back to member wording after one follow-up and skips model review", async () => {
   const { coach, calls } = scripted({
     clarify: [{ question: "Who benefits?", ready: false }, { question: "What changes?", ready: false }],
     actions: [{ actions: ["Try captions"], suggestedDate: "2027-02-01" }],
     goal: [{ goal: "By 1 February 2027, try captions." }],
   });
   const { outcome } = await runCurrentFlow({ ...base, goals: [{ action: 0 }] }, coach, { answer: async () => "Trainers" }, { redesigned: true });
-  assert.deepEqual(calls.map(c => c.stage), ["clarify", "clarify", "review", "actions", "goal"]);
+  assert.deepEqual(calls.map(c => c.stage), ["clarify", "clarify", "actions", "goal"]);
   assert.equal(outcome.objective, "testing");
   assert.equal(outcome.completed, true);
 });
 
-test("replay preserves historical request context and stops on unresolved refinement", async () => {
+test("replay preserves historical request context and keeps the member objective when refinement only raises a concern", async () => {
   const { coach } = scripted({
     clarify: [{ ready: true, objective: "Help staff" }],
     actions: [{ actions: ["Try captions"], suggestedDate: "2027-02-01" }],
@@ -110,10 +110,12 @@ test("replay preserves historical request context and stops on unresolved refine
   const requests = turns.filter(t => t.type === "coach");
   assert.deepEqual(requests[0]!.context.siblings, []);
   assert.deepEqual(requests.find(t => t.stage === "goal")!.context.siblings, []);
-  assert.equal(requests.length, 4);
+  assert.equal(requests.length, 3);
   const paused = scripted({ objective: [{ concern: "Please clarify the intended beneficiary." }] });
-  const { outcome } = await runCurrentFlow({ ...base, existing: { objective: "Help staff", kind: "normal" }, improvement: "Clearer", goals: [] }, paused.coach, member, { redesigned: true });
-  assert.equal(outcome.completed, false);
+  const { outcome } = await runCurrentFlow({ ...base, existing: { objective: "Help staff", kind: "normal" }, improvement: "Clearer", goals: [], endAtObjective: true }, paused.coach, member, { redesigned: true });
+  assert.equal(outcome.completed, true);
+  assert.equal(outcome.objective, "Help staff");
+  assert.equal(outcome.screens?.[0]?.concern, "Please clarify the intended beneficiary.");
   assert.deepEqual(paused.calls.map(c => c.stage), ["objective"]);
 });
 
@@ -154,18 +156,26 @@ test("redesigned replay can answer a checklist gap without a separate concern", 
   assert.equal(outcome.objective, "Build a video app for seekers.");
 });
 
-test("redesigned replay automatically checks a draft when its first reply lacks an assessment", async () => {
+test("redesigned replay records each objective screen and answers feedback the member can address", async () => {
+  const checks = (people: "met" | "needs_attention") => ({
+    purpose: { status: "met" as const, note: "Building the app is clear." },
+    people: { status: people, note: people === "met" ? "Seekers benefit." : "Who will watch the videos?" },
+    alignment: { status: "met" as const, note: "Supports the mission." },
+  });
   const { coach, calls } = scripted({
-    clarify: [{ objective: "Build a video app for seekers." }],
-    review: [{ assessment: {
-      purpose: { status: "met", note: "The app is the contribution." },
-      people: { status: "met", note: "Seekers benefit." },
-      alignment: { status: "uncertain", note: "Mission not configured." },
-    } }],
+    clarify: [{ objective: "Build a gospel video app.", assessment: checks("needs_attention") }],
+    objective: [{ objective: "Build a gospel video app for seekers.", assessment: checks("met") }],
     actions: [{ actions: ["Test the app"] }],
   });
+  const member = {
+    answer: async () => "unused",
+    respond: async (feedback: string) => /who/i.test(feedback) ? "People who don't yet know Jesus." : undefined,
+  };
   const { outcome } = await runCurrentFlow({ ...base, goals: [] }, coach, member, { redesigned: true });
-  assert.deepEqual(calls.map(c => c.stage), ["clarify", "review", "actions"]);
-  assert.equal(calls[1]!.context.objective, "Build a video app for seekers.");
-  assert.equal(outcome.objective, "Build a video app for seekers.");
+  assert.deepEqual(outcome.screens?.map(s => [s.objective, s.assessment?.people.status]), [
+    ["Build a gospel video app.", "needs_attention"],
+    ["Build a gospel video app for seekers.", "met"],
+  ]);
+  assert.deepEqual(calls[1]?.context.answers.at(-1), { question: "Who will watch the videos?", answer: "People who don't yet know Jesus." });
+  assert.equal(calls.filter(c => c.stage === "objective").length, 1, "The member stops once every check is met.");
 });

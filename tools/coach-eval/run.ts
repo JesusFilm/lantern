@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { coachPrompt } from "../../server/coach-prompt.js";
 import { checkTranscript } from "./checks.js";
 import { loadEvalEnvironment } from "./env.js";
@@ -10,7 +11,11 @@ import { runCurrentFlow } from "./flow.js";
 import { defaultJudge, judgeTranscript, renderTranscript, rubricVersion, transcriptHash, type Judgment } from "./judge.js";
 import { memberFor } from "./member.js";
 import { renderReport, type Row } from "./report.js";
-import { direction, scenarios } from "./scenarios.js";
+import { direction, scenarios as judgedScenarios, type Scenario } from "./scenarios.js";
+import { benchmarkScenarios, mergeResults, renderBenchmark, summarize, type BenchmarkResult } from "./benchmark.js";
+
+const scenarios: Scenario[] = judgedScenarios;
+const allScenarios: Scenario[] = [...judgedScenarios, ...benchmarkScenarios];
 import { coachCaller, installInstrumentation, needsOpenRouter, spending, targets } from "./targets.js";
 import type { Transcript } from "./types.js";
 
@@ -21,6 +26,10 @@ const usage = `Usage: node --import tsx tools/coach-eval/run.ts <command> [optio
   judge        --run NAME [--judge MODEL] [--targets a,b] [--concurrency 4] [--max-cost 5]
   report       --run NAME [--judge MODEL]
   review       --run NAME [--count 20]   Blind transcripts for human scoring.
+  benchmark    --run NAME [--target qwen] [--repeats 3] [--concurrency 2] [--scenarios x,y]
+               Replays the member benchmark, applies its pass rules and compares with baseline.json.
+               Exits non-zero when a scenario fails by majority or regresses.
+  baseline     --run NAME[,NAME...]   Records those runs' combined benchmark result as tools/coach-eval/baseline.json.
 
 Targets: ${Object.keys(targets).join(", ")}
 Results: ${runsRoot()}/NAME`;
@@ -85,7 +94,7 @@ async function budget() {
   console.log(JSON.stringify({ status: response.status, limit: data.limit, usage: data.usage, remaining: data.limit_remaining }));
 }
 
-async function transcripts() {
+async function transcripts(suite: Scenario[] = scenarios) {
   const dir = runDirectory();
   const env = loadEvalEnvironment();
   const chosen = list("targets") ?? [];
@@ -96,7 +105,7 @@ async function transcripts() {
     if (needsOpenRouter(target) && !env.openRouterKey) throw new Error(`${id} needs OPENROUTER_API_KEY in ${env.file}`);
   }
   const picked = list("scenarios");
-  const selected = picked ? scenarios.filter((s) => picked.includes(s.id)) : scenarios;
+  const selected = picked ? suite.filter((s) => picked.includes(s.id)) : suite;
   if (picked && selected.length !== picked.length) throw new Error("Unknown scenario in --scenarios.");
   const repeats = number("repeats", 3), maxCost = number("max-cost", 5), concurrency = number("concurrency", 2);
   installInstrumentation();
@@ -167,7 +176,7 @@ async function judge() {
   let done = 0, failed = 0;
   await pool(pending, concurrency, async (t) => {
     if (spending() >= maxCost) return;
-    const scenario = scenarios.find((s) => s.id === t.scenario);
+    const scenario = allScenarios.find((s) => s.id === t.scenario);
     if (!scenario) return;
     try {
       const judgment = await judgeTranscript(env, model, t, scenario);
@@ -188,7 +197,7 @@ function report() {
   const model = args.get("judge") ?? defaultJudge;
   const redesigned = existsSync(join(dir, "run.json")) && readJson<{ flow?: string }>(join(dir, "run.json")).flow?.startsWith("coach-redesign") === true;
   const rows: Row[] = loadTranscripts(dir).flatMap((transcript) => {
-    const scenario = scenarios.find((s) => s.id === transcript.scenario);
+    const scenario = allScenarios.find((s) => s.id === transcript.scenario);
     if (!scenario) return [];
     const file = judgmentFile(dir, model, transcript);
     const judgment = existsSync(file) ? readJson<Judgment>(file) : undefined;
@@ -225,7 +234,7 @@ function review() {
   const sections = keyed.map(({ t }, i) => {
     const id = "R" + String(i + 1).padStart(2, "0");
     key[id] = { target: t.target, scenario: t.scenario, repeat: t.repeat };
-    const scenario = scenarios.find((s) => s.id === t.scenario)!;
+    const scenario = allScenarios.find((s) => s.id === t.scenario)!;
     return [
       `## ${id}`,
       "",
@@ -243,7 +252,39 @@ function review() {
   console.log(`Wrote ${keyed.length} blind transcripts to ${join(dir, "review.md")}`);
 }
 
-const commands: Record<string, () => unknown> = { budget, transcripts, judge, report, review };
+const baselineFile = fileURLToPath(new URL("./baseline.json", import.meta.url));
+
+async function benchmark() {
+  const dir = runDirectory();
+  const target = args.get("target") ?? "qwen";
+  args.set("targets", target);
+  await transcripts(benchmarkScenarios);
+  const runs = loadTranscripts(dir, [target]).filter((t) => benchmarkScenarios.some((s) => s.id === t.scenario));
+  const meta = readJson<{ commit?: string }>(join(dir, "run.json"));
+  const result = summarize(runs, { commit: meta.commit ?? "unknown", target, createdAt: new Date().toISOString() });
+  const baseline = existsSync(baselineFile) ? readJson<BenchmarkResult>(baselineFile) : undefined;
+  const { markdown, passed, regressions } = renderBenchmark(result, baseline);
+  writeFileSync(join(dir, "benchmark.json"), JSON.stringify(result, null, 2));
+  writeFileSync(join(dir, "benchmark.md"), markdown);
+  console.log(markdown);
+  if (!passed || regressions.length) process.exitCode = 1;
+}
+
+function baseline() {
+  const names = list("run") ?? [];
+  if (!names.length || names.some((name) => !/^[\w.-]+$/.test(name))) throw new Error("Supply --run NAME[,NAME...].");
+  const results = names.map((name) => {
+    const file = join(runsRoot(), name, "benchmark.json");
+    if (!existsSync(file)) throw new Error(`Run the benchmark for ${name} first.`);
+    return readJson<BenchmarkResult>(file);
+  });
+  const merged = mergeResults(results);
+  writeFileSync(baselineFile, JSON.stringify(merged, null, 2) + "\n");
+  console.log(renderBenchmark(merged).markdown);
+  console.log(`Recorded ${names.join(", ")} as ${baselineFile}.`);
+}
+
+const commands: Record<string, () => unknown> = { budget, transcripts: () => transcripts(), judge, report, review, benchmark, baseline };
 const selectedCommand = command ? commands[command] : undefined;
 if (!selectedCommand) {
   console.log(usage);

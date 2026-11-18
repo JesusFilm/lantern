@@ -17,6 +17,11 @@ export const direction: DepartmentDirection = {
 export const initiativeName = (id: string) =>
   direction.initiatives.find((item) => item.id === id)?.name ?? id;
 
+export interface Reply {
+  when: RegExp;
+  say: string;
+}
+
 export interface Scenario {
   id: string;
   /** GitHub issues whose reported behavior this scenario reproduces. */
@@ -30,10 +35,15 @@ export interface Scenario {
   existing?: { objective: string; kind: ObjectiveKind; goals?: string[] };
   /** Answer to "What would you like to improve about this objective?" */
   improvement?: string;
+  /** The member saves after the Objective step instead of continuing to SMART goals. */
+  endAtObjective?: boolean;
   /** The simulated member chooses to answer feedback on the drafted objective. */
   respondToFeedback?: boolean;
-  /** Scripted answers are used in order; facts drive a simulated member. */
-  member: { answers: string[] } | { facts: string[] };
+  /**
+   * Scripted answers are used in order; facts drive a simulated member. Replies answer
+   * the first matching question or feedback, like a member who knows only those things.
+   */
+  member: { answers: string[] } | { facts: string[] } | { replies: Reply[]; otherwise?: string };
   /** Type chosen on the Objective step; "keep" leaves the editor default. */
   typeChoice: "keep" | "recommended" | ObjectiveKind;
   /** Goals planned with Add SMART goal: a suggested action index or the member's own action. */
@@ -49,7 +59,7 @@ export interface Scenario {
   };
 }
 
-const cycle = {
+export const cycle = {
   title: "Focus: November 2026 to April 2027",
   start: "2026-11-01",
   end: "2027-04-30",

@@ -231,7 +231,123 @@ test("when a follow-up still cannot produce a draft the member's own wording is 
     const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: input });
     assert.equal(response.status, 200);
     assert.equal((await response.json()).assessment.people.status, "needs_attention");
-    assert.equal(calls[1]!.stage, "review");
-    assert.equal(calls[1]!.context.objective, input.work);
+    assert.deepEqual(calls.map(c => c.stage), ["clarify", "objective", "review"]);
+    assert.equal(calls[2]!.context.objective, input.work);
+  } finally { await f.close(); }
+});
+
+test("an answered follow-up is drafted into the visible objective and checked as shown", async () => {
+  const calls: Array<{ stage: string; context: typeof checkpoint }> = [];
+  const coach: CoachProvider = { async suggest(_s, raw, validate) {
+    const input = JSON.parse(raw); calls.push(input);
+    if (input.stage === "clarify") return validate({ ready: false, question: "Is the app for public self-service or internal colleagues?" });
+    if (input.stage === "objective") return validate({ objective: `Build an app that generates gospel videos for ${input.context.answers.at(-1).answer.toLowerCase()}.`, initiativeIds: [] });
+    return validate({ assessment: {
+      purpose: { status: "met", note: "Building the app is clear." },
+      people: { status: "met", note: "The audience is named." },
+      alignment: { status: "met", note: "Supports the mission." },
+    }, concern: "Is the application for public self-service or internal colleagues?" });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const direction = await (await f.request("lead", "/api/department/direction")).json();
+    assert.equal((await f.request("lead", "/api/department/direction", "PUT", { ...direction, mission: "Help everyone encounter Jesus." })).status, 200);
+    const input = { ...checkpoint, kind: "normal", objective: "", work: "I'm building an application that generates gospel videos.",
+      answers: [{ question: "Who is the audience?", answer: "People who don't yet know Jesus" }] };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: input });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.objective, "Build an app that generates gospel videos for people who don't yet know jesus.");
+    assert.equal(result.question, undefined);
+    assert.equal(result.concern, undefined, "An optional refinement is not shown once every check is met.");
+    assert.deepEqual(calls.map(c => c.stage), ["clarify", "objective", "review"]);
+    assert.equal(calls[2]!.context.objective, result.objective, "The checks assess the wording the member sees.");
+  } finally { await f.close(); }
+});
+
+test("answering feedback never starts a question loop and unchanged wording is still checked", async () => {
+  const calls: Array<{ stage: string; context: typeof checkpoint }> = [];
+  let reviews = 0;
+  const coach: CoachProvider = { async suggest(_s, raw, validate) {
+    const input = JSON.parse(raw); calls.push(input);
+    if (input.stage === "objective") return validate({ ready: false, question: "What is your role?" });
+    // An echoed field is tolerated; a failed check is retried once.
+    if (++reviews === 1) throw new Error("unavailable");
+    return validate({ kind: "normal", objective: "echo", question: "Ignored during review?", assessment: {
+      purpose: { status: "needs_attention", note: "What is your role?" },
+      people: { status: "needs_attention", note: "Who benefits?" },
+      alignment: { status: "uncertain", note: "Not enough detail." },
+    } });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const input = { ...checkpoint, kind: "normal", entry: "objective", objective: "asdf jkl", answers: [{ question: "What do you do?", answer: "idk" }] };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: input });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.question, undefined);
+    assert.equal(result.objective, undefined);
+    assert.match(result.concern, /What is your role\?/);
+    assert.equal(result.assessment.people.status, "needs_attention");
+    assert.deepEqual(calls.map(c => c.stage), ["objective", "review", "review"]);
+    assert.equal(calls[2]!.context.objective, "asdf jkl");
+  } finally { await f.close(); }
+});
+
+test("a first concern-only reply becomes the member's question, and an unusable first draft keeps checks on their wording", async () => {
+  const calls: string[] = [];
+  let reply: object = { ready: false, concern: "Which process slows the team down most?" };
+  const coach: CoachProvider = { async suggest(_s, raw, validate) {
+    const input = JSON.parse(raw); calls.push(input.stage);
+    return validate(input.stage === "review" ? { assessment: {
+      purpose: { status: "needs_attention", note: "Name the work." },
+      people: { status: "needs_attention", note: "Who benefits?" },
+      alignment: { status: "uncertain", note: "Unclear." },
+    } } : reply);
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const request = async () => (await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, objective: "", work: "help the team with stuff" } })).json();
+    const asked = await request();
+    assert.equal(asked.question, "Which process slows the team down most?");
+    assert.equal(asked.assessment, undefined);
+    reply = { ready: false, concern: "This needs more detail before it can be drafted." };
+    calls.length = 0;
+    const own = await request();
+    assert.equal(own.question, undefined);
+    assert.equal(own.assessment.purpose.status, "needs_attention");
+    assert.deepEqual(calls, ["clarify", "review"]);
+  } finally { await f.close(); }
+});
+
+test("after one answered goal question the coach works with what it has", async () => {
+  const coach: CoachProvider = { async suggest(_s, raw, validate) {
+    const input = JSON.parse(raw);
+    return validate({ ready: false, question: input.context.answer ? "And how will you measure it?" : "What evidence will you record?" });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const ask = async (answer: string) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...checkpoint, answer, question: answer ? "What evidence will you record?" : "", answers: answer ? [{ question: "What evidence will you record?", answer }] : [] } })).json();
+    assert.equal((await ask("")).question, "What evidence will you record?");
+    const after = await ask("I'm not sure.");
+    assert.equal(after.question, undefined);
+    assert.match(after.concern, /how will you measure it/);
+  } finally { await f.close(); }
+});
+
+test("a check reply without checks is retried", async () => {
+  let reviews = 0;
+  const coach: CoachProvider = { async suggest(_s, raw, validate) {
+    const input = JSON.parse(raw);
+    if (input.stage !== "review") return validate({ objective: "Help trainers run accessible workshops.", initiativeIds: [] });
+    return validate(++reviews === 1 ? { ready: false, concern: "No checks this time." } : { assessment: {
+      purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Trainers." }, alignment: { status: "met", note: "Fits." },
+    } });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const result = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, kind: "personal-development" } })).json();
+    assert.equal(result.assessment.people.status, "met");
+    assert.equal(reviews, 2);
   } finally { await f.close(); }
 });

@@ -5,15 +5,10 @@ import type { Pool } from "pg";
 import { AccessError, membership } from "./membership.js";
 import { focusStore, validateFocus } from "./focus.js";
 import { coachStore } from "./coach-store.js";
-import { coachPrompt } from "./coach-prompt.js";
+import { coachTurn, providerAsk } from "./coach-turn.js";
 import { readDirection } from "./direction.js";
 import { CoachUnavailable, type CoachProvider } from "./coach-provider.js";
-import {
-  date,
-  validateSuggestion,
-  type CoachStage,
-  validateCheckpoint,
-} from "./coach-contract.js";
+import { date, type CoachStage, validateCheckpoint } from "./coach-contract.js";
 
 export function coachRoutes(
   db: Pool,
@@ -238,41 +233,7 @@ export function coachRoutes(
     res.on("close", closed);
     try {
       const direction = await readDirection(db, actor);
-      let suggestion = await provider.suggest(
-        coachPrompt(direction, enhanced, stage),
-        JSON.stringify({ stage, context }),
-        (v) =>
-          validateSuggestion(
-            stage,
-            v,
-            direction.initiatives.filter((i) => !i.archived).map((i) => i.id),
-            enhanced,
-            context,
-          ),
-        abort.signal,
-      );
-      const fallbackToMemberWording = stage === "clarify" && (!suggestion.objective || suggestion.ready === false) && (!suggestion.question || context.answers.length > 0);
-      // A not-ready response may have assessed a different, discarded draft.
-      if (enhanced && fallbackToMemberWording && suggestion.assessment) suggestion = { ...suggestion, assessment: undefined };
-      const objectiveToCheck = fallbackToMemberWording ? context.objective.trim() || context.work : !suggestion.question && !(stage === "clarify" && suggestion.ready === false) ? suggestion.objective : undefined;
-      if (enhanced && (stage === "clarify" || stage === "objective") && objectiveToCheck?.trim() && !suggestion.assessment) {
-        try {
-          const assessmentContext = validateCheckpoint({ ...context, entry: "objective", objective: objectiveToCheck }, coachContextLimits.answers, coachContextLimits.characters);
-          const checked = await provider.suggest(
-            coachPrompt(direction, true, "review"),
-            JSON.stringify({ stage: "review", context: assessmentContext }),
-            value => validateSuggestion("review", value, direction.initiatives.filter(i => !i.archived).map(i => i.id), true, assessmentContext),
-            AbortSignal.any([abort.signal, AbortSignal.timeout(15000)]),
-          );
-          if (checked.assessment && !checked.question) suggestion.assessment = checked.assessment;
-        } catch (error) {
-          // Keep the usable draft when only the optional automatic check fails.
-          if (abort.signal.aborted) throw error;
-        }
-      }
-      if (enhanced && !direction.mission.trim() && context.kind !== "personal-development" && context.kind !== "leadership" && suggestion.assessment) {
-        suggestion = { ...suggestion, assessment: { ...suggestion.assessment, alignment: { status: "uncertain", note: "Your career lead has not configured a mission yet." } } };
-      }
+      const suggestion = await coachTurn({ ask: providerAsk(provider, direction, enhanced), direction, stage, context, enhanced, signal: abort.signal });
       // Revoked sessions, membership removal and concurrent edits invalidate results.
       await requireUser(req);
       if ((await membership(db, actor))?.id !== department.id)

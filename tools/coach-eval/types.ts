@@ -57,6 +57,14 @@ export interface GoalPlan {
   concerns: string[];
 }
 
+/** What the member sees on the Objective step after a coach reply. */
+export interface ObjectiveScreen {
+  objective: string;
+  kind: ObjectiveKind;
+  assessment?: CoachSuggestion["assessment"];
+  concern: string;
+}
+
 export interface Outcome {
   completed: boolean;
   failure?: string;
@@ -68,6 +76,8 @@ export interface Outcome {
   other: boolean;
   goals: string[];
   plans: GoalPlan[];
+  /** Objective screens in order; the last is what the member continues with. */
+  screens?: ObjectiveScreen[];
 }
 
 export interface Transcript {
@@ -89,4 +99,6 @@ export type CoachCall = (
 
 export interface Member {
   answer(question: string, options: string[]): Promise<string>;
+  /** Answers AI coach feedback; undefined when the member has nothing to add. */
+  respond?(feedback: string): Promise<string | undefined>;
 }

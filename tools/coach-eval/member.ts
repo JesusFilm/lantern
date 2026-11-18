@@ -5,6 +5,18 @@ import type { Member } from "./types.js";
 
 /** Scripted answers come in order; simulated members answer from private facts only. */
 export function memberFor(scenario: Scenario, env: EvalEnvironment): Member {
+  if ("replies" in scenario.member) {
+    const { replies, otherwise = "I'm not sure." } = scenario.member;
+    const match = (text: string) => replies.find((reply) => reply.when.test(text))?.say;
+    return {
+      async answer(question) {
+        return match(question) ?? otherwise;
+      },
+      async respond(feedback) {
+        return match(feedback);
+      },
+    };
+  }
   if ("answers" in scenario.member) {
     const answers = scenario.member.answers;
     let next = 0;

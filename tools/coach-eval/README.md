@@ -30,6 +30,42 @@ guided flow changes.
 Model output varies, so run each scenario several times and compare pass rates.
 Calibrate the judge against blind human scores before relying on small differences.
 
+## Member benchmark
+
+The benchmark is the pass/fail gate for coaching changes. benchmark.ts defines
+member scenarios in four groups:
+
+- **vague**: a rough idea, then answers that range from useful to unsure;
+- **rewording**: the member knows their work but not how to phrase an objective;
+- **proficient**: a well-formed objective that needs little or no help;
+- **adversarial**: QA probing with off-topic answers, nonsense, an unrelated
+  personal goal or instructions embedded in the work description.
+
+Each run replays ObjectiveEditor through the shipped server coaching turn
+(server/coach-turn.ts), so automatic drafting and checks match production.
+Members answer from scripted replies keyed to the question asked, and answer
+coach feedback when they have something relevant to add.
+
+Every run must complete, show a draft with its three checks, ask few questions,
+avoid repeated questions and invented numbers, keep goal dates in the focus
+period and stay quiet once every check is met. Each scenario adds a contract
+written before running: wording the visible objective must or must not contain,
+expected check results, whether the draft should be ready, and recommended type
+or goals. A scenario passes when most of its runs pass; the suite passes when
+every scenario does.
+
+    node --import tsx tools/coach-eval/run.ts benchmark --run NAME --repeats 3
+    node --import tsx tools/coach-eval/run.ts baseline --run NAME[,NAME...]
+
+The benchmark writes benchmark.md and benchmark.json to the run directory and
+compares them with the committed baseline.json. It exits non-zero when a
+scenario fails by majority or regresses from the baseline. Run it before and
+after every prompt, flow or model change. Record a new baseline only when a
+change is accepted, preferably from two runs of the same code combined; review
+regressions before replacing one. Qwen varies between runs, so a single failing
+run of a scenario is expected; a scenario that loses its majority needs a look. When members report
+a new problem, add a scenario and contract first, then fix the behaviour.
+
 ## Run
 
 Live runs read credentials from ~/.config/lantern/coach-eval.env (override with

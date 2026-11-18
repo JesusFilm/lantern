@@ -199,6 +199,9 @@ export function ObjectiveEditor({
         if (redesigned) setConcern(result.concern ?? "");
         if (redesigned && (requestStage === "clarify" || requestStage === "objective") && result.objective) {
           setAssessment({ checks: result.assessment, text: result.objective, kind: edit.kind });
+        } else if (redesigned && requestStage === "objective" && !result.question) {
+          // Feedback without new wording: the checks describe the wording already on screen.
+          setAssessment({ checks: result.assessment, text: input.objective, kind: edit.kind });
         }
         if (redesigned && requestStage === "review" && input.entry === "objective") {
           setAssessment({ checks: result.assessment, text: input.objective, kind: edit.kind });
@@ -290,7 +293,7 @@ export function ObjectiveEditor({
   async function openGoals() {
     setStage("goals");
     if (!redesigned || edit.goals.length) return;
-    await guidedRequest("actions", { ...context(), entry: "goal", action: "", goal: "", actions: [] }, reply => {
+    await guidedRequest("actions", { ...context(), entry: "goal", action: "", goal: "", actions: [], question: "", answer: "" }, reply => {
       if (reply.actions?.length) setPlan({ actions: reply.actions, action: "", date: boundedDate(reply.suggestedDate), text: "" });
     }, "goals");
   }
@@ -428,7 +431,8 @@ export function ObjectiveEditor({
         return;
       }
       if (redesigned) {
-        await guidedRequest("goal", { ...context(), entry: "goal" }, reply => {
+        // A new goal request starts without the previous step's question and answer.
+        await guidedRequest("goal", { ...context(), entry: "goal", question: "", answer: "" }, reply => {
           if (!reply.goal) return;
           setPlan(old => ({ ...old, text: reply.goal!, generatedFor: signature, edited: false }));
           setStage("goal");
@@ -455,6 +459,8 @@ export function ObjectiveEditor({
     const clean = {
       ...context(),
       entry: "goal" as const,
+      question: "",
+      answer: "",
       actions: [],
       action: "",
       goal: "",

@@ -6,9 +6,11 @@ import {
   createCoachProvider,
   type CoachProviderConfig,
 } from "../../server/coach-provider.js";
+import { coachTurn } from "../../server/coach-turn.js";
+import type { CoachCheckpoint } from "../../shared/coach.js";
 import type { EvalEnvironment } from "./env.js";
 import { direction } from "./scenarios.js";
-import type { Attempt, AttemptOutcome, CoachCall } from "./types.js";
+import type { Attempt, AttemptOutcome, CoachCall, CoachStage } from "./types.js";
 
 /**
  * A coach configuration under test. Requests go through the shipped provider:
@@ -137,30 +139,31 @@ export function needsOpenRouter(target: Target) {
   return target.route !== "primary";
 }
 
-/** Calls the shipped prompt, provider and response contract for one coach turn. */
-export function coachCaller(target: Target, env: EvalEnvironment, redesigned = false): CoachCall {
+/** Runs the shipped server coaching turn: prompt, provider, response contract and follow-up steps. */
+export function coachCaller(target: Target, env: EvalEnvironment, redesigned = false, department = direction): CoachCall {
   const config = providerConfig(target, env);
-  const ids = direction.initiatives.filter((i) => !i.archived).map((i) => i.id);
+  const ids = department.initiatives.filter((i) => !i.archived).map((i) => i.id);
   return async (stage, context) => {
     // A fresh provider per turn keeps one target's outage from cooling down the next turn.
     const provider = createCoachProvider(config, () => {});
     const attempts: Attempt[] = [];
     const models = { primary: config.primary.model, fallback: config.fallback.model };
     const started = performance.now();
-    const validate = (value: unknown) => {
-      const attempt = attempts.at(-1);
-      try {
-        const result = validateSuggestion(stage, value, ids, redesigned, context);
-        if (attempt) attempt.outcome = "ok";
-        return result;
-      } catch (error) {
-        if (attempt) attempt.outcome = "schema";
-        throw error;
-      }
-    };
+    const ask = (next: CoachStage, nextContext: CoachCheckpoint, signal?: AbortSignal) =>
+      provider.suggest(coachPrompt(department, redesigned, next), JSON.stringify({ stage: next, context: nextContext }), (value: unknown) => {
+        const attempt = attempts.at(-1);
+        try {
+          const result = validateSuggestion(next, value, ids, redesigned, nextContext);
+          if (attempt) attempt.outcome = "ok";
+          return result;
+        } catch (error) {
+          if (attempt) attempt.outcome = "schema";
+          throw error;
+        }
+      }, signal);
     try {
       const suggestion = await scope.run({ attempts, target, models }, () =>
-        provider.suggest(coachPrompt(direction, redesigned, stage), JSON.stringify({ stage, context }), validate),
+        coachTurn({ ask, direction: department, stage, context, enhanced: redesigned }),
       );
       return { ok: true, suggestion, elapsedMs: Math.round(performance.now() - started), attempts };
     } catch (error) {

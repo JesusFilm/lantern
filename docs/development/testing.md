@@ -105,7 +105,7 @@ Coaching provider tests use local HTTP fixtures for Qwen-first routing, OpenRout
 
 Objective authoring browser journeys cover explicit manual/AI-guided methods, a single objective save with nested goals, editable types, sibling preservation, method switching, cancellation, failure recovery, legacy working-note preservation and member inline review alongside lead snapshot review. The same authenticated acceptance runner now enters assistance through Position focuses. Provider fixtures verify workflow contracts, not the usefulness of generated wording.
 
-Coaching quality is measured separately by the [coach evaluation](../../tools/coach-eval/README.md). It replays the guided flow through the shipped prompt, contract and providers against live models on synthetic scenarios, then scores the transcripts. It needs evaluation credentials and is not part of CI; run it before and after coaching prompt, flow or model changes and compare pass rates.
+Coaching quality is measured separately by the [coach evaluation](../../tools/coach-eval/README.md). It replays the guided flow through the shipped prompt, contract and providers against live models on synthetic scenarios, then scores the transcripts. It needs evaluation credentials and is not part of CI. Its member benchmark replays vague, rewording, proficient and adversarial members through the shipped coaching turn, applies pass rules fixed before running, and compares majority results with a committed baseline. Run it before and after coaching prompt, flow or model changes; CI runs only its offline tests.
 
 Identity cutover regressions cover same-email collision refusal, concurrent first
 sign-ins, ambiguous enrollment through HTTP and the database function, private

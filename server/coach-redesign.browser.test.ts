@@ -51,7 +51,7 @@ test("member can continue editing their own wording when the coach keeps asking 
     }
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("I train Spanish-speaking colleagues and want to learn Spanish.");
     await expect(page.getByText(/What would help your training work\? 2/)).toBeVisible();
-    assert.deepEqual(f.calls.map(c => c.stage), ["clarify", "clarify", "review"]);
+    assert.deepEqual(f.calls.map(c => c.stage).filter(stage => stage !== "review"), ["clarify", "clarify", "objective"]);
     await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
     await page.getByLabel("Objective", { exact: true }).fill("My edited objective");
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited objective");
@@ -301,9 +301,10 @@ test("a failed feedback revision keeps the member's draft and details", async ()
   } finally { await f.close(); }
 });
 
-test("back from a feedback follow-up restores the draft and the supplied detail", async () => {
+test("a follow-up question after feedback appears as feedback beside the unchanged draft", async () => {
   const f = await world(stage => stage === "clarify"
     ? { objective: "Build a video application.", concern: "Who will use it?" }
+    : stage === "review" ? { review: "No checks." }
     : { question: "How will they find the videos?" });
   try {
     const { page } = f;
@@ -314,11 +315,9 @@ test("back from a feedback follow-up restores the draft and the supplied detail"
     await page.getByRole("button", { name: "Help me address this", exact: true }).click();
     await page.getByLabel("Details for the coach", { exact: true }).fill("online seekers");
     await page.getByRole("button", { name: "Update objective", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "How will they find the videos?" })).toBeVisible();
-    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await expect(page.getByRole("region", { name: "AI coach feedback" })).toContainText("How will they find the videos?");
+    await expect(page.getByLabel("Your answer", { exact: true })).toHaveCount(0);
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a video application.");
-    await expect(page.getByLabel("Details for the coach", { exact: true })).toHaveValue("online seekers");
-    await expect(page.getByText("Who will use it?", { exact: true })).toBeVisible();
   } finally { await f.close(); }
 });
 
@@ -368,7 +367,8 @@ test("a failed retry keeps the edited draft available", async () => {
 
 test("a missing assessment is not approval and can be checked without rewriting a development objective", async () => {
   let checks = 0;
-  const f = await world(stage => stage === "review" ? (++checks === 1 ? (() => { throw Error("unavailable"); })() : { assessment: {
+  // The automatic check and its retry both fail; the member checks manually.
+  const f = await world(stage => stage === "review" ? (++checks <= 2 ? (() => { throw Error("unavailable"); })() : { assessment: {
     purpose: { status: "met", note: "The learning is clear." },
     people: { status: "met", note: "The trainers benefit." },
     alignment: { status: "met", note: "This supports the member's work." },
@@ -414,5 +414,34 @@ test("a draft receives automatic checks after an audience follow-up without anot
     await expect(feedback).toContainText("Your career lead has not configured a mission yet.");
     await expect(feedback).not.toContainText("did not provide an assessment");
     assert.deepEqual(f.calls.map(call => call.stage), ["clarify", "clarify", "review"]);
+  } finally { await f.close(); }
+});
+
+test("feedback without new wording updates the checks for the wording on screen", async () => {
+  const checks = (note: string) => ({
+    purpose: { status: "met" as const, note: "The app is the contribution." },
+    people: { status: "needs_attention" as const, note },
+    alignment: { status: "met" as const, note: "Supports the mission." },
+  });
+  let reviews = 0;
+  const f = await world((stage) => stage === "objective"
+    ? { concern: "Name the group the videos are for." }
+    : stage === "review" ? { assessment: checks(++reviews === 1 ? "Still no audience in the wording." : "unexpected") }
+    : { objective: "Build a gospel video app.", assessment: checks("Who will watch the videos?") });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("Build a gospel video app.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    const feedback = page.getByRole("region", { name: "AI coach feedback" });
+    await expect(feedback).toContainText("Who will watch the videos?");
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByRole("button", { name: "Help me address this", exact: true }).click();
+    await page.getByLabel("Details for the coach", { exact: true }).fill("not sure yet");
+    await page.getByRole("button", { name: "Update objective", exact: true }).click();
+    await expect(feedback).toContainText("Still no audience in the wording.");
+    await expect(feedback).toContainText("Name the group the videos are for.");
+    await expect(feedback).not.toContainText("changed since the coach checked it");
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a gospel video app.");
   } finally { await f.close(); }
 });

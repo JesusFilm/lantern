@@ -25,7 +25,8 @@ test("rejected replies are explained by the contract rule they break", () => {
 });
 
 test("redesigned rejection diagnostics use the supplied date and allow one goal idea", () => {
-  assert.equal(schemaCause("actions", '{"actions":["Review reports"],"extra":"unsupported"}', true, { date: "2027-01-15", end: "2027-04-30" }), "unexpected field");
+  // The redesigned contract ignores echoed fields; the legacy contract still rejects them.
+  assert.equal(schemaCause("actions", '{"actions":["Review reports","Pilot captions"],"suggestedDate":"2027-01-15","extra":"unsupported"}', false), "unexpected field");
   assert.equal(schemaCause("actions", '{"actions":[]}', true), "no goal ideas");
 });
 

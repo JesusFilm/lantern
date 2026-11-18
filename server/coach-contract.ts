@@ -136,22 +136,10 @@ export function validateSuggestion(
     !["question", "objective", "goal", "title", "concern", "review", "suggestedDate", "recommendedKind"].includes(key) || typeof item !== "string" || item.trim()));
   if (!object(value)) return fail();
   const fields = ["question", "objective", "goal", "title", "concern", ...(redesigned ? ["review"] : [])];
-  if (
-    Object.keys(value).some(
-      (k) =>
-        ![
-          ...fields,
-          "ready",
-          "options",
-          "actions",
-          "initiativeIds",
-          "suggestedDate",
-          "recommendedKind",
-          ...(redesigned ? ["assessment"] : []),
-        ].includes(k),
-    )
-  )
-    return fail();
+  const known = [...fields, "ready", "options", "actions", "initiativeIds", "suggestedDate", "recommendedKind", ...(redesigned ? ["assessment"] : [])];
+  // The redesigned coach ignores echoed context fields such as kind; they are never returned.
+  if (redesigned) value = Object.fromEntries(Object.entries(value).filter(([k]) => known.includes(k)));
+  if (!object(value) || Object.keys(value).some((k) => !known.includes(k))) return fail();
   if (value.assessment !== undefined) {
     const assessment = value.assessment;
     const valid = object(assessment) && Object.keys(assessment).length === 3 && ["purpose", "people", "alignment"].every(key => {
@@ -214,6 +202,8 @@ export function validateSuggestion(
     if (!output) return fail();
   }
   const result = value as CoachSuggestion;
+  // A review assesses supplied wording; it never rewrites it.
+  if (redesigned && stage === "review") delete result.objective;
   if (redesigned && context) {
     if (result.goal && date(context.date)) {
       const action = result.goal.replace(modelDeadline, "");
