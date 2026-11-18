@@ -1,0 +1,7 @@
+{
+  "about": "Pass rules for the coach member benchmark, applied by run.ts benchmark and the Coach benchmark CI check. Rates are fractions of runs. See docs/development/coach-benchmark.md before changing them.",
+  "minRunPassRate": 0.8,
+  "maxDropFromBaseline": 0.1,
+  "maxScenarioFailures": 2,
+  "minCategoryRunPassRate": 0.6
+}

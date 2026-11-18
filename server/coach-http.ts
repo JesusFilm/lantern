@@ -1,23 +1,21 @@
+import { coachContextLimits } from "../shared/coach.js";
 import { Router } from "express";
 import type { Request } from "express";
 import type { Pool } from "pg";
 import { AccessError, membership } from "./membership.js";
 import { focusStore, validateFocus } from "./focus.js";
 import { coachStore } from "./coach-store.js";
-import { coachPrompt } from "./coach-prompt.js";
+import { coachTurn, providerAsk } from "./coach-turn.js";
 import { readDirection } from "./direction.js";
 import { CoachUnavailable, type CoachProvider } from "./coach-provider.js";
-import {
-  validateSuggestion,
-  type CoachStage,
-  validateCheckpoint,
-} from "./coach-contract.js";
+import { date, type CoachStage, validateCheckpoint } from "./coach-contract.js";
 
 export function coachRoutes(
   db: Pool,
   requireUser: (req: Request) => Promise<{ id: string; email: string }>,
   provider?: CoachProvider,
   offered: (user: { email: string }) => boolean = () => true,
+  redesigned: (user: { email: string }) => boolean = () => false,
 ) {
   const router = Router(),
     store = coachStore(db);
@@ -187,17 +185,21 @@ export function coachRoutes(
         503,
         "Coaching is unavailable. You can continue writing manually.",
       );
+    const enhanced = redesigned(user);
     const body = req.body;
+    if (body?.stage === "review" && !enhanced) throw new AccessError(404, "Not found.");
     if (
       !body ||
       Object.keys(body).some(
         (k) => !["stage", "context", "focusId", "version"].includes(k),
       ) ||
-      !["clarify", "objective", "actions", "goal"].includes(body.stage)
+      !["clarify", "objective", "actions", "goal", ...(enhanced ? ["review"] : [])].includes(body.stage)
     )
       throw new AccessError(400, "Choose a valid coaching step.");
-    const context = validateCheckpoint(body.context),
+    const context = validateCheckpoint(body.context, enhanced ? coachContextLimits.answers : 3, enhanced ? coachContextLimits.characters : 32000),
       stage = body.stage as CoachStage;
+    if (enhanced && stage === "goal" && (!date(context.date) || context.date < context.start || context.date > context.end))
+      throw new AccessError(400, "Choose a target date within this position focus period.");
     if (body.focusId !== undefined) {
       if (
         typeof body.focusId !== "string" ||
@@ -231,17 +233,7 @@ export function coachRoutes(
     res.on("close", closed);
     try {
       const direction = await readDirection(db, actor);
-      const suggestion = await provider.suggest(
-        coachPrompt(direction),
-        JSON.stringify({ stage, context }),
-        (v) =>
-          validateSuggestion(
-            stage,
-            v,
-            direction.initiatives.filter((i) => !i.archived).map((i) => i.id),
-          ),
-        abort.signal,
-      );
+      const suggestion = await coachTurn({ ask: providerAsk(provider, direction, enhanced), direction, stage, context, enhanced, signal: abort.signal });
       // Revoked sessions, membership removal and concurrent edits invalidate results.
       await requireUser(req);
       if ((await membership(db, actor))?.id !== department.id)

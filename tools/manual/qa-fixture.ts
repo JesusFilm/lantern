@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import { guideContent } from "../../server/guide-content.js";
+import { syntheticMission } from "../../server/synthetic-direction.js";
 import { initiativeDefaults } from "../../server/local-initiatives.js";
 import type { StrategicInitiative } from "../../shared/direction.js";
 
@@ -62,7 +62,7 @@ export async function resetQaDepartment(db: Pool, options: { participants: strin
     if (initiatives.length + extraInitiatives.length > 100) throw new Error("QA initiative defaults exceed the department limit.");
     await client.query(`INSERT INTO department_direction(department_id,mission,initiatives) VALUES($1,$2,$3)
       ON CONFLICT(department_id) DO UPDATE SET mission=EXCLUDED.mission,initiatives=EXCLUDED.initiatives,version=department_direction.version+1`,
-      [id, guideContent.context.mission, JSON.stringify([...initiatives, ...extraInitiatives])]);
+      [id, syntheticMission, JSON.stringify([...initiatives, ...extraInitiatives])]);
     await client.query("UPDATE memberships SET role='member' WHERE department_id=$1 AND role='career-lead'", [id]);
     for (const user of users)
       await client.query("INSERT INTO memberships(user_id,department_id,role) VALUES($1,$2,$3) ON CONFLICT(user_id) DO UPDATE SET department_id=EXCLUDED.department_id,role=EXCLUDED.role", [user.id, id, user.id === lead.id ? "career-lead" : "member"]);

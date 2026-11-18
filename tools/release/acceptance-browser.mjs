@@ -529,6 +529,7 @@ export async function runAcceptanceBrowser(
       origin,
       runId,
       enabled: identities.peer.coachAvailable,
+      redesigned: identities.peer.features?.includes("coach-redesign") ?? false,
     });
     checks.push(checkpoint);
 

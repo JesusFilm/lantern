@@ -1,0 +1,77 @@
+name: Coach benchmark
+# Replays the AI coach member benchmark against Qwen and applies tools/coach-eval/gate.json.
+# Procedure, thresholds and setup: docs/development/coach-benchmark.md.
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      repeats:
+        description: Runs per scenario
+        default: '3'
+permissions:
+  contents: read
+concurrency:
+  group: coach-benchmark-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  benchmark:
+    name: Coach benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: coach-eval
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 2 }
+      - name: Decide whether coaching behavior changed
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Files that change what the coach says. The pull request merge commit's first parent is main.
+          coaching='^(server/(coach-(turn|prompt|guidance|contract|provider)|guide-content|synthetic-direction|local-initiatives)\.ts|shared/(coach|direction|guide|focus)\.ts|client/workspace/ObjectiveEditor\.tsx|tools/coach-eval/|\.github/workflows/coach-benchmark\.yml)'
+          if [ "$EVENT" = pull_request ] && [ "$HEAD_REPO" != "$REPO" ]; then
+            # Forks receive no secrets; a maintainer runs the benchmark locally instead.
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Pull requests from forks cannot use the benchmark key. If coaching changed, a maintainer runs the coach benchmark locally."
+            echo "Fork pull request: if coaching changed, run the coach benchmark locally (docs/development/coach-benchmark.md)." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$EVENT" = workflow_dispatch ] || git diff --name-only HEAD^1 HEAD | grep -Eq "$coaching"; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No coaching files changed; the benchmark was not needed." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/setup-node@v7
+        if: steps.scope.outputs.run == 'true'
+        with: { node-version: '26.13.1', cache: npm }
+      - if: steps.scope.outputs.run == 'true'
+        run: npm ci
+      - name: Run the member benchmark
+        if: steps.scope.outputs.run == 'true'
+        env:
+          COACH_EVAL_QWEN_KEY: ${{ secrets.COACH_EVAL_QWEN_KEY }}
+          COACH_EVAL_GATEWAY_URL: ${{ vars.COACH_EVAL_GATEWAY_URL }}
+          COACH_EVAL_RUNS: ${{ runner.temp }}/coach-eval
+          REPEATS: ${{ inputs.repeats || '3' }}
+          RUN_NAME: ci-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          if [ -z "$COACH_EVAL_QWEN_KEY" ]; then
+            echo "::error::COACH_EVAL_QWEN_KEY is not set in the coach-eval environment. See docs/development/coach-benchmark.md."
+            exit 1
+          fi
+          node --import tsx tools/coach-eval/run.ts benchmark --run "$RUN_NAME" --target qwen --repeats "$REPEATS" --concurrency 2
+      - name: Publish the benchmark report
+        if: always() && steps.scope.outputs.run == 'true'
+        env:
+          REPORT: ${{ runner.temp }}/coach-eval/ci-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          if [ -f "$REPORT/benchmark.md" ]; then cat "$REPORT/benchmark.md" >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/upload-artifact@v7
+        if: always() && steps.scope.outputs.run == 'true'
+        with:
+          name: coach-benchmark-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/coach-eval
+          if-no-files-found: ignore
+          retention-days: 30

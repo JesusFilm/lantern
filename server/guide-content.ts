@@ -1,9 +1,10 @@
 import type { GuideContent } from '../shared/guide.js';
+import { syntheticMission } from './synthetic-direction.js';
 
 // Curated release content, not department-editable data. Add department context only when supplied and agreed.
 export const guideContent: GuideContent = {
   context: {
-    mission: 'We partner with the Body of Christ through heart language media, so everyone, everywhere can encounter Jesus.',
+    mission: syntheticMission,
   },
   objectives: {
     title: 'Critical mission objectives',
@@ -121,7 +122,7 @@ export const guideContent: GuideContent = {
       {
         id: 'time-bound', title: 'Time-bound · agree when to learn or act',
         paragraphs: [
-          'Give the goal a timeframe that fits the work and can be agreed with your career lead. Goal dates are distinct from the department’s review cadence.',
+          'Give the goal a timeframe within your position focus period that fits the work and can be agreed with your career lead. Goal dates are distinct from the department’s review cadence.',
           'This worked example uses Month 1, Month 3 and Month 6 to show sequencing. These goal milestones are illustrative, not required deadlines; the agreed rhythm is two focus cycles per year.',
         ],
         example: { label: 'The worked goal, brought together', text: 'For one video devotional, test 20 viewers by Month 1 and record who finds the next step. Build and release a clearer screen by Month 3 after accessibility and reliability checks. By Month 6, retest 20 viewers, aiming for at least 16 to find the next step, and document remaining gaps.' },
@@ -130,7 +131,7 @@ export const guideContent: GuideContent = {
       {
         id: 'development', title: 'Use the same approach for growth',
         paragraphs: [
-          'A personal development plan is optional and encouraged. Describe a capability or behaviour you want to grow, with SMART goals showing its practical application.',
+          'A personal development plan is optional and encouraged. Describe a capability or behaviour you want to grow, with SMART goals showing its professional application. A personal interest can fit when you explain how it supports your work.',
           'Leadership development assignments are a separate optional part beneath personal development. A coach gives an assignment; agree specific goals and outcomes for it. You do not need to include either development section just to complete a focus.',
           'An internal contribution could be facilitating a useful show-and-tell; a related development goal could be demonstrating better facilitation, supported by participant feedback. Evidence of learning can be meaningful without a numerical score.',
           'Include any development in the saved version requested for review before confirmation. The same locked baseline and two-cycle rhythm apply. A career lead may review and confirm their own requested focus; discussion with their senior or manager is optional.',

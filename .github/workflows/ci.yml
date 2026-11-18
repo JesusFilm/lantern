@@ -51,6 +51,8 @@ jobs:
         with: { node-version: '26.13.1', cache: npm }
       - run: npm ci
       - run: npm run typecheck
+      - name: Coach evaluation harness
+        run: npx tsc -p tools/coach-eval/tsconfig.json && node --import tsx --test tools/coach-eval/*.test.ts
   tests:
     name: PostgreSQL HTTP and browser tests
     runs-on: ubuntu-latest

@@ -10,7 +10,7 @@ import { migrate } from '../../dist/server/schema.js';
 import { runAcceptanceBrowser } from './acceptance-browser.mjs';
 import { withAcceptanceFixture } from './acceptance-fixture.mjs';
 
-async function fixture(work, { rejectFocusSave = false, rejectImageSave = false, allowUnrequestedConfirmation = false, rejectSelfReview = false, directionDelay = 0, coach } = {}) {
+async function fixture(work, { rejectFocusSave = false, rejectImageSave = false, allowUnrequestedConfirmation = false, rejectSelfReview = false, directionDelay = 0, coach, redesigned = true } = {}) {
   const database = await privilegeFixture();
   const server = createServer();
   try {
@@ -46,7 +46,7 @@ async function fixture(work, { rejectFocusSave = false, rejectImageSave = false,
         else next();
       });
     }
-    app.use(createApp(database.runtime, { origin, coach, features: resolveFeatureConfig({}, 'stage') }));
+    app.use(createApp(database.runtime, { origin, coach, features: resolveFeatureConfig({ LANTERN_FEATURES: `coach-redesign=${redesigned ? 'on' : 'off'}` }, 'stage') }));
     app.use(express.static('dist/client'));
     server.on('request', app);
     await withAcceptanceFixture(database.migration, async fixture => {
@@ -130,24 +130,35 @@ test('deployed acceptance waits for delayed initiative choices before editing an
   }, { directionDelay: 750 });
 });
 
-async function withProvider(work, { primaryFails = false, bothFail = false } = {}) {
+async function withProvider(work, { primaryFails = false, bothFail = false, budgetProbe = false, clarificationQuestions = 1, noIdeas = false, concernWithOutput = false } = {}) {
   const calls = [];
   const upstream = createServer(async (request, response) => {
     let raw = '';
     for await (const chunk of request) raw += chunk;
     const body = JSON.parse(raw);
-    const { stage } = JSON.parse(body.messages.at(-1).content);
+    const { stage, context } = JSON.parse(body.messages.at(-1).content);
     calls.push({ path: request.url, stage });
     if (bothFail || (primaryFails && request.url === '/primary/v1/messages')) {
       response.writeHead(503).end('{}'); return;
     }
-    const value = stage === 'clarify'
+    const base = noIdeas && stage === 'actions' ? { concern: 'Describe an action within your control.' }
+      : budgetProbe && stage === 'actions' && calls.filter(c => c.stage === 'actions').length === 1
+      ? { concern: 'Choose an action within your control.' }
+      : budgetProbe && stage === 'goal' ? { question: 'What evidence will you record?', ready: false }
+      : stage === 'clarify' && context.answers.length < clarificationQuestions
       ? { ready: false, question: 'Who benefits from this work?', options: ['Engineers'] }
-      : stage === 'objective'
+      : stage === 'objective' || stage === 'clarify'
         ? { objective: 'Help engineers diagnose build failures', title: 'Synthetic diagnostics', initiativeIds: [] }
         : stage === 'actions'
           ? { actions: ['Review three failed builds', 'Try clearer diagnostic messages'], suggestedDate: '2026-11-30' }
+          : stage === 'review' ? { assessment: {
+              purpose: { status: 'met', note: 'The contribution is clear.' },
+              people: { status: 'met', note: 'Engineers benefit.' },
+              alignment: { status: 'met', note: 'The work supports the mission.' },
+            } }
           : { goal: 'Review three failed builds by the selected date and record diagnostic steps.' };
+    // The coach often adds feedback alongside goal ideas or goal wording.
+    const value = concernWithOutput && (stage === 'actions' || stage === 'goal') ? { ...base, concern: 'Check that this is within your control.' } : base;
     response.setHeader('Content-Type', 'application/json');
     response.end(JSON.stringify(request.url.startsWith('/primary')
       ? { content: [{ type: 'text', text: JSON.stringify(value) }] }
@@ -167,16 +178,21 @@ async function withProvider(work, { primaryFails = false, bothFail = false } = {
   }
 }
 
-for (const primaryFails of [false, true]) {
-  test(`deployed coaching journey saves and submits generated work (${primaryFails ? 'fallback' : 'primary'})`, { timeout: 120000 }, async () => {
+for (const redesigned of [false, true]) for (const primaryFails of [false, true]) {
+  test(`deployed coaching journey saves and submits generated work (${primaryFails ? 'fallback' : 'primary'}, ${redesigned ? 'redesigned' : 'legacy'})`, { timeout: 120000 }, async () => {
     await withProvider(async (coach, calls) => {
       await fixture(async input => {
         const checks = await runAcceptanceBrowser(input);
         assert.ok(checks.includes('coaching-enabled-journey'));
         assert.ok(!checks.includes('coaching-disabled-manual'));
         assert.ok(calls.some(call => call.stage === 'goal'));
+        const reviews = calls.map((call, index) => call.stage === 'review' ? index : -1).filter(index => index >= 0);
+        if (redesigned) {
+          assert.ok(reviews.length > 0, 'The missing assessment is requested automatically.');
+          assert.ok(reviews.every(index => index < calls.findIndex(call => call.stage === 'actions')), 'The final check makes no model call.');
+        } else assert.equal(reviews.length, 0);
         assert.equal(calls.some(call => call.path.startsWith('/fallback')), primaryFails);
-      }, { coach });
+      }, { coach, redesigned });
     }, { primaryFails });
   });
 }
@@ -191,4 +207,56 @@ test('a provider outage blocks enabled coaching acceptance and revokes synthetic
       }
     }, { coach });
   }, { bothFail: true });
+});
+
+
+test('when the redesigned coach gives only feedback at the goal step, the journey writes the goal itself, within the ten-request cap', { timeout: 120000 }, async () => {
+  await withProvider(async (coach, calls) => {
+    await fixture(async input => {
+      // Model quality must not block delivery: a member can switch to Write myself and keep the planned goal.
+      const checks = await runAcceptanceBrowser(input);
+      assert.ok(checks.includes('coaching-enabled-journey'));
+      // The server shows a second goal question as feedback, so the runner's cap is not reached.
+      assert.ok(calls.filter(call => call.stage !== 'review').length <= 10);
+      assert.equal(calls.filter(call => call.stage === 'goal').length, 2);
+      assert.equal(calls.filter(call => call.stage === 'actions').length, 2);
+    }, { coach });
+  }, { budgetProbe: true });
+});
+
+
+test("deployed redesigned coaching drafts from the member's answers if clarification continues", { timeout: 120000 }, async () => {
+  await withProvider(async (coach, calls) => {
+    await fixture(async input => {
+      const checks = await runAcceptanceBrowser(input);
+      assert.ok(checks.includes('coaching-enabled-journey'));
+      assert.equal(calls.filter(call => call.stage === 'clarify').length, 2);
+      // After one answer the coach drafts from it instead of asking again.
+      assert.equal(calls.filter(call => call.stage === 'objective').length, 1);
+      assert.equal(calls.filter(call => call.stage !== 'review').length, 5);
+      assert.equal(calls.filter(call => call.stage === 'review').length, 1);
+    }, { coach });
+  }, { clarificationQuestions: 4 });
+});
+
+test('when the redesigned coach offers no goal ideas after asking twice, the journey writes the goal itself', { timeout: 120000 }, async () => {
+  await withProvider(async (coach, calls) => {
+    await fixture(async input => {
+      const checks = await runAcceptanceBrowser(input);
+      assert.ok(checks.includes('coaching-enabled-journey'));
+      assert.equal(calls.filter(call => call.stage === 'actions').length, 2);
+      assert.equal(calls.filter(call => call.stage === 'goal').length, 0);
+    }, { coach });
+  }, { noIdeas: true });
+});
+
+test('goal ideas and goal wording shown with coach feedback are used as normal', { timeout: 120000 }, async () => {
+  await withProvider(async (coach, calls) => {
+    await fixture(async input => {
+      const checks = await runAcceptanceBrowser(input);
+      assert.ok(checks.includes('coaching-enabled-journey'));
+      assert.equal(calls.filter(call => call.stage === 'actions').length, 1);
+      assert.equal(calls.filter(call => call.stage === 'goal').length, 1);
+    }, { coach });
+  }, { concernWithOutput: true });
 });

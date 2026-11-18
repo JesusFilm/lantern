@@ -1,6 +1,6 @@
 import type { CoachCheckpoint, CoachSuggestion } from "../shared/coach.js";
 import { AccessError } from "./membership.js";
-export type CoachStage = "clarify" | "objective" | "actions" | "goal";
+export type CoachStage = "clarify" | "objective" | "actions" | "goal" | "review";
 export const date = (value: unknown): value is string =>
   typeof value === "string" &&
   /^\d{4}-\d{2}-\d{2}$/.test(value) &&
@@ -14,14 +14,26 @@ const text = (v: unknown, max = 4000): v is string =>
   typeof v === "string" && v.length <= max;
 const texts = (v: unknown, max = 6) =>
   Array.isArray(v) && v.length <= max && v.every((x) => text(x, 1000));
-export function validateCheckpoint(value: unknown): CoachCheckpoint {
+// Match dates explicitly: Date.parse also accepts method phrases containing a date.
+const month = "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)";
+const day = "\\d{1,2}(?:st|nd|rd|th)?";
+// Lantern adds the selected date itself, so a model's own deadline phrase is removed first:
+// exact dates, and month, quarter or year phrases such as "By the end of March 2027" or "By mid-2027".
+const part = "(?:(?:the )?(?:end|start|beginning|middle) of |mid-?|early |late )";
+const period = `(?:${part}?(?:${month}|Q[1-4]),? |${part})\\d{4}`;
+const modelDeadline = new RegExp(`^By (?:\\d{4}-\\d{2}-\\d{2}|${day} ${month} \\d{4}|${month} ${day},? \\d{4}|${period}),\\s*`, "i");
+export function validateCheckpoint(value: unknown, maxAnswers = 3, maxCharacters = 32000): CoachCheckpoint {
   const fail = (): never => {
     throw new AccessError(
       400,
       "Check the coaching fields and dates before saving.",
     );
   };
-  if (!object(value) || JSON.stringify(value).length > 32000) return fail();
+  if (!object(value)) return fail();
+  if (JSON.stringify(value).length > maxCharacters) {
+    if (maxCharacters > 32000) throw new AccessError(400, "This coaching context is too long. Shorten it or continue writing manually; your draft is unchanged.");
+    return fail();
+  }
   const fields = [
     "work",
     "question",
@@ -63,7 +75,7 @@ export function validateCheckpoint(value: unknown): CoachCheckpoint {
     return fail();
   if (
     !Array.isArray(value.answers) ||
-    value.answers.length > 3 ||
+    value.answers.length > maxAnswers ||
     value.answers.some(
       (a) =>
         !object(a) ||
@@ -116,27 +128,32 @@ export function validateSuggestion(
   stage: CoachStage,
   value: unknown,
   initiativeIds: string[],
+  redesigned = false,
+  context?: Pick<CoachCheckpoint, "date" | "end">,
 ): CoachSuggestion {
   const fail = (): never => {
     throw new Error("Invalid coach response");
   };
   if (!object(value)) return fail();
-  const fields = ["question", "objective", "goal", "title", "concern"];
-  if (
-    Object.keys(value).some(
-      (k) =>
-        ![
-          ...fields,
-          "ready",
-          "options",
-          "actions",
-          "initiativeIds",
-          "suggestedDate",
-          "recommendedKind",
-        ].includes(k),
-    )
-  )
-    return fail();
+  // Optional empty strings carry no meaning; they are not a provider failure.
+  if (redesigned) value = Object.fromEntries(Object.entries(value).filter(([key, item]) =>
+    !["question", "objective", "goal", "title", "concern", "review", "suggestedDate", "recommendedKind"].includes(key) || typeof item !== "string" || item.trim()));
+  if (!object(value)) return fail();
+  const fields = ["question", "objective", "goal", "title", "concern", ...(redesigned ? ["review"] : [])];
+  const known = [...fields, "ready", "options", "actions", "initiativeIds", "suggestedDate", "recommendedKind", ...(redesigned ? ["assessment"] : [])];
+  // The redesigned coach ignores echoed context fields such as kind; they are never returned.
+  if (redesigned) value = Object.fromEntries(Object.entries(value).filter(([k]) => known.includes(k)));
+  if (!object(value) || Object.keys(value).some((k) => !known.includes(k))) return fail();
+  if (value.assessment !== undefined) {
+    const assessment = value.assessment;
+    const valid = object(assessment) && Object.keys(assessment).length === 3 && ["purpose", "people", "alignment"].every(key => {
+      const item = assessment[key];
+      return object(item) && Object.keys(item).every(k => k === "status" || k === "note") &&
+        ["met", "needs_attention", "uncertain"].includes(String(item.status)) && text(item.note, 500) && !!item.note.trim();
+    });
+    // A malformed optional assessment must never discard an otherwise usable draft.
+    if (!valid) delete value.assessment;
+  }
   if (
     fields.some(
       (k) =>
@@ -158,21 +175,22 @@ export function validateSuggestion(
     const choices = value[key] as string[] | undefined;
     if (choices && choices.some((choice) => !choice.trim())) return fail();
   }
+  if (redesigned && context && Array.isArray(value.actions) && value.actions.length) value.suggestedDate = context.end;
   if (value.suggestedDate !== undefined && !date(value.suggestedDate))
     return fail();
   if (
-    stage === "clarify" &&
+    !redesigned && stage === "clarify" &&
     !(value.ready === false ? value.question : value.objective)
   )
     return fail();
-  if (
+  if (!redesigned && (
     (stage === "objective" && !value.objective) ||
     (stage === "actions" &&
       (!Array.isArray(value.actions) ||
         value.actions.length < 2 ||
         !date(value.suggestedDate))) ||
     (stage === "goal" && !value.goal)
-  )
+  ))
     return fail();
   if (
     value.recommendedKind !== undefined &&
@@ -181,7 +199,23 @@ export function validateSuggestion(
     )
   )
     return fail();
+  if (redesigned && value.ready === false && !value.question && !value.concern && !(stage === "review" && value.assessment)) return fail();
+  if (redesigned && !value.question && !value.concern) {
+    const output = stage === "actions" ? Array.isArray(value.actions) && value.actions.length > 0 && date(value.suggestedDate)
+      : stage === "goal" ? value.goal : stage === "review" ? value.review || value.assessment : value.objective;
+    if (!output) return fail();
+  }
   const result = value as CoachSuggestion;
+  // A review assesses supplied wording; it never rewrites it.
+  if (redesigned && stage === "review") delete result.objective;
+  if (redesigned && context) {
+    if (result.goal && date(context.date)) {
+      const action = result.goal.replace(modelDeadline, "");
+      if (!action.trim()) return fail();
+      const label = new Date(context.date + "T12:00:00Z").toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+      result.goal = `By ${label}, ${action}`;
+    }
+  }
   if (result.initiativeIds?.some((id) => !initiativeIds.includes(id)))
     return fail();
   return result;

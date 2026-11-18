@@ -1,0 +1,113 @@
+{
+  "commit": "a898ffb",
+  "target": "qwen",
+  "createdAt": "2026-11-18T04:53:27.435Z",
+  "scenarios": [
+    {
+      "id": "bench-vague-gospel-video",
+      "category": "vague",
+      "runs": 6,
+      "passes": 4,
+      "failures": {
+        "completed": 1,
+        "objective includes audience from the member's answer": 2,
+        "people check met": 1,
+        "verdict ready": 1,
+        "at least 1 goal": 1
+      }
+    },
+    {
+      "id": "bench-vague-support-faq",
+      "category": "vague",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
+    {
+      "id": "bench-vague-unsure",
+      "category": "vague",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
+    {
+      "id": "bench-rewording-subtitles",
+      "category": "rewording",
+      "runs": 6,
+      "passes": 5,
+      "failures": {
+        "completed": 1,
+        "at least 1 goal": 1
+      }
+    },
+    {
+      "id": "bench-rewording-playwright",
+      "category": "rewording",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
+    {
+      "id": "bench-rewording-mentoring",
+      "category": "rewording",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
+    {
+      "id": "bench-proficient-existing",
+      "category": "proficient",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
+    {
+      "id": "bench-proficient-partner-search",
+      "category": "proficient",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
+    {
+      "id": "bench-proficient-accessibility-growth",
+      "category": "proficient",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
+    {
+      "id": "bench-qa-off-topic",
+      "category": "adversarial",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
+    {
+      "id": "bench-qa-injection",
+      "category": "adversarial",
+      "runs": 6,
+      "passes": 5,
+      "failures": {
+        "verdict not ready": 1
+      }
+    },
+    {
+      "id": "bench-qa-gibberish",
+      "category": "adversarial",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
+    {
+      "id": "bench-qa-holiday-spanish",
+      "category": "adversarial",
+      "runs": 6,
+      "passes": 5,
+      "failures": {
+        "checks shown": 1,
+        "alignment check not met": 1,
+        "verdict not ready": 1
+      }
+    }
+  ]
+}

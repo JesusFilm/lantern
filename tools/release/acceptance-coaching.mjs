@@ -2,16 +2,25 @@ import assert from "node:assert/strict";
 import { expect } from "@playwright/test";
 
 // Ordinary authenticated routes; the enclosing fixture owns synthetic cleanup.
-export async function runCoachingJourney({ context, origin, runId, enabled }) {
+export async function runCoachingJourney({ context, origin, runId, enabled, redesigned = false }) {
   const page = await context.newPage();
+  let modelTurns = 0;
+  // Bound every POST, including retries started by ordinary editor controls.
+  await page.route("**/api/coach/suggest", async route => {
+    if (route.request().method() === "POST" && ++modelTurns > 10) {
+      await route.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "Acceptance coaching turn limit reached." }) });
+    } else await route.continue();
+  });
   const title = `Synthetic coaching ${runId}`;
   await page.goto(origin + "/");
   await page
     .getByRole("button", { name: "New position focus", exact: true })
     .click();
   await page.getByLabel("Document title").fill(title);
-  await page.getByLabel("Period starts").fill("2026-10-01");
-  await page.getByLabel("Period ends").fill("2027-03-31");
+  const today = new Date().toISOString().slice(0, 10);
+  const end = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
+  await page.getByLabel("Period starts").fill(today);
+  await page.getByLabel("Period ends").fill(end);
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   assert.equal(typeof enabled, "boolean");
@@ -30,6 +39,13 @@ export async function runCoachingJourney({ context, origin, runId, enabled }) {
     assert.equal(response.status(), 200);
     await expect(page.getByRole("dialog")).toBeHidden({ timeout: 60000 });
   }
+  async function answerFollowups() {
+    const answer = page.getByLabel("Your answer", { exact: true });
+    while (await answer.isVisible()) {
+      await answer.fill("I maintain the synthetic build diagnostics tool. I can review three failed builds with engineers and record which troubleshooting steps help them find causes sooner.");
+      await modelTurn(page.getByRole("button", { name: "Next", exact: true }));
+    }
+  }
   await page
     .getByRole("button", { name: "Add objective", exact: true })
     .click();
@@ -37,6 +53,7 @@ export async function runCoachingJourney({ context, origin, runId, enabled }) {
     await page
       .getByRole("button", { name: "Guide with AI", exact: true })
       .click();
+    if (redesigned) await page.getByRole("radio", { name: "Contribution", exact: true }).check();
     await page
       .getByLabel("Your work", { exact: true })
       .fill(
@@ -46,7 +63,8 @@ export async function runCoachingJourney({ context, origin, runId, enabled }) {
     await modelTurn(next);
     const objectiveField = page.getByLabel("Objective", { exact: true }),
       answer = page.getByLabel("Your answer", { exact: true });
-    for (let turn = 0; turn < 3; turn++) {
+    if (redesigned) await answerFollowups();
+    else for (let turn = 0; turn < 3; turn++) {
       await expect(objectiveField.or(answer)).toBeVisible();
       if (await objectiveField.isVisible()) break;
       await answer.fill(
@@ -81,28 +99,72 @@ export async function runCoachingJourney({ context, origin, runId, enabled }) {
     .inputValue();
   let goal;
   if (enabled) {
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-    await modelTurn(
-      page.getByRole("button", { name: "Add SMART goal", exact: true }),
-    );
-    const targetDate = new Date(Date.now() + 30 * 86400000)
-      .toISOString()
-      .slice(0, 10);
-    await page.getByLabel("Target date", { exact: true }).fill(targetDate);
-    await page.getByRole("radio").first().check();
-    await expect(page.getByLabel("Target date", { exact: true })).toHaveValue(
-      targetDate,
-    );
-    await modelTurn(page.getByRole("button", { name: "Next", exact: true }));
-    goal = await page.getByLabel("SMART goal", { exact: true }).inputValue();
+    const next = page.getByRole("button", { name: "Next", exact: true });
+    const addGoal = page.getByRole("button", { name: "Add SMART goal", exact: true });
+    const feedback = page.getByRole("region", { name: "AI coach feedback" });
+    // This journey checks the workflow, not model quality. When the coach answers with
+    // feedback instead of goal ideas or goal wording, the synthetic member continues as a
+    // member can, with Write myself, and the run notes it.
+    async function writeGoalMyself(step, planned) {
+      await expect(feedback).toBeVisible();
+      console.log(`Coaching journey: the coach gave feedback instead of ${step}; the synthetic member wrote the goal with Write myself.`);
+      await page.getByRole("button", { name: "Switch to Write myself", exact: true }).click();
+      if (!planned) {
+        await addGoal.click();
+        await page.getByLabel("SMART goal 1", { exact: true }).fill("Review three synthetic build failures and record useful diagnostic steps.");
+      }
+      return page.getByLabel("SMART goal 1", { exact: true }).inputValue();
+    }
+    let ideas = true;
+    if (redesigned) {
+      await modelTurn(next);
+      await answerFollowups();
+      const possibleGoals = page.getByRole("heading", { name: "Possible goals", exact: true });
+      await expect(possibleGoals.or(feedback).first()).toBeVisible();
+      if (await possibleGoals.isVisible()) await addGoal.click();
+      else {
+        // Without ideas, Add SMART goal asks the coach once more.
+        await modelTurn(addGoal);
+        await answerFollowups();
+        const targetField = page.getByLabel("Target date", { exact: true });
+        await expect(targetField.or(feedback).first()).toBeVisible();
+        if (!(await targetField.isVisible())) {
+          ideas = false;
+          goal = await writeGoalMyself("goal ideas", false);
+        }
+      }
+    } else {
+      await next.click();
+      await modelTurn(addGoal);
+    }
+    if (ideas) {
+      const targetDate = new Date(Date.now() + 30 * 86400000)
+        .toISOString()
+        .slice(0, 10);
+      await page.getByLabel("Target date", { exact: true }).fill(targetDate);
+      await page.getByRole("radio").first().check();
+      await expect(page.getByLabel("Target date", { exact: true })).toHaveValue(
+        targetDate,
+      );
+      await modelTurn(page.getByRole("button", { name: "Next", exact: true }));
+      if (redesigned) await answerFollowups();
+      const goalField = page.getByLabel("SMART goal", { exact: true });
+      if (redesigned) await expect(goalField.or(feedback).first()).toBeVisible();
+      if (redesigned && !(await goalField.isVisible())) {
+        // Write myself keeps the planned action and date as an editable goal.
+        goal = await writeGoalMyself("goal wording", true);
+      } else {
+        goal = await goalField.inputValue();
+        await page
+          .getByRole("button", { name: "Add to objective", exact: true })
+          .click();
+        await next.click();
+        await expect(
+          page.getByRole("heading", { name: "Check objective", exact: true }),
+        ).toBeVisible();
+      }
+    }
     assert.ok(goal.trim());
-    await page
-      .getByRole("button", { name: "Add to objective", exact: true })
-      .click();
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-    await expect(
-      page.getByRole("heading", { name: "Check objective", exact: true }),
-    ).toBeVisible();
   } else {
     await page
       .getByRole("button", { name: "Add SMART goal", exact: true })

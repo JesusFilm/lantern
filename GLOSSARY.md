@@ -71,6 +71,12 @@ An optional objective for a capability or behavior the member wants to grow, pai
 **Leadership objective**:
 An optional objective for developing leadership through a practical assignment, paired with goals for its outcomes.
 
+**Discovery objective**:
+An objective explicitly focused on finding out an unknown need or useful direction. It states the uncertainty honestly and does not imply that research, access or another person’s participation has already been agreed.
+
+**Member role type**:
+A planned description of a member’s profession or work, such as engineer, QA, evangelist, lector or trainer. It provides coaching context and grants no permissions. Account configuration is tracked in [#102](https://github.com/JesusFilm/lantern/issues/102); currently members describe their work to the coach.
+
 **SMART goal**:
 A specific, measurable, achievable, relevant and time-bound goal supporting an objective. These qualities do not require five separate written fields or universal numerical targets.
 

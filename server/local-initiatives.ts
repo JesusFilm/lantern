@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 import type { StrategicInitiative } from "../shared/direction.js";
 import { membershipWrite } from "./membership.js";
+import { syntheticMission } from "./synthetic-direction.js";
 
 // Engineering's current staging identities. These are defaults for synthetic
 // local walkthroughs; ordinary startup never changes hosted team direction.
@@ -47,8 +48,8 @@ export async function seedLocalInitiatives(db: Pool, localUserId: string) {
     }
     if (!changed) return;
     if (initiatives.length > 100) throw new Error("Local initiative defaults would exceed the limit of 100 initiatives; no changes applied.");
-    await client.query(`INSERT INTO department_direction(department_id, initiatives) VALUES($1,$2)
+    await client.query(`INSERT INTO department_direction(department_id, initiatives, mission) VALUES($1,$2,$3)
       ON CONFLICT(department_id) DO UPDATE SET initiatives=EXCLUDED.initiatives, version=department_direction.version+1`,
-      [department, JSON.stringify(initiatives)]);
+      [department, JSON.stringify(initiatives), syntheticMission]);
   });
 }

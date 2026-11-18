@@ -52,7 +52,7 @@ export async function coachingFixture(
   assert.ok(a && typeof a !== "string");
   const origin = `http://127.0.0.1:${a.port}`;
   // Coaching tests show the coach unless a test chooses its own feature settings.
-  const shown = features ?? (options.defaultFeatures === false ? undefined : resolveFeatureConfig({}, "local"));
+  const shown = features ?? (options.defaultFeatures === false ? undefined : resolveFeatureConfig({ LANTERN_FEATURES: "coach-redesign=off" }, "local"));
   const app = createApp(fixture.runtime, { origin, coach, features: shown });
   server.on("request", app);
   const request = (

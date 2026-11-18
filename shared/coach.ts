@@ -1,5 +1,10 @@
 // Private coaching input and submitted review documents have separate visibility.
 import type { FocusDraft, PositionFocus, ObjectiveKind } from "./focus.js";
+export const coachContextLimits = { answers: 12, characters: 128000 } as const;
+
+export type ObjectiveCheck = { status: "met" | "needs_attention" | "uncertain"; note: string };
+export type ObjectiveAssessment = { purpose: ObjectiveCheck; people: ObjectiveCheck; alignment: ObjectiveCheck };
+
 export interface CoachCheckpoint {
   entry?: "work" | "objective" | "goal";
   kind?: ObjectiveKind;
@@ -29,6 +34,8 @@ export interface CoachCheckpoint {
   concern: string;
 }
 export interface CoachSuggestion {
+  assessment?: ObjectiveAssessment;
+  review?: string;
   recommendedKind?: ObjectiveKind;
   ready?: boolean;
   question?: string;

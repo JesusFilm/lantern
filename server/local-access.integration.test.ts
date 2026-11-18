@@ -88,6 +88,7 @@ test(
       assert.ok(first.department);
       assert.equal(first.localAccess, true);
       const direction = await (await fetch(origin + "/api/department/direction")).json() as DepartmentDirection;
+      assert.equal(direction.mission, "We partner with the Body of Christ through heart language media, so everyone, everywhere can encounter Jesus.");
       for (const expected of approvedDescriptions) {
         assert.equal(direction.initiatives.find(item => item.name.toLowerCase() === expected.name.toLowerCase())?.description, expected.description);
       }
@@ -157,6 +158,11 @@ test(
       await stop();
       await start();
       assert.deepEqual(await (await fetch(origin + "/api/department/direction")).json(), expected);
+      const cleared = await fetch(origin + "/api/department/direction", { method: "PUT", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify({ ...expected, mission: "" }) });
+      assert.equal(cleared.status, 200);
+      await stop();
+      await start();
+      assert.equal(((await (await fetch(origin + "/api/department/direction")).json()) as DepartmentDirection).mission, "");
       await stop();
       await admin.query("UPDATE memberships SET deleted_at=now() WHERE user_id=$1", [first.user.id]);
       await start();

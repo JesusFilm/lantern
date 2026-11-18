@@ -430,6 +430,34 @@ dialog [role="alert"] {
 .authoring-fields > :last-child {
   margin-bottom: 0;
 }
+.coach-feedback {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+.coach-feedback h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  color: var(--accent);
+  font-size: var(--text-body);
+}
+.coach-feedback p { margin: 0; }
+.coach-feedback > button, .coach-feedback > .field { margin-top: var(--space-3); margin-right: var(--space-2); }
+.coach-checks { list-style: none; padding: 0; margin: var(--space-3) 0; display: grid; gap: var(--space-3); }
+.coach-check > div { font-size: var(--text-small); }
+.coach-check > p { margin: var(--space-1) 0 0; color: var(--muted); font-size: var(--text-small); }
+.coach-check-met > div { color: #167449; }
+.coach-check-needs_attention > div { color: #a52e39; }
+.coach-check-uncertain > div { color: var(--muted); }
+[data-theme="dark"] .coach-check-met > div { color: #a9e8c6; }
+[data-theme="dark"] .coach-check-needs_attention > div { color: #ffb2aa; }
+.coach-feedback + [role="status"] { margin-top: var(--space-4); }
 .authoring-fields :is(input, textarea, select, button),
 .objective-editor > [role="alert"] {
   scroll-margin-block: var(--space-4) calc(144px + env(safe-area-inset-bottom));
