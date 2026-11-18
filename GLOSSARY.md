@@ -80,7 +80,7 @@ Work towards useful outcomes, including product work, shared capabilities and ac
 ## Guidance and context
 
 **Guide**:
-Optional instruction supporting objective and SMART-goal writing and the Position Focus procedure, separate from focus authoring. The Procedures topic contains The year, Agree a focus, and Make a change; the agreed two-cycle rhythm does not itself enable scheduling, automatic carryover or amendment operations.
+Optional instruction supporting objective and SMART-goal writing and the Position Focus procedure, separate from focus authoring. The Procedures topic contains The year and Agree a focus; the agreed two-cycle rhythm does not itself enable scheduling, automatic carryover or amendment operations.
 
 **Example position focus**:
 A concise generic illustration of one objective and two goals. Its targets do not impose requirements on a member's own focus.

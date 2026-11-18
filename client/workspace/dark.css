@@ -17,7 +17,7 @@
 [data-theme="dark"] .primary { background: #00778a; border-color: #00778a; color: white; }
 [data-theme="dark"] .primary:hover { background: #006477; }
 [data-theme="dark"] .link { background: transparent; }
-[data-theme="dark"] :is(.mission-banner, .focus-list, .empty-base, .lesson-card, .guide-navigation, .topic-entry > button, .member-context, .procedure-flow-panel, .initiative-icon-grid button, .objective-pager, .lesson-footer, .cp-coach-wait) { background: var(--surface); color: var(--ink); }
+[data-theme="dark"] :is(.mission-banner, .focus-list, .empty-base, .lesson-card, .guide-navigation, .topic-entry > button, .member-context, .procedure-year, .procedure-flow-panel, .initiative-icon-grid button, .objective-pager, .lesson-footer, .cp-coach-wait) { background: var(--surface); color: var(--ink); }
 [data-theme="dark"] :is(.goal, .footer, .notice, .unread, .mission-editor-preview, .area-heading, .lesson-steps, .confirmation-summary, .focus-process, .explanation, .initiative-table th, .initiative-table .archived, .focus-list th, .guided-choices label:has(input:checked)) { background: var(--surface-subtle); color: var(--ink); }
 [data-theme="dark"] :is(.focus-list tbody tr:hover, .topic-entry > button.selected, .topic-group > button.selected, .lesson-steps button[aria-current="step"], .initiative-icon-grid button[aria-pressed="true"]) { background: #294b5b; color: #8fe3eb; }
 [data-theme="dark"] :is(.department-tabs, .tabs, .tabs button, .lesson-steps button) { background: transparent; }
@@ -27,6 +27,7 @@
 [data-theme="dark"] :is(.focus-list .link, .why strong, .initiative-identity, .procedure-milestones strong, .explanation h3) { color: var(--ink); }
 [data-theme="dark"] :is(.process-stages > li, .procedure-milestones li) { background: #1c3041; color: var(--ink); border-color: var(--border); }
 [data-theme="dark"] .procedure-flow-icon { background: #294b5b; color: #8fe3eb; }
+[data-theme="dark"] .procedure-flow-reminder { color: var(--muted); }
 [data-theme="dark"] .procedure-proposed { background: #514426; color: #ffdf95; }
 [data-theme="dark"] .badge, [data-theme="dark"] .focus-draft, [data-theme="dark"] .member-initials { background: #314b5a; color: #e4edf5; }
 [data-theme="dark"] .initiative-chip { background: #29434b; }
