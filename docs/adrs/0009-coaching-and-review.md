@@ -4,6 +4,8 @@ Date: 2026-10-28
 Status: Accepted for provider isolation and versioned review storage
 Superseded: 2026-10-29 — authoring and checkpoint lifecycle replaced by [ADR 0010](0010-integrated-focus-assistance.md) and [ADR 0011](0011-objective-authoring-methods.md).
 
+Product intent and exceptions for review are recorded in the [review and confirmation rules](../rules/review-and-confirmation.md).
+
 ## Decision
 
 Implement the accepted member and career-lead flows as ordinary authenticated
@@ -14,14 +16,9 @@ career-lead confirmation remain separate actions.
 
 Store review requests as immutable full-focus version snapshots; notes reference
 a request and use per-user read acknowledgments. Focus writes, notes and confirmation
-share server-enforced authority and transaction locking. Current authoring and
-discussion behavior is defined in the [PRD](../PRD.md).
-Require the latest requested version to match the latest saved version before
-confirmation; a missing request also prevents confirmation, including for a career
-lead’s own focus. Enforce that rule in the shared confirmation path and a database
-guard covering older instances during rollout. Existing confirmed history remains
-valid without retrospective requests. See the [PRD](../PRD.md) for the current
-confirmation policy.
+share server-enforced authority and transaction locking. The shared confirmation path and a database guard enforce the current-version
+request requirement ([RC-01 and RC-02](../rules/review-and-confirmation.md));
+the guard also covers older instances during rollout.
 
 Keep model access behind a server-only provider interface with bounded HTTP calls
 and output validation. Use the existing Qwen gateway protocol first, then OpenRouter
