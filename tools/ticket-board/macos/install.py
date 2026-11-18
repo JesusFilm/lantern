@@ -3,6 +3,7 @@
 import pathlib
 import plistlib
 import json
+import re
 import shutil
 import subprocess
 import os
@@ -27,8 +28,29 @@ entry = f'''
 '''
 if registry.is_file():
     text = registry.read_text()
-    if '  - id: career-lead-ticket-board\n' not in text:
+    matches = list(re.finditer(r'(?m)^  - id: career-lead-ticket-board[ \t]*(?:\#.*)?(?:\n|$)', text))
+    if len(matches) > 1:
+        raise SystemExit('The schedules registry contains duplicate ticket-board entries.')
+    if not matches:
         registry.write_text(text.rstrip() + '\n' + entry)
+    else:
+        match = matches[0]
+        following = re.search(r'(?m)^(?:  - |[^ \t\n#])', text[match.end():])
+        end = match.end() + following.start() if following else len(text)
+        block = text[match.end():end]
+        owners = list(re.finditer(r'(?m)^    owner:[^\n]*(?:\n|$)', block))
+        if len(owners) > 1:
+            raise SystemExit('The ticket-board registry entry contains duplicate owners.')
+        owner = '    owner: ' + json.dumps(str(root)) + '\n'
+        if owners:
+            found = owners[0]
+            if re.match(r'    owner:[ \t]*[|>]', found.group()):
+                raise SystemExit('The ticket-board registry owner must be a single-line value.')
+            block = block[:found.start()] + owner + block[found.end():]
+        else:
+            block = owner + block
+        separator = '' if match.group().endswith('\n') else '\n'
+        registry.write_text(text[:match.end()] + separator + block + text[end:])
 logs.mkdir(parents=True, exist_ok=True)
 plist.parent.mkdir(parents=True, exist_ok=True)
 config = {
