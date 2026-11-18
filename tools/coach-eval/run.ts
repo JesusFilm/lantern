@@ -27,8 +27,8 @@ const usage = `Usage: node --import tsx tools/coach-eval/run.ts <command> [optio
   report       --run NAME [--judge MODEL]
   review       --run NAME [--count 20]   Blind transcripts for human scoring.
   benchmark    --run NAME [--target qwen] [--repeats 3] [--concurrency 2] [--scenarios x,y]
-               Replays the member benchmark, applies its pass rules and compares with baseline.json.
-               Exits non-zero when a scenario fails by majority or regresses.
+               Replays the member benchmark, compares with baseline.json and applies gate.json.
+               Exits non-zero when the gate fails. See docs/development/coach-benchmark.md.
   baseline     --run NAME[,NAME...]   Records those runs' combined benchmark result as tools/coach-eval/baseline.json.
 
 Targets: ${Object.keys(targets).join(", ")}
@@ -263,11 +263,12 @@ async function benchmark() {
   const meta = readJson<{ commit?: string }>(join(dir, "run.json"));
   const result = summarize(runs, { commit: meta.commit ?? "unknown", target, createdAt: new Date().toISOString() });
   const baseline = existsSync(baselineFile) ? readJson<BenchmarkResult>(baselineFile) : undefined;
-  const { markdown, passed, regressions } = renderBenchmark(result, baseline);
+  const picked = list("scenarios");
+  const { markdown, passed } = renderBenchmark(result, baseline, picked ? { expected: picked } : {});
   writeFileSync(join(dir, "benchmark.json"), JSON.stringify(result, null, 2));
   writeFileSync(join(dir, "benchmark.md"), markdown);
   console.log(markdown);
-  if (!passed || regressions.length) process.exitCode = 1;
+  if (!passed) process.exitCode = 1;
 }
 
 function baseline() {

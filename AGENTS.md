@@ -17,6 +17,7 @@ Load the relevant guide when its task applies; follow its source links only for 
 | Task | Start here |
 | --- | --- |
 | Run/write tests, explain coverage, or assess what a green check proves | [Testing](docs/development/testing.md): local commands, staging journeys, production checks and limits |
+| Change what the AI coach says or how guided authoring proceeds: prompts, Guide principles, response contract, coach turn, model or flow | [Coach benchmark](docs/development/coach-benchmark.md): add a scenario for reported problems, run before and after, meet the gate, report it and update the baseline |
 | Link issues in a PR, hand work to QA, or handle QA results and issue closure | [QA issue workflow](docs/development/qa-issue-workflow.md): labels, release evidence, checks, retesting and engineering closure |
 | Merge, release, change schema or delivery switches, or recover a failed release | [Releasing](docs/operations/releasing.md): automatic/manual paths, evidence and recovery |
 | Review a change or modify workflows, release tooling or agent instructions | [Change review](docs/operations/review-gate.md): independent inspection, protected changes and owner authority |

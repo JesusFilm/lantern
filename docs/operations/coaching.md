@@ -77,6 +77,7 @@ complete set.
    normal Qwen turn, then a deliberately unavailable **staging-only** primary URL
    and verify an OpenRouter reply. Restore the primary URL and verify Qwen recovery.
    This is a connectivity/failover check, not a coaching-quality benchmark.
+   Coaching quality is measured by the [coach benchmark](../development/coach-benchmark.md).
 4. Run staging readiness and authenticated acceptance for the exact release. With
    the coach off, acceptance verifies model rejection and manual draft submission.
    With the coach on, synthetic members also complete the deployed coaching

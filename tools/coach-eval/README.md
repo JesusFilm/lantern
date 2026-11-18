@@ -32,8 +32,11 @@ Calibrate the judge against blind human scores before relying on small differenc
 
 ## Member benchmark
 
-The benchmark is the pass/fail gate for coaching changes. benchmark.ts defines
-member scenarios in four groups:
+The benchmark is the pass/fail gate for coaching changes. The procedure, gate
+and pull request check are in
+[docs/development/coach-benchmark.md](../../docs/development/coach-benchmark.md);
+this section describes the implementation. benchmark.ts defines member
+scenarios in four groups:
 
 - **vague**: a rough idea, then answers that range from useful to unsure;
 - **rewording**: the member knows their work but not how to phrase an objective;
@@ -51,26 +54,28 @@ avoid repeated questions and invented numbers, keep goal dates in the focus
 period and stay quiet once every check is met. Each scenario adds a contract
 written before running: wording the visible objective must or must not contain,
 expected check results, whether the draft should be ready, and recommended type
-or goals. A scenario passes when most of its runs pass; the suite passes when
-every scenario does.
+or goals. A scenario passes when most of its runs pass. The run passes when it
+meets the thresholds in gate.json: overall and per-category pass rates, the
+number of scenarios below majority, and the drop from the baseline.
 
     node --import tsx tools/coach-eval/run.ts benchmark --run NAME --repeats 3
     node --import tsx tools/coach-eval/run.ts baseline --run NAME[,NAME...]
 
-The benchmark writes benchmark.md and benchmark.json to the run directory and
-compares them with the committed baseline.json. It exits non-zero when a
-scenario fails by majority or regresses from the baseline. Run it before and
-after every prompt, flow or model change. Record a new baseline only when a
-change is accepted, preferably from two runs of the same code combined; review
-regressions before replacing one. Qwen varies between runs, so a single failing
-run of a scenario is expected; a scenario that loses its majority needs a look. When members report
-a new problem, add a scenario and contract first, then fix the behaviour.
+The benchmark writes benchmark.md and benchmark.json to the run directory,
+compares them with the committed baseline.json and exits non-zero when the gate
+fails. Record a new baseline only when a change is accepted, from two runs of
+the same code combined. Qwen varies between runs, so a single failing run of a
+scenario is expected; a scenario that loses its majority needs a look. When
+members report a new problem, add a scenario and contract first, then fix the
+behaviour.
 
 ## Run
 
 Live runs read credentials from ~/.config/lantern/coach-eval.env (override with
 COACH_EVAL_ENV): OPENROUTER_API_KEY, QWEN_TOKEN_FILE and AI_GATEWAY_CHAT_BASE_URL.
-Keep that file private and outside Git; results never include credentials.
+Keep that file private and outside Git; results never include credentials. CI has
+no settings file and sets COACH_EVAL_QWEN_KEY, COACH_EVAL_GATEWAY_URL and
+COACH_EVAL_OPENROUTER_KEY instead; these variables also override the file.
 
     node --import tsx tools/coach-eval/run.ts budget
     node --import tsx tools/coach-eval/run.ts transcripts --run NAME --targets qwen,gemini-flash --repeats 3
@@ -88,7 +93,8 @@ To evaluate a change, run the same scenarios and repeats on the base and changed
 revisions with the same judge, then compare the reports. Add a scenario for each new
 coaching problem before fixing it.
 
-CI typechecks the harness and runs its offline tests in the typecheck job. The tools
+CI typechecks the harness and runs its offline tests in the typecheck job, and the
+Coach benchmark workflow runs the live benchmark when coaching files change. The tools
 are deliberately not package scripts, so the QA manual's source fingerprint is unaffected.
 
 The CLI now replays `coach-redesign`: type first, at most one initial follow-up before returning the member’s own wording for editing, an automatic assessment when the objective reply omits one, optional answers to objective feedback in scenarios that opt in, goal-level questions, immediate goal ideas and date validation. The final check does not call a model. The legacy replay remains available in

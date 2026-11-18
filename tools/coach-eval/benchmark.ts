@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { ObjectiveAssessment } from "../../shared/coach.js";
 import type { ObjectiveKind } from "../../shared/focus.js";
 import { checkTranscript } from "./checks.js";
@@ -343,15 +344,78 @@ export function compare(after: BenchmarkResult, baseline?: BenchmarkResult): Com
   });
 }
 
-export function renderBenchmark(result: BenchmarkResult, baseline?: BenchmarkResult) {
+/**
+ * Pass rules for a whole benchmark run, committed in gate.json. Model output varies,
+ * so the gate tolerates scattered failures while catching a lost kind of member.
+ */
+export interface Gate {
+  /** Share of all runs that must pass. */
+  minRunPassRate: number;
+  /** Largest allowed fall in the overall run pass rate below the baseline's, on the same scenarios. */
+  maxDropFromBaseline: number;
+  /** Scenarios allowed to fail by majority (missing scenarios count as failing). */
+  maxScenarioFailures: number;
+  /** Share of runs that must pass within each category. */
+  minCategoryRunPassRate: number;
+}
+export const gateFile = "tools/coach-eval/gate.json";
+export const gate: Gate = JSON.parse(readFileSync(new URL("./gate.json", import.meta.url), "utf8"));
+
+export interface GateCheck { name: string; passed: boolean; actual: string; required: string }
+
+const totals = (scenarios: ScenarioResult[]) => ({
+  runs: scenarios.reduce((n, s) => n + s.runs, 0),
+  passes: scenarios.reduce((n, s) => n + s.passes, 0),
+});
+const rate = (scenarios: ScenarioResult[]) => { const t = totals(scenarios); return t.runs ? t.passes / t.runs : 0; };
+const percent = (value: number) => `${Math.round(value * 100)}%`;
+const atLeast = (value: number, floor: number) => value + 1e-9 >= floor;
+
+/**
+ * Applies the gate to a run. `expected` lists the scenarios that should have run
+ * (all of them unless the run was deliberately narrowed with --scenarios).
+ */
+export function applyGate(result: BenchmarkResult, rules: Gate = gate, baseline?: BenchmarkResult, expected = benchmarkScenarios.map((s) => s.id)) {
+  const checks: GateCheck[] = [];
+  const ran = result.scenarios.filter((s) => s.runs > 0);
+  const missing = expected.filter((id) => !ran.some((s) => s.id === id));
+  checks.push({ name: "every scenario ran", passed: !missing.length, actual: missing.length ? `missing ${missing.join(", ")}` : `${ran.length} ran`, required: `${expected.length} scenarios` });
+  const { runs, passes } = totals(ran), overall = rate(ran);
+  checks.push({ name: "overall runs", passed: atLeast(overall, rules.minRunPassRate), actual: `${passes}/${runs} (${percent(overall)})`, required: `≥ ${percent(rules.minRunPassRate)}` });
+  if (baseline) {
+    const same = baseline.scenarios.filter((s) => ran.some((r) => r.id === s.id));
+    if (same.length) {
+      const before = rate(same), floor = before - rules.maxDropFromBaseline;
+      checks.push({ name: "drop from baseline", passed: atLeast(overall, floor), actual: `${percent(overall)} vs baseline ${percent(before)}`, required: `≥ ${percent(Math.max(0, floor))} (baseline − ${percent(rules.maxDropFromBaseline)})` });
+    }
+  }
+  const losing = ran.filter((s) => !majority(s)).length + missing.length;
+  checks.push({ name: "scenarios below majority", passed: losing <= rules.maxScenarioFailures, actual: String(losing), required: `≤ ${rules.maxScenarioFailures}` });
+  for (const category of Object.keys(categories) as Category[]) {
+    const subset = ran.filter((s) => s.category === category);
+    if (!subset.length) continue;
+    const t = totals(subset), value = rate(subset);
+    checks.push({ name: `${category} runs`, passed: atLeast(value, rules.minCategoryRunPassRate), actual: `${t.passes}/${t.runs} (${percent(value)})`, required: `≥ ${percent(rules.minCategoryRunPassRate)}` });
+  }
+  return { passed: checks.every((c) => c.passed), checks };
+}
+
+export function renderBenchmark(result: BenchmarkResult, baseline?: BenchmarkResult, options: { rules?: Gate; expected?: string[] } = {}) {
   const rows = compare(result, baseline);
+  const verdict = applyGate(result, options.rules ?? gate, baseline, options.expected);
   const passedScenarios = result.scenarios.filter(majority).length;
   const runs = result.scenarios.reduce((n, s) => n + s.runs, 0), passes = result.scenarios.reduce((n, s) => n + s.passes, 0);
   const out = [
-    `# Coach benchmark: ${passedScenarios}/${result.scenarios.length} scenarios pass by majority`,
+    `# Coach benchmark: ${verdict.passed ? "PASS" : "FAIL"}, ${passes}/${runs} runs passed`,
     "",
-    `Target ${result.target}, commit ${result.commit}, ${passes}/${runs} runs passed.` +
+    `Target ${result.target}, commit ${result.commit}, ${passedScenarios}/${result.scenarios.length} scenarios pass by majority.` +
       (baseline ? ` Compared with baseline ${baseline.commit}.` : " No baseline to compare."),
+    "",
+    `Gate: ${verdict.passed ? "PASS" : "FAIL"} against ${gateFile}.`,
+    "",
+    "| Gate check | Result | Required | |",
+    "| --- | --- | --- | --- |",
+    ...verdict.checks.map((c) => `| ${c.name} | ${c.actual} | ${c.required} | ${c.passed ? "pass" : "FAIL"} |`),
     "",
     "| Category | Scenarios passing | Runs passing |",
     "| --- | --- | --- |",
@@ -368,5 +432,5 @@ export function renderBenchmark(result: BenchmarkResult, baseline?: BenchmarkRes
       return `| ${id} | ${after.passes}/${after.runs} ${mark} | ${before ? `${before.passes}/${before.runs}` : "–"} | ${change} | ${failures} |`;
     }),
   ];
-  return { markdown: out.join("\n") + "\n", passed: passedScenarios === result.scenarios.length, regressions: rows.filter((r) => r.change === "regressed").map((r) => r.id) };
+  return { markdown: out.join("\n") + "\n", passed: verdict.passed, gate: verdict, regressions: rows.filter((r) => r.change === "regressed").map((r) => r.id) };
 }

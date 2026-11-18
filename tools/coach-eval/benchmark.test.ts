@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { benchmarkScenarios, compare, evaluate, majority, mergeResults, renderBenchmark, summarize, type BenchmarkResult } from "./benchmark.js";
+import { applyGate, benchmarkScenarios, compare, evaluate, gate, majority, mergeResults, renderBenchmark, summarize, type BenchmarkResult } from "./benchmark.js";
 import type { ObjectiveScreen, Transcript } from "./types.js";
 
 const gospel = benchmarkScenarios.find(s => s.id === "bench-vague-gospel-video")!;
@@ -48,7 +48,7 @@ test("a scenario passes by majority and changes are reported against the baselin
   assert.equal(compare(result, before)[0]!.change, "improved");
   assert.equal(compare(before, result)[0]!.change, "regressed");
   assert.deepEqual(renderBenchmark(before, result).regressions, [gospel.id]);
-  assert.equal(renderBenchmark(result).passed, true);
+  assert.match(renderBenchmark(result).markdown, /bench-vague-gospel-video \| 2\/3 pass/);
 });
 
 test("every benchmark scenario has a category, a contract and a unique id", () => {
@@ -75,4 +75,43 @@ test("repeated runs combine into one baseline sample", () => {
   assert.deepEqual([merged.scenarios[0]!.passes, merged.scenarios[0]!.runs], [3, 4]);
   assert.equal(merged.commit, "a");
   assert.equal(merged.createdAt, "2");
+});
+
+/** Three runs per scenario; `passes` overrides the default of 3 for the named scenarios. */
+function sample(passes: Record<string, number> = {}, omit: string[] = []): BenchmarkResult {
+  return {
+    commit: "x", target: "qwen", createdAt: "",
+    scenarios: benchmarkScenarios.filter(s => !omit.includes(s.id)).map(s => ({ id: s.id, category: s.category, runs: 3, passes: passes[s.id] ?? 3, failures: {} })),
+  };
+}
+const failedGate = (result: BenchmarkResult, baseline?: BenchmarkResult) => applyGate(result, gate, baseline).checks.filter(c => !c.passed).map(c => c.name);
+
+test("the committed gate allows Qwen's usual variation but not a lost kind of member", () => {
+  assert.ok(gate.minRunPassRate >= 0.7 && gate.minRunPassRate < 1);
+  assert.ok(gate.maxDropFromBaseline > 0 && gate.maxDropFromBaseline <= 0.2);
+  const baseline = sample({ "bench-vague-gospel-video": 2, "bench-qa-holiday-spanish": 2 });
+  // Scattered single-run failures and one scenario losing its majority stay within the gate.
+  const noisy = sample({ "bench-vague-gospel-video": 1, "bench-rewording-subtitles": 2, "bench-qa-injection": 2 });
+  assert.deepEqual(failedGate(noisy, baseline), []);
+  assert.equal(applyGate(noisy, gate, baseline).passed, true);
+  // Losing one whole category fails, even if the overall rate would be acceptable.
+  const adversarial = Object.fromEntries(benchmarkScenarios.filter(s => s.category === "adversarial").map(s => [s.id, 1]));
+  assert.ok(failedGate(sample(adversarial)).includes("adversarial runs"));
+  // A missing scenario counts as failed rather than shrinking the sample.
+  assert.ok(failedGate(sample({}, ["bench-qa-gibberish"])).includes("every scenario ran"));
+});
+
+test("the gate measures drops from the baseline as well as the absolute floor", () => {
+  const perfect = sample();
+  const threeFailures = sample(Object.fromEntries(benchmarkScenarios.slice(0, 3).map(s => [s.id, 2])));
+  // 36 of 39 runs (92%) clears the floor and is within the allowed drop from 100%.
+  assert.deepEqual(failedGate(threeFailures, perfect), []);
+  const lower = sample(Object.fromEntries(benchmarkScenarios.slice(0, 9).map(s => [s.id, 2])));
+  // 30 of 39 (77%), spread so every scenario keeps its majority, is below the floor and more than the allowed drop.
+  assert.deepEqual(failedGate(lower, perfect).sort(), ["drop from baseline", "overall runs"]);
+  assert.ok(!failedGate(lower).includes("drop from baseline"), "without a baseline only the floor applies");
+  const md = renderBenchmark(lower, perfect).markdown;
+  assert.match(md, /Gate: FAIL/);
+  assert.match(md, /tools\/coach-eval\/gate\.json/);
+  assert.equal(renderBenchmark(lower, perfect).passed, false);
 });
