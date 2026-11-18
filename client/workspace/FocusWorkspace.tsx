@@ -148,6 +148,9 @@ export function FocusWorkspace({
                   : ""}
               </span>
             ) : null}
+            {!!record?.requests.length && record.requests.at(-1)?.document.version !== focus.version && (
+              <p className="focus-review-guidance">You have changed this focus since sending it for review. Open Review &amp; discussion and send the latest saved version before it can be confirmed.</p>
+            )}
           </div>}
           {recordError && (
             <p role="alert">

@@ -48,10 +48,17 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       const retry = async () => {
         await expect(page.getByRole('alert')).toContainText('Sign-in could not be completed');
         await expect(page).toHaveURL(origin + '/?signInError=1');
+        await expect(page.getByRole('heading', { name: 'Welcome to Lantern' })).toBeVisible();
+        await expect(page.locator('nav').getByRole('button', { name: 'Account', exact: true, includeHidden: true })).toHaveCount(0);
+        await expect(page.locator('nav [aria-current="page"]')).toHaveCount(0);
+        for (const path of ['/api/focuses', '/api/department', '/api/guide', '/api/department/registered-users']) {
+          assert.equal((await context.request.get(origin + path)).status(), 401, `${path} remains protected when signed out`);
+        }
         await page.getByRole('link', { name: 'Sign in with Jesus Film' }).click();
         await signIn();
       };
-      await page.goto(origin); await signIn();
+      await page.goto(origin + '/auth/jesusfilm/callback?error=access_denied&state=qa-test');
+      await retry();
       await expect(page.getByRole('alert')).toContainText('Sign-in could not be completed');
       assert.equal((await f.admin.query("SELECT id FROM users WHERE email='lead@example.test'")).rowCount, 2);
 

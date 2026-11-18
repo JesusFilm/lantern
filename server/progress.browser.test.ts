@@ -132,5 +132,6 @@ test('hidden progress leaves member and lead focus views unchanged', {timeout:45
   assert.equal((await lc.request.post(`${origin}/api/department/members/${member}/focuses/${focus.id}/confirm`,{headers:{Origin:origin},data:{version:1}})).status(),200);
   const page=await mc.newPage();await page.goto(`${origin}/?page=focuses&focus=${focus.id}`);await expect(page.getByText('Help onboarding',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Progress & notes'})).toHaveCount(0);
   const leadPage=await lc.newPage();await leadPage.goto(`${origin}/?page=department&member=${member}&memberFocus=${focus.id}`);await expect(leadPage.getByText('Help onboarding',{exact:true})).toBeVisible();await expect(leadPage.getByRole('button',{name:'Progress & notes'})).toHaveCount(0);
+  await leadPage.goto(`${origin}/?page=reviews`);await leadPage.getByRole('button',{name:'Review focus',exact:true}).click();await expect(leadPage.getByText('Help onboarding',{exact:true})).toBeVisible();await expect(leadPage.getByRole('button',{name:'Progress & notes'})).toHaveCount(0);
  } finally {await browser.close();await vite?.close();server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await f.close();}
 });
