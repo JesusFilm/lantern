@@ -6,6 +6,8 @@ Keep responsibilities separate: React presents data and captures intent; HTTP mo
 
 Server-resolved identity and active department membership are authoritative. Never accept ownership or role grants from client input. Preserve history and department scope when membership ends, except for explicitly requested data removal. Keep local access explicitly configured and unavailable by default; production requires authenticated sessions.
 
+Before posting GitHub issue or PR comments, review the entire comment, including links, logs, screenshots and linked artifacts. Remove secrets, credentials and tokens; private network addresses or hostnames (including Tailscale); and machine-only links such as localhost URLs and local file paths. Share useful verification instead: the checks or journeys run, environment, outcome and limitations, with sanitized output or an accessible GitHub Actions run link where appropriate. Never imply an unrun or failed check passed. If sensitive information was posted, also remove the affected revisions from the comment's GitHub edit history; editing the comment alone leaves them visible.
+
 Link tracked issues in PR descriptions with `Refs #123`, not GitHub's automatic closing keywords. Include a `## QA checks` section with concrete checks and flag names when known. QA owns issue verification; engineers handle closure under the [QA handoff](docs/development/qa-issue-workflow.md#engineering-closure). Release and production promotion do not wait for QA's issue verification. The manual checks required by [Releasing](docs/operations/releasing.md), including real staging sign-in for auth, OAuth and admission-policy changes, still apply.
 
 ## Read for the task
