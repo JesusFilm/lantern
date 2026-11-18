@@ -124,3 +124,15 @@ test("redesigned flow improves an existing objective using the Guide without ask
   assert.equal(calls[0]!.context.concern, "");
   assert.equal(outcome.objective, "Help trainers run accessible workshops.");
 });
+
+test("redesigned replay can answer draft feedback and revise the objective", async () => {
+  const { coach, calls } = scripted({
+    clarify: [{ objective: "Build a video app.", concern: "Who will use it?" }],
+    objective: [{ objective: "Build a video app for online seekers." }],
+    actions: [{ actions: ["Test the app"] }],
+  });
+  const { outcome } = await runCurrentFlow({ ...base, goals: [], respondToFeedback: true }, coach, { answer: async () => "online seekers" }, { redesigned: true });
+  assert.equal(calls[1]?.context.objective, "Build a video app.");
+  assert.deepEqual(calls[1]?.context.answers.at(-1), { question: "Who will use it?", answer: "online seekers" });
+  assert.equal(outcome.objective, "Build a video app for online seekers.");
+});

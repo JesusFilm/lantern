@@ -201,6 +201,84 @@ test("coach feedback is identifiable and distinct from the missing-goals warning
     await expect(page.getByRole("region", { name: "AI coach feedback" })).toContainText("Check how the workshop helps participants.");
     await expect(page.getByRole("button", { name: "Improve objective with AI", exact: true })).toHaveCount(0);
     await expect(page.getByText(/No SMART goals yet/)).toBeVisible();
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await expect(page.getByRole("region", { name: "AI coach feedback" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Return to draft", exact: true }).click();
+    await expect(page.getByRole("region", { name: "AI coach feedback" })).toContainText("Check how the workshop helps participants.");
+  } finally { await f.close(); }
+});
+
+test("member can give the coach a missing detail and revise the current objective", async () => {
+  const f = await world((stage, context) => stage === "clarify"
+    ? { objective: "Build a video application.", concern: "Who will use the application?", initiativeIds: [] }
+    : { objective: `Build a video application for ${context.answers.at(-1)?.answer}.`, initiativeIds: [] });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I want to build a video app.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a video application.");
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByLabel("Objective", { exact: true }).fill("Build a gospel video application.");
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a gospel video application.");
+    await page.getByRole("button", { name: "Help me address this", exact: true }).click();
+    await page.getByLabel("Details for the coach", { exact: true }).fill("online seekers");
+    await page.getByRole("button", { name: "Update objective", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a video application for online seekers.");
+    assert.equal(f.calls.at(-1)?.stage, "objective");
+    assert.equal(f.calls.at(-1)?.context.objective, "Build a gospel video application.");
+    assert.deepEqual(f.calls.at(-1)?.context.answers.at(-1), { question: "Who will use the application?", answer: "online seekers" });
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await expect(page.getByLabel("Your work", { exact: true })).toHaveValue("I want to build a video app.");
+    await page.getByRole("button", { name: "Return to draft", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a video application for online seekers.");
+  } finally { await f.close(); }
+});
+
+test("a failed feedback revision keeps the member's draft and details", async () => {
+  let revisions = 0;
+  const f = await world(stage => {
+    if (stage === "clarify") return { objective: "Build a video application.", concern: "Who will use the application?" };
+    if (++revisions === 1) throw Error("unavailable");
+    return { objective: "Build a video application for online seekers." };
+  });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("Build a video app.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByRole("button", { name: "Help me address this", exact: true }).click();
+    await page.getByLabel("Details for the coach", { exact: true }).fill("online seekers");
+    await page.getByRole("button", { name: "Update objective", exact: true }).click();
+    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a video application.");
+    await expect(page.getByLabel("Details for the coach", { exact: true })).toHaveValue("online seekers");
+    await page.getByRole("button", { name: "Update objective", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a video application for online seekers.");
+  } finally { await f.close(); }
+});
+
+test("back from a feedback follow-up restores the draft and the supplied detail", async () => {
+  const f = await world(stage => stage === "clarify"
+    ? { objective: "Build a video application.", concern: "Who will use it?" }
+    : { question: "How will they find the videos?" });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("Build a video app.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByRole("button", { name: "Help me address this", exact: true }).click();
+    await page.getByLabel("Details for the coach", { exact: true }).fill("online seekers");
+    await page.getByRole("button", { name: "Update objective", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "How will they find the videos?" })).toBeVisible();
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a video application.");
+    await expect(page.getByLabel("Details for the coach", { exact: true })).toHaveValue("online seekers");
+    await expect(page.getByText("Who will use it?", { exact: true })).toBeVisible();
   } finally { await f.close(); }
 });
 

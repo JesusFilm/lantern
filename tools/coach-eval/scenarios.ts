@@ -30,6 +30,8 @@ export interface Scenario {
   existing?: { objective: string; kind: ObjectiveKind; goals?: string[] };
   /** Answer to "What would you like to improve about this objective?" */
   improvement?: string;
+  /** The simulated member chooses to answer feedback on the drafted objective. */
+  respondToFeedback?: boolean;
   /** Scripted answers are used in order; facts drive a simulated member. */
   member: { answers: string[] } | { facts: string[] };
   /** Type chosen on the Objective step; "keep" leaves the editor default. */
@@ -63,6 +65,22 @@ const automationAnswers = [
 ];
 
 export const scenarios: Scenario[] = [
+  {
+    id: "objective-feedback-followup",
+    issues: [],
+    summary: "A member supplies a missing detail in response to the coach's objective feedback.",
+    role: "Product builder",
+    focus: cycle,
+    work: "I want to build an application that creates gospel videos.",
+    member: { answers: ["Online seekers who want to learn about Jesus.", "Online seekers who want to learn about Jesus."] },
+    respondToFeedback: true,
+    typeChoice: "keep",
+    goals: [],
+    expect: { criteria: [
+      "Any question or feedback asks for a concrete detail rather than giving vague criticism.",
+      "When the member provides a detail, the coach uses it in the objective without inventing commitments.",
+    ] },
+  },
   {
     id: "thin-input",
     issues: ["#123"],

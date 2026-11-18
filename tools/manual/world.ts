@@ -49,7 +49,7 @@ function fakeCoach(initiative: () => string): CoachProvider {
         actions: ["Review the last ten failed deployments with the team", "Publish runbooks for the three most common causes"],
         suggestedDate: "2027-04-30",
         goal: "By 30 April 2027, publish runbooks for the three most common deployment failures and walk the team through each one.",
-        ...(JSON.parse(_context).stage === "clarify" ? { concern: "Consider how you will know the runbooks help engineers." } : {}),
+        ...(JSON.parse(_context).stage === "clarify" ? { concern: "Which engineers will use the runbooks?" } : {}),
         initiativeIds: [initiative()],
         recommendedKind: "normal",
       });

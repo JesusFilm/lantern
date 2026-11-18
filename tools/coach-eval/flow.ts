@@ -42,6 +42,7 @@ export async function runCurrentFlow(
   let plan = { actions: [] as string[], action: "", date: focus.end, text: "" };
   let recommendedKind: ObjectiveKind | undefined;
   let recommendedInitiatives: string[] = [];
+  let draftConcern = "";
   const plans: GoalPlan[] = [];
 
   // Mirrors ObjectiveEditor's context(); the server adds department direction.
@@ -140,6 +141,7 @@ export async function runCurrentFlow(
       if (result.objective) edit.text = result.objective;
       recommendedKind = result.recommendedKind;
       recommendedInitiatives = result.initiativeIds ?? [];
+      draftConcern = result.concern ?? "";
       if (scenario.typeChoice === "recommended" && recommendedKind) edit.kind = recommendedKind;
       else if (scenario.typeChoice !== "keep" && scenario.typeChoice !== "recommended")
         edit.kind = scenario.typeChoice;
@@ -153,6 +155,7 @@ export async function runCurrentFlow(
       const stage: CoachStage = !redesigned && nextAnswers.length >= 3 ? "objective" : "clarify";
       const result = await ask(step, stage, { ...context(), answers: nextAnswers });
       if (!result) return { turns, outcome: outcome("coach unavailable") };
+      draftConcern = result.concern ?? result.question ?? "";
       answers = nextAnswers;
       if (redesigned && (!result.objective || result.ready === false) && (!result.question || step === "question")) {
         edit.text = work;
@@ -171,8 +174,21 @@ export async function runCurrentFlow(
       turns.push({ type: "member", step: "answer", text: answer });
       step = "question";
     }
-    chooseObjectiveFields();
   }
+
+  if (redesigned && scenario.respondToFeedback && draftConcern) {
+    const detail = await member.answer(draftConcern, []);
+    if (detail.trim()) {
+      answers = [...answers, { question: draftConcern, answer: detail }];
+      turns.push({ type: "member", step: "answer", text: detail });
+      const revision = await ask("refine", "objective", { ...context(), entry: "objective", question: draftConcern, answer: detail });
+      if (!revision) return { turns, outcome: outcome("coach unavailable") };
+      if (revision.objective) edit.text = revision.objective;
+      recommendedKind = revision.recommendedKind;
+      recommendedInitiatives = revision.initiativeIds ?? [];
+    }
+  }
+  if (!scenario.existing) chooseObjectiveFields();
 
   let ideas = redesigned && !edit.goals.length ? await ask("actions", "actions", {
     ...context(), entry: "goal", actions: [], action: "", goal: "",
