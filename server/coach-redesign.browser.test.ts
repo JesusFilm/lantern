@@ -56,7 +56,7 @@ test("member can continue editing their own wording when the coach keeps asking 
     await page.getByLabel("Objective", { exact: true }).fill("My edited objective");
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited objective");
     await page.getByRole("button", { name: "Back", exact: true }).click();
-    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByRole("button", { name: "Return to draft", exact: true }).click();
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited objective");
     await page.getByRole("button", { name: "Back", exact: true }).click();
     await page.getByLabel("Your answer", { exact: true }).fill("I support the current workshop.");
@@ -145,21 +145,36 @@ test("switching methods during a refinement question preserves manual edits and 
   } finally { await f.close(); }
 });
 
-test("coach drafts using the Guide without asking the member how to refine it", async () => {
-  const f = await world(stage => ({ objective: stage === "objective" ? "Help trainers run accessible workshops." : "Help trainers deliver accessible workshops.", initiativeIds: [] }));
+test("member can return to an edited draft or ask for another suggestion from their original input", async () => {
+  let count = 0;
+  const f = await world(() => ({ objective: ++count === 1 ? "Help trainers deliver accessible workshops." : "Help trainers run accessible workshops.", initiativeIds: [] }));
   try {
     const { page } = f;
     await page.getByRole("radio", { name: "Contribution", exact: true }).check();
     await page.getByLabel("Your work", { exact: true }).fill("I help trainers make workshops accessible.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Help trainers deliver accessible workshops.");
-    await expect(page.getByLabel("How should the coach refine this wording?")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Refine wording", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Improve objective with AI", exact: true })).toHaveCount(0);
     await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
-    await page.getByRole("button", { name: "Improve objective with AI", exact: true }).click();
+    await page.getByLabel("Objective", { exact: true }).fill("My edited draft");
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await expect(page.getByLabel("Your work", { exact: true })).toHaveValue("I help trainers make workshops accessible.");
+    await page.getByRole("button", { name: "Return to draft", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited draft");
+    assert.equal(f.calls.length, 1);
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await page.getByRole("button", { name: "Try again", exact: true }).click();
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Help trainers run accessible workshops.");
-    assert.equal(f.calls.at(-1)?.stage, "objective");
-    assert.equal(f.calls.at(-1)?.context.concern, "");
+    assert.equal(f.calls.length, 2);
+    assert.equal(f.calls.at(-1)?.context.work, "I help trainers make workshops accessible.");
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await page.getByLabel("Your work", { exact: true }).fill("I help new trainers make workshops accessible.");
+    await expect(page.getByRole("button", { name: "Try again", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toBeVisible();
+    assert.equal(f.calls.length, 3);
+    assert.equal(f.calls.at(-1)?.context.work, "I help new trainers make workshops accessible.");
   } finally { await f.close(); }
 });
 
@@ -175,7 +190,7 @@ test("a concern without a draft still lets the member edit their own words", asy
   } finally { await f.close(); }
 });
 
-test("coach feedback is identifiable and the improvement button is separated from the objective", async () => {
+test("coach feedback is identifiable and distinct from the missing-goals warning", async () => {
   const f = await world(() => ({ objective: "Help trainers run accessible workshops.", concern: "Check how the workshop helps participants.", initiativeIds: [] }));
   try {
     const { page } = f;
@@ -184,9 +199,51 @@ test("coach feedback is identifiable and the improvement button is separated fro
     await page.getByLabel("Your work", { exact: true }).fill("I help trainers make workshops accessible.");
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByRole("region", { name: "AI coach feedback" })).toContainText("Check how the workshop helps participants.");
-    const input = await page.getByLabel("Objective", { exact: true }).boundingBox();
-    const button = await page.getByRole("button", { name: "Improve objective with AI", exact: true }).boundingBox();
-    assert.ok(input && button && button.y - (input.y + input.height) >= 8, "Button needs visible spacing below the objective field");
+    await expect(page.getByRole("button", { name: "Improve objective with AI", exact: true })).toHaveCount(0);
     await expect(page.getByText(/No SMART goals yet/)).toBeVisible();
+  } finally { await f.close(); }
+});
+
+test("retry from a follow-up uses the saved answer and makes a fresh suggestion", async () => {
+  let drafts = 0;
+  const f = await world((_stage, context) => context.answers.length
+    ? { objective: ++drafts === 1 ? "Help trainers deliver accessible workshops." : "Help trainers run accessible workshops." }
+    : { ready: false, question: "Who benefits?" });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I improve workshops.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByLabel("Your answer", { exact: true }).fill("Volunteer trainers");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Help trainers deliver accessible workshops.");
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue("Volunteer trainers");
+    await page.getByRole("button", { name: "Try again", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Help trainers run accessible workshops.");
+    assert.equal(f.calls.length, 3);
+    assert.equal(f.calls.at(-1)?.context.answers[0]?.answer, "Volunteer trainers");
+  } finally { await f.close(); }
+});
+
+test("a failed retry keeps the edited draft available", async () => {
+  let calls = 0;
+  const f = await world(() => { if (++calls === 2) throw Error("unavailable"); return { objective: "Help trainers deliver accessible workshops." }; });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I help trainers make workshops accessible.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Help trainers deliver accessible workshops.");
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByLabel("Objective", { exact: true }).fill("My edited objective");
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await page.getByRole("button", { name: "Try again", exact: true }).click();
+    await expect(page.getByRole("alert")).toBeVisible();
+    await page.getByRole("button", { name: "Return to draft", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited objective");
+    assert.equal(f.calls.length, 2);
   } finally { await f.close(); }
 });

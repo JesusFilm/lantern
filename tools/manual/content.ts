@@ -255,10 +255,10 @@ export const chapters: Chapter[] = [
         check: [
           "Recommendations offer a switch; your type stays selected.",
           "Next requires an initiative or Other; choosing either clears the error.",
-          "AI coach feedback appears in a labelled panel; edit the draft as needed.",
+          "AI feedback is labelled; Back then Try again requests a new draft.",
         ],
         shots: [
-          { id: "guided-work", persona: "member", path: draft, act: guided, ready: (p) => p.getByLabel("Your work", { exact: true }), caption: "Your work" },
+          { id: "guided-work", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Back")(page); }, ready: role("button", "Try again"), caption: "Return to your work to try again" },
           { id: "guided-objective", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Next")(page); }, ready: (p) => p.getByRole("alert"), mode: longPage, caption: "Choose an initiative or Other" },
         ],
       },

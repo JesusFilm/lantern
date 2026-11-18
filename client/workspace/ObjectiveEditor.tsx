@@ -286,7 +286,7 @@ export function ObjectiveEditor({
   function boundedDate(value?: string) {
     return value && value >= edit.source.start && value <= edit.source.end ? value : edit.source.end;
   }
-  async function next() {
+  async function next(forceRetry = false) {
     setError("");
     if (redesigned && stage === "question" && pendingReply.current) {
       if (answers.length >= coachContextLimits.answers) { setError("We still need more context. Go back or continue writing manually."); return; }
@@ -334,9 +334,9 @@ export function ObjectiveEditor({
       }
       const nextAnswers =
         stage === "question" ? [...answers, { question, answer }] : answers;
-      const input = { ...context(), answers: nextAnswers };
+      const input = { ...context(), answers: nextAnswers, ...(forceRetry ? { objective: "" } : {}) };
       const cacheKey = JSON.stringify([work, nextAnswers, ...(redesigned ? [chosenKind] : [])]);
-      const cached = exploration.current.get(cacheKey);
+      const cached = forceRetry ? undefined : exploration.current.get(cacheKey);
       const result =
         cached?.suggestion ??
         (await suggest(
@@ -355,7 +355,7 @@ export function ObjectiveEditor({
         return;
       }
       if (result.objective && result.ready !== false) {
-        if (objectiveBasis.current !== cacheKey)
+        if (forceRetry || objectiveBasis.current !== cacheKey)
           update({
             type: "objective-values",
             values: {
@@ -508,11 +508,6 @@ export function ObjectiveEditor({
           onChange={(e) => onChange({ type: "text", text: e.target.value })}
         />
       </div>
-      {redesigned && method === "guided" && stage === "objective" && <button type="button" className="objective-improve" disabled={busy || !edit.text.trim()} onClick={() => void guidedRequest("objective", { ...context(), entry: "objective" }, result => {
-        if (result.objective) update({ type: "objective-values", values: { text: result.objective } });
-        setRecommended(result.recommendedKind);
-        setRecommendedInitiatives(result.initiativeIds ?? []);
-      }, "objective")}>Improve objective with AI</button>}
       <ObjectiveTypeChoices
         kind={edit.kind}
         recommended={method === "guided" ? recommended : undefined}
@@ -587,6 +582,9 @@ export function ObjectiveEditor({
     stage === "objective" ||
     stage === "goals" ||
     stage === "check";
+  const returnToDraft = redesigned && !pendingReply.current && !!edit.text.trim() && objectiveBasis.current !== undefined &&
+    ((stage === "work" && objectiveBasis.current === JSON.stringify([work, answers, chosenKind])) ||
+      (stage === "question" && objectiveBasis.current === JSON.stringify([work, [...answers, { question, answer }], chosenKind])));
   return (
     <section
       className="objective-editor"
@@ -883,6 +881,9 @@ export function ObjectiveEditor({
               </button>
             )}
             {redesigned && method === "guided" && stage === "refine" && <button type="button" disabled={busy} onClick={() => void openGoals()}>Continue without changes</button>}
+            {method === "guided" && returnToDraft && (
+              <button type="button" disabled={busy || (stage === "work" ? !work.trim() || !chosenKind : !answer.trim())} onClick={() => void next(true)}>Try again</button>
+            )}
             {method === "guided" && stage !== "goal" && stage !== "check" && (
               <button
                 type="button"
@@ -896,7 +897,7 @@ export function ObjectiveEditor({
                 }
                 onClick={() => void next()}
               >
-                {redesigned && stage === "refine" ? "Improve objective" : "Next"}
+                {returnToDraft ? "Return to draft" : redesigned && stage === "refine" ? "Improve objective" : "Next"}
               </button>
             )}
           </div>

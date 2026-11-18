@@ -430,9 +430,6 @@ dialog [role="alert"] {
 .authoring-fields > :last-child {
   margin-bottom: 0;
 }
-.objective-improve {
-  margin-top: var(--space-3);
-}
 .coach-feedback {
   margin-top: var(--space-4);
   padding: var(--space-4);
