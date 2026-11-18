@@ -4,4 +4,4 @@ Optional read-only tooling: run `npm run tickets` and open http://127.0.0.1:4393
 
 The TypeScript server uses the existing Node.js, Express and tsx dependencies and binds to loopback. The browser refreshes every five seconds. HTML in records is escaped, and other repository files are not exposed.
 
-Run `npm run tickets:test` to verify parsing, HTTP refresh and empty-board behavior.
+Run `npm run tickets:test` to verify parsing, HTTP refresh and empty-board behavior. On macOS, `python3 tools/ticket-board/macos/install.py` installs a user login service for the current checkout. If the optional local schedules registry exists, the installer records the checkout there. Run `python3 -B -m unittest tools/ticket-board/macos/test_install.py` to check the installer without changing your services.
