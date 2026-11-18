@@ -34,6 +34,8 @@ In effect · Owner decision, 17 Nov 2026 · [#153](https://github.com/JesusFilm/
 
 Saving does not request review or confirm agreement; requesting review does not confirm it. Confirmation records agreement after review. Agreement can be reached offline, but the explicit request and confirmation in Lantern are still required; a note, waiting period and second reviewer are not mandatory. For a career lead's own focus, discussion with a senior or manager is optional (RC-06).
 
+Only the focus owner can edit their draft and request its review. A career lead cannot rewrite another member's draft or request review on their behalf; see [access and data](../PRD.md#access-and-data) and the [review request checks](../../server/coach-store.ts).
+
 Current interface and enforcement: the member-focus confirmation dialog refers to a discussion. In the review-request view, a career lead confirming a member's focus must tick an attestation that they discussed and agreed it; a lead confirming their own focus attests that they reviewed it. The server does not independently verify a conversation or agreement. The owner and career lead can use review notes; see RC-11. These interface details do not change the expected agreement or establish a second reviewer.
 
 Rationale (inferred): requesting and confirming are deliberate actions by the focus owner and career lead.
@@ -84,6 +86,8 @@ Why: not recorded in the cited decision.
 In effect · [#153](https://github.com/JesusFilm/lantern/issues/153)
 
 Before confirmation, the owner and career lead can add review notes and soft-delete their own notes; notes cannot be edited. The focus owner and the current active career lead of the owner's department can read the discussion, including a lead who did not participate in it. It becomes read-only on confirmation.
+
+Current behavior: notes remain attached to the requested version they discuss. Earlier notes remain visible with their earlier draft after a new request and after confirmation. If someone starts a note on one request and a newer request arrives before it is submitted, Lantern rejects that stale submission and retains the typed text; it does not move the note to the new request. A newly started note can be submitted against the current request. See the [browser workflow](../../server/coach.browser.test.ts) and [request-version checks](../../server/coach-store.ts); the cited owner decision does not specifically decide this concurrency behavior.
 
 Rationale (inferred): the review retains a history of the discussion without allowing a participant to rewrite another's contribution.
 
