@@ -101,7 +101,9 @@ export async function coachTurn(input: {
       else if (!checked) break;
     }
   }
-  if (suggestion.assessment && !direction.mission.trim() && context.kind !== "personal-development" && context.kind !== "leadership")
+  // With Not sure chosen, the coach's recommended type decides which lens applies.
+  const kind = context.kind ?? suggestion.recommendedKind;
+  if (suggestion.assessment && !direction.mission.trim() && kind !== "personal-development" && kind !== "leadership")
     suggestion = { ...suggestion, assessment: { ...suggestion.assessment, alignment: { status: "uncertain", note: "Your career lead has not configured a mission yet." } } };
   // Once every check is met, further refinements belong in SMART goals.
   if (allMet(suggestion) && suggestion.concern) suggestion = { ...suggestion, concern: undefined };

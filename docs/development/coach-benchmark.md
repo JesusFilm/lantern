@@ -89,7 +89,9 @@ read that file and print each rule with its required value.
 | Scenarios below majority | at most 2 | One or two unstable scenarios are tolerated; more indicates a behavior change. |
 | Runs passing in each category | at least 60% | No kind of member, including QA probing, can be traded away for the others. |
 
-A scenario with no runs counts as failing. Change `gate.json` only in a PR that
+A run the harness could not record (for example after a crash) counts as a
+failed run, and a scenario with no runs counts as failing, so a partial sample
+cannot pass. Change `gate.json` only in a PR that
 explains why. The owner decides on loosening it; tightening it after a sustained
 improvement is encouraged.
 
@@ -102,10 +104,11 @@ The **Coach benchmark** workflow
 ([coach-benchmark.yml](../../.github/workflows/coach-benchmark.yml)) runs on
 pull requests to main. It runs the benchmark only when the PR changes coaching
 files: the coach server modules, Guide content, synthetic direction, shared coach
-types, the harness or the workflow itself. Otherwise it passes immediately with a
-note. A change to `ObjectiveEditor.tsx` alone does not trigger it, because the
-benchmark replays `flow.ts`; update `flow.ts` and the check runs. It can also be
-started manually from the Actions tab with a chosen number of repeats.
+types, `ObjectiveEditor.tsx`, the harness or the workflow itself. Otherwise it
+passes immediately with a note. The benchmark replays the guided flow from
+`flow.ts`, so a change to `ObjectiveEditor.tsx` is measured only once `flow.ts`
+is updated to match it. It can also be started manually from the Actions tab
+with a chosen number of repeats.
 
 The check posts `benchmark.md` as the job summary and uploads the transcripts as
 an artifact for 30 days. It fails when the gate fails or the key is missing.
@@ -113,8 +116,11 @@ an artifact for 30 days. It fails when the gate fails or the key is missing.
 The check needs one-time setup by a repository administrator:
 
 1. Obtain a dedicated JFP AI gateway key for the `coding` model, named for this
-   check (for example "Lantern coach benchmark CI"). Avoid sharing the
-   Decision Lab experiments key so its rate limit and revocation stay separate.
+   check (for example "Lantern coach benchmark CI"), with the lowest rate limit
+   that completes a run. Do not reuse another key. The check runs each pull
+   request's own copy of the workflow and harness, so anyone who can push a
+   branch to this repository could change that code to read the key. Keep it
+   limited to this purpose so it can be revoked without affecting anything else.
 2. In GitHub, Settings → Environments, create the `coach-eval` environment.
    Do not add required reviewers, or every coaching PR will wait for approval.
    Restrict deployment branches only if PR branches remain allowed.
@@ -126,8 +132,8 @@ The check needs one-time setup by a repository administrator:
    workflow runs on every PR and passes quickly when coaching is unchanged, so a
    required check never waits on unrelated PRs.
 
-Pull requests from forks do not receive environment secrets, so the check fails
-for them; run the benchmark locally instead.
+Pull requests from forks do not receive secrets. For them the check passes with a
+warning, and a maintainer runs the benchmark locally if coaching changed.
 
 ## Limits
 

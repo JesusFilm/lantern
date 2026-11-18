@@ -17,7 +17,10 @@ const texts = (v: unknown, max = 6) =>
 // Match dates explicitly: Date.parse also accepts method phrases containing a date.
 const month = "(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)";
 const day = "\\d{1,2}(?:st|nd|rd|th)?";
-const modelDeadline = new RegExp(`^By (?:\\d{4}-\\d{2}-\\d{2}|${day} ${month} \\d{4}|${month} ${day},? \\d{4}),\\s*`, "i");
+// Lantern adds the selected date itself, so a model's own deadline phrase is removed first:
+// exact dates, and month or quarter phrases such as "By the end of March 2027".
+const period = `(?:(?:the )?(?:end|start|beginning|middle) of |mid-?|early |late )?(?:${month}|Q[1-4])`;
+const modelDeadline = new RegExp(`^By (?:\\d{4}-\\d{2}-\\d{2}|${day} ${month} \\d{4}|${month} ${day},? \\d{4}|${period},? \\d{4}),\\s*`, "i");
 export function validateCheckpoint(value: unknown, maxAnswers = 3, maxCharacters = 32000): CoachCheckpoint {
   const fail = (): never => {
     throw new AccessError(

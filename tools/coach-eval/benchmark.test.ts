@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { applyGate, benchmarkScenarios, compare, evaluate, gate, majority, mergeResults, renderBenchmark, summarize, type BenchmarkResult } from "./benchmark.js";
+import { applyGate, benchmarkScenarios, compare, countMissingRuns, evaluate, gate, majority, mergeResults, renderBenchmark, summarize, type BenchmarkResult } from "./benchmark.js";
 import type { ObjectiveScreen, Transcript } from "./types.js";
 
 const gospel = benchmarkScenarios.find(s => s.id === "bench-vague-gospel-video")!;
@@ -114,4 +114,19 @@ test("the gate measures drops from the baseline as well as the absolute floor", 
   assert.match(md, /Gate: FAIL/);
   assert.match(md, /tools\/coach-eval\/gate\.json/);
   assert.equal(renderBenchmark(lower, perfect).passed, false);
+});
+
+test("runs the harness could not record count as failures, so a partial sample cannot pass", () => {
+  // One scenario kept a single passing run of three; another recorded nothing.
+  const partial = sample({}, ["bench-qa-gibberish"]);
+  partial.scenarios[0] = { ...partial.scenarios[0]!, runs: 1, passes: 1 };
+  const counted = countMissingRuns(partial, benchmarkScenarios.map(s => s.id), 3);
+  const first = counted.scenarios.find(s => s.id === partial.scenarios[0]!.id)!;
+  assert.deepEqual([first.passes, first.runs, majority(first)], [1, 3, false]);
+  assert.equal(first.failures["run recorded"], 2);
+  const gibberish = counted.scenarios.find(s => s.id === "bench-qa-gibberish")!;
+  assert.deepEqual([gibberish.passes, gibberish.runs, gibberish.category], [0, 3, "adversarial"]);
+  assert.equal(counted.scenarios.length, benchmarkScenarios.length);
+  const below = applyGate(counted).checks.find(c => c.name === "scenarios below majority")!;
+  assert.equal(below.actual, "2");
 });

@@ -345,6 +345,22 @@ export function compare(after: BenchmarkResult, baseline?: BenchmarkResult): Com
 }
 
 /**
+ * Counts each run the harness failed to record (a skipped or crashed run leaves no
+ * transcript) as a failed run, so every scenario is judged on the full sample.
+ */
+export function countMissingRuns(result: BenchmarkResult, expected: string[], repeats: number): BenchmarkResult {
+  const scenarios = expected.flatMap((id) => {
+    const definition = benchmarkScenarios.find((s) => s.id === id);
+    if (!definition) return [];
+    const found = result.scenarios.find((s) => s.id === id) ?? { id, category: definition.category, runs: 0, passes: 0, failures: {} };
+    const missing = Math.max(0, repeats - found.runs);
+    if (!missing) return [found];
+    return [{ ...found, runs: found.runs + missing, failures: { ...found.failures, "run recorded": (found.failures["run recorded"] ?? 0) + missing } }];
+  });
+  return { ...result, scenarios: [...scenarios, ...result.scenarios.filter((s) => !expected.includes(s.id))] };
+}
+
+/**
  * Pass rules for a whole benchmark run, committed in gate.json. Model output varies,
  * so the gate tolerates scattered failures while catching a lost kind of member.
  */

@@ -89,7 +89,8 @@ test("Lantern owns provisional and selected dates even when the coach supplies d
   try {
     const actions = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context: checkpoint })).json();
     assert.equal(actions.suggestedDate, checkpoint.end);
-    for (const prefix of ["", "By 1 January 2027, ", "By January 1, 2027, ", "By 2027-01-01, ", "By 1st January 2027, ", "By January 1st, 2027, "]) {
+    for (const prefix of ["", "By 1 January 2027, ", "By January 1, 2027, ", "By 2027-01-01, ", "By 1st January 2027, ", "By January 1st, 2027, ",
+      "By the end of March 2027, ", "By end of March 2027, ", "By March 2027, ", "By the end of Q1 2027, ", "By mid-January 2027, "]) {
       suppliedGoal = prefix + "review failure reports.";
       const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint })).json();
       assert.equal(goal.goal, "By 30 November 2026, review failure reports.");
@@ -143,6 +144,14 @@ test("objective checks use only the configured mission and preserve uncertainty 
     assert.match(prompt, /Department context:.*"mission":""/);
     const development = await f.request("member", "/api/coach/suggest", "POST", { stage: "review", context: { ...checkpoint, entry: "objective", kind: "personal-development" } });
     assert.equal((await development.json()).assessment.alignment.status, "met");
+    // With Not sure chosen, a recommended development or leadership type is judged against the work, not the mission.
+    reply = { objective: "Grow my mentoring skills", recommendedKind: "leadership", assessment: (reply as { assessment: unknown }).assessment };
+    const unsure = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: { ...checkpoint, entry: "objective", kind: undefined } });
+    assert.equal((await unsure.json()).assessment.alignment.status, "met");
+    reply = { ...(reply as object), recommendedKind: "normal" };
+    const unsureContribution = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: { ...checkpoint, entry: "objective", kind: undefined } });
+    assert.equal((await unsureContribution.json()).assessment.alignment.status, "uncertain");
+    reply = { ready: false, assessment: (reply as { assessment: unknown }).assessment };
     const direction = await (await f.request("lead", "/api/department/direction")).json();
     assert.equal((await f.request("lead", "/api/department/direction", "PUT", { ...direction, mission: "Serve training communities." })).status, 200);
     const configured = await request();

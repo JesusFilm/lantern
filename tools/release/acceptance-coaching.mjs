@@ -98,6 +98,7 @@ export async function runCoachingJourney({ context, origin, runId, enabled, rede
     .getByLabel("Objective", { exact: true })
     .inputValue();
   let goal;
+  let wroteGoal = false;
   if (enabled) {
     const next = page.getByRole("button", { name: "Next", exact: true });
     const addGoal = page.getByRole("button", { name: "Add SMART goal", exact: true });
@@ -119,15 +120,28 @@ export async function runCoachingJourney({ context, origin, runId, enabled, rede
     );
     await modelTurn(page.getByRole("button", { name: "Next", exact: true }));
     if (redesigned) await answerFollowups();
-    goal = await page.getByLabel("SMART goal", { exact: true }).inputValue();
+    const goalField = page.getByLabel("SMART goal", { exact: true });
+    if (redesigned && !(await goalField.isVisible())) {
+      // The coach may answer with feedback instead of goal wording. This journey checks the
+      // workflow, not model quality, so it continues as a member would: Write myself keeps the
+      // planned action and date as an editable goal.
+      await expect(page.getByRole("region", { name: "AI coach feedback" })).toBeVisible();
+      await page.getByRole("button", { name: "Switch to Write myself", exact: true }).click();
+      goal = await page.getByLabel("SMART goal 1", { exact: true }).inputValue();
+      wroteGoal = true;
+    } else {
+      goal = await goalField.inputValue();
+    }
     assert.ok(goal.trim());
-    await page
-      .getByRole("button", { name: "Add to objective", exact: true })
-      .click();
-    await next.click();
-    await expect(
-      page.getByRole("heading", { name: "Check objective", exact: true }),
-    ).toBeVisible();
+    if (!wroteGoal) {
+      await page
+        .getByRole("button", { name: "Add to objective", exact: true })
+        .click();
+      await next.click();
+      await expect(
+        page.getByRole("heading", { name: "Check objective", exact: true }),
+      ).toBeVisible();
+    }
   } else {
     await page
       .getByRole("button", { name: "Add SMART goal", exact: true })

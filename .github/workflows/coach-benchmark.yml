@@ -27,10 +27,17 @@ jobs:
         id: scope
         env:
           EVENT: ${{ github.event_name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
         run: |
           # Files that change what the coach says. The pull request merge commit's first parent is main.
-          coaching='^(server/(coach-(turn|prompt|guidance|contract|provider)|guide-content|synthetic-direction|local-initiatives)\.ts|shared/(coach|direction|guide|focus)\.ts|tools/coach-eval/|\.github/workflows/coach-benchmark\.yml)'
-          if [ "$EVENT" = workflow_dispatch ] || git diff --name-only HEAD^1 HEAD | grep -Eq "$coaching"; then
+          coaching='^(server/(coach-(turn|prompt|guidance|contract|provider)|guide-content|synthetic-direction|local-initiatives)\.ts|shared/(coach|direction|guide|focus)\.ts|client/workspace/ObjectiveEditor\.tsx|tools/coach-eval/|\.github/workflows/coach-benchmark\.yml)'
+          if [ "$EVENT" = pull_request ] && [ "$HEAD_REPO" != "$REPO" ]; then
+            # Forks receive no secrets; a maintainer runs the benchmark locally instead.
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Pull requests from forks cannot use the benchmark key. If coaching changed, a maintainer runs the coach benchmark locally."
+            echo "Fork pull request: if coaching changed, run the coach benchmark locally (docs/development/coach-benchmark.md)." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$EVENT" = workflow_dispatch ] || git diff --name-only HEAD^1 HEAD | grep -Eq "$coaching"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"

@@ -12,7 +12,7 @@ import { defaultJudge, judgeTranscript, renderTranscript, rubricVersion, transcr
 import { memberFor } from "./member.js";
 import { renderReport, type Row } from "./report.js";
 import { direction, scenarios as judgedScenarios, type Scenario } from "./scenarios.js";
-import { benchmarkScenarios, mergeResults, renderBenchmark, summarize, type BenchmarkResult } from "./benchmark.js";
+import { benchmarkScenarios, countMissingRuns, mergeResults, renderBenchmark, summarize, type BenchmarkResult } from "./benchmark.js";
 
 const scenarios: Scenario[] = judgedScenarios;
 const allScenarios: Scenario[] = [...judgedScenarios, ...benchmarkScenarios];
@@ -261,10 +261,15 @@ async function benchmark() {
   await transcripts(benchmarkScenarios);
   const runs = loadTranscripts(dir, [target]).filter((t) => benchmarkScenarios.some((s) => s.id === t.scenario));
   const meta = readJson<{ commit?: string }>(join(dir, "run.json"));
-  const result = summarize(runs, { commit: meta.commit ?? "unknown", target, createdAt: new Date().toISOString() });
-  const baseline = existsSync(baselineFile) ? readJson<BenchmarkResult>(baselineFile) : undefined;
   const picked = list("scenarios");
-  const { markdown, passed } = renderBenchmark(result, baseline, picked ? { expected: picked } : {});
+  const expected = picked ?? benchmarkScenarios.map((s) => s.id);
+  const result = countMissingRuns(
+    summarize(runs, { commit: meta.commit ?? "unknown", target, createdAt: new Date().toISOString() }),
+    expected,
+    number("repeats", 3),
+  );
+  const baseline = existsSync(baselineFile) ? readJson<BenchmarkResult>(baselineFile) : undefined;
+  const { markdown, passed } = renderBenchmark(result, baseline, { expected });
   writeFileSync(join(dir, "benchmark.json"), JSON.stringify(result, null, 2));
   writeFileSync(join(dir, "benchmark.md"), markdown);
   console.log(markdown);
