@@ -380,6 +380,7 @@ export function ObjectiveEditor({
       setAnswers(nextAnswers);
       if (redesigned && (!result.objective || result.ready === false) && (!result.question || (stage === "question" && nextAnswers.length >= 1))) {
         if (!edit.text.trim()) update({ type: "objective-values", values: { text: work } });
+        setAssessment({ checks: result.assessment, text: edit.text.trim() ? edit.text : work, kind: edit.kind });
         objectiveBasis.current = cacheKey;
         setConcern([result.concern, result.question].filter(Boolean).join(" "));
         setStage("objective");

@@ -87,14 +87,14 @@ test("an unavailable coach is retried once and ends the session", async () => {
   assert.equal(outcome.completed, false);
 });
 
-test("redesigned replay falls back to member wording after one follow-up and skips model review", async () => {
+test("redesigned replay checks fallback wording after one follow-up without a final review call", async () => {
   const { coach, calls } = scripted({
     clarify: [{ question: "Who benefits?", ready: false }, { question: "What changes?", ready: false }],
     actions: [{ actions: ["Try captions"], suggestedDate: "2027-02-01" }],
     goal: [{ goal: "By 1 February 2027, try captions." }],
   });
   const { outcome } = await runCurrentFlow({ ...base, goals: [{ action: 0 }] }, coach, { answer: async () => "Trainers" }, { redesigned: true });
-  assert.deepEqual(calls.map(c => c.stage), ["clarify", "clarify", "actions", "goal"]);
+  assert.deepEqual(calls.map(c => c.stage), ["clarify", "clarify", "review", "actions", "goal"]);
   assert.equal(outcome.objective, "testing");
   assert.equal(outcome.completed, true);
 });
@@ -109,8 +109,8 @@ test("replay preserves historical request context and stops on unresolved refine
   const { turns } = await runCurrentFlow({ ...base, goals: [{ action: 0 }] }, coach, member, { redesigned: true });
   const requests = turns.filter(t => t.type === "coach");
   assert.deepEqual(requests[0]!.context.siblings, []);
-  assert.deepEqual(requests[2]!.context.siblings, []);
-  assert.equal(requests.length, 3);
+  assert.deepEqual(requests.find(t => t.stage === "goal")!.context.siblings, []);
+  assert.equal(requests.length, 4);
   const paused = scripted({ objective: [{ concern: "Please clarify the intended beneficiary." }] });
   const { outcome } = await runCurrentFlow({ ...base, existing: { objective: "Help staff", kind: "normal" }, improvement: "Clearer", goals: [] }, paused.coach, member, { redesigned: true });
   assert.equal(outcome.completed, false);
@@ -132,8 +132,9 @@ test("redesigned replay can answer draft feedback and revise the objective", asy
     actions: [{ actions: ["Test the app"] }],
   });
   const { outcome } = await runCurrentFlow({ ...base, goals: [], respondToFeedback: true }, coach, { answer: async () => "online seekers" }, { redesigned: true });
-  assert.equal(calls[1]?.context.objective, "Build a video app.");
-  assert.deepEqual(calls[1]?.context.answers.at(-1), { question: "Who will use it?", answer: "online seekers" });
+  const revision = calls.find(call => call.stage === "objective");
+  assert.equal(revision?.context.objective, "Build a video app.");
+  assert.deepEqual(revision?.context.answers.at(-1), { question: "Who will use it?", answer: "online seekers" });
   assert.equal(outcome.objective, "Build a video app for online seekers.");
 });
 
@@ -150,5 +151,21 @@ test("redesigned replay can answer a checklist gap without a separate concern", 
   const { outcome } = await runCurrentFlow({ ...base, goals: [], respondToFeedback: true }, coach, { answer: async () => "seekers" }, { redesigned: true });
   assert.equal(calls[1]?.stage, "objective");
   assert.deepEqual(calls[1]?.context.answers.at(-1), { question: "Who will use it?", answer: "seekers" });
+  assert.equal(outcome.objective, "Build a video app for seekers.");
+});
+
+test("redesigned replay automatically checks a draft when its first reply lacks an assessment", async () => {
+  const { coach, calls } = scripted({
+    clarify: [{ objective: "Build a video app for seekers." }],
+    review: [{ assessment: {
+      purpose: { status: "met", note: "The app is the contribution." },
+      people: { status: "met", note: "Seekers benefit." },
+      alignment: { status: "uncertain", note: "Mission not configured." },
+    } }],
+    actions: [{ actions: ["Test the app"] }],
+  });
+  const { outcome } = await runCurrentFlow({ ...base, goals: [] }, coach, member, { redesigned: true });
+  assert.deepEqual(calls.map(c => c.stage), ["clarify", "review", "actions"]);
+  assert.equal(calls[1]!.context.objective, "Build a video app for seekers.");
   assert.equal(outcome.objective, "Build a video app for seekers.");
 });

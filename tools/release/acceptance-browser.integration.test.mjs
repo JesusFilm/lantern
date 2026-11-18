@@ -150,7 +150,11 @@ async function withProvider(work, { primaryFails = false, bothFail = false, budg
         ? { objective: 'Help engineers diagnose build failures', title: 'Synthetic diagnostics', initiativeIds: [] }
         : stage === 'actions'
           ? { actions: ['Review three failed builds', 'Try clearer diagnostic messages'], suggestedDate: '2026-11-30' }
-          : stage === 'review' ? { review: 'The goal supports this objective.' }
+          : stage === 'review' ? { assessment: {
+              purpose: { status: 'met', note: 'The contribution is clear.' },
+              people: { status: 'met', note: 'Engineers benefit.' },
+              alignment: { status: 'met', note: 'The work supports the mission.' },
+            } }
           : { goal: 'Review three failed builds by the selected date and record diagnostic steps.' };
     response.setHeader('Content-Type', 'application/json');
     response.end(JSON.stringify(request.url.startsWith('/primary')
@@ -179,7 +183,11 @@ for (const redesigned of [false, true]) for (const primaryFails of [false, true]
         assert.ok(checks.includes('coaching-enabled-journey'));
         assert.ok(!checks.includes('coaching-disabled-manual'));
         assert.ok(calls.some(call => call.stage === 'goal'));
-        assert.equal(calls.some(call => call.stage === 'review'), false);
+        const reviews = calls.map((call, index) => call.stage === 'review' ? index : -1).filter(index => index >= 0);
+        if (redesigned) {
+          assert.ok(reviews.length > 0, 'The missing assessment is requested automatically.');
+          assert.ok(reviews.every(index => index < calls.findIndex(call => call.stage === 'actions')), 'The final check makes no model call.');
+        } else assert.equal(reviews.length, 0);
         assert.equal(calls.some(call => call.path.startsWith('/fallback')), primaryFails);
       }, { coach, redesigned });
     }, { primaryFails });
@@ -199,11 +207,12 @@ test('a provider outage blocks enabled coaching acceptance and revokes synthetic
 });
 
 
-test('deployed coaching caps all inference paths at ten requests, including retrying concern-only goal ideas', { timeout: 120000 }, async () => {
+test('deployed coaching caps browser requests at ten while allowing an automatic assessment', { timeout: 120000 }, async () => {
   await withProvider(async (coach, calls) => {
     await fixture(async input => {
       await assert.rejects(runAcceptanceBrowser(input), { message: 'Staging acceptance failed [coaching-enabled-journey].' });
-      assert.equal(calls.length, 10);
+      assert.equal(calls.filter(call => call.stage !== 'review').length, 10);
+      assert.equal(calls.filter(call => call.stage === 'review').length, 1);
       assert.equal(calls.filter(call => call.stage === 'actions').length, 2);
     }, { coach });
   }, { budgetProbe: true });
@@ -216,7 +225,8 @@ test("deployed redesigned coaching preserves the member's wording if clarificati
       const checks = await runAcceptanceBrowser(input);
       assert.ok(checks.includes('coaching-enabled-journey'));
       assert.equal(calls.filter(call => call.stage === 'clarify').length, 2);
-      assert.equal(calls.length, 4);
+      assert.equal(calls.filter(call => call.stage !== 'review').length, 4);
+      assert.equal(calls.filter(call => call.stage === 'review').length, 1);
     }, { coach });
   }, { clarificationQuestions: 4 });
 });

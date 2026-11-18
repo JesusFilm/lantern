@@ -1,9 +1,10 @@
 import type { GuideContent } from '../shared/guide.js';
+import { syntheticMission } from './synthetic-direction.js';
 
 // Curated release content, not department-editable data. Add department context only when supplied and agreed.
 export const guideContent: GuideContent = {
   context: {
-    mission: 'We partner with the Body of Christ through heart language media, so everyone, everywhere can encounter Jesus.',
+    mission: syntheticMission,
   },
   objectives: {
     title: 'Critical mission objectives',

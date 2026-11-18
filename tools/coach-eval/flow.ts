@@ -88,6 +88,7 @@ export async function runCurrentFlow(
     step: FlowStep,
     stage: CoachStage,
     input: CoachCheckpoint,
+    automaticReview = false,
   ): Promise<CoachSuggestion | undefined> {
     try {
       validateCheckpoint(structuredClone(input), redesigned ? coachContextLimits.answers : 3, redesigned ? coachContextLimits.characters : 32000);
@@ -95,11 +96,11 @@ export async function runCurrentFlow(
       turns.push({ type: "coach", step, stage, context: input, ok: false, error: "request-rejected", elapsedMs: 0, attempts: [] });
       return undefined;
     }
-    for (let attempt = 0; attempt <= retries; attempt++) {
+    for (let attempt = 0; attempt <= (automaticReview ? 0 : retries); attempt++) {
       const result = await coach(stage, input);
       turns.push({ type: "coach", step, stage, context: input, ...result });
       if (result.ok && result.suggestion) {
-        if (redesigned && stage !== "clarify" && result.suggestion.question) {
+        if (redesigned && stage !== "clarify" && result.suggestion.question && !automaticReview) {
           if (answers.length >= 12) return result.suggestion;
           const q = result.suggestion.question;
           const a = await member.answer(q, result.suggestion.options ?? []);
@@ -107,7 +108,15 @@ export async function runCurrentFlow(
           turns.push({ type: "member", step: "answer", text: a });
           return ask(step, stage, { ...input, answers, question: q, answer: a });
         }
-        return result.suggestion;
+        const suggestion = { ...result.suggestion };
+        const fallback = stage === "clarify" && (!suggestion.objective || suggestion.ready === false) && (!suggestion.question || input.answers.length > 0);
+        if (redesigned && fallback) delete suggestion.assessment;
+        const objective = fallback ? input.objective.trim() || input.work : !suggestion.question && !(stage === "clarify" && suggestion.ready === false) ? suggestion.objective : undefined;
+        if (redesigned && (stage === "clarify" || stage === "objective") && objective?.trim() && !suggestion.assessment) {
+          const checked = await ask("refine", "review", { ...input, entry: "objective", objective }, true);
+          if (checked?.assessment && !checked.question) suggestion.assessment = checked.assessment;
+        }
+        return suggestion;
       }
     }
     return undefined;

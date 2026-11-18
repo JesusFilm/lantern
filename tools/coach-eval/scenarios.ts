@@ -1,11 +1,11 @@
 import type { DepartmentDirection } from "../../shared/direction.js";
 import type { ObjectiveKind } from "../../shared/focus.js";
-import { guideContent } from "../../server/guide-content.js";
+import { syntheticMission } from "../../server/synthetic-direction.js";
 import { initiativeDefaults } from "../../server/local-initiatives.js";
 
 /** The staging QA department: the Guide mission and Engineering's four initiatives. */
 export const direction: DepartmentDirection = {
-  mission: guideContent.context?.mission ?? "",
+  mission: syntheticMission,
   version: 1,
   initiatives: initiativeDefaults.map((item, i) => ({
     ...item,

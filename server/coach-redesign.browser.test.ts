@@ -51,7 +51,7 @@ test("member can continue editing their own wording when the coach keeps asking 
     }
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("I train Spanish-speaking colleagues and want to learn Spanish.");
     await expect(page.getByText(/What would help your training work\? 2/)).toBeVisible();
-    assert.deepEqual(f.calls.map(c => c.stage), Array(2).fill("clarify"));
+    assert.deepEqual(f.calls.map(c => c.stage), ["clarify", "clarify", "review"]);
     await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
     await page.getByLabel("Objective", { exact: true }).fill("My edited objective");
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited objective");
@@ -104,9 +104,10 @@ test("goal ideas preserve the selected action and date, and the final check need
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByLabel("SMART goal", { exact: true })).toContainText("introductory session");
     await page.getByRole("button", { name: "Add to objective", exact: true }).click();
+    const callsBeforeFinalCheck = f.calls.length;
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Check objective", exact: true })).toBeVisible();
-    assert.equal(f.calls.some(c => c.stage === "review"), false);
+    assert.equal(f.calls.length, callsBeforeFinalCheck);
     assert.equal(f.calls.filter(c => c.stage === "goal").at(-1)?.context.action, "Try the workshop materials with captions");
     await page.getByRole("button", { name: "Save objective", exact: true }).click();
     await expect(page.getByRole("region", { name: "Add objective", exact: true })).toHaveCount(0);
@@ -147,7 +148,7 @@ test("switching methods during a refinement question preserves manual edits and 
 
 test("member can return to an edited draft or ask for another suggestion from their original input", async () => {
   let count = 0;
-  const f = await world(() => ({ objective: ++count === 1 ? "Help trainers deliver accessible workshops." : "Help trainers run accessible workshops.", initiativeIds: [] }));
+  const f = await world(stage => stage === "review" ? { review: "No assessment." } : ({ objective: ++count === 1 ? "Help trainers deliver accessible workshops." : "Help trainers run accessible workshops.", initiativeIds: [] }));
   try {
     const { page } = f;
     await page.getByRole("radio", { name: "Contribution", exact: true }).check();
@@ -161,20 +162,20 @@ test("member can return to an edited draft or ask for another suggestion from th
     await expect(page.getByLabel("Your work", { exact: true })).toHaveValue("I help trainers make workshops accessible.");
     await page.getByRole("button", { name: "Return to draft", exact: true }).click();
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited draft");
-    assert.equal(f.calls.length, 1);
+    assert.equal(f.calls.filter(c => c.stage === "clarify").length, 1);
     await page.getByRole("button", { name: "Back", exact: true }).click();
     await page.getByRole("button", { name: "Try again", exact: true }).click();
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Help trainers run accessible workshops.");
-    assert.equal(f.calls.length, 2);
-    assert.equal(f.calls.at(-1)?.context.work, "I help trainers make workshops accessible.");
+    assert.equal(f.calls.filter(c => c.stage === "clarify").length, 2);
+    assert.equal(f.calls.filter(c => c.stage === "clarify").at(-1)?.context.work, "I help trainers make workshops accessible.");
     await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
     await page.getByRole("button", { name: "Back", exact: true }).click();
     await page.getByLabel("Your work", { exact: true }).fill("I help new trainers make workshops accessible.");
     await expect(page.getByRole("button", { name: "Try again", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByLabel("Objective", { exact: true })).toBeVisible();
-    assert.equal(f.calls.length, 3);
-    assert.equal(f.calls.at(-1)?.context.work, "I help new trainers make workshops accessible.");
+    assert.equal(f.calls.filter(c => c.stage === "clarify").length, 3);
+    assert.equal(f.calls.filter(c => c.stage === "clarify").at(-1)?.context.work, "I help new trainers make workshops accessible.");
   } finally { await f.close(); }
 });
 
@@ -214,6 +215,8 @@ test("objective feedback shows the coach's three checks and a clear ready state"
     ? { objective: "Create gospel videos for seekers to encounter Jesus.", assessment: { purpose: { status: "met", note: "The contribution is clear." }, people: { status: "met", note: "Seekers and the intended benefit are clear." }, alignment: { status: "met", note: "This supports the mission." } } }
     : { objective: "Create gospel videos.", assessment: { purpose: { status: "met", note: "The contribution is clear." }, people: { status: "needs_attention", note: "Who will the videos help?" }, alignment: { status: "uncertain", note: "The department mission is unavailable." } } });
   try {
+    const direction = await (await f.request("lead", "/api/department/direction")).json();
+    assert.equal((await f.request("lead", "/api/department/direction", "PUT", { ...direction, mission: "Help seekers encounter Jesus." })).status, 200);
     const { page } = f;
     await page.getByRole("radio", { name: "Contribution", exact: true }).check();
     await page.getByLabel("Your work", { exact: true }).fill("Create gospel videos.");
@@ -262,9 +265,9 @@ test("member can give the coach a missing detail and revise the current objectiv
     await page.getByLabel("Details for the coach", { exact: true }).fill("online seekers");
     await page.getByRole("button", { name: "Update objective", exact: true }).click();
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a video application for online seekers.");
-    assert.equal(f.calls.at(-1)?.stage, "objective");
-    assert.equal(f.calls.at(-1)?.context.objective, "Build a gospel video application.");
-    assert.deepEqual(f.calls.at(-1)?.context.answers.at(-1), { question: "Who will use the application?", answer: "online seekers" });
+    assert.equal(f.calls.filter(c => c.stage === "objective").at(-1)?.stage, "objective");
+    assert.equal(f.calls.filter(c => c.stage === "objective").at(-1)?.context.objective, "Build a gospel video application.");
+    assert.deepEqual(f.calls.filter(c => c.stage === "objective").at(-1)?.context.answers.at(-1), { question: "Who will use the application?", answer: "online seekers" });
     await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
     await page.getByRole("button", { name: "Back", exact: true }).click();
     await expect(page.getByLabel("Your work", { exact: true })).toHaveValue("I want to build a video app.");
@@ -277,6 +280,7 @@ test("a failed feedback revision keeps the member's draft and details", async ()
   let revisions = 0;
   const f = await world(stage => {
     if (stage === "clarify") return { objective: "Build a video application.", concern: "Who will use the application?" };
+    if (stage === "review") return { review: "No assessment." };
     if (++revisions === 1) throw Error("unavailable");
     return { objective: "Build a video application for online seekers." };
   });
@@ -320,7 +324,7 @@ test("back from a feedback follow-up restores the draft and the supplied detail"
 
 test("retry from a follow-up uses the saved answer and makes a fresh suggestion", async () => {
   let drafts = 0;
-  const f = await world((_stage, context) => context.answers.length
+  const f = await world((stage, context) => stage === "review" ? { review: "No assessment." } : context.answers.length
     ? { objective: ++drafts === 1 ? "Help trainers deliver accessible workshops." : "Help trainers run accessible workshops." }
     : { ready: false, question: "Who benefits?" });
   try {
@@ -337,14 +341,14 @@ test("retry from a follow-up uses the saved answer and makes a fresh suggestion"
     await expect(page.getByLabel("Your answer", { exact: true })).toHaveValue("Volunteer trainers");
     await page.getByRole("button", { name: "Try again", exact: true }).click();
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Help trainers run accessible workshops.");
-    assert.equal(f.calls.length, 3);
-    assert.equal(f.calls.at(-1)?.context.answers[0]?.answer, "Volunteer trainers");
+    assert.equal(f.calls.filter(c => c.stage === "clarify").length, 3);
+    assert.equal(f.calls.filter(c => c.stage === "clarify").at(-1)?.context.answers[0]?.answer, "Volunteer trainers");
   } finally { await f.close(); }
 });
 
 test("a failed retry keeps the edited draft available", async () => {
   let calls = 0;
-  const f = await world(() => { if (++calls === 2) throw Error("unavailable"); return { objective: "Help trainers deliver accessible workshops." }; });
+  const f = await world(stage => { if (stage === "review") return { review: "No assessment." }; if (++calls === 2) throw Error("unavailable"); return { objective: "Help trainers deliver accessible workshops." }; });
   try {
     const { page } = f;
     await page.getByRole("radio", { name: "Contribution", exact: true }).check();
@@ -358,16 +362,17 @@ test("a failed retry keeps the edited draft available", async () => {
     await expect(page.getByRole("alert")).toBeVisible();
     await page.getByRole("button", { name: "Return to draft", exact: true }).click();
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited objective");
-    assert.equal(f.calls.length, 2);
+    assert.equal(f.calls.filter(c => c.stage === "clarify").length, 2);
   } finally { await f.close(); }
 });
 
 test("a missing assessment is not approval and can be checked without rewriting a development objective", async () => {
-  const f = await world(stage => stage === "review" ? { assessment: {
+  let checks = 0;
+  const f = await world(stage => stage === "review" ? (++checks === 1 ? (() => { throw Error("unavailable"); })() : { assessment: {
     purpose: { status: "met", note: "The learning is clear." },
     people: { status: "met", note: "The trainers benefit." },
     alignment: { status: "met", note: "This supports the member's work." },
-  } } : { objective: "Learn Spanish to support the trainers I work with." });
+  } }) : { objective: "Learn Spanish to support the trainers I work with." });
   try {
     const { page } = f;
     await page.getByRole("radio", { name: "Personal development", exact: true }).check();
@@ -381,5 +386,33 @@ test("a missing assessment is not approval and can be checked without rewriting 
     await expect(feedback).toContainText("Connection to your work");
     await expect(feedback).toContainText("The main elements are in place");
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Learn Spanish to support the trainers I work with.");
+  } finally { await f.close(); }
+});
+
+test("a draft receives automatic checks after an audience follow-up without another click", async () => {
+  const f = await world((stage, context) => {
+    if (stage === "review") return { assessment: {
+      purpose: { status: "met", note: "A video app is the contribution." },
+      people: { status: "met", note: "Online seekers are the audience." },
+      alignment: { status: "met", note: "Supports the mission." },
+    } };
+    if (!context.answers.length) return { ready: false, question: "Who is the audience?" };
+    return { objective: "Build a gospel video app for online seekers." };
+  });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("Build a gospel video app.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Your answer", { exact: true })).toBeVisible();
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByLabel("Your answer", { exact: true }).fill("Online seekers");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a gospel video app for online seekers.");
+    const feedback = page.getByRole("region", { name: "AI coach feedback" });
+    await expect(feedback).toContainText("Online seekers are the audience.");
+    await expect(feedback).toContainText("Your career lead has not configured a mission yet.");
+    await expect(feedback).not.toContainText("did not provide an assessment");
+    assert.deepEqual(f.calls.map(call => call.stage), ["clarify", "clarify", "review"]);
   } finally { await f.close(); }
 });
