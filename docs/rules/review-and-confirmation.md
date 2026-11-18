@@ -115,7 +115,9 @@ Rationale (inferred): the agreement establishes the process without deciding tho
 ### RC-15 Explain unavailable review and confirmation actions
 In effect · [#89](https://github.com/JesusFilm/lantern/issues/89) · [#149](https://github.com/JesusFilm/lantern/issues/149)
 
-An ineligible focus does not offer actionable confirmation; the explanation identifies the missing step. The review-request form remains visible when sending is unavailable, with an accessible reason; the optional note is disabled with Send, and a failed request retains the note.
+An ineligible focus does not offer actionable confirmation; the explanation identifies the missing step. When an open draft request form cannot send, it remains visible with an accessible reason; the optional note is disabled with Send, and a failed request retains the note.
+
+Current behavior: if confirmation happens while the request form remains open, it shows the locked-state explanation and preserves unsent text. Reopening a confirmed focus shows its retained discussion, when present, without a request form. The confirmed-state acceptance wording in [#149](https://github.com/JesusFilm/lantern/issues/149) does not explicitly distinguish an already-open form from reopening; its later QA report records that a confirmed focus shows no request form.
 
 Why: people need to understand how to become ready without losing their work. See the [PRD](../PRD.md#product-behavior) for presentation and recovery details.
 
