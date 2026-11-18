@@ -90,7 +90,8 @@ test("Lantern owns provisional and selected dates even when the coach supplies d
     const actions = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context: checkpoint })).json();
     assert.equal(actions.suggestedDate, checkpoint.end);
     for (const prefix of ["", "By 1 January 2027, ", "By January 1, 2027, ", "By 2027-01-01, ", "By 1st January 2027, ", "By January 1st, 2027, ",
-      "By the end of March 2027, ", "By end of March 2027, ", "By March 2027, ", "By the end of Q1 2027, ", "By mid-January 2027, "]) {
+      "By the end of March 2027, ", "By end of March 2027, ", "By March 2027, ", "By the end of Q1 2027, ", "By mid-January 2027, ",
+      "By the end of 2027, ", "By mid-2027, ", "By early 2027, "]) {
       suppliedGoal = prefix + "review failure reports.";
       const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint })).json();
       assert.equal(goal.goal, "By 30 November 2026, review failure reports.");

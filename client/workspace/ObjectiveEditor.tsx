@@ -82,6 +82,8 @@ export function ObjectiveEditor({
   const [options, setOptions] = useState<string[]>([]);
   const [recommended, setRecommended] =
     useState<CoachSuggestion["recommendedKind"]>();
+  // The type the server judged alignment against: with Not sure, the coach's recommendation.
+  const checkedKind = redesigned && chosenKind === "unsure" ? recommended ?? "normal" : edit.kind;
   const [recommendedInitiatives, setRecommendedInitiatives] = useState<string[]>([]);
   const [plan, setPlan] = useState<GoalPlan>({
     actions: [],
@@ -881,7 +883,7 @@ export function ObjectiveEditor({
               <p role="status">Your objective or type changed since the coach checked it. The earlier checks may no longer apply.</p> : checks ? <>
                 <p>{Object.values(checks).every(check => check.status === "met") && !concern ? "The main elements are in place. You can continue to SMART goals." : "Here is what the coach found. You can respond or continue with your draft."}</p>
                 <ul className="coach-checks">
-                  {([ ["purpose", "Your contribution"], ["people", "Who benefits and how"], ["alignment", edit.kind === "normal" ? "Connection to the mission" : "Connection to your work"] ] as const).map(([key, label]) => {
+                  {([ ["purpose", "Your contribution"], ["people", "Who benefits and how"], ["alignment", checkedKind === "normal" ? "Connection to the mission" : "Connection to your work"] ] as const).map(([key, label]) => {
                     const check = checks[key];
                     return <li key={key} className={`coach-check coach-check-${check.status}`}>
                       <div><span aria-hidden="true">{check.status === "met" ? "✓" : check.status === "needs_attention" ? "!" : "?"}</span> <strong>{label}</strong> — <span>{check.status === "met" ? "Met" : check.status === "needs_attention" ? "Needs attention" : "Not sure"}</span></div>

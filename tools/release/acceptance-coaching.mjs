@@ -98,50 +98,73 @@ export async function runCoachingJourney({ context, origin, runId, enabled, rede
     .getByLabel("Objective", { exact: true })
     .inputValue();
   let goal;
-  let wroteGoal = false;
   if (enabled) {
     const next = page.getByRole("button", { name: "Next", exact: true });
     const addGoal = page.getByRole("button", { name: "Add SMART goal", exact: true });
+    const feedback = page.getByRole("region", { name: "AI coach feedback" });
+    // This journey checks the workflow, not model quality. When the coach answers with
+    // feedback instead of goal ideas or goal wording, the synthetic member continues as a
+    // member can, with Write myself, and the run notes it.
+    async function writeGoalMyself(step, planned) {
+      await expect(feedback).toBeVisible();
+      console.log(`Coaching journey: the coach gave feedback instead of ${step}; the synthetic member wrote the goal with Write myself.`);
+      await page.getByRole("button", { name: "Switch to Write myself", exact: true }).click();
+      if (!planned) {
+        await addGoal.click();
+        await page.getByLabel("SMART goal 1", { exact: true }).fill("Review three synthetic build failures and record useful diagnostic steps.");
+      }
+      return page.getByLabel("SMART goal 1", { exact: true }).inputValue();
+    }
+    let ideas = true;
     if (redesigned) {
       await modelTurn(next);
       await answerFollowups();
-      await addGoal.click();
+      const possibleGoals = page.getByRole("heading", { name: "Possible goals", exact: true });
+      await expect(possibleGoals.or(feedback)).toBeVisible();
+      if (await possibleGoals.isVisible()) await addGoal.click();
+      else {
+        // Without ideas, Add SMART goal asks the coach once more.
+        await modelTurn(addGoal);
+        await answerFollowups();
+        const targetField = page.getByLabel("Target date", { exact: true });
+        await expect(targetField.or(feedback)).toBeVisible();
+        if (!(await targetField.isVisible())) {
+          ideas = false;
+          goal = await writeGoalMyself("goal ideas", false);
+        }
+      }
     } else {
       await next.click();
       await modelTurn(addGoal);
     }
-    const targetDate = new Date(Date.now() + 30 * 86400000)
-      .toISOString()
-      .slice(0, 10);
-    await page.getByLabel("Target date", { exact: true }).fill(targetDate);
-    await page.getByRole("radio").first().check();
-    await expect(page.getByLabel("Target date", { exact: true })).toHaveValue(
-      targetDate,
-    );
-    await modelTurn(page.getByRole("button", { name: "Next", exact: true }));
-    if (redesigned) await answerFollowups();
-    const goalField = page.getByLabel("SMART goal", { exact: true });
-    if (redesigned && !(await goalField.isVisible())) {
-      // The coach may answer with feedback instead of goal wording. This journey checks the
-      // workflow, not model quality, so it continues as a member would: Write myself keeps the
-      // planned action and date as an editable goal.
-      await expect(page.getByRole("region", { name: "AI coach feedback" })).toBeVisible();
-      await page.getByRole("button", { name: "Switch to Write myself", exact: true }).click();
-      goal = await page.getByLabel("SMART goal 1", { exact: true }).inputValue();
-      wroteGoal = true;
-    } else {
-      goal = await goalField.inputValue();
+    if (ideas) {
+      const targetDate = new Date(Date.now() + 30 * 86400000)
+        .toISOString()
+        .slice(0, 10);
+      await page.getByLabel("Target date", { exact: true }).fill(targetDate);
+      await page.getByRole("radio").first().check();
+      await expect(page.getByLabel("Target date", { exact: true })).toHaveValue(
+        targetDate,
+      );
+      await modelTurn(page.getByRole("button", { name: "Next", exact: true }));
+      if (redesigned) await answerFollowups();
+      const goalField = page.getByLabel("SMART goal", { exact: true });
+      if (redesigned) await expect(goalField.or(feedback)).toBeVisible();
+      if (redesigned && !(await goalField.isVisible())) {
+        // Write myself keeps the planned action and date as an editable goal.
+        goal = await writeGoalMyself("goal wording", true);
+      } else {
+        goal = await goalField.inputValue();
+        await page
+          .getByRole("button", { name: "Add to objective", exact: true })
+          .click();
+        await next.click();
+        await expect(
+          page.getByRole("heading", { name: "Check objective", exact: true }),
+        ).toBeVisible();
+      }
     }
     assert.ok(goal.trim());
-    if (!wroteGoal) {
-      await page
-        .getByRole("button", { name: "Add to objective", exact: true })
-        .click();
-      await next.click();
-      await expect(
-        page.getByRole("heading", { name: "Check objective", exact: true }),
-      ).toBeVisible();
-    }
   } else {
     await page
       .getByRole("button", { name: "Add SMART goal", exact: true })

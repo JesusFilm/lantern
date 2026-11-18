@@ -445,3 +445,18 @@ test("feedback without new wording updates the checks for the wording on screen"
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a gospel video app.");
   } finally { await f.close(); }
 });
+
+test("with Not sure chosen, the alignment check is labelled for the type the coach recommended", async () => {
+  const assessment = { purpose: { status: "met", note: "The contribution is clear." }, people: { status: "met", note: "Two new engineers benefit." }, alignment: { status: "met", note: "Mentoring supports the team's work." } } as const;
+  const f = await world(() => ({ objective: "Mentor two new engineers weekly so they can ship work on their own.", recommendedKind: "leadership", initiativeIds: [], assessment }));
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Not sure", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I want to mentor the two new engineers weekly.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    const feedback = page.getByRole("region", { name: "AI coach feedback" });
+    await expect(feedback).toContainText("Connection to your work");
+    await expect(feedback).not.toContainText("Connection to the mission");
+    assert.equal(f.calls.at(-1)?.context.kind, undefined);
+  } finally { await f.close(); }
+});

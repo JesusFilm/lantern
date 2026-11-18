@@ -129,4 +129,8 @@ test("runs the harness could not record count as failures, so a partial sample c
   assert.equal(counted.scenarios.length, benchmarkScenarios.length);
   const below = applyGate(counted).checks.find(c => c.name === "scenarios below majority")!;
   assert.equal(below.actual, "2");
+  // A scenario with nothing recorded fails the gate outright, even when the rest is perfect.
+  const oneMissing = countMissingRuns(sample({}, ["bench-qa-injection"]), benchmarkScenarios.map(s => s.id), 3);
+  assert.equal(applyGate(oneMissing).passed, false);
+  assert.deepEqual(failedGate(oneMissing), ["every scenario ran"]);
 });

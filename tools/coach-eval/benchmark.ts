@@ -393,7 +393,8 @@ const atLeast = (value: number, floor: number) => value + 1e-9 >= floor;
  */
 export function applyGate(result: BenchmarkResult, rules: Gate = gate, baseline?: BenchmarkResult, expected = benchmarkScenarios.map((s) => s.id)) {
   const checks: GateCheck[] = [];
-  const ran = result.scenarios.filter((s) => s.runs > 0);
+  // Runs counted by countMissingRuns are failures; a scenario made only of them never ran.
+  const ran = result.scenarios.filter((s) => s.runs > (s.failures["run recorded"] ?? 0));
   const missing = expected.filter((id) => !ran.some((s) => s.id === id));
   checks.push({ name: "every scenario ran", passed: !missing.length, actual: missing.length ? `missing ${missing.join(", ")}` : `${ran.length} ran`, required: `${expected.length} scenarios` });
   const { runs, passes } = totals(ran), overall = rate(ran);

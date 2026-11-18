@@ -130,7 +130,7 @@ test('deployed acceptance waits for delayed initiative choices before editing an
   }, { directionDelay: 750 });
 });
 
-async function withProvider(work, { primaryFails = false, bothFail = false, budgetProbe = false, clarificationQuestions = 1 } = {}) {
+async function withProvider(work, { primaryFails = false, bothFail = false, budgetProbe = false, clarificationQuestions = 1, noIdeas = false } = {}) {
   const calls = [];
   const upstream = createServer(async (request, response) => {
     let raw = '';
@@ -141,7 +141,8 @@ async function withProvider(work, { primaryFails = false, bothFail = false, budg
     if (bothFail || (primaryFails && request.url === '/primary/v1/messages')) {
       response.writeHead(503).end('{}'); return;
     }
-    const value = budgetProbe && stage === 'actions' && calls.filter(c => c.stage === 'actions').length === 1
+    const value = noIdeas && stage === 'actions' ? { concern: 'Describe an action within your control.' }
+      : budgetProbe && stage === 'actions' && calls.filter(c => c.stage === 'actions').length === 1
       ? { concern: 'Choose an action within your control.' }
       : budgetProbe && stage === 'goal' ? { question: 'What evidence will you record?', ready: false }
       : stage === 'clarify' && context.answers.length < clarificationQuestions
@@ -234,4 +235,15 @@ test("deployed redesigned coaching drafts from the member's answers if clarifica
       assert.equal(calls.filter(call => call.stage === 'review').length, 1);
     }, { coach });
   }, { clarificationQuestions: 4 });
+});
+
+test('when the redesigned coach offers no goal ideas after asking twice, the journey writes the goal itself', { timeout: 120000 }, async () => {
+  await withProvider(async (coach, calls) => {
+    await fixture(async input => {
+      const checks = await runAcceptanceBrowser(input);
+      assert.ok(checks.includes('coaching-enabled-journey'));
+      assert.equal(calls.filter(call => call.stage === 'actions').length, 2);
+      assert.equal(calls.filter(call => call.stage === 'goal').length, 0);
+    }, { coach });
+  }, { noIdeas: true });
 });

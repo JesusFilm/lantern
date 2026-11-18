@@ -3,7 +3,7 @@
   "editionDate": "2026-11-18",
   "deck": "cb31ab2740324f013c8b438cfa61417753e4a9e22339933ccc2f1da7006138a5",
   "sources": {
-    "fingerprint": "0cadd5ca1ae2aac51816cac96076a1a218056ba1c381f13253140e5b852c3755",
+    "fingerprint": "c838f301a15bdde0126eb373e04d79f2b2f673986fef394f11205d4bd46c9725",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -35,7 +35,7 @@
       "client/workspace/MemberFocuses.tsx": "c08deec2430f99237fff844f474cb9c4fedf1e6e641cfba7edaaf89580a11a03",
       "client/workspace/MissionBanner.tsx": "317c8886f63b10c398e69ccccf4ce77234383b99910a2a92d7fd8db3e9389b6a",
       "client/workspace/MissionImageDialog.tsx": "27adf5505b6ed72ba704e63ff324bf3f4db9bdd957cb861c6a56b8b6e2bdcc3e",
-      "client/workspace/ObjectiveEditor.tsx": "47fd3e75f5093c148439dc19b8f6a7a937525f7a88bcb0d7783f70814817d8e0",
+      "client/workspace/ObjectiveEditor.tsx": "6e708adc8d381c55b0de74d11aeab8b24687fbb8196951b91e4e922af62c18c4",
       "client/workspace/ObjectiveType.tsx": "bd84d8608f07f41cd22d5a53d9b6b7ce7102e77d410afc1eb2432fc1603bad79",
       "client/workspace/ProceduresGuide.tsx": "a0bde6ee5b83106f3f4bd6e0da6863b5e41a1036bccef94a8253bcc83d6892f8",
       "client/workspace/Sidebar.tsx": "78d2983e82e7cf752ae6edaa61d30919f59c6606d02cc91db4f7fd4d0502e49e",
@@ -69,7 +69,7 @@
       "server/auth-link.ts": "378284c38d3cad72c80fb889cf09b75fded6c6ac291dcf8c5056a3522dd4edf0",
       "server/auth-recovery.ts": "91b16ccb58d61de3331ed03cc769080ab03cc96e093a446c7ddfead184d660ee",
       "server/bootstrap-database.ts": "98068f7b5aecec50064fd7be1019adf1e55bb63a14b38b30f8e16a51c945ba86",
-      "server/coach-contract.ts": "7d18d852de0fce11b46774566e2ffe9ce09220da7912380704907159c073d51c",
+      "server/coach-contract.ts": "b6c8ae6edd99ac263abc5cc26b3345fba7f97ac017ec63e1a03e0aace57e5f03",
       "server/coach-guidance.ts": "25116e425fc5fffde10d4d75cb07bf2c6cfcb075d51ebaab507ecf1ec3ed8085",
       "server/coach-http.ts": "490ed441fb3059e2a3476f5eb73273632477d7e5c6990f3fbc66493fc2e509c1",
       "server/coach-prompt.ts": "47b5d9c073ddad3de3c1ff332e99847e69fec9130d1ec92bb7bcea46c9bd0349",
@@ -218,7 +218,7 @@
   },
   "pdf": "4f6ffe7f29eda00a2be15327149b6b7a39643fdf1ebde1be95c3075096057302",
   "verification": {
-    "generatedAt": "2026-11-18T06:43:13.544Z",
+    "generatedAt": "2026-11-18T06:53:55.237Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -251,7 +251,7 @@
       "client/workspace/MemberFocuses.tsx": "c08deec2430f99237fff844f474cb9c4fedf1e6e641cfba7edaaf89580a11a03",
       "client/workspace/MissionBanner.tsx": "317c8886f63b10c398e69ccccf4ce77234383b99910a2a92d7fd8db3e9389b6a",
       "client/workspace/MissionImageDialog.tsx": "27adf5505b6ed72ba704e63ff324bf3f4db9bdd957cb861c6a56b8b6e2bdcc3e",
-      "client/workspace/ObjectiveEditor.tsx": "47fd3e75f5093c148439dc19b8f6a7a937525f7a88bcb0d7783f70814817d8e0",
+      "client/workspace/ObjectiveEditor.tsx": "6e708adc8d381c55b0de74d11aeab8b24687fbb8196951b91e4e922af62c18c4",
       "client/workspace/ObjectiveType.tsx": "bd84d8608f07f41cd22d5a53d9b6b7ce7102e77d410afc1eb2432fc1603bad79",
       "client/workspace/ProceduresGuide.tsx": "a0bde6ee5b83106f3f4bd6e0da6863b5e41a1036bccef94a8253bcc83d6892f8",
       "client/workspace/Sidebar.tsx": "78d2983e82e7cf752ae6edaa61d30919f59c6606d02cc91db4f7fd4d0502e49e",
@@ -285,7 +285,7 @@
       "server/auth-link.ts": "378284c38d3cad72c80fb889cf09b75fded6c6ac291dcf8c5056a3522dd4edf0",
       "server/auth-recovery.ts": "91b16ccb58d61de3331ed03cc769080ab03cc96e093a446c7ddfead184d660ee",
       "server/bootstrap-database.ts": "98068f7b5aecec50064fd7be1019adf1e55bb63a14b38b30f8e16a51c945ba86",
-      "server/coach-contract.ts": "7d18d852de0fce11b46774566e2ffe9ce09220da7912380704907159c073d51c",
+      "server/coach-contract.ts": "b6c8ae6edd99ac263abc5cc26b3345fba7f97ac017ec63e1a03e0aace57e5f03",
       "server/coach-guidance.ts": "25116e425fc5fffde10d4d75cb07bf2c6cfcb075d51ebaab507ecf1ec3ed8085",
       "server/coach-http.ts": "490ed441fb3059e2a3476f5eb73273632477d7e5c6990f3fbc66493fc2e509c1",
       "server/coach-prompt.ts": "47b5d9c073ddad3de3c1ff332e99847e69fec9130d1ec92bb7bcea46c9bd0349",
