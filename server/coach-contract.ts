@@ -22,6 +22,17 @@ const day = "\\d{1,2}(?:st|nd|rd|th)?";
 const part = "(?:(?:the )?(?:end|start|beginning|middle) of |mid-?|early |late )";
 const period = `(?:${part}?(?:${month}|Q[1-4]),? |${part})\\d{4}`;
 const modelDeadline = new RegExp(`^By (?:\\d{4}-\\d{2}-\\d{2}|${day} ${month} \\d{4}|${month} ${day},? \\d{4}|${period}),\\s*`, "i");
+/**
+ * Prefixes a goal with the member-selected date, replacing any deadline phrase the
+ * model wrote. Returns undefined when the date is invalid or no wording remains.
+ */
+export function datedGoal(text: string, selected: string): string | undefined {
+  if (!date(selected)) return undefined;
+  const action = text.trim().replace(modelDeadline, "");
+  if (!action.trim()) return undefined;
+  const label = new Date(selected + "T12:00:00Z").toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  return 'By ' + label + ', ' + action;
+}
 export function validateCheckpoint(value: unknown, maxAnswers = 3, maxCharacters = 32000): CoachCheckpoint {
   const fail = (): never => {
     throw new AccessError(
@@ -208,13 +219,10 @@ export function validateSuggestion(
   const result = value as CoachSuggestion;
   // A review assesses supplied wording; it never rewrites it.
   if (redesigned && stage === "review") delete result.objective;
-  if (redesigned && context) {
-    if (result.goal && date(context.date)) {
-      const action = result.goal.replace(modelDeadline, "");
-      if (!action.trim()) return fail();
-      const label = new Date(context.date + "T12:00:00Z").toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
-      result.goal = `By ${label}, ${action}`;
-    }
+  if (redesigned && context && result.goal && date(context.date)) {
+    const dated = datedGoal(result.goal, context.date);
+    if (!dated) return fail();
+    result.goal = dated;
   }
   if (result.initiativeIds?.some((id) => !initiativeIds.includes(id)))
     return fail();

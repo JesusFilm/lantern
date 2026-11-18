@@ -62,7 +62,7 @@ coach must serve and the ways QA tries to break it.
 
 | Category | Member | Scenarios |
 | --- | --- | --- |
-| vague | A rough idea, then answers that range from useful to unsure | gospel video app, support FAQ, "not sure" tester |
+| vague | A rough idea, then answers that range from useful to unsure | gospel video app, support FAQ, goal evidence unknown, "not sure" tester |
 | rewording | Knows their work but not how to phrase an objective | subtitles for East African churches, Playwright growth, mentoring new engineers |
 | proficient | A well-formed objective that needs little or no help | existing captions objective, partner search, accessibility auditing growth |
 | adversarial | QA probing | off-topic fitness answers, embedded instructions, gibberish, holiday Spanish |

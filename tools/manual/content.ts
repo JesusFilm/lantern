@@ -273,6 +273,7 @@ export const chapters: Chapter[] = [
         tryIt: ["At SMART goals, select an idea or **Add SMART goal**.", "Pick or write an action and date, then **Next**.", "Edit the goal, **Add to objective**, then **Next** to the check."],
         check: [
           "Dates outside the focus period are rejected.",
+          "Answer \"not sure\" about evidence: you still get an editable goal.",
           "Check shows your objective and goals without changing wording.",
           "No goals warns but permits saving; failure keeps your writing.",
         ],

@@ -244,7 +244,8 @@ test('when the redesigned coach offers no goal ideas after asking twice, the jou
     await fixture(async input => {
       const checks = await runAcceptanceBrowser(input);
       assert.ok(checks.includes('coaching-enabled-journey'));
-      assert.equal(calls.filter(call => call.stage === 'actions').length, 2);
+      // Two browser requests; the server asks once more whenever ideas come back empty.
+      assert.equal(calls.filter(call => call.stage === 'actions').length, 4);
       assert.equal(calls.filter(call => call.stage === 'goal').length, 0);
     }, { coach });
   }, { noIdeas: true });

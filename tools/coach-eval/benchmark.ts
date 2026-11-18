@@ -69,6 +69,23 @@ export const benchmarkScenarios: BenchmarkScenario[] = [
     },
   },
   {
+    ...base, id: "bench-vague-goal-evidence", category: "vague", role: "Video editor",
+    summary: "A clear objective, but the member cannot say how a goal's success will be shown.",
+    work: "I edit our gospel films. I want to cut a short version of each new film for social media so young people who haven't heard the gospel actually watch it.",
+    member: { replies: [
+      // Evidence questions come first: they often mention the audience too.
+      { when: /evidence|measur|success|track|how will you (know|show|tell)|what will show|result|indicat|criteria/i, say: "I'm not sure how I'd show that yet." },
+      { when: who, say: "Young people on social media who haven't heard the gospel." },
+    ], otherwise: "I'm not sure." },
+    // The member types their own action with no evidence, as members often do.
+    typeChoice: "normal", goals: [{ action: "Cut short versions of new films for social media" }],
+    expect: { criteria: ["A goal is drafted from the member's action even though they cannot name evidence."] },
+    contract: {
+      includes: [{ label: "short social versions", pattern: /short|social|clip/i }],
+      goals: 1,
+    },
+  },
+  {
     ...base, id: "bench-vague-unsure", category: "vague", role: "QA engineer",
     summary: "One word and 'not sure' to everything.",
     work: "testing",
