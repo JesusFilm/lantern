@@ -174,3 +174,19 @@ test("a concern without a draft still lets the member edit their own words", asy
     await expect(page.getByText("Describe how this learning supports your work.", { exact: true })).toBeVisible();
   } finally { await f.close(); }
 });
+
+test("coach feedback is identifiable and the improvement button is separated from the objective", async () => {
+  const f = await world(() => ({ objective: "Help trainers run accessible workshops.", concern: "Check how the workshop helps participants.", initiativeIds: [] }));
+  try {
+    const { page } = f;
+    await page.evaluate("document.documentElement.setAttribute('data-theme', 'dark')");
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I help trainers make workshops accessible.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByRole("region", { name: "AI coach feedback" })).toContainText("Check how the workshop helps participants.");
+    const input = await page.getByLabel("Objective", { exact: true }).boundingBox();
+    const button = await page.getByRole("button", { name: "Improve objective with AI", exact: true }).boundingBox();
+    assert.ok(input && button && button.y - (input.y + input.height) >= 8, "Button needs visible spacing below the objective field");
+    await expect(page.getByText(/No SMART goals yet/)).toBeVisible();
+  } finally { await f.close(); }
+});

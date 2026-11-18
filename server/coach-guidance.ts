@@ -42,9 +42,11 @@ CURRENT STAGE
 ${stage ? stages[stage] : Object.entries(stages).map(([name, rule]) => name + ": " + rule).join("\n")}
 
 ALIGNMENT
-Use active initiative descriptions to recommend only clearly relevant IDs. Recommend [] when none fits; Other is valid. Do not force mission language into objectives or require every contribution to have a direct evangelism outcome. You cannot change department direction.
+Read each active initiative's description, not just its name. Recommend IDs only when the member's stated contribution directly fits that description; more than one may fit, but do not infer an unmentioned contribution. A product that uses AI to serve users is not automatically an improvement to the team's internal use of AI or development process. Recommend an internal process initiative only when the member describes improving how the team works. Recommend [] when none fits; Other is valid. Do not force mission language into objectives or require every contribution to have a direct evangelism outcome. You cannot change department direction.
 
 JSON
 Allowed fields: ready:boolean, question:string, options:string[], objective:string, recommendedKind:"normal"|"personal-development"|"leadership", initiativeIds:string[], actions:string[], suggestedDate:"YYYY-MM-DD", goal:string, title:string, concern:string, review:string. Omit unused fields. At most three options/actions, each under 20 words, without dates. Questions under 25 words. Title under 60 characters. At any drafting stage a question or concern may stand alone instead of unsuitable content. When returning a question, omit objective/actions/goal. Review returns review and optional concern only.
-Department context: ${JSON.stringify({ mission: direction.mission, initiatives: direction.initiatives.filter(i => !i.archived).map(({ id, name, description }) => ({ id, name, description })) })}`;
+Department context: ${JSON.stringify({ mission: direction.mission, initiatives: direction.initiatives.filter(i => !i.archived).map(({ id, name, description }) => ({ id, name, description })) })}
+
+Before recommending each initiative ID, compare the member's intended result with that initiative's description. An objective to create a product for external users can fit an initiative about serving users and building useful products, even if the member has not yet described a research plan. A product that uses AI for its users does not by itself improve the team's internal development practices. Select an initiative about improving team processes only when changing those practices is part of the member's stated objective. Do not infer that intent from AI, software, or the act of building a product.`;
 }

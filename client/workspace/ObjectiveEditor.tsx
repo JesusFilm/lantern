@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Sparkles } from "lucide-react";
 import { coachContextLimits, type CoachCheckpoint, type CoachSuggestion } from "../../shared/coach.js";
 import type { EditChange, ObjectiveEdit } from "./useDraftFocusWorkflow.js";
 import { objectiveTypes, ObjectiveType, ObjectiveTypeChoices } from "./ObjectiveType.js";
@@ -507,7 +508,7 @@ export function ObjectiveEditor({
           onChange={(e) => onChange({ type: "text", text: e.target.value })}
         />
       </div>
-      {redesigned && method === "guided" && stage === "objective" && <button type="button" disabled={busy || !edit.text.trim()} onClick={() => void guidedRequest("objective", { ...context(), entry: "objective" }, result => {
+      {redesigned && method === "guided" && stage === "objective" && <button type="button" className="objective-improve" disabled={busy || !edit.text.trim()} onClick={() => void guidedRequest("objective", { ...context(), entry: "objective" }, result => {
         if (result.objective) update({ type: "objective-values", values: { text: result.objective } });
         setRecommended(result.recommendedKind);
         setRecommendedInitiatives(result.initiativeIds ?? []);
@@ -830,7 +831,10 @@ export function ObjectiveEditor({
               </>
             )}
           </fieldset>
-          {redesigned && concern && method === "guided" && <p role="status">{concern}</p>}
+          {redesigned && concern && method === "guided" && <section className="coach-feedback" aria-label="AI coach feedback">
+            <h2><Sparkles aria-hidden="true" size={18} /> AI coach feedback</h2>
+            <p role="status">{concern}</p>
+          </section>}
           {redesigned && canSave && !edit.goals.some(g => g.trim()) && <p role="status">No SMART goals yet. You can save this draft and add goals later. Goals make the objective actionable.</p>}
           {error && <p role="alert">{error}</p>}
           <div className="authoring-actions">

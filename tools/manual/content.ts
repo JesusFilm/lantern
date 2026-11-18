@@ -255,7 +255,7 @@ export const chapters: Chapter[] = [
         check: [
           "Recommendations offer a switch; your type stays selected.",
           "Next requires an initiative or Other; choosing either clears the error.",
-          "Improve objective with AI uses the Guide; edit the draft as needed.",
+          "AI coach feedback appears in a labelled panel; edit the draft as needed.",
         ],
         shots: [
           { id: "guided-work", persona: "member", path: draft, act: guided, ready: (p) => p.getByLabel("Your work", { exact: true }), caption: "Your work" },

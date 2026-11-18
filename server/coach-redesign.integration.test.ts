@@ -99,3 +99,28 @@ test("Lantern owns provisional and selected dates even when the coach supplies d
     assert.equal(goal.goal, "By 30 November 2026, " + suppliedGoal);
   } finally { await f.close(); }
 });
+
+test("coaching receives current initiative descriptions from the member's department", async () => {
+  const prompts: string[] = [];
+  const coach: CoachProvider = { async suggest(system, _context, validate) { prompts.push(system); return validate({ objective: "Help viewers", initiativeIds: [] }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const before = await (await f.request("lead", "/api/department/direction")).json();
+    const update = await f.request("lead", "/api/department/direction", "PUT", { ...before, initiatives: [
+      { name: "Product", description: "Understand external viewer needs and improve products from their feedback.", archived: false },
+      { name: "Practice", description: "Improve how the internal team works with AI agents.", archived: false },
+      { name: "Old", description: "Archived description must stay out.", archived: true },
+    ] });
+    assert.equal(update.status, 200);
+    const first = await update.json();
+    assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: checkpoint })).status, 200);
+    assert.match(prompts[0]!, /Understand external viewer needs and improve products from their feedback/);
+    assert.match(prompts[0]!, /Improve how the internal team works with AI agents/);
+    assert.doesNotMatch(prompts[0]!, /Archived description must stay out/);
+    const changed = await f.request("lead", "/api/department/direction", "PUT", { ...first, initiatives: first.initiatives.map((i: { name: string }) => i.name === "Product" ? { ...i, description: "Listen to ministry partners." } : i) });
+    assert.equal(changed.status, 200);
+    assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: checkpoint })).status, 200);
+    assert.match(prompts[1]!, /Listen to ministry partners/);
+    assert.doesNotMatch(prompts[1]!, /Understand external viewer needs/);
+  } finally { await f.close(); }
+});
