@@ -3,12 +3,12 @@
 import pathlib
 import plistlib
 import json
-import re
 import shutil
 import subprocess
 import os
 
 root = pathlib.Path(__file__).resolve().parents[3]
+root_text = os.fsencode(root).decode('utf-8')
 node = shutil.which('node')
 if not node:
     raise SystemExit('Node.js must be installed first.')
@@ -22,41 +22,19 @@ entry = f'''
     what: Serve the local career lead ticket board on http://127.0.0.1:4393
     mechanism: launchd
     fires: "At login and on exit (label com.jaxs.career-lead-ticket-board, RunAtLoad + KeepAlive)"
-    owner: {json.dumps(str(root))}
+    owner: {json.dumps(root_text, ensure_ascii=False)}
     verify: "launchctl print gui/$(id -u)/com.jaxs.career-lead-ticket-board; curl -f http://127.0.0.1:4393/api/tickets"
     status: active
 '''
-if registry.is_file():
-    text = registry.read_text()
-    matches = list(re.finditer(r'(?m)^  - id: career-lead-ticket-board[ \t]*(?:\#.*)?(?:\n|$)', text))
-    if len(matches) > 1:
-        raise SystemExit('The schedules registry contains duplicate ticket-board entries.')
-    if not matches:
-        registry.write_text(text.rstrip() + '\n' + entry)
-    else:
-        match = matches[0]
-        following = re.search(r'(?m)^(?:  - |[^ \t\n#])', text[match.end():])
-        end = match.end() + following.start() if following else len(text)
-        block = text[match.end():end]
-        owners = list(re.finditer(r'(?m)^    owner:[^\n]*(?:\n|$)', block))
-        if len(owners) > 1:
-            raise SystemExit('The ticket-board registry entry contains duplicate owners.')
-        owner = '    owner: ' + json.dumps(str(root)) + '\n'
-        if owners:
-            found = owners[0]
-            if re.match(r'    owner:[ \t]*[|>]', found.group()):
-                raise SystemExit('The ticket-board registry owner must be a single-line value.')
-            block = block[:found.start()] + owner + block[found.end():]
-        else:
-            block = owner + block
-        separator = '' if match.group().endswith('\n') else '\n'
-        registry.write_text(text[:match.end()] + separator + block + text[end:])
+text = registry.read_text(encoding='utf-8')
+if '  - id: career-lead-ticket-board\n' not in text:
+    registry.write_text(text.rstrip() + '\n' + entry, encoding='utf-8')
 logs.mkdir(parents=True, exist_ok=True)
 plist.parent.mkdir(parents=True, exist_ok=True)
 config = {
     'Label': label,
-    'ProgramArguments': [node, '--import', 'tsx', str(root / 'tools/ticket-board/index.ts')],
-    'WorkingDirectory': str(root),
+    'ProgramArguments': [node, '--import', 'tsx', root_text + '/tools/ticket-board/index.ts'],
+    'WorkingDirectory': root_text,
     'RunAtLoad': True,
     'KeepAlive': True,
     'ThrottleInterval': 10,

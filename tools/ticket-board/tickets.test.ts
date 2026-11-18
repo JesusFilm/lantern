@@ -8,7 +8,7 @@ import { test } from 'node:test';
 import { createTicketBoardApp } from './app.js';
 import { parseTicket, loadTickets } from './tickets.js';
 
-test('macOS installer supports a different checkout and an optional schedules registry', () => {
+test('macOS installer records the current checkout in a new registry entry', () => {
   execFileSync('python3', ['-B', '-m', 'unittest', 'tools/ticket-board/macos/test_install.py'], { stdio: 'pipe' });
 });
 
