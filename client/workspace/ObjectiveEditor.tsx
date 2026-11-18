@@ -885,7 +885,7 @@ export function ObjectiveEditor({
               </> : <p role="status">The coach did not provide an assessment for this draft. You can continue or add context.</p>)}
             {concern && <p role="status">{stage === "objective" && assessmentStale ? "Earlier feedback: " : ""}{concern}</p>}
             {stage === "objective" && !checks && <button type="button" disabled={busy || !edit.text.trim()} onClick={() => void suggest("review", { ...context(), entry: "objective" })}>Check this objective</button>}
-            {stage === "objective" && (concern || !checks || Object.values(checks).some(check => check.status !== "met")) && (addressingConcern ? <div className="field">
+            {stage === "objective" && (concern || (checks && Object.values(checks).some(check => check.status !== "met"))) && (addressingConcern ? <div className="field">
               <label htmlFor="concern-details">Details for the coach</label>
               <small>Optional. The coach will use your answer to update the objective.</small>
               <textarea id="concern-details" maxLength={4000} value={concernDetails} onChange={e => setConcernDetails(e.target.value)} disabled={busy} />

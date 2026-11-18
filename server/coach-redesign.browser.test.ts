@@ -376,6 +376,7 @@ test("a missing assessment is not approval and can be checked without rewriting 
     const feedback = page.getByRole("region", { name: "AI coach feedback" });
     await expect(feedback).toContainText("did not provide an assessment");
     await expect(feedback).not.toContainText("The main elements are in place");
+    await expect(feedback.getByRole("button", { name: "Help me address this", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "Check this objective", exact: true }).click();
     await expect(feedback).toContainText("Connection to your work");
     await expect(feedback).toContainText("The main elements are in place");
