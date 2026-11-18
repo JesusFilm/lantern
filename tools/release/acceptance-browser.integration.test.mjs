@@ -130,7 +130,7 @@ test('deployed acceptance waits for delayed initiative choices before editing an
   }, { directionDelay: 750 });
 });
 
-async function withProvider(work, { primaryFails = false, bothFail = false, budgetProbe = false, clarificationQuestions = 1, noIdeas = false } = {}) {
+async function withProvider(work, { primaryFails = false, bothFail = false, budgetProbe = false, clarificationQuestions = 1, noIdeas = false, concernWithOutput = false } = {}) {
   const calls = [];
   const upstream = createServer(async (request, response) => {
     let raw = '';
@@ -141,7 +141,7 @@ async function withProvider(work, { primaryFails = false, bothFail = false, budg
     if (bothFail || (primaryFails && request.url === '/primary/v1/messages')) {
       response.writeHead(503).end('{}'); return;
     }
-    const value = noIdeas && stage === 'actions' ? { concern: 'Describe an action within your control.' }
+    const base = noIdeas && stage === 'actions' ? { concern: 'Describe an action within your control.' }
       : budgetProbe && stage === 'actions' && calls.filter(c => c.stage === 'actions').length === 1
       ? { concern: 'Choose an action within your control.' }
       : budgetProbe && stage === 'goal' ? { question: 'What evidence will you record?', ready: false }
@@ -157,6 +157,8 @@ async function withProvider(work, { primaryFails = false, bothFail = false, budg
               alignment: { status: 'met', note: 'The work supports the mission.' },
             } }
           : { goal: 'Review three failed builds by the selected date and record diagnostic steps.' };
+    // The coach often adds feedback alongside goal ideas or goal wording.
+    const value = concernWithOutput && (stage === 'actions' || stage === 'goal') ? { ...base, concern: 'Check that this is within your control.' } : base;
     response.setHeader('Content-Type', 'application/json');
     response.end(JSON.stringify(request.url.startsWith('/primary')
       ? { content: [{ type: 'text', text: JSON.stringify(value) }] }
@@ -246,4 +248,15 @@ test('when the redesigned coach offers no goal ideas after asking twice, the jou
       assert.equal(calls.filter(call => call.stage === 'goal').length, 0);
     }, { coach });
   }, { noIdeas: true });
+});
+
+test('goal ideas and goal wording shown with coach feedback are used as normal', { timeout: 120000 }, async () => {
+  await withProvider(async (coach, calls) => {
+    await fixture(async input => {
+      const checks = await runAcceptanceBrowser(input);
+      assert.ok(checks.includes('coaching-enabled-journey'));
+      assert.equal(calls.filter(call => call.stage === 'actions').length, 1);
+      assert.equal(calls.filter(call => call.stage === 'goal').length, 1);
+    }, { coach });
+  }, { concernWithOutput: true });
 });

@@ -120,14 +120,14 @@ export async function runCoachingJourney({ context, origin, runId, enabled, rede
       await modelTurn(next);
       await answerFollowups();
       const possibleGoals = page.getByRole("heading", { name: "Possible goals", exact: true });
-      await expect(possibleGoals.or(feedback)).toBeVisible();
+      await expect(possibleGoals.or(feedback).first()).toBeVisible();
       if (await possibleGoals.isVisible()) await addGoal.click();
       else {
         // Without ideas, Add SMART goal asks the coach once more.
         await modelTurn(addGoal);
         await answerFollowups();
         const targetField = page.getByLabel("Target date", { exact: true });
-        await expect(targetField.or(feedback)).toBeVisible();
+        await expect(targetField.or(feedback).first()).toBeVisible();
         if (!(await targetField.isVisible())) {
           ideas = false;
           goal = await writeGoalMyself("goal ideas", false);
@@ -149,7 +149,7 @@ export async function runCoachingJourney({ context, origin, runId, enabled, rede
       await modelTurn(page.getByRole("button", { name: "Next", exact: true }));
       if (redesigned) await answerFollowups();
       const goalField = page.getByLabel("SMART goal", { exact: true });
-      if (redesigned) await expect(goalField.or(feedback)).toBeVisible();
+      if (redesigned) await expect(goalField.or(feedback).first()).toBeVisible();
       if (redesigned && !(await goalField.isVisible())) {
         // Write myself keeps the planned action and date as an editable goal.
         goal = await writeGoalMyself("goal wording", true);
