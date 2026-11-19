@@ -193,6 +193,51 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
         END $guard$;
         INSERT INTO schema_migrations(version) VALUES(12);`);
     }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=13')).rowCount) {
+      await client.query(`
+        CREATE TABLE weekly_plans (
+          user_id uuid NOT NULL REFERENCES users(id), department_id uuid NOT NULL REFERENCES departments(id),
+          week_start date NOT NULL CHECK(extract(isodow FROM week_start)=1),
+          version integer NOT NULL CHECK(version>0), goals jsonb NOT NULL CHECK(jsonb_typeof(goals)='array'),
+          created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(user_id,department_id,week_start,version)
+        );
+        CREATE TABLE daily_updates (
+          id uuid PRIMARY KEY, user_id uuid NOT NULL, department_id uuid NOT NULL, week_start date NOT NULL,
+          plan_version integer NOT NULL, update_date date NOT NULL CHECK(update_date>=week_start AND update_date<week_start+7),
+          body text NOT NULL CHECK(length(body) BETWEEN 1 AND 4000), created_at timestamptz NOT NULL DEFAULT now(),
+          FOREIGN KEY(user_id,department_id,week_start,plan_version) REFERENCES weekly_plans(user_id,department_id,week_start,version)
+        );
+        CREATE INDEX daily_update_owner_week ON daily_updates(user_id,department_id,week_start);
+        INSERT INTO schema_migrations(version) VALUES(13);
+      `);
+    }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=14')).rowCount) {
+      await client.query(`ALTER TABLE users ADD COLUMN github_username text
+        CHECK (github_username IS NULL OR github_username ~ '^[a-zA-Z0-9]([a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$');
+        INSERT INTO schema_migrations(version) VALUES(14);`);
+    }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=15')).rowCount) {
+      await client.query(`ALTER TABLE daily_updates ADD COLUMN goal_statuses jsonb NOT NULL DEFAULT '[]'
+        CHECK (jsonb_typeof(goal_statuses)='array');
+        INSERT INTO schema_migrations(version) VALUES(15);`);
+    }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=16')).rowCount) {
+      await client.query(`ALTER TABLE daily_updates DROP CONSTRAINT daily_updates_body_check;
+        ALTER TABLE daily_updates ADD CONSTRAINT daily_updates_body_check CHECK(length(body) BETWEEN 0 AND 4000);
+        INSERT INTO schema_migrations(version) VALUES(16);`);
+    }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=17')).rowCount) {
+      await client.query(`CREATE TABLE team_api_tokens (
+        id uuid PRIMARY KEY, user_id uuid NOT NULL REFERENCES users(id),
+        department_id uuid NOT NULL REFERENCES departments(id),
+        name text NOT NULL CHECK(length(name) BETWEEN 1 AND 80),
+        token_hash text UNIQUE NOT NULL CHECK(token_hash ~ '^[0-9a-f]{64}$'),
+        created_at timestamptz NOT NULL DEFAULT now(), expires_at timestamptz NOT NULL,
+        revoked_at timestamptz
+      );
+      CREATE INDEX team_api_token_owner ON team_api_tokens(user_id,department_id);
+      INSERT INTO schema_migrations(version) VALUES(17);`);
+    }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
@@ -202,8 +247,8 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10,11,12)');
-  if (result.rowCount !== 12) throw new Error('Required migration is missing.');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17)');
+  if (result.rowCount !== 17) throw new Error('Required migration is missing.');
   const reviewGuard = await database.query(`SELECT 1 FROM pg_trigger WHERE tgrelid='position_focuses'::regclass
     AND tgname='guard_focus_review' AND tgenabled='O' AND tgfoid='guard_focus_review()'::regprocedure`);
   if (!reviewGuard.rowCount) throw new Error('Focus review guard is missing.');
@@ -211,6 +256,9 @@ export async function assertSchemaReady(database: Pool | PoolClient) {
     AND tgname='guard_membership_identity' AND tgenabled='O' AND tgfoid='guard_membership_identity()'::regprocedure`);
   if (!identityGuard.rowCount) throw new Error('Membership identity guard is missing.');
   await database.query('SELECT subject,email,verified_at FROM auth_identity_candidates LIMIT 0');
+  await database.query('SELECT token_hash,revoked_at,expires_at FROM team_api_tokens LIMIT 0');
+  await database.query('SELECT github_username FROM users LIMIT 0');
+  await database.query('SELECT p.goals,u.body,u.goal_statuses FROM weekly_plans p,daily_updates u LIMIT 0');
   await database.query('SELECT department_id,mission,mission_image,initiatives,version FROM department_direction LIMIT 0');
   await database.query('SELECT c.document,r.version,n.body,x.user_id FROM coach_checkpoints c,focus_review_requests r,focus_review_notes n,focus_note_reads x LIMIT 0');
   await database.query('SELECT focus_id,section_index,goal_index,author_id,body,created_at,ordinal FROM focus_progress_notes LIMIT 0');

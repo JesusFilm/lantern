@@ -64,7 +64,7 @@ test('upgrading the hosted baseline preserves existing accounts and requires the
     await db.query('DELETE FROM schema_migrations WHERE version IN (2,3,5,6)');
     await db.query('ALTER TABLE users ADD COLUMN hosted_domain text NOT NULL; CREATE TABLE allowed_domains(domain text PRIMARY KEY); DROP FUNCTION enroll_member(uuid,text)');
     const userId = randomUUID();
-    await db.query("INSERT INTO users VALUES($1,'legacy-sub','legacy@example.test','Legacy person','example.test')", [userId]);
+    await db.query("INSERT INTO users(id,google_sub,email,name,hosted_domain) VALUES($1,'legacy-sub','legacy@example.test','Legacy person','example.test')", [userId]);
     await assert.rejects(assertSchemaReady(db));
     await Promise.all([migrate(db), migrate(db)]);
     await assertSchemaReady(db);

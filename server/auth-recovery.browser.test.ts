@@ -49,7 +49,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
         await expect(page.getByRole('alert')).toContainText('Sign-in could not be completed');
         await expect(page).toHaveURL(origin + '/?signInError=1');
         await expect(page.getByRole('heading', { name: 'Welcome to Lantern' })).toBeVisible();
-        await expect(page.locator('nav').getByRole('button', { name: 'Account', exact: true, includeHidden: true })).toHaveCount(0);
+        await expect(page.locator('nav').getByRole('link', { name: 'Account', exact: true, includeHidden: true })).toHaveCount(0);
         await expect(page.locator('nav [aria-current="page"]')).toHaveCount(0);
         for (const path of ['/api/focuses', '/api/department', '/api/guide', '/api/department/registered-users']) {
           assert.equal((await context.request.get(origin + path)).status(), 401, `${path} remains protected when signed out`);
@@ -92,7 +92,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       assert.equal((await context.request.get(`${origin}/api/department/members/${f.ids.outsider}/focuses`)).status(), 404);
       const oldSession = (await context.cookies()).find(cookie => cookie.name === 'lantern-session')!;
       const signOut = async () => {
-        await page.getByRole('button', { name: 'Account', exact: true }).click();
+        await page.getByRole('link', { name: 'Account', exact: true }).click();
         await page.getByRole('button', { name: 'Sign out', exact: true }).click();
         await expect(page.getByRole('heading', { name: 'Fixture JFP sign-in' })).toBeVisible();
       };

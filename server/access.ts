@@ -9,6 +9,13 @@ import type { Pool } from 'pg';
 import type { IdentityProvider } from './identity.js';
 import { focusRoutes } from './focus-http.js';
 import { directionRoutes } from './direction-http.js';
+import { githubRoutes } from './github-http.js';
+import type { GitHubConnection } from './github.js';
+import { githubAvatarRoutes } from './github-avatar-http.js';
+import type { AvatarOptions } from './github-avatars.js';
+import { teamAPIRoutes } from './team-api-http.js';
+import { teamWeeklyRoutes } from './team-weekly-http.js';
+import { weeklyRoutes } from './weekly-http.js';
 import { guideContent } from './guide-content.js';
 import { AccessError, addMember, membership } from './membership.js';
 import type { RegisteredUser } from '../shared/access.js';
@@ -20,7 +27,7 @@ const random = () => randomBytes(32).toString('base64url');
 function cookie(request: Request, name: string) {
   return request.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1);
 }
-export interface AccessConfig { origin: string; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean; coach?: CoachProvider; features?: FeatureConfig; flagOwnerEmail?: string }
+export interface AccessConfig { origin: string; githubAvatars?: AvatarOptions; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean; coach?: CoachProvider; features?: FeatureConfig; flagOwnerEmail?: string; github?: { ownerId: string; source: GitHubConnection } }
 export function accessRoutes(db: Pool, config: AccessConfig) {
   const router = Router();
   // Without explicit settings every registered feature is hidden, as production starts.
@@ -31,6 +38,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
   const options = { httpOnly: true, secure, sameSite: 'lax' as const, path: '/' };
   router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   router.use((req, _res, next) => {
+    if (req.headers.authorization && !req.path.startsWith("/api/v1/")) return next(new AccessError(401, "Bearer tokens are accepted only by the read-only team API."));
     if (req.method !== 'GET' && req.headers.origin !== config.origin) return next(new AccessError(403, 'Request origin is not allowed.'));
     next();
   });
@@ -103,6 +111,11 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
   router.use(coachRoutes(db, requireUser, config.coach, (user) => featureEnabled(features, 'coach', user.email), (user) => featureEnabled(features, 'coach-redesign', user.email)));
   router.use(focusRoutes(db, requireUser, features));
   router.use(directionRoutes(db, requireUser));
+  router.use(weeklyRoutes(db, requireUser, features));
+  router.use(teamWeeklyRoutes(db, requireUser, features));
+  router.use(teamAPIRoutes(db, requireUser, features, config.githubAvatars, config.localUserId));
+  router.use(githubAvatarRoutes(db, requireUser, features, config.githubAvatars));
+  router.use(githubRoutes(db, requireUser, features, config.origin, config.github));
   router.patch('/api/account', async (req, res) => {
     const user = await requireUser(req);
     if (!req.body || Object.keys(req.body).some(k => k !== 'name') || typeof req.body.name !== 'string' || !req.body.name.trim() || req.body.name.trim().length > 100) throw new AccessError(400, 'Enter a display name of 1–100 characters.');

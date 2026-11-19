@@ -535,18 +535,16 @@ export async function runAcceptanceBrowser(
 
     checkpoint = "account-and-guide";
     await memberPage
-      .getByRole("button", { name: "Account", exact: true })
-      .click();
-    await memberPage
-      .getByRole("button", { name: "Edit name", exact: true })
+      .getByRole("link", { name: "Account", exact: true })
       .click();
     const name = `Synthetic member ${runId}`;
     await memberPage.getByLabel("Display name", { exact: true }).fill(name);
-    await saveDialog(memberPage);
+    await memberPage.getByLabel("Display name", { exact: true }).press("Enter");
+    await expect(memberPage.locator(".aside-foot")).toContainText(name);
     await memberPage.reload();
-    await expect(memberPage.getByRole("main").getByText(name, { exact: true })).toBeVisible();
+    await expect(memberPage.getByLabel("Display name", { exact: true })).toHaveValue(name);
     await memberPage
-      .getByRole("button", { name: "Guide", exact: true })
+      .getByRole("link", { name: "Guide", exact: true })
       .click();
     await expect(
       memberPage.getByRole("heading", {

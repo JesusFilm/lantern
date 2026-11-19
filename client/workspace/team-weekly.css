@@ -1,0 +1,27 @@
+.my-team { max-width: 1120px; }
+.team-heading-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+.team-members { display: flex; flex-direction: column; gap: 32px; }
+.team-member { min-width: 0; }
+.team-member-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 10px; margin: 0 0 8px; padding: 0 4px; }
+.team-member-heading > div { flex: 1; min-width: 0; }
+.team-member-heading h2 { margin: 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.team-avatar { display: inline-flex; justify-content: center; align-items: center; flex: 0 0 36px; height: 36px; border-radius: 50%; background: var(--surface-subtle); color: var(--accent); font-size: 12px; font-weight: 600; }
+.team-github { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; color: var(--muted); font-size: 12px; text-decoration: none; }
+.team-no-update { flex-basis: 100%; margin-left: 46px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.team-member .week-day-content { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: start; gap: 20px; min-width: 0; }
+.team-member .team-goals { min-width: 0; margin: 0; }
+.team-goals > li { display: block; padding: 12px 0; }
+.team-goals > li:first-child { padding-top: 0; }
+.team-goal-main { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.team-work-links { display: flex; flex-wrap: nowrap; gap: 12px; margin-top: 7px; min-width: 0; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.team-work-links a, .team-work-links > span { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; min-width: 0; color: var(--muted); font-size: 11px; text-decoration: none; white-space: nowrap; }
+.team-work-links a:hover, .team-github:hover { color: var(--accent); text-decoration: underline; }
+.team-work-links svg { flex-shrink: 0; }
+.team-update-body { min-width: 0; height: 100%; margin: 0; padding-left: 20px; border-left: 1px solid var(--border); font-size: 14px; }
+.team-empty { margin: 0; color: var(--muted); font-size: 14px; }
+@media (max-width: 800px) { .team-member .week-day-content { grid-template-columns: minmax(0,1fr); gap: 16px; } .team-update-body { height: auto; padding: 16px 0 0; border-left: 0; border-top: 1px solid var(--border); } }
+@media (max-width: 400px) { .team-member .week-day-content { padding: 12px; } .team-goal-main { gap: 8px; } .team-no-update { white-space: normal; text-align: right; } }
+
+.team-work-links::-webkit-scrollbar { display: none; }
+
+.team-avatar img { display: block; width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }

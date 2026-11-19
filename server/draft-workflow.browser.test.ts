@@ -610,7 +610,7 @@ test(
           try {
             await page.goto(origin + "/?page=guide");
             await page
-              .getByRole("button", { name: "Position focuses", exact: true })
+              .getByRole("link", { name: "Position focuses", exact: true })
               .click();
             await page
               .getByRole("button", { name: source.title, exact: true })

@@ -647,6 +647,22 @@ nav button {
   font-size: 17px;
   overflow-wrap: anywhere;
 }
+.profile-card .profile-inline-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 0 3px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  box-shadow: none;
+}
+.profile-card .profile-inline-input:hover { border: 0; }
+.profile-card .profile-inline-input:focus { outline: none; border: 0; box-shadow: none; }
+.profile-card .profile-inline-error { margin: 6px 0 0; font-size: 13px; }
 .profile-note {
   font-size: 13px;
 }
@@ -2052,9 +2068,7 @@ dialog .initiative-description-field textarea {
 .members th:first-child { width: 30%; }
 .members th:nth-child(2) { width: 50%; }
 .members .link { text-align: left; }
-.appearance-card { margin-top: 24px; padding: var(--panel-padding); }
-.appearance-options { border: 0; padding: 0; margin: 20px 0 0; display: flex; gap: 16px; flex-wrap: wrap; }
-.appearance-options legend { font-weight: 600; margin-bottom: 8px; }
+.appearance-options { border: 0; padding: 0; margin: 0; display: flex; gap: 16px; flex-wrap: wrap; }
 .appearance-options label { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
 .appearance-options input { width: auto; accent-color: #007e95; }
 @media (max-width: 600px) { .members th, .members td { padding: 10px 6px; font-size: 13px; } }

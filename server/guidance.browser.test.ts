@@ -134,7 +134,7 @@ test(
             page.getByRole("heading", { name: "Your first position focus" }),
           ).toBeVisible();
           await page
-            .getByRole("button", { name: "Guide", exact: true })
+            .getByRole("link", { name: "Guide", exact: true })
             .click();
           await expect(
             page.getByRole("heading", {

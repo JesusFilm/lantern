@@ -26,6 +26,9 @@ The team boundary within which membership and position focuses belong. An accoun
 A person or group whose needs a member's contribution serves, including colleagues within the team.
 _Avoid_: User when it could be confused with an application account.
 
+**Team API token**:
+A named, expiring and revocable bearer credential for reading one department’s team updates and cached profile pictures. It belongs to its creator and original department, depends on active approved membership, and grants no editing or account-management authority.
+
 ## Position focuses
 
 **Position focus**:
@@ -82,6 +85,17 @@ A specific, measurable, achievable, relevant and time-bound goal supporting an o
 
 **Contribution**:
 Work towards useful outcomes, including product work, shared capabilities and activities supporting team connection.
+
+## Weekly planning
+
+**Weekly goal**:
+A member's short-term aim for a Monday–Sunday week. Weekly goals are separate from the SMART goals in a position focus. Saving a changed weekly plan retains its earlier versions. A weekly goal keeps its identity when edited and can carry optional links to a position focus or external work.
+
+**Linked work**:
+Optional context attached to a weekly goal: a saved position focus, project, repository, issue or other named web link. Saving a link does not change completion state or grant access to its target.
+
+**Daily update**:
+A dated record of progress, changed expectations or requests for help within a planned week. It refers to the plan version current when saved. Corrections retain internal revisions, while the UI shows one latest update per date. The author edits their own week; the flagged My team view lets active department members read their active teammates’ dated snapshots.
 
 ## Guidance and context
 

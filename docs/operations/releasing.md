@@ -73,3 +73,18 @@ before production release. Readiness and fixture sessions cannot prove it.
 Remove retired Google client settings with the environment owner after the
 cutover. Do not roll back the provider or remove schema 11's protection without
 an explicit compatible recovery plan. See [ADR 0019](../adrs/0019-sign-in-collision-recovery.md).
+
+## Weekly reporting and team API
+
+Schemas 13–17 add weekly plans, daily updates, an optional GitHub username,
+goal statuses, status-only updates and hashed read-only team API credentials.
+These migrations are additive for the schema-12 application still serving.
+Runtime may append weekly history and revoke its own tokens through the scoped
+HTTP API; it cannot rewrite saved history or token scope. Apply through the
+manual schema-release process, retain these migrations on rollback, and verify
+health advertises schema 17.
+
+Keep `weekly-updates`, `team-updates` and `team-api` hidden until the owner
+releases them. The separate TV controller holds its department-scoped token
+privately and proxies updates and images; production does not permit local
+identity access. See [Team API](../development/team-api.md).
