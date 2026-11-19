@@ -134,3 +134,12 @@ test("runs the harness could not record count as failures, so a partial sample c
   assert.equal(applyGate(oneMissing).passed, false);
   assert.deepEqual(failedGate(oneMissing), ["every scenario ran"]);
 });
+
+test("the goal-evidence scenario checks the drafted goal keeps the member's action and adds no agreement", () => {
+  const evidence = benchmarkScenarios.find(s => s.id === "bench-vague-goal-evidence")!;
+  const objective = "Cut short versions of new gospel films for social media so young people who haven't heard the gospel watch them.";
+  const score = (goal: string) => evaluate({ ...run({ objective }, [goal]), scenario: evidence.id }, evidence).assertions.filter(a => !a.passed).map(a => a.name);
+  assert.deepEqual(score("By 30 April 2027, Cut short versions of new films for social media"), []);
+  assert.ok(score("By 30 April 2027, Cut short versions and share them with the career lead for feedback").includes("no invented reviewer or agreement"));
+  assert.ok(score("By 30 April 2027, Publish a newsletter").includes("goal includes the member's action"));
+});

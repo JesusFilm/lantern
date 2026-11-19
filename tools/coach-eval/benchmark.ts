@@ -21,6 +21,8 @@ export interface Contract {
   maxQuestions?: number;
   /** The visible objective must contain each pattern, usually facts from the member's answers. */
   includes?: Array<{ label: string; pattern: RegExp }>;
+  /** Every goal must contain each pattern, usually words from the member's chosen action. */
+  goalIncludes?: Array<{ label: string; pattern: RegExp }>;
   /** Coach-written objective wording and goals must not contain these. The member's own words shown back are exempt. */
   excludes?: Array<{ label: string; pattern: RegExp }>;
   checks?: Partial<Record<CheckName, "met" | "not met">>;
@@ -82,6 +84,8 @@ export const benchmarkScenarios: BenchmarkScenario[] = [
     expect: { criteria: ["A goal is drafted from the member's action even though they cannot name evidence."] },
     contract: {
       includes: [{ label: "short social versions", pattern: /short|social|clip/i }],
+      goalIncludes: [{ label: "the member's action", pattern: /\b(cut|short|social)/i }],
+      excludes: [{ label: "invented reviewer or agreement", pattern: /career lead|manager|supervisor|approv|sign[- ]off|stakeholder/i }],
       goals: 1,
     },
   },
@@ -283,6 +287,8 @@ export function evaluate(transcript: Transcript, scenario: BenchmarkScenario): {
   const ownWording = [scenario.work, scenario.existing?.objective].some((text) => text?.trim() === objective.trim());
   for (const { label, pattern } of contract.excludes ?? [])
     add(`no ${label}`, ![ownWording ? "" : objective, ...goals].some((text) => pattern.test(text)), objective);
+  for (const { label, pattern } of contract.goalIncludes ?? [])
+    add(`goal includes ${label}`, goals.length > 0 && goals.every((goal) => pattern.test(goal)), goals.join(" | "));
   for (const [name, expected] of Object.entries(contract.checks ?? {}) as Array<[CheckName, "met" | "not met"]>) {
     const status = checks?.[name]?.status;
     add(`${name} check ${expected}`, !!status && (status === "met") === (expected === "met"), status ?? "missing");

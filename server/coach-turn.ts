@@ -20,6 +20,8 @@ export function providerAsk(provider: CoachProvider, direction: DepartmentDirect
 const allMet = (suggestion: CoachSuggestion) =>
   !!suggestion.assessment && Object.values(suggestion.assessment).every(check => check.status === "met");
 const joined = (...parts: Array<string | undefined>) => parts.filter(Boolean).join(" ") || undefined;
+/** Beyond this, a first reply probably waited on a provider timeout, so no optional call follows. */
+const retryWithinMs = 20000;
 
 /**
  * One member-facing coaching turn. In redesigned drafting the coach asks at most once
@@ -34,8 +36,11 @@ export async function coachTurn(input: {
   context: CoachCheckpoint;
   enhanced: boolean;
   signal?: AbortSignal;
+  /** Clock for the latency guard; injected by tests. */
+  now?: () => number;
 }): Promise<CoachSuggestion> {
-  const { ask, direction, stage, context, enhanced, signal } = input;
+  const { ask, direction, stage, context, enhanced, signal, now = Date.now } = input;
+  const started = now();
   let suggestion = await ask(stage, context, signal);
   if (!enhanced) return suggestion;
   const optional = async (next: CoachStage, nextContext: CoachCheckpoint, tries = 1) => {
@@ -53,8 +58,9 @@ export async function coachTurn(input: {
     const asFeedback = (reply: CoachSuggestion) =>
       ({ ...reply, question: undefined, options: undefined, concern: joined(reply.concern, reply.question) });
     if (context.answer?.trim() && suggestion.question) suggestion = asFeedback(suggestion);
-    if (stage === "actions" && !suggestion.question && !suggestion.actions?.length) {
-      // Feedback alone leaves the member nothing to choose: ask once more without the earlier question.
+    if (stage === "actions" && !suggestion.question && !suggestion.actions?.length && now() - started < retryWithinMs) {
+      // Feedback alone leaves the member nothing to choose: ask once more without the earlier question,
+      // unless the first reply was already slow enough to risk a long wait.
       const retry = await optional("actions", { ...context, question: "", answer: "" });
       if (retry?.actions?.length) suggestion = { ...asFeedback(retry), concern: joined(suggestion.concern, retry.concern, retry.question) };
     }
