@@ -104,7 +104,7 @@ test(
         memberPage.getByRole("button", { name: "Sign out", exact: true }),
       ).toHaveCount(0);
       await memberPage
-        .getByRole("button", { name: "Account", exact: true })
+        .getByRole("link", { name: "Account", exact: true })
         .click();
       await expect(
         memberPage.getByRole("button", { name: "Sign out", exact: true }),

@@ -182,7 +182,7 @@ test(
               .getByText(mission, { exact: true }),
           ).toBeVisible();
           await expect(
-            memberPage.getByRole("button", { name: "Department", exact: true }),
+            memberPage.getByRole("link", { name: "Department", exact: true }),
           ).toHaveCount(0);
         },
       );
@@ -588,7 +588,7 @@ test(
             .getByRole("button", { name: "Cancel", exact: true })
             .click();
           await memberPage
-            .getByRole("button", { name: "Guide", exact: true })
+            .getByRole("link", { name: "Guide", exact: true })
             .click();
           await memberPage
             .getByRole("button", { name: "Strategic initiatives", exact: true })
@@ -660,7 +660,7 @@ test(
           );
           await memberPage.setViewportSize({ width: 1280, height: 900 });
           await memberPage
-            .getByRole("button", { name: "Position focuses", exact: true })
+            .getByRole("link", { name: "Position focuses", exact: true })
             .click();
         },
       );

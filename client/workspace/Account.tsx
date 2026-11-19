@@ -1,20 +1,24 @@
 import type { Appearance } from "./appearance.js";
-import { useState } from "react";
 import type { SessionView } from "../../shared/access.js";
-import { Dialog } from "./Dialog.js";
 import { api } from "./api.js";
+import { TeamAPIAccess } from "./TeamAPIAccess.js";
+import { GitHubProfile } from './GitHubProfile.js';
+import { InlineProfileField } from './InlineProfileField.js';
 export function Account({
   user,
   onChange,
   appearance,
   onAppearanceChange,
+  githubEnabled = false,
+  teamAPIEnabled = false,
 }: {
   appearance: Appearance;
   onAppearanceChange: (appearance: Appearance) => void;
   user: NonNullable<SessionView["user"]>;
   onChange: (user: NonNullable<SessionView["user"]>) => void;
+  githubEnabled?: boolean;
+  teamAPIEnabled?: boolean;
 }) {
-  const [editing, setEditing] = useState(false);
   return (
     <>
       <header>
@@ -23,58 +27,37 @@ export function Account({
           <p className="muted">Your profile information.</p>
         </div>
       </header>
-      <section className="read-section profile-card">
-        <div className="row">
-          <h2>Profile</h2>
-          <button className="link edit-action" onClick={() => setEditing(true)}>
-            Edit name
-          </button>
-        </div>
+      <section className="read-section profile-card" aria-label="Account settings">
         <dl>
           <div>
             <dt>Display name</dt>
-            <dd>{user.name}</dd>
+            <dd><InlineProfileField value={user.name} label="Display name" maxLength={100} onSave={async value => {
+              const name = value.trim();
+              if (!name) throw new Error('Enter a display name.');
+              const saved = await api<NonNullable<SessionView['user']>>('/api/account', 'PATCH', { name });
+              onChange(saved);
+              return saved.name;
+            }} /></dd>
           </div>
           <div>
             <dt>Email</dt>
             <dd>{user.email}</dd>
           </div>
-        </dl>
-      </section>
-      <section className="read-section appearance-card">
-        <h2>Appearance</h2>
-        <p className="muted">Choose how Lantern looks on this browser.</p>
-        <fieldset className="appearance-options">
-          <legend>Style mode</legend>
+          {githubEnabled && <GitHubProfile />}
+          <div>
+            <dt>Appearance</dt>
+            <dd><fieldset className="appearance-options" aria-label="Appearance">
           {(["light", "dark", "system"] as const).map((option) => (
             <label key={option}>
               <input type="radio" name="appearance" value={option} checked={appearance === option} onChange={() => onAppearanceChange(option)} />
               {option[0]!.toUpperCase() + option.slice(1)}
             </label>
           ))}
-        </fieldset>
+            </fieldset></dd>
+          </div>
+        </dl>
       </section>
-      {editing && (
-        <Dialog
-          title="Edit display name"
-          onClose={() => setEditing(false)}
-          onSave={async (data) => {
-            const name = String(data.get("name")).trim();
-            if (!name) throw new Error("Enter a display name.");
-            onChange(await api("/api/account", "PATCH", { name }));
-            setEditing(false);
-          }}
-        >
-          <label htmlFor="profile-name">Display name</label>
-          <input
-            id="profile-name"
-            name="name"
-            required
-            maxLength={100}
-            defaultValue={user.name}
-          />
-        </Dialog>
-      )}
+      {teamAPIEnabled && <TeamAPIAccess />}
     </>
   );
 }

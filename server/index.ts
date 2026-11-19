@@ -1,3 +1,6 @@
+import { localGitHubApp } from './github.js';
+import { createHash } from 'node:crypto';
+import { homedir } from 'node:os';
 import {createCoachProvider} from './coach-provider.js';
 import { localAccount } from './local-access.js';
 import { seedLocalInitiatives } from './local-initiatives.js';
@@ -31,7 +34,8 @@ try {
 catch (error) { await database.end(); throw error; }
 let revision: string | undefined;
 try { revision = JSON.parse(readFileSync('release.json', 'utf8')).sha; } catch { /* Local builds need no release stamp. */ }
-const app = createApp(database, { coach:coach ? createCoachProvider(coach):undefined, features, flagOwnerEmail, origin, hostingOnly, localUserId, provider: clientId ? jesusFilmProvider(clientId, origin) : undefined }, hosted ? { revision, deployment: process.env.RAILWAY_DEPLOYMENT_ID } : undefined);
+const github = localUserId ? { ownerId: localUserId, source: localGitHubApp(localUserId, origin, resolve(homedir(), '.local/state/lantern', 'github-' + createHash('sha256').update(process.cwd()).digest('hex').slice(0, 16) + '.json')) } : undefined;
+const app = createApp(database, { github, flagOwnerEmail, coach:coach ? createCoachProvider(coach):undefined, features, origin, hostingOnly, localUserId, provider: clientId ? jesusFilmProvider(clientId, origin) : undefined }, hosted ? { revision, deployment: process.env.RAILWAY_DEPLOYMENT_ID } : undefined);
 const server = createServer(app);
 const production = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 let closeFrontend: (() => Promise<void>) | undefined;
