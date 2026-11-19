@@ -49,7 +49,7 @@ Changing a stage or production variable redeploys the webapp with a new deployme
 
 ## Release a flagged feature
 
-QA passing flagged work is the signal to release it: an issue labelled `feature-flag` that reaches `qa: passed`. A reminder is then posted once in the `#lantern-qa` Slack channel, addressed to the owner, naming the flag and linking the issue and its pull requests. Closing the issue does not mark the flag released, because engineering closes issues after a QA pass while the flag may still be hidden.
+QA passing flagged work is the signal to release it: an issue labelled `feature-flag` that reaches `qa: passed`. A reminder is then posted once per flag in the `#lantern-qa` Slack channel, addressed to the owner, naming the flag and linking its QA-passed issues and their pull requests, and the owner gets a Slackbot notification. Closing the issue does not mark the flag released, because engineering closes issues after a QA pass while the flag may still be hidden.
 
 The repository owner releases the feature in Railway. Each variable change redeploys the webapp.
 
