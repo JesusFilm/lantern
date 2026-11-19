@@ -1,7 +1,7 @@
 {
-  "commit": "01e24e8",
+  "commit": "f35d66c",
   "target": "qwen",
-  "createdAt": "2026-11-19T01:43:32.629Z",
+  "createdAt": "2026-11-19T03:00:26.852Z",
   "scenarios": [
     {
       "id": "bench-vague-gospel-video",
@@ -9,15 +9,19 @@
       "runs": 6,
       "passes": 4,
       "failures": {
-        "objective includes audience from the member's answer": 2
+        "feedback names no new people": 1,
+        "objective includes audience from the member's answer": 1
       }
     },
     {
       "id": "bench-vague-support-faq",
       "category": "vague",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 4,
+      "failures": {
+        "verdict ready": 1,
+        "objective includes FAQ": 1
+      }
     },
     {
       "id": "bench-vague-goal-evidence",
@@ -30,8 +34,12 @@
       "id": "bench-vague-unsure",
       "category": "vague",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 5,
+      "failures": {
+        "checks shown": 1,
+        "people check not met": 1,
+        "verdict not ready": 1
+      }
     },
     {
       "id": "bench-rewording-subtitles",
@@ -65,10 +73,8 @@
       "id": "bench-proficient-partner-search",
       "category": "proficient",
       "runs": 6,
-      "passes": 4,
-      "failures": {
-        "objective includes search": 2
-      }
+      "passes": 6,
+      "failures": {}
     },
     {
       "id": "bench-proficient-accessibility-growth",
@@ -95,12 +101,8 @@
       "id": "bench-qa-gibberish",
       "category": "adversarial",
       "runs": 6,
-      "passes": 5,
-      "failures": {
-        "checks shown": 1,
-        "people check not met": 1,
-        "verdict not ready": 1
-      }
+      "passes": 6,
+      "failures": {}
     },
     {
       "id": "bench-qa-holiday-spanish",
