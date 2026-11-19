@@ -84,8 +84,8 @@ follow-up separately when needed. A merged fix or green automated checks alone
 do not replace manual QA sign-off for an issue awaiting QA.
 
 Closing an issue labelled `feature-flag` does not release its flag. Keep the
-label: the owner's release reminder continues until the issue is labelled
-`flag: released` (see [Release a flagged feature](feature-flags.md#release-a-flagged-feature)).
+label: the owner's release reminder relies on it, and the owner adds
+`flag: released` once the flag is on in production (see [Release a flagged feature](feature-flags.md#release-a-flagged-feature)).
 
 ## New features
 
