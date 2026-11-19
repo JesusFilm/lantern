@@ -135,13 +135,20 @@ export function validateCheckpoint(value: unknown, maxAnswers = 3, maxCharacters
   if (value.revision !== undefined && (typeof value.revision !== "string" || !/^[0-9a-f-]{36}$/.test(value.revision))) return fail();
   return value as unknown as CoachCheckpoint;
 }
+/**
+ * A validated model reply. beneficiary is the model's quote of who the member said the work
+ * serves ("" when they have not said); coachTurn checks it and never returns it to the client.
+ */
+export interface ModelSuggestion extends CoachSuggestion {
+  beneficiary?: string;
+}
 export function validateSuggestion(
   stage: CoachStage,
   value: unknown,
   initiativeIds: string[],
   redesigned = false,
   context?: Pick<CoachCheckpoint, "date" | "end">,
-): CoachSuggestion {
+): ModelSuggestion {
   const fail = (): never => {
     throw new Error("Invalid coach response");
   };
@@ -151,10 +158,12 @@ export function validateSuggestion(
     !["question", "objective", "goal", "title", "concern", "review", "suggestedDate", "recommendedKind"].includes(key) || typeof item !== "string" || item.trim()));
   if (!object(value)) return fail();
   const fields = ["question", "objective", "goal", "title", "concern", ...(redesigned ? ["review"] : [])];
-  const known = [...fields, "ready", "options", "actions", "initiativeIds", "suggestedDate", "recommendedKind", ...(redesigned ? ["assessment"] : [])];
+  const known = [...fields, "ready", "options", "actions", "initiativeIds", "suggestedDate", "recommendedKind", ...(redesigned ? ["assessment", "beneficiary"] : [])];
   // The redesigned coach ignores echoed context fields such as kind; they are never returned.
   if (redesigned) value = Object.fromEntries(Object.entries(value).filter(([k]) => known.includes(k)));
   if (!object(value) || Object.keys(value).some((k) => !known.includes(k))) return fail();
+  // An unusable beneficiary is treated as not supplied; it never discards a draft.
+  if (value.beneficiary !== undefined && !text(value.beneficiary, 300)) delete value.beneficiary;
   if (value.assessment !== undefined) {
     const assessment = value.assessment;
     const valid = object(assessment) && Object.keys(assessment).length === 3 && ["purpose", "people", "alignment"].every(key => {
@@ -216,7 +225,7 @@ export function validateSuggestion(
       : stage === "goal" ? value.goal : stage === "review" ? value.review || value.assessment : value.objective;
     if (!output) return fail();
   }
-  const result = value as CoachSuggestion;
+  const result = value as ModelSuggestion;
   // A review assesses supplied wording; it never rewrites it.
   if (redesigned && stage === "review") delete result.objective;
   if (redesigned && context && result.goal && date(context.date)) {

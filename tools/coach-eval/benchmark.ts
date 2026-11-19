@@ -51,7 +51,7 @@ export const benchmarkScenarios: BenchmarkScenario[] = [
     typeChoice: "normal", goals: [{ action: 0 }],
     expect: { criteria: ["The audience the member gave appears in the objective they see."] },
     contract: {
-      includes: [{ label: "audience from the member's answer", pattern: /know (about )?jesus|seekers|non-?believers|not yet (know|encounter)|unreached/i }],
+      includes: [{ label: "audience from the member's answer", pattern: /know (about )?jesus|seekers|non-?believers|not yet (know|encounter|met)|n't (yet )?met jesus|unreached/i }],
       checks: { purpose: "met", people: "met" }, verdict: "ready", goals: 1,
     },
   },
@@ -249,6 +249,20 @@ function memberText(transcript: Transcript, scenario: Scenario) {
   ].join(" ");
 }
 
+const common = new Set(["with", "that", "this", "from", "their", "your", "have", "will", "into", "each", "what", "about", "them", "they", "more", "than", "then", "when", "which", "where"]);
+const stems = (text: string) => new Set((text.toLowerCase().match(/[a-z]{4,}/g) ?? []).filter((w) => !common.has(w)).map((w) => w.slice(0, 4)));
+/** True when at least half of the chosen action's meaningful words survive in the goal. */
+function keepsAction(action: string, goal: string) {
+  const wanted = [...stems(action)], have = stems(goal);
+  return !wanted.length || wanted.filter((w) => have.has(w)).length * 2 >= wanted.length;
+}
+/** Result clauses a goal must not add unless the member's action or words already contain them. */
+const addedOutcome = /\b(so that|in order to|to ensure|ensuring|which will|resulting in|leading to)\b/gi;
+/** People the coach must not introduce in feedback unless the member mentioned them. */
+const newPeople = /\b(career lead|line manager|manager|supervisor|director|team lead|leadership team)\b/gi;
+const introduced = (text: string, pattern: RegExp, own: string) =>
+  [...text.matchAll(pattern)].map((m) => m[0].toLowerCase()).filter((phrase) => !own.toLowerCase().includes(phrase));
+
 /** Counts questions the coach asked before showing the first draft. */
 function draftQuestions(transcript: Transcript) {
   let count = 0;
@@ -280,6 +294,15 @@ export function evaluate(transcript: Transcript, scenario: BenchmarkScenario): {
   const invented = [objective, ...goals].flatMap(numbers).filter((n) => !own.has(n));
   add("no invented numbers", !invented.length, invented.join(", "));
   add("goal dates in focus period", !metrics.dateIssues.length, metrics.dateIssues.join("; "));
+  const said = memberText(transcript, scenario);
+  const written = transcript.outcome.plans.filter((plan) => plan.goal);
+  const drifted = written.filter((plan) => !keepsAction(plan.action, goalText(plan.goal!)));
+  add("goals keep the chosen action", !drifted.length, drifted.map((plan) => plan.goal).join(" | "));
+  const outcomes = written.flatMap((plan) => introduced(goalText(plan.goal!), addedOutcome, said + " " + plan.action));
+  add("goals add no outcome", !outcomes.length, outcomes.join(", "));
+  const feedback = [...(transcript.outcome.screens ?? []).map((screen) => screen.concern), ...transcript.outcome.plans.flatMap((plan) => plan.concerns)].join(" ");
+  const people = introduced(feedback, newPeople, said);
+  add("feedback names no new people", !people.length, people.join(", "));
   const allMet = !!checks && Object.values(checks).every((c) => c.status === "met");
   if (allMet) add("quiet once ready", !screen?.concern, screen?.concern);
 

@@ -1,10 +1,10 @@
 import { coachContextLimits, type CoachCheckpoint, type CoachSuggestion } from "../shared/coach.js";
 import type { DepartmentDirection } from "../shared/direction.js";
-import { datedGoal, validateCheckpoint, validateSuggestion, type CoachStage } from "./coach-contract.js";
+import { datedGoal, validateCheckpoint, validateSuggestion, type CoachStage, type ModelSuggestion } from "./coach-contract.js";
 import { coachPrompt } from "./coach-prompt.js";
 import type { CoachProvider } from "./coach-provider.js";
 
-type Ask = (stage: CoachStage, context: CoachCheckpoint, signal?: AbortSignal) => Promise<CoachSuggestion>;
+type Ask = (stage: CoachStage, context: CoachCheckpoint, signal?: AbortSignal) => Promise<ModelSuggestion>;
 
 /** Sends one stage to the provider using the shipped prompt and response contract. */
 export function providerAsk(provider: CoachProvider, direction: DepartmentDirection, enhanced: boolean): Ask {
@@ -20,6 +20,14 @@ export function providerAsk(provider: CoachProvider, direction: DepartmentDirect
 const allMet = (suggestion: CoachSuggestion) =>
   !!suggestion.assessment && Object.values(suggestion.assessment).every(check => check.status === "met");
 const joined = (...parts: Array<string | undefined>) => parts.filter(Boolean).join(" ") || undefined;
+const quoteWords = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").split(" ").filter(word => word.length >= 3);
+const connectives = new Set(["the", "and", "for", "who", "our", "their", "with", "that", "this", "from", "are", "will", "can", "all"]);
+/** True when every meaningful word of the coach's quote appears in what the member wrote (allowing simple word endings). */
+export function memberSaid(quote: string, memberText: string) {
+  const said = new Set(quoteWords(memberText).map(word => word.slice(0, 5)));
+  const quoted = quoteWords(quote).filter(word => !connectives.has(word));
+  return quoted.length > 0 && quoted.every(word => said.has(word.slice(0, 5)));
+}
 /** Beyond this, a first reply probably waited on a provider timeout, so no optional call follows. */
 const retryWithinMs = 20000;
 
@@ -29,7 +37,13 @@ const retryWithinMs = 20000;
  * Objective screen. Every Objective screen gets checks of the exact wording it shows.
  * Optional follow-up steps never discard a usable draft; only cancellation stops the turn.
  */
-export async function coachTurn(input: {
+export async function coachTurn(input: Parameters<typeof turn>[0]): Promise<CoachSuggestion> {
+  // The beneficiary quote is for the server's check only.
+  const { beneficiary: _quote, ...reply } = await turn(input);
+  return reply;
+}
+
+async function turn(input: {
   ask: Ask;
   direction: DepartmentDirection;
   stage: CoachStage;
@@ -38,7 +52,7 @@ export async function coachTurn(input: {
   signal?: AbortSignal;
   /** Clock for the latency guard; injected by tests. */
   now?: () => number;
-}): Promise<CoachSuggestion> {
+}): Promise<ModelSuggestion> {
   const { ask, direction, stage, context, enhanced, signal, now = Date.now } = input;
   const started = now();
   let suggestion = await ask(stage, context, signal);
@@ -81,6 +95,11 @@ export async function coachTurn(input: {
     if (!answered && !drafted(suggestion) && !suggestion.question && suggestion.concern?.trim().endsWith("?"))
       // A first reply that only asks, phrased as a concern, is the coach's one question.
       suggestion = { ...suggestion, question: suggestion.concern, concern: undefined, objective: undefined, assessment: undefined };
+    const lens = context.kind ?? suggestion.recommendedKind;
+    if (!answered && drafted(suggestion) && suggestion.beneficiary !== undefined && lens !== "personal-development" && lens !== "leadership" &&
+      !memberSaid(suggestion.beneficiary, [context.work, context.objective].join(" ")))
+      // The coach must not invent who the work serves: a first draft without the member's own beneficiary becomes the one question.
+      suggestion = { ...suggestion, objective: undefined, assessment: undefined, ready: false, question: "Who will benefit from this work, and how?" };
     if (drafted(suggestion)) shown = suggestion.objective;
     else if (answered) {
       // After the member answers, the editor stops asking and shows a draft built from the answers.
