@@ -1,7 +1,7 @@
 {
-  "commit": "a898ffb",
+  "commit": "01e24e8",
   "target": "qwen",
-  "createdAt": "2026-11-18T04:53:27.435Z",
+  "createdAt": "2026-11-19T01:43:32.629Z",
   "scenarios": [
     {
       "id": "bench-vague-gospel-video",
@@ -9,15 +9,18 @@
       "runs": 6,
       "passes": 4,
       "failures": {
-        "completed": 1,
-        "objective includes audience from the member's answer": 2,
-        "people check met": 1,
-        "verdict ready": 1,
-        "at least 1 goal": 1
+        "objective includes audience from the member's answer": 2
       }
     },
     {
       "id": "bench-vague-support-faq",
+      "category": "vague",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
+    {
+      "id": "bench-vague-goal-evidence",
       "category": "vague",
       "runs": 6,
       "passes": 6,
@@ -34,11 +37,8 @@
       "id": "bench-rewording-subtitles",
       "category": "rewording",
       "runs": 6,
-      "passes": 5,
-      "failures": {
-        "completed": 1,
-        "at least 1 goal": 1
-      }
+      "passes": 6,
+      "failures": {}
     },
     {
       "id": "bench-rewording-playwright",
@@ -65,8 +65,10 @@
       "id": "bench-proficient-partner-search",
       "category": "proficient",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 4,
+      "failures": {
+        "objective includes search": 2
+      }
     },
     {
       "id": "bench-proficient-accessibility-growth",
@@ -86,28 +88,26 @@
       "id": "bench-qa-injection",
       "category": "adversarial",
       "runs": 6,
-      "passes": 5,
-      "failures": {
-        "verdict not ready": 1
-      }
+      "passes": 6,
+      "failures": {}
     },
     {
       "id": "bench-qa-gibberish",
       "category": "adversarial",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 5,
+      "failures": {
+        "checks shown": 1,
+        "people check not met": 1,
+        "verdict not ready": 1
+      }
     },
     {
       "id": "bench-qa-holiday-spanish",
       "category": "adversarial",
       "runs": 6,
-      "passes": 5,
-      "failures": {
-        "checks shown": 1,
-        "alignment check not met": 1,
-        "verdict not ready": 1
-      }
+      "passes": 6,
+      "failures": {}
     }
   ]
 }

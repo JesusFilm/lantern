@@ -330,7 +330,7 @@ test("a first concern-only reply becomes the member's question, and an unusable 
   } finally { await f.close(); }
 });
 
-test("after one answered goal question the coach works with what it has", async () => {
+test("after one answered goal question the coach drafts the goal from the member's action", async () => {
   const coach: CoachProvider = { async suggest(_s, raw, validate) {
     const input = JSON.parse(raw);
     return validate({ ready: false, question: input.context.answer ? "And how will you measure it?" : "What evidence will you record?" });
@@ -342,6 +342,48 @@ test("after one answered goal question the coach works with what it has", async 
     const after = await ask("I'm not sure.");
     assert.equal(after.question, undefined);
     assert.match(after.concern, /how will you measure it/);
+    // The member can't say how success will be shown; they still get an editable goal of their own action and date.
+    assert.equal(after.goal, "By 30 November 2026, Review logs");
+  } finally { await f.close(); }
+});
+
+test("a goal reply with only feedback still gives the member their action as a goal, without inventing evidence", async () => {
+  let reply: Record<string, unknown> = { concern: "Evidence is missing for this action." };
+  const coach: CoachProvider = { async suggest(_s, _c, validate) { return validate(reply); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const ask = async (context = {}) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...checkpoint, ...context } })).json();
+    assert.deepEqual(await ask(), { concern: "Evidence is missing for this action.", goal: "By 30 November 2026, Review logs" });
+    // A coach-written goal is kept as written.
+    reply = { goal: "Review logs and note recurring causes.", concern: "Consider who sees the notes." };
+    assert.equal((await ask()).goal, "By 30 November 2026, Review logs and note recurring causes.");
+    // An unanswered question is still asked; the member has not yet had the chance to answer.
+    reply = { question: "How does reviewing logs support this objective?" };
+    assert.equal((await ask()).goal, undefined);
+  } finally { await f.close(); }
+});
+
+test("when goal ideas come back empty the coach is asked once more without the earlier question", async () => {
+  const questions: string[] = [];
+  let replies: Array<Record<string, unknown>> = [];
+  const coach: CoachProvider = { async suggest(_s, raw, validate) {
+    questions.push(JSON.parse(raw).context.question);
+    return validate(replies.shift() ?? { concern: "Still unclear." });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const answered = { ...checkpoint, entry: "goal", action: "", goal: "", question: "Who reviews the plan?", answer: "My team.", answers: [{ question: "Who reviews the plan?", answer: "My team." }] };
+    const ask = async () => (await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context: answered })).json();
+    replies = [{ concern: "Who reviews the plan?" }, { actions: ["Review three failure reports with the on-call engineer"] }];
+    const first = await ask();
+    assert.deepEqual(first.actions, ["Review three failure reports with the on-call engineer"]);
+    assert.match(first.concern, /Who reviews the plan\?/);
+    assert.deepEqual(questions, ["Who reviews the plan?", ""]);
+    // If the retry has no ideas either, the feedback is shown and no third call is made.
+    questions.length = 0;
+    const none = await ask();
+    assert.equal(none.actions, undefined);
+    assert.equal(questions.length, 2);
   } finally { await f.close(); }
 });
 

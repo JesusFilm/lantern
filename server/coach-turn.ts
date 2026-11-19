@@ -1,6 +1,6 @@
 import { coachContextLimits, type CoachCheckpoint, type CoachSuggestion } from "../shared/coach.js";
 import type { DepartmentDirection } from "../shared/direction.js";
-import { validateCheckpoint, validateSuggestion, type CoachStage } from "./coach-contract.js";
+import { datedGoal, validateCheckpoint, validateSuggestion, type CoachStage } from "./coach-contract.js";
 import { coachPrompt } from "./coach-prompt.js";
 import type { CoachProvider } from "./coach-provider.js";
 
@@ -20,6 +20,8 @@ export function providerAsk(provider: CoachProvider, direction: DepartmentDirect
 const allMet = (suggestion: CoachSuggestion) =>
   !!suggestion.assessment && Object.values(suggestion.assessment).every(check => check.status === "met");
 const joined = (...parts: Array<string | undefined>) => parts.filter(Boolean).join(" ") || undefined;
+/** Beyond this, a first reply probably waited on a provider timeout, so no optional call follows. */
+const retryWithinMs = 20000;
 
 /**
  * One member-facing coaching turn. In redesigned drafting the coach asks at most once
@@ -34,16 +36,13 @@ export async function coachTurn(input: {
   context: CoachCheckpoint;
   enhanced: boolean;
   signal?: AbortSignal;
+  /** Clock for the latency guard; injected by tests. */
+  now?: () => number;
 }): Promise<CoachSuggestion> {
-  const { ask, direction, stage, context, enhanced, signal } = input;
+  const { ask, direction, stage, context, enhanced, signal, now = Date.now } = input;
+  const started = now();
   let suggestion = await ask(stage, context, signal);
   if (!enhanced) return suggestion;
-  if (stage === "actions" || stage === "goal") {
-    // The member has answered this step's question: show any remaining gap instead of asking again.
-    if (context.answer?.trim() && suggestion.question)
-      suggestion = { ...suggestion, question: undefined, options: undefined, concern: joined(suggestion.concern, suggestion.question) };
-    return suggestion;
-  }
   const optional = async (next: CoachStage, nextContext: CoachCheckpoint, tries = 1) => {
     for (let attempt = 0; attempt < tries; attempt++) {
       try {
@@ -54,6 +53,25 @@ export async function coachTurn(input: {
       }
     }
   };
+  if (stage === "actions" || stage === "goal") {
+    // The member has answered this step's question: show any remaining gap instead of asking again.
+    const asFeedback = (reply: CoachSuggestion) =>
+      ({ ...reply, question: undefined, options: undefined, concern: joined(reply.concern, reply.question) });
+    if (context.answer?.trim() && suggestion.question) suggestion = asFeedback(suggestion);
+    if (stage === "actions" && !suggestion.question && !suggestion.actions?.length && now() - started < retryWithinMs) {
+      // Feedback alone leaves the member nothing to choose: ask once more without the earlier question,
+      // unless the first reply was already slow enough to risk a long wait.
+      const retry = await optional("actions", { ...context, question: "", answer: "" });
+      if (retry?.actions?.length) suggestion = { ...asFeedback(retry), concern: joined(suggestion.concern, retry.concern, retry.question) };
+    }
+    if (stage === "goal" && !suggestion.question && !suggestion.goal?.trim()) {
+      // The member may not know how success will be shown. They still get an editable goal of
+      // their own action and selected date, with the coach's feedback beside it.
+      const goal = context.action?.trim() ? datedGoal(context.action, context.date ?? "") : undefined;
+      if (goal) suggestion = { ...suggestion, goal, ready: undefined };
+    }
+    return suggestion;
+  }
   const answered = context.answers.length > 0;
   const memberWording = context.objective.trim() || context.work;
   const drafted = (reply: CoachSuggestion) => !!reply.objective && reply.ready !== false && !reply.question;
