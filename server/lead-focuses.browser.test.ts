@@ -447,7 +447,7 @@ test(
           await page.goto(origin);
           for (const destination of ["Guide", "Account"]) {
             await page
-              .getByRole("button", { name: destination, exact: true })
+              .getByRole("link", { name: destination, exact: true })
               .click();
             await page
               .getByRole("link", { name: "Department", exact: true })
@@ -460,11 +460,11 @@ test(
             ).toBeVisible();
             await page.goBack();
             await expect(
-              page.getByRole("button", { name: destination, exact: true }),
+              page.getByRole("link", { name: destination, exact: true }),
             ).toHaveAttribute("aria-current", "page");
             await page.reload();
             await expect(
-              page.getByRole("button", { name: destination, exact: true }),
+              page.getByRole("link", { name: destination, exact: true }),
             ).toHaveAttribute("aria-current", "page");
             await page.goForward();
             await expect(
