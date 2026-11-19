@@ -6,4 +6,4 @@
  * coach is a standing switch: it stays registered so the goal coach, which
  * calls paid external models, can be turned off or limited to a preview.
  */
-export const featureNames: readonly string[] = ["coach", "coach-redesign", "sidebar-collapse", "focus-progress"];
+export const featureNames: readonly string[] = ["coach", "coach-redesign", "sidebar-collapse", "focus-progress", "weekly-updates", "team-updates", "team-api"];

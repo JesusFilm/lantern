@@ -1,0 +1,29 @@
+import type { Pool } from 'pg';
+import type { TeamDay, TeamDayMember } from '../shared/weekly.js';
+import { AccessError, membership, membershipWrite } from './membership.js';
+
+export function teamWeeklyStore(db: Pool) {
+  return {
+    day(userId: string, date: string, expectedDepartmentId?:string): Promise<TeamDay> {
+      return membershipWrite(db, async client => {
+        const department = await membership(client, userId);
+        if (!department || (expectedDepartmentId && department.id!==expectedDepartmentId)) throw new AccessError(403, 'Active department membership is required.');
+        const first = await client.query<{ firstDate: string | null }>(`SELECT to_char(min(u.update_date),'YYYY-MM-DD') AS "firstDate"
+          FROM daily_updates u JOIN memberships m ON m.user_id=u.user_id AND m.department_id=u.department_id
+          WHERE u.department_id=$1 AND m.deleted_at IS NULL`, [department.id]);
+        const members = await client.query<TeamDayMember>(`SELECT person.id,person.name,person.github_username AS "githubUsername",
+          coalesce(plan.goals,'[]'::jsonb) AS goals,
+          CASE WHEN entry.id IS NULL THEN NULL ELSE jsonb_build_object('id',entry.id,'date',to_char(entry.update_date,'YYYY-MM-DD'),
+            'body',entry.body,'planVersion',entry.plan_version,'goalStatuses',entry.goal_statuses,'createdAt',entry.created_at) END AS update
+          FROM memberships m JOIN users person ON person.id=m.user_id
+          LEFT JOIN LATERAL (SELECT * FROM daily_updates u WHERE u.user_id=person.id AND u.department_id=$1 AND u.update_date=$2::date
+            ORDER BY u.created_at DESC,u.id DESC LIMIT 1) entry ON true
+          LEFT JOIN LATERAL (SELECT p.goals FROM weekly_plans p WHERE p.user_id=person.id AND p.department_id=$1
+            AND p.week_start=date_trunc('week',$2::date)::date AND (entry.id IS NULL OR p.version=entry.plan_version)
+            ORDER BY p.version DESC LIMIT 1) plan ON true
+          WHERE m.department_id=$1 AND m.deleted_at IS NULL ORDER BY lower(person.name),person.id`, [department.id,date]);
+        return { date, firstDate: first.rows[0]!.firstDate, members: members.rows };
+      });
+    },
+  };
+}

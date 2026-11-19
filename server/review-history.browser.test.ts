@@ -25,10 +25,10 @@ for (const [crossPage, legacy] of [[false, false], [true, false], [true, true]])
       if (legacy) await page.evaluate('history.replaceState(null, "")');
       await page.getByRole("button", { name: focus.title, exact: true }).click();
       if (crossPage) {
-        await page.getByRole("button", { name: "Guide", exact: true }).click();
+        await page.getByRole("link", { name: "Guide", exact: true }).click();
         await expect(page.locator(".guide-header")).toBeVisible();
         if (legacy) await page.evaluate('history.replaceState(null, "")');
-        await page.getByRole("button", { name: "Position focuses", exact: true }).click();
+        await page.getByRole("link", { name: "Position focuses", exact: true }).click();
       }
       await page.getByRole("button", { name: "Review & discussion", exact: true }).click();
       const note = page.getByLabel("Note to career lead · optional");
@@ -60,7 +60,7 @@ for (const [crossPage, legacy] of [[false, false], [true, false], [true, true]])
       await expect(note).toHaveValue("");
 
       // Keep a Forward destination while returning to review through history.
-      await page.getByRole("button", { name: "Guide", exact: true }).click();
+      await page.getByRole("link", { name: "Guide", exact: true }).click();
       await expect(page.locator(".guide-header")).toBeVisible();
       if (legacy) await page.evaluate('history.replaceState(null, "")');
       await page.goBack();
@@ -79,7 +79,7 @@ for (const [crossPage, legacy] of [[false, false], [true, false], [true, true]])
       await page.getByRole("button", { name: "Review & discussion", exact: true }).click();
       await expect(note).toHaveValue("");
       await note.fill("Menu navigation prompts once");
-      await page.getByRole("button", { name: "Guide", exact: true }).click();
+      await page.getByRole("link", { name: "Guide", exact: true }).click();
       await expect(page.locator(".guide-header")).toBeVisible();
       assert.equal(prompts, 6);
       const record = await (await f.request("member", "/api/coach/focuses/" + focus.id)).json();

@@ -8,6 +8,8 @@ import { FocusWorkspace } from "./workspace/FocusWorkspace.js";
 import { LearningGuide } from "./workspace/LearningGuide.js";
 import { Sidebar } from "./workspace/Sidebar.js";
 import { Account } from "./workspace/Account.js";
+import { MyTeam } from "./workspace/MyTeam.js";
+import { MyWeek } from "./workspace/MyWeek.js";
 import { Department } from "./workspace/Department.js";
 import "./workspace/style.css";
 import "./workspace/dark.css";
@@ -16,23 +18,37 @@ history.replaceState(
   { ...history.state, lanternHistoryIndex: workspaceHistoryIndex() },
   "",
 );
-function currentPage() {
+function currentPage(): keyof typeof pageTitles {
   const page = new URLSearchParams(location.search).get("page");
-  return page === "department" || page === "guide" || page === "account" || page === "reviews"
+  return page === "department" || page === "guide" || page === "account" || page === "reviews" || page === "week" || page === "team"
     ? page
     : "focuses";
 }
-function navigatePage(page: string) {
-  if(!window.dispatchEvent(new Event("lantern-coach-leave", {cancelable:true})))return;
+const pageTitles = {
+  focuses: "Position focuses",
+  week: "My week",
+  team: "My team",
+  guide: "Guide",
+  account: "Account",
+  department: "Department",
+  reviews: "Review requests",
+};
+function pageHref(page: string) {
   const url = new URL(location.href);
   url.searchParams.delete("member");
   url.searchParams.delete("memberFocus");
+  if (page === "team" && currentPage() !== "team") url.searchParams.delete("date");
+  if (page === "week" && currentPage() !== "week") url.searchParams.delete("week");
   if (page === "focuses") url.searchParams.delete("page");
   else url.searchParams.set("page", page);
+  return url.pathname + url.search + url.hash;
+}
+function navigatePage(page: string) {
+  if(!window.dispatchEvent(new Event("lantern-coach-leave", {cancelable:true})))return;
   history.pushState(
     { lanternHistoryIndex: workspaceHistoryIndex() + 1 },
     "",
-    url,
+    pageHref(page),
   );
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
@@ -91,9 +107,11 @@ function App() {
     };
   }, []);
   const activePage = session?.user ? page : "";
+  const pageTitle = !session?.user ? "Lantern" : `${pageTitles[page]} — Lantern`;
+  useEffect(() => { document.title = pageTitle; }, [pageTitle]);
   return (
     <>
-      <Sidebar session={session} activePage={activePage} onNavigate={navigatePage} />
+      <Sidebar session={session} activePage={activePage} onNavigate={navigatePage} hrefForPage={pageHref} />
       <main className="main">
         <div className="workspace">
           {error && (
@@ -144,6 +162,8 @@ function App() {
                 <CoachWorkspace key={page} session={session} lead={page === "reviews"}/>
               ) : page === "account" ? (
                 <Account
+                  teamAPIEnabled={!!session.department && session.features.includes("team-api") && session.features.includes("team-updates")}
+                  githubEnabled={!!session.department && session.features.includes('weekly-updates')}
                   appearance={appearance}
                   onAppearanceChange={choose}
                   user={session.user}
@@ -164,6 +184,10 @@ function App() {
                   </p>
                   <button onClick={() => void refresh()}>Check access</button>
                 </section>
+              ) : page === "team" ? (
+                session.features?.includes("team-updates") ? <MyTeam /> : <section><h1>Page unavailable</h1></section>
+              ) : page === "week" ? (
+                session.features?.includes("weekly-updates") ? <MyWeek /> : <section><h1>Page unavailable</h1></section>
               ) : page === "focuses" ||
                 (page === "department" &&
                   session.department.role !== "career-lead") ? (

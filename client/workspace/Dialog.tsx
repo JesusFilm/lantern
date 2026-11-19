@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { X } from 'lucide-react';
 export function Dialog({
   title,
   children,
@@ -8,6 +9,8 @@ export function Dialog({
   saveLabel = "Save changes",
   saveIcon,
   saveDisabled = false,
+  fullScreen = false,
+  closeLabel = 'Close dialog',
 }: {
   title: string;
   children: ReactNode;
@@ -16,6 +19,8 @@ export function Dialog({
   saveLabel?: string;
   saveIcon?: ReactNode;
   saveDisabled?: boolean;
+  fullScreen?: boolean;
+  closeLabel?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [busy, setBusy] = useState(false),
@@ -28,6 +33,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
+      className={fullScreen ? 'fullscreen-dialog' : undefined}
       aria-labelledby="dialog-title"
       onCancel={(e) => {
         e.preventDefault();
@@ -46,7 +52,9 @@ export function Dialog({
             .finally(() => setBusy(false));
         }}
       >
-        <h2 id="dialog-title">{title}</h2>
+        {fullScreen ? <div className="dialog-heading"><h2 id="dialog-title">{title}</h2>
+          <button type="button" className="dialog-close" aria-label={closeLabel} disabled={busy} onClick={onClose}><X size={24} /></button>
+        </div> : <h2 id="dialog-title">{title}</h2>}
         <div className="dialog-content">
           <fieldset disabled={busy} className="dialog-fields">
             {children}

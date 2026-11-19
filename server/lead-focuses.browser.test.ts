@@ -108,7 +108,7 @@ test(
       page.setDefaultTimeout(5000);
       await page.goto(origin);
       await page
-        .getByRole("button", { name: "Department", exact: true })
+        .getByRole("link", { name: "Department", exact: true })
         .click();
       const people = page.getByRole("table", { name: "People" });
       await expect(people.getByRole("columnheader")).toHaveText(["Name", "Email", "Role"]);
@@ -167,7 +167,7 @@ test(
         })
         .click();
       await page
-        .getByRole("button", { name: "Department", exact: true })
+        .getByRole("link", { name: "Department", exact: true })
         .click();
       await page.getByRole("button", { name: "Bob", exact: true }).click();
       await expect(
@@ -182,7 +182,7 @@ test(
         page.getByRole("heading", { name: "Bob’s position focuses" }),
       ).toBeVisible();
       await page
-        .getByRole("button", { name: "Department", exact: true })
+        .getByRole("link", { name: "Department", exact: true })
         .click();
       await expect(
         page.getByRole("heading", { name: "Department", exact: true }),
@@ -223,7 +223,7 @@ test(
             page.getByText("Publish a guide by June", { exact: true }),
           ).toHaveCount(0);
           await page
-            .getByRole("button", { name: "Department", exact: true })
+            .getByRole("link", { name: "Department", exact: true })
             .click();
           await expect(
             page.getByRole("button", { name: "Alice", exact: true }),
@@ -245,7 +245,7 @@ test(
           );
           await expect(page.locator(".aside-foot")).toContainText("Bob");
           await expect(
-            page.getByRole("button", { name: "Department", exact: true }),
+            page.getByRole("link", { name: "Department", exact: true }),
           ).toHaveCount(0);
           await expect(
             page.getByText("Publish a guide by June", { exact: true }),
@@ -427,7 +427,7 @@ test(
               page.getByText("Publish a guide by June", { exact: true }),
             ).toHaveCount(0);
             await expect(
-              page.getByRole("button", {
+              page.getByRole("link", {
                 name: "Department",
                 exact: true,
               }),
@@ -447,10 +447,10 @@ test(
           await page.goto(origin);
           for (const destination of ["Guide", "Account"]) {
             await page
-              .getByRole("button", { name: destination, exact: true })
+              .getByRole("link", { name: destination, exact: true })
               .click();
             await page
-              .getByRole("button", { name: "Department", exact: true })
+              .getByRole("link", { name: "Department", exact: true })
               .click();
             await expect(
               page.getByRole("heading", {
@@ -460,11 +460,11 @@ test(
             ).toBeVisible();
             await page.goBack();
             await expect(
-              page.getByRole("button", { name: destination, exact: true }),
+              page.getByRole("link", { name: destination, exact: true }),
             ).toHaveAttribute("aria-current", "page");
             await page.reload();
             await expect(
-              page.getByRole("button", { name: destination, exact: true }),
+              page.getByRole("link", { name: destination, exact: true }),
             ).toHaveAttribute("aria-current", "page");
             await page.goForward();
             await expect(
@@ -572,7 +572,7 @@ test(
             }),
           ).toBeVisible();
           await expect(
-            page.getByRole("button", { name: "Department", exact: true }),
+            page.getByRole("link", { name: "Department", exact: true }),
           ).toHaveCount(0);
           await expect(
             page.getByText("Publish a guide by June", { exact: true }),

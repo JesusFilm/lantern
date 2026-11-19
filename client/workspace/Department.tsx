@@ -2,6 +2,7 @@ import { MemberFocuses } from "./MemberFocuses.js";
 import { useEffect, useState } from "react";
 import type { RegisteredUser, SessionView } from "../../shared/access.js";
 import { api as request } from "./api.js";
+import { GitHubSettings } from "./GitHubSettings.js";
 import { TeamDirection } from "./TeamDirection.js";
 import { workspaceHistoryIndex } from "./useDraftFocusWorkflow.js";
 const api = <T,>(path: string, body?: unknown) =>
@@ -31,7 +32,11 @@ export function Department({
     focus: new URLSearchParams(location.search).get("memberFocus"),
   });
   const [selection, setSelection] = useState(route);
-  const [tab, setTab] = useState(() => new URLSearchParams(location.search).get("departmentTab") === "direction" ? "direction" : "people");
+  const canManageGitHub = session.department.role === "career-lead" && session.features.includes("weekly-updates");
+  const [tab, setTab] = useState(() => {
+    const value = new URLSearchParams(location.search).get("departmentTab");
+    return value === "direction" || (value === "settings" && canManageGitHub) ? value : "people";
+  });
   function selectTab(value: string) {
     setTab(value);
     const url = new URL(location.href);
@@ -165,8 +170,9 @@ export function Department({
       <div className="tabs department-tabs" aria-label="Department panels">
         <button type="button" className={tab === "people" ? "active" : ""} aria-pressed={tab === "people"} onClick={() => selectTab("people")}>People</button>
         <button type="button" className={tab === "direction" ? "active" : ""} aria-pressed={tab === "direction"} onClick={() => selectTab("direction")}>Mission & initiatives</button>
+        {canManageGitHub && <button type="button" className={tab === "settings" ? "active" : ""} aria-pressed={tab === "settings"} onClick={() => selectTab("settings")}>Settings</button>}
       </div>
-      {tab === "direction" ? <TeamDirection /> : <>
+      {tab === "settings" && canManageGitHub ? <GitHubSettings /> : tab === "direction" ? <TeamDirection /> : <>
       <table className="members" aria-label="People">
         <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Role</th></tr></thead>
         <tbody>{members.map((member) => (

@@ -179,9 +179,7 @@ test(
           await page
             .getByLabel("SMART goal", { exact: true })
             .fill("Run three practice sessions by July.");
-          await page
-            .getByRole("button", { name: /^Save (changes|objective)$/ })
-            .click();
+          await page.getByRole("button", { name: /^Save (changes|objective)$/ }).click();
           await expect(page.getByRole("dialog")).toBeHidden();
           await page.unroute("**/api/focuses/*");
           await page.reload();
@@ -246,7 +244,7 @@ test(
         "guided lessons retain the side menu, example is concise, profile saves and cancels",
         async () => {
           await page
-            .getByRole("button", { name: "Guide", exact: true })
+            .getByRole("link", { name: "Guide", exact: true })
             .click();
           await page
             .getByRole("button", { name: "Objectives", exact: true })
@@ -290,32 +288,26 @@ test(
             "Why it works",
           );
           await page
-            .getByRole("button", { name: "Account", exact: true })
+            .getByRole("link", { name: "Account", exact: true })
             .click();
-          await page.getByRole("button", { name: "Edit name" }).click();
           await page
             .getByLabel("Display name", { exact: true })
             .fill("Discard");
-          await page
-            .getByRole("button", { name: "Cancel", exact: true })
-            .click();
-          await expect(page.locator("dd").first()).toHaveText("Jordan Davis");
-          await page.getByRole("button", { name: "Edit name" }).click();
+          await page.getByLabel("Display name", {exact:true}).press("Escape");
+          await expect(page.getByLabel("Display name", {exact:true})).toHaveValue("Jordan Davis");
           await page
             .getByLabel("Display name", { exact: true })
             .fill("Jordan Updated");
-          await page
-            .getByRole("button", { name: /^Save (changes|objective)$/ })
-            .click();
-          await expect(page.getByRole("dialog")).toBeHidden();
+          await page.getByLabel("Display name", {exact:true}).press("Enter");
+          await expect(page.locator(".aside-foot")).toContainText("Jordan Updated");
           await page.reload();
           await page
-            .getByRole("button", { name: "Account", exact: true })
+            .getByRole("link", { name: "Account", exact: true })
             .click();
-          await expect(page.locator("dd").first()).toHaveText("Jordan Updated");
+          await expect(page.getByLabel("Display name", {exact:true})).toHaveValue("Jordan Updated");
           await page.setViewportSize({ width: 390, height: 844 });
           await page
-            .getByRole("button", { name: "Guide", exact: true })
+            .getByRole("link", { name: "Guide", exact: true })
             .click();
           assert.ok(
             await page.evaluate(
@@ -345,7 +337,7 @@ test(
         async () => {
           await page.setViewportSize({ width: 1440, height: 1000 });
           await page
-            .getByRole("button", { name: "Position focuses", exact: true })
+            .getByRole("link", { name: "Position focuses", exact: true })
             .click();
           await page
             .getByRole("button", { name: "Revised annual focus", exact: true })

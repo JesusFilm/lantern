@@ -142,8 +142,7 @@ test("private browser state follows the current server session", { timeout: 6000
     await t.test("a delayed profile save cannot restore the previous member's account", async () => {
       await signIn(memberA);
       await page.goto(origin);
-      await page.getByRole("button", { name: "Account", exact: true }).click();
-      await page.getByRole("button", { name: "Edit name", exact: true }).click();
+      await page.getByRole("link", { name: "Account", exact: true }).click();
       await page.getByLabel("Display name", { exact: true }).fill("Saved member A");
       let release!: () => void, captured!: () => void;
       const held = new Promise<void>((resolve) => { release = resolve; });
@@ -155,7 +154,7 @@ test("private browser state follows the current server session", { timeout: 6000
         await route.fulfill({ response });
       }, { times: 1 });
       try {
-        await page.getByRole("button", { name: "Save changes", exact: true }).click();
+        await page.getByLabel("Display name", { exact: true }).press("Enter");
         await ready;
         await signIn(memberB);
         await refreshSession();
@@ -166,7 +165,7 @@ test("private browser state follows the current server session", { timeout: 6000
         await (await response).finished();
         await page.evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
         await expect(page.locator(".aside-foot")).toContainText("Member B");
-        await expect(page.locator("dd").first()).toHaveText("Member B");
+        await expect(page.getByLabel("Display name", { exact: true })).toHaveValue("Member B");
       } finally {
         release();
         await page.unroute("**/api/account");

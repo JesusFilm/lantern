@@ -25,7 +25,7 @@ test('domain removal erases legacy storage while preserving approved emails, acc
     const user = randomUUID(), team = randomUUID(), focus = randomUUID();
     await f.migration.query("INSERT INTO allowed_domains VALUES('historical.test')");
     await f.admin.query("INSERT INTO approved_emails VALUES('person@another.test')");
-    await f.migration.query("INSERT INTO users VALUES($1,'legacy-sub','person@another.test','Preserved name','historical.test')", [user]);
+    await f.migration.query("INSERT INTO users(id,google_sub,email,name,hosted_domain) VALUES($1,'legacy-sub','person@another.test','Preserved name','historical.test')", [user]);
     await f.admin.query("INSERT INTO departments(id,name) VALUES($1,'Preserved team')", [team]);
     await f.admin.query("INSERT INTO memberships VALUES($1,$2,'career-lead',NULL)", [user,team]);
     await f.admin.query("INSERT INTO sessions VALUES('preserved-session',$1,now()+interval '1 hour')", [user]);

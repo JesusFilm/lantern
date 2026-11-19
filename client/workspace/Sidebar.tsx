@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Menu, X, BookOpen, Building2, ClipboardCheck, FileText, PanelLeftClose, PanelLeftOpen, UserRound, type LucideIcon } from "lucide-react";
+import { Menu, X, BookOpen, Building2, CalendarDays, UsersRound, ClipboardCheck, FileText, PanelLeftClose, PanelLeftOpen, UserRound, type LucideIcon } from "lucide-react";
 import type { SessionView } from "../../shared/access.js";
 import "./sidebar.css";
 import { usePhoneLayout } from "./usePhoneLayout.js";
@@ -10,10 +10,11 @@ function readCollapsed() {
   catch { return false; }
 }
 
-export function Sidebar({ session, activePage, onNavigate }: {
+export function Sidebar({ session, activePage, onNavigate, hrefForPage }: {
   session?: SessionView;
   activePage: string;
   onNavigate: (page: string) => void;
+  hrefForPage: (page: string) => string;
 }) {
   const phone = usePhoneLayout();
   const canCollapse = session?.features?.includes("sidebar-collapse") ?? false;
@@ -45,6 +46,8 @@ export function Sidebar({ session, activePage, onNavigate }: {
   const items: { id: string; label: string; icon: LucideIcon }[] = [
     ...(session?.user ? [
       { id: "focuses", label: "Position focuses", icon: FileText },
+      ...(session.department && session.features?.includes("weekly-updates") ? [{ id: "week", label: "My week", icon: CalendarDays }] : []),
+      ...(session.department && session.features?.includes("team-updates") ? [{ id: "team", label: "My team", icon: UsersRound }] : []),
       ...(session.department?.role === "career-lead" ? [{ id: "reviews", label: "Review requests", icon: ClipboardCheck }] : []),
       { id: "guide", label: "Guide", icon: BookOpen },
       { id: "account", label: "Account", icon: UserRound },
@@ -62,10 +65,14 @@ export function Sidebar({ session, activePage, onNavigate }: {
       {mobileMenu && <button type="button" className="mobile-menu-close" aria-label="Close menu" onClick={() => setMenuOpen(false)}><X size={22} /></button>}
     </div>
     <nav id="main-navigation" aria-label="Main navigation">
-      {items.map(({ id, label, icon: Icon }) => <button key={id} type="button" aria-label={label} title={collapsed ? label : undefined} aria-current={activePage === id ? "page" : undefined} className={activePage === id ? "active" : ""} onClick={() => { onNavigate(id); setMenuOpen(false); }}>
+      {items.map(({ id, label, icon: Icon }) => <a key={id} href={hrefForPage(id)} aria-label={label} title={collapsed ? label : undefined} aria-current={activePage === id ? "page" : undefined} className={`sidebar-link${activePage === id ? " active" : ""}`} onClick={event => {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        onNavigate(id); setMenuOpen(false);
+      }}>
         <Icon size={20} strokeWidth={1.7} aria-hidden="true" />
         <span className="sidebar-label">{label}</span>
-      </button>)}
+      </a>)}
     </nav>
     {!phone && canCollapse && <div className="sidebar-actions">
       <button className="sidebar-toggle" type="button" aria-label={toggleLabel} title={toggleLabel} aria-expanded={!collapsed} aria-controls="main-navigation" onClick={toggle}>
