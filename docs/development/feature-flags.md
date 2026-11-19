@@ -49,15 +49,15 @@ Changing a stage or production variable redeploys the webapp with a new deployme
 
 ## Release a flagged feature
 
-QA passing flagged work is the signal to release it: an issue labelled `feature-flag` that reaches `qa: passed`. A reminder is then posted once per flag in the `#lantern-qa` Slack channel, addressed to the owner, naming the flag and linking its QA-passed issues and their pull requests, and the owner gets a Slackbot notification. Closing the issue does not mark the flag released, because engineering closes issues after a QA pass while the flag may still be hidden.
+QA passing flagged work is the signal to release it: an issue labelled `feature-flag` that reaches `qa: passed`. A reminder is then posted once per flag in the `#lantern-qa` Slack channel, addressed to the owner, naming the flag and linking its QA-passed issues and their pull requests, and the owner gets a Slackbot notification. The reminder is not repeated; the flag's state in each environment is the record of whether it is released, shown on the owner's `/ops/feature-flags` page. Closing the issue does not release the flag, because engineering closes issues after a QA pass while the flag may still be hidden.
 
 The repository owner releases the feature in Railway. Each variable change redeploys the webapp.
 
 1. Confirm the release containing the feature is live in production, with the feature unset or `off`.
 2. Set the feature to `preview` and list the checking accounts in `LANTERN_PREVIEW_EMAILS`. Try the feature in production with one of those accounts.
 3. Set the feature to `on`.
-4. Add `flag: released` to the issue, so the issue records that the flag is on in production.
-5. If a problem appears, set the feature back to `off` and remove `flag: released`. Data the feature already saved stays in the database.
+4. Optionally, add `flag: released` to the issue to note on it that the feature is live. The reminder skips issues with this label, but does not need it.
+5. If a problem appears, set the feature back to `off`, and remove `flag: released` if it was added. Data the feature already saved stays in the database.
 
 ## Remove the flag
 
