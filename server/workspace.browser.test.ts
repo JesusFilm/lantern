@@ -179,8 +179,8 @@ test(
           await page
             .getByLabel("SMART goal", { exact: true })
             .fill("Run three practice sessions by July.");
-          await page.getByLabel("Display name", {exact:true}).press("Enter");
-          await expect(page.locator(".aside-foot")).toContainText("Jordan Updated");
+          await page.getByRole("button", { name: /^Save (changes|objective)$/ }).click();
+          await expect(page.getByRole("dialog")).toBeHidden();
           await page.unroute("**/api/focuses/*");
           await page.reload();
           await expect(page.locator(".read-goal")).toContainText(
