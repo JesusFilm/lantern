@@ -403,3 +403,40 @@ test("a check reply without checks is retried", async () => {
     assert.equal(reviews, 2);
   } finally { await f.close(); }
 });
+
+test("a first draft whose beneficiary is not in the member's words becomes the coach's one question", async () => {
+  const stages: string[] = [];
+  let reply: Record<string, unknown> = {};
+  const assessment = { purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Supports the mission." } };
+  const coach: CoachProvider = { async suggest(_s, raw, validate) { stages.push(JSON.parse(raw).stage); return validate(stages.at(-1) === "review" ? { assessment } : reply); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const ask = async (context: Record<string, unknown>) => {
+      stages.length = 0;
+      return (await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, objective: "", work: "I'm building an application that generates gospel videos.", kind: "normal", ...context } })).json();
+    };
+    // Invented audience: the member never named viewers.
+    reply = { objective: "Build an app that generates gospel videos for viewers seeking Jesus.", beneficiary: "viewers seeking Jesus", ready: true, initiativeIds: [] };
+    const invented = await ask({});
+    assert.equal(invented.objective, undefined);
+    assert.match(invented.question, /who/i);
+    assert.equal(invented.beneficiary, undefined);
+    assert.deepEqual(stages, ["clarify"]);
+    // The coach says the member has not named anyone.
+    reply = { ...reply, beneficiary: "" };
+    assert.match((await ask({})).question, /who/i);
+    // A beneficiary taken from the member's own words is drafted and checked as usual.
+    reply = { objective: "Deliver subtitles before outreach events for churches in East Africa.", beneficiary: "Churches in East Africa", ready: true, initiativeIds: [] };
+    const grounded = await ask({ work: "I translate subtitles, and churches in east Africa need them before their outreach events." });
+    assert.equal(grounded.objective, "Deliver subtitles before outreach events for churches in East Africa.");
+    assert.equal(grounded.beneficiary, undefined);
+    assert.deepEqual(stages, ["clarify", "review"]);
+    // Development objectives serve the member, and answers already given are never followed by another question.
+    reply = { objective: "Grow my Playwright skills.", beneficiary: "engineers", ready: true, initiativeIds: [] };
+    assert.equal((await ask({ kind: "personal-development" })).objective, "Grow my Playwright skills.");
+    reply = { objective: "Build an app that generates gospel videos for seekers.", beneficiary: "seekers", ready: true, initiativeIds: [] };
+    const answered = await ask({ answers: [{ question: "Who is it for?", answer: "Not sure yet." }] });
+    assert.equal(answered.objective, "Build an app that generates gospel videos for seekers.");
+    assert.equal(answered.question, undefined);
+  } finally { await f.close(); }
+});

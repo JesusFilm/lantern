@@ -69,9 +69,13 @@ coach must serve and the ways QA tries to break it.
 
 Every run must complete and show a draft with all three checks. It must not
 ask too many or repeated questions, invent numbers or put goal dates outside
-the focus period, and it must stay quiet once every check is met. Each scenario's
-contract adds what the visible objective must or must not contain, expected
-check results, whether it should be ready, and any recommended type or goals.
+the focus period, and it must stay quiet once every check is met. Goals must
+keep at least half of the chosen action's meaningful words and add no result
+clause ("so that…", "to ensure…") the member did not supply. Feedback must not
+introduce a career lead, manager or other person the member did not mention.
+Each scenario's contract adds what the visible objective and goals must or must
+not contain, expected check results, whether it should be ready, and any
+recommended type or goals.
 A run passes when every assertion passes; a scenario passes when most of its
 runs pass.
 

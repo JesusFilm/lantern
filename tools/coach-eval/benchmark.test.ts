@@ -143,3 +143,24 @@ test("the goal-evidence scenario checks the drafted goal keeps the member's acti
   assert.ok(score("By 30 April 2027, Cut short versions and share them with the career lead for feedback").includes("no invented reviewer or agreement"));
   assert.ok(score("By 30 April 2027, Publish a newsletter").includes("goal includes the member's action"));
 });
+
+test("every run's goals keep the chosen action, add no outcome, and feedback names no new people", () => {
+  const plan = (action: string, goal: string, concerns: string[] = []) => ({ actions: [action], action, date: "2027-04-30", goal, concerns });
+  const score = (plans: ReturnType<typeof plan>[], concern = "") => {
+    const t = run({ concern }, plans.map(p => p.goal));
+    t.outcome.plans = plans;
+    return evaluate(t, gospel).assertions.filter(a => !a.passed).map(a => a.name);
+  };
+  const action = "Publish a first video and ask three seekers for feedback";
+  assert.deepEqual(score([plan(action, "By 30 April 2027, publish a first video and ask three seekers for feedback.")]), []);
+  assert.ok(score([plan(action, "By 30 April 2027, write a blog post.")]).includes("goals keep the chosen action"), "expected failure: goals keep the chosen action");
+  assert.ok(score([plan(action, "By 30 April 2027, publish a first video and ask three seekers for feedback, so that the app is ready for launch.")]).includes("goals add no outcome"), "expected failure: goals add no outcome");
+  // An outcome the member chose is theirs.
+  assert.deepEqual(score([plan(action + " so that seekers can respond", "By 30 April 2027, publish a first video and ask three seekers for feedback so that seekers can respond.")]), []);
+  assert.ok(score([plan(action, "By 30 April 2027, publish a first video and ask three seekers for feedback.", ["Who will you confirm this with, such as your career lead?"])]).includes("feedback names no new people"), "expected failure: feedback names no new people");
+  assert.ok(score([], "Check with your manager first.").includes("feedback names no new people"), "expected failure: feedback names no new people");
+});
+
+test("the gospel audience may be phrased as people who have not yet met Jesus", () => {
+  assert.deepEqual(failed(run({ objective: "Build an application that generates gospel videos for people who have not yet met Jesus." })), []);
+});
