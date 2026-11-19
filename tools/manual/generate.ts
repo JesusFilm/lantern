@@ -14,7 +14,7 @@ import { manualNow, startWorld, type ManualWorld } from "./world.js";
 import sharp from "sharp";
 
 /**
- * npm run manual [-- --only=shot-id,…] [-- --confirm=supplied-id,…]
+ * npm run manual [-- --only=shot-id,… --preview-dir=path --confirm=supplied-id,…]
  * Photographs every scene, writes changed screenshots, renders a new edition
  * when the deck changed, and records the manifest that npm run manual:check verifies.
  */
@@ -22,8 +22,10 @@ const root = process.cwd();
 const args = new Map(process.argv.slice(2).map((arg) => { const [k, v = ""] = arg.replace(/^--/, "").split("="); return [k!, v]; }));
 const only = args.get("only")?.split(",").filter(Boolean);
 const confirm = args.get("confirm")?.split(",").filter(Boolean) ?? [];
+const previewDir = process.argv.find((arg) => arg.startsWith("--preview-dir="))?.slice("--preview-dir=".length);
+if (previewDir !== undefined && (!only || !previewDir)) throw new Error("--preview-dir requires --only and a nonempty path.");
 const output = join(root, manualDirectory);
-const screenshots = only ? join(root, "output", "manual-preview") : join(output, "screenshots");
+const screenshots = only ? (previewDir ? resolve(root, previewDir) : join(root, "output", "manual-preview")) : join(output, "screenshots");
 const layout = { root, supplied };
 const log = (message: string) => process.stdout.write(message + "\n");
 
