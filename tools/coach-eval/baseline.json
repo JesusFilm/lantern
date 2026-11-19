@@ -1,25 +1,23 @@
 {
-  "commit": "4bfcfcc+dirty",
+  "commit": "01e24e8",
   "target": "qwen",
-  "createdAt": "2026-11-18T09:43:06.170Z",
+  "createdAt": "2026-11-19T01:43:32.629Z",
   "scenarios": [
     {
       "id": "bench-vague-gospel-video",
       "category": "vague",
       "runs": 6,
-      "passes": 5,
+      "passes": 4,
       "failures": {
-        "objective includes audience from the member's answer": 1
+        "objective includes audience from the member's answer": 2
       }
     },
     {
       "id": "bench-vague-support-faq",
       "category": "vague",
       "runs": 6,
-      "passes": 5,
-      "failures": {
-        "objective includes FAQ": 1
-      }
+      "passes": 6,
+      "failures": {}
     },
     {
       "id": "bench-vague-goal-evidence",
@@ -60,10 +58,8 @@
       "id": "bench-proficient-existing",
       "category": "proficient",
       "runs": 6,
-      "passes": 5,
-      "failures": {
-        "verdict ready": 1
-      }
+      "passes": 6,
+      "failures": {}
     },
     {
       "id": "bench-proficient-partner-search",
@@ -99,8 +95,12 @@
       "id": "bench-qa-gibberish",
       "category": "adversarial",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 5,
+      "failures": {
+        "checks shown": 1,
+        "people check not met": 1,
+        "verdict not ready": 1
+      }
     },
     {
       "id": "bench-qa-holiday-spanish",
