@@ -164,3 +164,14 @@ test("every run's goals keep the chosen action, add no outcome, and feedback nam
 test("the gospel audience may be phrased as people who have not yet met Jesus", () => {
   assert.deepEqual(failed(run({ objective: "Build an application that generates gospel videos for people who have not yet met Jesus." })), []);
 });
+
+test("a goal that rewords the chosen action still keeps it", () => {
+  const t = run({});
+  const action = "Investigate partner support logs to identify common film search failures.";
+  const goal = "By 30 April 2027, Review partner support logs to identify patterns in requests related to not finding Spanish films.";
+  t.outcome.goals = [goal];
+  t.outcome.plans = [{ actions: [action], action, date: "2027-04-30", goal, concerns: ["Consider asking an internal stakeholder which films are hardest to find."] }];
+  const names = evaluate(t, gospel).assertions.filter(a => !a.passed).map(a => a.name);
+  assert.ok(!names.includes("goals keep the chosen action"), "a reworded action is kept");
+  assert.ok(!names.includes("feedback names no new people"), "a generic stakeholder example names no one");
+});

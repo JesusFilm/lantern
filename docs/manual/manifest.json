@@ -1,9 +1,9 @@
 {
-  "edition": 65,
+  "edition": 66,
   "editionDate": "2026-11-19",
-  "deck": "2b710a60b3bea49af6edb503fb2c6d7af9047e774fc839d9765f047ed7981f59",
+  "deck": "af58e1a89dcdd1b8e18018abd42840289e694d58b89fd9874e3d51d04c36108f",
   "sources": {
-    "fingerprint": "249899d2d43c5f24ef9879cd4954d76bca516ed7fbb8dd372be31e3593eda5f9",
+    "fingerprint": "b7685142380a228363776543b7f9ddf697c1ca45b9c77ed0f01824349abadddd",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -87,7 +87,7 @@
       "server/auth-recovery.ts": "91b16ccb58d61de3331ed03cc769080ab03cc96e093a446c7ddfead184d660ee",
       "server/bootstrap-database.ts": "98068f7b5aecec50064fd7be1019adf1e55bb63a14b38b30f8e16a51c945ba86",
       "server/coach-contract.ts": "2206bc5601507cd149f93d78e270a984b9939d91ce088535df5865bf614974ec",
-      "server/coach-guidance.ts": "d2b7da2b996135e4b27cc93c3116132efdaa4237b7315c203fb511eee2ea2326",
+      "server/coach-guidance.ts": "dbcfc427df7c3a8a8bb3acd17baf00552ef390d73012b297a90e119db856f485",
       "server/coach-http.ts": "490ed441fb3059e2a3476f5eb73273632477d7e5c6990f3fbc66493fc2e509c1",
       "server/coach-prompt.ts": "47b5d9c073ddad3de3c1ff332e99847e69fec9130d1ec92bb7bcea46c9bd0349",
       "server/coach-provider.ts": "c169f689dc7e9616f3653d869166bf0776154cdf4a9d7453c49faf2e6a64fdaf",
@@ -209,7 +209,7 @@
     "lead-review-2.png": "d5ed96747d4656515905bd6a4dea50ff2643ba449c76121bfaff1ad8221787f4",
     "lead-review-progress.png": "6926c3cbeb9defbf468682f9c392af4f6bfc40c6edb7e4c2d9866cac69e548ee",
     "lead-reviews.png": "cc1bb2e8c1a74216da1f5756ce8c4583c8795ba2b224f3c5d314ec9a03c4382f",
-    "member-confirm-dialog.png": "3743b148a45782e5b6055b58c3bf3c941982e0f27363175fc1057182d66810ae",
+    "member-confirm-dialog.png": "19dd4d0e6a27291a4dd7b90711dca55ccbcb26d6a41a7f03d045d9891b77cf99",
     "mission-image.png": "bb3a2eefb5de50cb8cb7ab767abe7e84661e7a0e3fe44700ba57c4c4495d6e6a",
     "objective-choice.png": "3d195f31a80e216b404b821889d155db78f089e046988b9d6c4e176140cc552c",
     "objective-manual-1.png": "65716b9f9437fe57fda38f6b975868e4208b15143d7f72209d1298be080ca777",
@@ -250,9 +250,9 @@
       }
     }
   },
-  "pdf": "ec5943fae62382f7fe6aa9b0e2fe8fa15123cac19fd3c08f75a51f3d3c62123e",
+  "pdf": "893a5b6430c3ae497b1e94b3755c90f0177c94d1752fa5f1cc931a09b89a5269",
   "verification": {
-    "generatedAt": "2026-11-19T02:33:30.501Z",
+    "generatedAt": "2026-11-19T02:48:30.091Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -337,7 +337,7 @@
       "server/auth-recovery.ts": "91b16ccb58d61de3331ed03cc769080ab03cc96e093a446c7ddfead184d660ee",
       "server/bootstrap-database.ts": "98068f7b5aecec50064fd7be1019adf1e55bb63a14b38b30f8e16a51c945ba86",
       "server/coach-contract.ts": "2206bc5601507cd149f93d78e270a984b9939d91ce088535df5865bf614974ec",
-      "server/coach-guidance.ts": "d2b7da2b996135e4b27cc93c3116132efdaa4237b7315c203fb511eee2ea2326",
+      "server/coach-guidance.ts": "dbcfc427df7c3a8a8bb3acd17baf00552ef390d73012b297a90e119db856f485",
       "server/coach-http.ts": "490ed441fb3059e2a3476f5eb73273632477d7e5c6990f3fbc66493fc2e509c1",
       "server/coach-prompt.ts": "47b5d9c073ddad3de3c1ff332e99847e69fec9130d1ec92bb7bcea46c9bd0349",
       "server/coach-provider.ts": "c169f689dc7e9616f3653d869166bf0776154cdf4a9d7453c49faf2e6a64fdaf",

@@ -250,7 +250,7 @@ function memberText(transcript: Transcript, scenario: Scenario) {
 }
 
 const common = new Set(["with", "that", "this", "from", "their", "your", "have", "will", "into", "each", "what", "about", "them", "they", "more", "than", "then", "when", "which", "where"]);
-const stems = (text: string) => new Set((text.toLowerCase().match(/[a-z]{4,}/g) ?? []).filter((w) => !common.has(w)).map((w) => w.slice(0, 5)));
+const stems = (text: string) => new Set((text.toLowerCase().match(/[a-z]{4,}/g) ?? []).filter((w) => !common.has(w)).map((w) => w.slice(0, 4)));
 /** True when at least half of the chosen action's meaningful words survive in the goal. */
 function keepsAction(action: string, goal: string) {
   const wanted = [...stems(action)], have = stems(goal);
@@ -259,7 +259,7 @@ function keepsAction(action: string, goal: string) {
 /** Result clauses a goal must not add unless the member's action or words already contain them. */
 const addedOutcome = /\b(so that|in order to|to ensure|ensuring|which will|resulting in|leading to)\b/gi;
 /** People the coach must not introduce in feedback unless the member mentioned them. */
-const newPeople = /\b(career lead|line manager|manager|supervisor|director|stakeholders?|team lead|leadership team)\b/gi;
+const newPeople = /\b(career lead|line manager|manager|supervisor|director|team lead|leadership team)\b/gi;
 const introduced = (text: string, pattern: RegExp, own: string) =>
   [...text.matchAll(pattern)].map((m) => m[0].toLowerCase()).filter((phrase) => !own.toLowerCase().includes(phrase));
 
