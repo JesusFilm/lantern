@@ -83,6 +83,10 @@ An informational note alone does not block closure. Preserve any non-blocking
 follow-up separately when needed. A merged fix or green automated checks alone
 do not replace manual QA sign-off for an issue awaiting QA.
 
+Closing an issue labelled `feature-flag` does not release its flag. Keep the
+label: the owner's release reminder continues until the issue is labelled
+`flag: released` (see [Release a flagged feature](feature-flags.md#release-a-flagged-feature)).
+
 ## New features
 
 New user-visible features follow the [feature flag policy](feature-flags.md):
