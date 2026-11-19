@@ -23,7 +23,7 @@ A flagged feature that needs a schema change must keep the migration compatible 
 3. In the client, show the feature's entry points only when `session.features` includes the name.
 4. Test both states through the public interfaces. With the feature shown, it works. With it hidden, its routes answer 404, its entry points are absent and existing behavior is unchanged. Build the setting for a test with `resolveFeatureConfig` and pass it to `createApp` as `features`. An application created without `features` hides every registered feature.
 5. Add the feature's slides to the [QA manual](manual.md) in this same change, as [manual.md](manual.md) requires for every user-visible change. The feature shows on stage by default, so testers will see it there while production still hides it; each slide must state the flag name and that the feature is hidden in production until it is released. The flag-removal change then drops that note, keeping the slide itself.
-6. Label the issue the change refers to `feature-flag`, and add a line `Flag: `name`` to the issue description and the PR description. Without a tracking issue, open one for the feature. The label is how a QA pass becomes a release reminder; see [Release a flagged feature](#release-a-flagged-feature).
+6. Label the issue the change refers to `feature-flag`, and add a line such as ``Flag: `coach-redesign` `` to the issue description and the PR description. Without a tracking issue, open one for the feature. The label is how a QA pass becomes a release reminder; see [Release a flagged feature](#release-a-flagged-feature).
 
 ## States and settings
 
