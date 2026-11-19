@@ -23,6 +23,7 @@ A flagged feature that needs a schema change must keep the migration compatible 
 3. In the client, show the feature's entry points only when `session.features` includes the name.
 4. Test both states through the public interfaces. With the feature shown, it works. With it hidden, its routes answer 404, its entry points are absent and existing behavior is unchanged. Build the setting for a test with `resolveFeatureConfig` and pass it to `createApp` as `features`. An application created without `features` hides every registered feature.
 5. Add the feature's slides to the [QA manual](manual.md) in this same change, as [manual.md](manual.md) requires for every user-visible change. The feature shows on stage by default, so testers will see it there while production still hides it; each slide must state the flag name and that the feature is hidden in production until it is released. The flag-removal change then drops that note, keeping the slide itself.
+6. Label the issue the change refers to `feature-flag`, and add a line such as ``Flag: `coach-redesign` `` to the issue description and the PR description. Without a tracking issue, open one for the feature. The label is how a QA pass becomes a release reminder; see [Release a flagged feature](#release-a-flagged-feature).
 
 ## States and settings
 
@@ -48,12 +49,15 @@ Changing a stage or production variable redeploys the webapp with a new deployme
 
 ## Release a flagged feature
 
-The repository owner does this in Railway. Each variable change redeploys the webapp.
+QA passing flagged work is the signal to release it: an issue labelled `feature-flag` that reaches `qa: passed`. A reminder is then posted once per flag in the `#lantern-qa` Slack channel, addressed to the owner, naming the flag and linking its QA-passed issues and their pull requests, and the owner gets a Slackbot notification. The reminder is not repeated; the flag's state in each environment is the record of whether it is released, shown on the owner's `/ops/feature-flags` page. Closing the issue does not release the flag, because engineering closes issues after a QA pass while the flag may still be hidden.
+
+The repository owner releases the feature in Railway. Each variable change redeploys the webapp.
 
 1. Confirm the release containing the feature is live in production, with the feature unset or `off`.
 2. Set the feature to `preview` and list the checking accounts in `LANTERN_PREVIEW_EMAILS`. Try the feature in production with one of those accounts.
 3. Set the feature to `on`.
-4. If a problem appears, set it back to `off`. Data the feature already saved stays in the database.
+4. Optionally, add `flag: released` to the issue to note on it that the feature is live. The reminder skips issues with this label, but does not need it.
+5. If a problem appears, set the feature back to `off`, and remove `flag: released` if it was added. Data the feature already saved stays in the database.
 
 ## Remove the flag
 
