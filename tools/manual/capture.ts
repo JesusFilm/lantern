@@ -18,6 +18,8 @@ export function contextOptions(device: Device): BrowserContextOptions {
 
 /** Native controls such as date inputs follow the browser process locale, not the page locale. */
 export const launchOptions = {
+  // Keep glyph placement deterministic across repeated Chromium captures.
+  args: ["--disable-font-subpixel-positioning"],
   env: { ...process.env, LANG: "en_NZ.UTF-8", LANGUAGE: "en_NZ", LC_ALL: "en_NZ.UTF-8" },
 };
 
