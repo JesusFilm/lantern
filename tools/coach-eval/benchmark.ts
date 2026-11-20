@@ -21,6 +21,10 @@ export interface Contract {
   maxQuestions?: number;
   /** The visible objective must contain each pattern, usually facts from the member's answers. */
   includes?: Array<{ label: string; pattern: RegExp }>;
+  /** For uncertain input, allow unchanged wording only with an explicit explanation. */
+  improvedOrExplained?: Array<{ label: string; pattern: RegExp }>;
+  /** The member's answer must be included in a subsequent coach request. */
+  requiresAnswer?: boolean;
   /** Every goal must contain each pattern, usually words from the member's chosen action. */
   goalIncludes?: Array<{ label: string; pattern: RegExp }>;
   /** Coach-written objective wording and goals must not contain these. The member's own words shown back are exempt. */
@@ -43,6 +47,32 @@ const mission = /\b(mission|connect\w*|relat\w*|align\w*|support\w*|work|role|jo
 const base = { issues: [] as string[], focus: cycle, goals: [] as Scenario["goals"], endAtObjective: true };
 
 export const benchmarkScenarios: BenchmarkScenario[] = [
+  {
+    ...base, id: "bench-vague-existing-testing", category: "vague", role: "QA engineer", issues: ["#191"],
+    summary: "Improve a vague existing objective using the member's answer.",
+    existing: { objective: "stuff", kind: "normal" },
+    member: { answers: ["not sure, may be testing, benefits app"] },
+    respondToFeedback: true,
+    typeChoice: "keep",
+    expect: { criteria: ["The coach uses the testing and app details, or explains that it could not improve the wording."] },
+    contract: { maxQuestions: 1, requiresAnswer: true, improvedOrExplained: [
+      { label: "testing", pattern: /test/i },
+      { label: "app", pattern: /app/i },
+    ] },
+  },
+  {
+    ...base, id: "bench-vague-existing-answer", category: "vague", role: "QA engineer", issues: ["#191"],
+    summary: "Improve a vague existing objective after a clear answer.",
+    existing: { objective: "stuff", kind: "normal" },
+    member: { answers: ["I test the app so users have fewer bugs."] },
+    respondToFeedback: true,
+    typeChoice: "keep",
+    expect: { criteria: ["The improved objective uses the member's testing and user details."] },
+    contract: { maxQuestions: 1, requiresAnswer: true, includes: [
+      { label: "testing", pattern: /test/i },
+      { label: "users", pattern: /user/i },
+    ] },
+  },
   {
     ...base, id: "bench-vague-gospel-video", category: "vague", role: "Developer",
     summary: "One-line product idea; the member supplies the audience when asked.",
@@ -268,7 +298,8 @@ function draftQuestions(transcript: Transcript) {
   let count = 0;
   for (let i = 1; i < transcript.turns.length; i++) {
     const turn = transcript.turns[i]!, previous = transcript.turns[i - 1]!;
-    if (turn.type === "member" && turn.step === "answer" && previous.type === "coach" && previous.stage === "clarify") count++;
+    if (turn.type === "member" && turn.step === "answer" && previous.type === "coach" &&
+      (previous.stage === "clarify" || (previous.step === "refine" && !!previous.suggestion?.question))) count++;
   }
   return count;
 }
@@ -287,6 +318,11 @@ export function evaluate(transcript: Transcript, scenario: BenchmarkScenario): {
   add("completed", transcript.outcome.completed, transcript.outcome.failure);
   add("draft shown", !!objective.trim());
   add("checks shown", !!checks, "No assessment for the visible objective.");
+  if (contract.requiresAnswer) {
+    const submitted = transcript.turns.some((turn, i) => turn.type === "member" && turn.step === "answer" &&
+      transcript.turns.slice(i + 1).some(next => next.type === "coach" && next.context.answers.some(a => a.answer === turn.text)));
+    add("member answer sent to coach", submitted);
+  }
   const questions = draftQuestions(transcript), limit = contract.maxQuestions ?? 2;
   add(`at most ${limit} question${limit === 1 ? "" : "s"} before the draft`, questions <= limit, `${questions} asked`);
   add("no repeated question", !metrics.repeatedQuestion);
@@ -307,6 +343,12 @@ export function evaluate(transcript: Transcript, scenario: BenchmarkScenario): {
   if (allMet) add("quiet once ready", !screen?.concern, screen?.concern);
 
   for (const { label, pattern } of contract.includes ?? []) add(`objective includes ${label}`, pattern.test(objective), objective);
+  if (contract.improvedOrExplained) {
+    const unchanged = objective.trim() === scenario.existing?.objective.trim();
+    const explained = unchanged && /could not improve/i.test(screen?.concern ?? "");
+    for (const { label, pattern } of contract.improvedOrExplained)
+      add(`objective includes ${label} or explains no improvement`, pattern.test(objective) || explained, objective);
+  }
   const ownWording = [scenario.work, scenario.existing?.objective].some((text) => text?.trim() === objective.trim());
   for (const { label, pattern } of contract.excludes ?? [])
     add(`no ${label}`, ![ownWording ? "" : objective, ...goals].some((text) => pattern.test(text)), objective);
@@ -449,7 +491,8 @@ export function applyGate(result: BenchmarkResult, rules: Gate = gate, baseline?
     const same = baseline.scenarios.filter((s) => ran.some((r) => r.id === s.id));
     if (same.length) {
       const before = rate(same), floor = before - rules.maxDropFromBaseline;
-      checks.push({ name: "drop from baseline", passed: atLeast(overall, floor), actual: `${percent(overall)} vs baseline ${percent(before)}`, required: `≥ ${percent(Math.max(0, floor))} (baseline − ${percent(rules.maxDropFromBaseline)})` });
+      const comparable = rate(ran.filter((r) => same.some((s) => s.id === r.id)));
+      checks.push({ name: "drop from baseline", passed: atLeast(comparable, floor), actual: `${percent(comparable)} vs baseline ${percent(before)}`, required: `≥ ${percent(Math.max(0, floor))} (baseline − ${percent(rules.maxDropFromBaseline)})` });
     }
   }
   const losing = ran.filter((s) => !majority(s)).length + missing.length;

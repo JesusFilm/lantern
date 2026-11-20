@@ -337,10 +337,15 @@ export function ObjectiveEditor({
       }
       if (redesigned) {
         await guidedRequest("objective", { ...context(), entry: "objective", concern: improvement }, result => {
-          if (!result.objective) return;
-          update({ type: "objective-values", values: { text: result.objective } });
-          setRecommended(result.recommendedKind);
-          setRecommendedInitiatives(result.initiativeIds ?? []);
+          if (result.objective) {
+            update({ type: "objective-values", values: { text: result.objective } });
+            setRecommended(result.recommendedKind);
+            setRecommendedInitiatives(result.initiativeIds ?? []);
+          }
+          const checksMet = !!result.assessment && Object.values(result.assessment).every(check => check.status === "met");
+          if ((!result.objective || result.objective.trim() === edit.text.trim()) && !checksMet) {
+            setConcern(["The coach could not improve this objective yet.", result.concern].filter(Boolean).join(" "));
+          }
           setStage("objective");
         });
         return;
@@ -513,7 +518,9 @@ export function ObjectiveEditor({
       } else setStage("work");
     } else if (stage === "objective") {
       const previous = answers.at(-1);
-      if (previous) {
+      if (redesigned && source && !previous) {
+        setStage("refine");
+      } else if (previous) {
         setAnswers(answers.slice(0, -1));
         setQuestion(previous.question);
         setAnswer(previous.answer);
@@ -910,7 +917,7 @@ export function ObjectiveEditor({
             {method === "guided" &&
               stage !== "work" &&
               stage !== "refine" &&
-              !(stage === "objective" && !edit.adding && !work) && (
+              !(stage === "objective" && !redesigned && !edit.adding && !work) && (
                 <button type="button" disabled={busy} onClick={back}>
                   Back
                 </button>

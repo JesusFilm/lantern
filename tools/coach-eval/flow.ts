@@ -149,6 +149,8 @@ export async function runCurrentFlow(
         concern: redesigned ? "" : scenario.improvement ?? "",
       });
       if (!result) return { turns, outcome: outcome("coach unavailable") };
+      const unchanged = !result.objective || result.objective.trim() === edit.text.trim();
+      const checksMet = !!result.assessment && Object.values(result.assessment).every(check => check.status === "met");
       // Without new wording the editor keeps the member's objective and shows checks of it.
       // Refinement replaces the wording only; type and alignment stay as saved.
       if (result.objective) edit.text = result.objective;
@@ -157,7 +159,7 @@ export async function runCurrentFlow(
       if (scenario.typeChoice === "recommended" && recommendedKind) edit.kind = recommendedKind;
       else if (scenario.typeChoice !== "keep" && scenario.typeChoice !== "recommended")
         edit.kind = scenario.typeChoice;
-      if (redesigned) showScreen(result);
+      if (redesigned) showScreen(result, unchanged && !checksMet ? "The coach could not improve this objective yet." : "");
     }
   } else {
     work = scenario.work ?? "";
@@ -191,7 +193,8 @@ export async function runCurrentFlow(
   }
 
   // Help me address this: the member answers the first gap, while they have something to add.
-  const rounds = !redesigned ? 0 : scenario.respondToFeedback ? 1 : member.respond ? 2 : 0;
+  const alreadyAnswered = turns.some(turn => turn.type === "member" && turn.step === "answer");
+  const rounds = !redesigned ? 0 : scenario.respondToFeedback && (!scenario.existing || !alreadyAnswered) ? 1 : member.respond ? 2 : 0;
   for (let round = 0; round < rounds; round++) {
     const screen = screens.at(-1);
     const gap = screen?.concern || Object.values(screen?.assessment ?? {}).find(check => check.status !== "met")?.note;

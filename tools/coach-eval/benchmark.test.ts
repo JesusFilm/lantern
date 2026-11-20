@@ -55,7 +55,29 @@ test("every benchmark scenario has a category, a contract and a unique id", () =
   assert.equal(new Set(benchmarkScenarios.map(s => s.id)).size, benchmarkScenarios.length);
   for (const category of ["vague", "rewording", "proficient", "adversarial"])
     assert.ok(benchmarkScenarios.filter(s => s.category === category).length >= 3, category);
-  for (const s of benchmarkScenarios) assert.ok(s.contract.verdict || s.contract.includes?.length, s.id);
+  for (const s of benchmarkScenarios) assert.ok(s.contract.verdict || s.contract.includes?.length || s.contract.improvedOrExplained?.length, s.id);
+});
+
+test("the uncertain existing objective must either use the answer or explain the unchanged wording", () => {
+  const scenario = benchmarkScenarios.find(s => s.id === "bench-vague-existing-testing")!;
+  const notMet = { status: "needs_attention" as const, note: "Describe the work." };
+  const check = (objective: string, concern: string) => {
+    const t = run({ objective, concern, assessment: { purpose: notMet, people: notMet, alignment: notMet } }, []);
+    const second = t.turns[2]!;
+    if (second.type === "coach") second.context = { ...second.context, answers: [{ question: "Who?", answer: "People who don't yet know Jesus." }] };
+    return evaluate({ ...t, scenario: scenario.id }, scenario).assertions.filter(a => !a.passed).map(a => a.name);
+  };
+  assert.deepEqual(check("Test the app.", ""), []);
+  assert.deepEqual(check("stuff", "The coach could not improve this objective yet."), []);
+  assert.ok(check("stuff", "Who benefits?").some(name => name.includes("or explains no improvement")));
+  assert.ok(check("Test the website.", "The coach could not improve this objective yet.").some(name => name.includes("or explains no improvement")));
+});
+
+test("the existing-objective scenario requires the member's answer to reach the coach", () => {
+  const scenario = benchmarkScenarios.find(s => s.id === "bench-vague-existing-testing")!;
+  const t = run({ objective: "stuff", concern: "The coach could not improve this objective yet.", assessment: { purpose: { status: "needs_attention", note: "Work?" }, people: { status: "needs_attention", note: "Who?" }, alignment: { status: "uncertain", note: "Why?" } } }, []);
+  const fails = evaluate(t, scenario).assertions.filter(a => !a.passed).map(a => a.name);
+  assert.ok(fails.includes("member answer sent to coach"));
 });
 
 test("embedded instructions fail only when the coach writes them, and never pass as ready", () => {
@@ -104,16 +126,26 @@ test("the committed gate allows Qwen's usual variation but not a lost kind of me
 test("the gate measures drops from the baseline as well as the absolute floor", () => {
   const perfect = sample();
   const threeFailures = sample(Object.fromEntries(benchmarkScenarios.slice(0, 3).map(s => [s.id, 2])));
-  // 36 of 39 runs (92%) clears the floor and is within the allowed drop from 100%.
+  // Three scattered failures clear the floor and stay within the allowed drop.
   assert.deepEqual(failedGate(threeFailures, perfect), []);
-  const lower = sample(Object.fromEntries(benchmarkScenarios.slice(0, 9).map(s => [s.id, 2])));
-  // 30 of 39 (77%), spread so every scenario keeps its majority, is below the floor and more than the allowed drop.
+  const lower = sample(Object.fromEntries(benchmarkScenarios.slice(0, 11).map(s => [s.id, 2])));
+  // Eleven scattered failures leave every scenario with a majority, but cross both thresholds.
   assert.deepEqual(failedGate(lower, perfect).sort(), ["drop from baseline", "overall runs"]);
   assert.ok(!failedGate(lower).includes("drop from baseline"), "without a baseline only the floor applies");
   const md = renderBenchmark(lower, perfect).markdown;
   assert.match(md, /Gate: FAIL/);
   assert.match(md, /tools\/coach-eval\/gate\.json/);
   assert.equal(renderBenchmark(lower, perfect).passed, false);
+});
+
+test("the baseline drop compares only scenarios present in both results", () => {
+  const current = sample();
+  const added = current.scenarios[0]!.id;
+  const baseline = sample({}, [added]);
+  const reduced = { ...current, scenarios: current.scenarios.map(s => s.id === added ? { ...s, passes: 0 } : { ...s, passes: 2 }) };
+  const drop = applyGate(reduced, gate, baseline).checks.find(c => c.name === "drop from baseline")!;
+  assert.match(drop.actual, /^67% vs baseline 100%/);
+  assert.equal(drop.passed, false);
 });
 
 test("runs the harness could not record count as failures, so a partial sample cannot pass", () => {

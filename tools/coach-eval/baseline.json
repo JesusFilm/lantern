@@ -1,27 +1,35 @@
 {
-  "commit": "f35d66c",
+  "commit": "726de71, 11c219c",
   "target": "qwen",
-  "createdAt": "2026-11-19T03:00:26.852Z",
+  "createdAt": "2026-11-20T02:25:15.014Z",
   "scenarios": [
+    {
+      "id": "bench-vague-existing-testing",
+      "category": "vague",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
+    {
+      "id": "bench-vague-existing-answer",
+      "category": "vague",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
     {
       "id": "bench-vague-gospel-video",
       "category": "vague",
       "runs": 6,
-      "passes": 4,
-      "failures": {
-        "feedback names no new people": 1,
-        "objective includes audience from the member's answer": 1
-      }
+      "passes": 6,
+      "failures": {}
     },
     {
       "id": "bench-vague-support-faq",
       "category": "vague",
       "runs": 6,
-      "passes": 4,
-      "failures": {
-        "verdict ready": 1,
-        "objective includes FAQ": 1
-      }
+      "passes": 6,
+      "failures": {}
     },
     {
       "id": "bench-vague-goal-evidence",
@@ -36,17 +44,19 @@
       "runs": 6,
       "passes": 5,
       "failures": {
-        "checks shown": 1,
-        "people check not met": 1,
-        "verdict not ready": 1
+        "completed": 1
       }
     },
     {
       "id": "bench-rewording-subtitles",
       "category": "rewording",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 4,
+      "failures": {
+        "completed": 1,
+        "at least 1 goal": 1,
+        "goals add no outcome": 1
+      }
     },
     {
       "id": "bench-rewording-playwright",
@@ -66,22 +76,28 @@
       "id": "bench-proficient-existing",
       "category": "proficient",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 5,
+      "failures": {
+        "objective includes facilitators": 1
+      }
     },
     {
       "id": "bench-proficient-partner-search",
       "category": "proficient",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 5,
+      "failures": {
+        "verdict ready": 1
+      }
     },
     {
       "id": "bench-proficient-accessibility-growth",
       "category": "proficient",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 5,
+      "failures": {
+        "verdict ready": 1
+      }
     },
     {
       "id": "bench-qa-off-topic",

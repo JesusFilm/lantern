@@ -117,6 +117,129 @@ test("goal ideas preserve the selected action and date, and the final check need
   } finally { await f.close(); }
 });
 
+test("answering an existing objective question updates and saves the objective", async () => {
+  const f = await world((stage, context) => {
+    if (stage === "review") return { assessment: {
+      purpose: { status: "met", note: "Testing is clear." },
+      people: { status: "met", note: "Users benefit." },
+      alignment: { status: "uncertain", note: "Connection is unclear." },
+    } };
+    return context.answers.length ? { objective: "Test the app so users have fewer bugs." } : { question: "What work do you do?" };
+  });
+  try {
+    const { page } = f;
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    assert.equal((await f.request("member", "/api/focuses/" + f.focus.id, "PUT", {
+      title: f.focus.title, start: f.focus.start, end: f.focus.end, version: f.focus.version,
+      sections: [{ kind: "normal", objective: "stuff", goals: [], alignment: { other: true, initiatives: [] } }],
+    })).status, 200);
+    await page.reload();
+    await page.getByRole("button", { name: "Guide with AI", exact: true }).click();
+    await page.getByRole("button", { name: "Improve objective", exact: true }).click();
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByLabel("Your answer", { exact: true }).fill("I test the app so users have fewer bugs.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Test the app so users have fewer bugs.");
+    assert.equal(f.calls.filter(c => c.stage === "objective").at(-1)?.context.answers.at(-1)?.answer, "I test the app so users have fewer bugs.");
+    assert.equal(f.calls.filter(c => c.stage === "review").at(-1)?.context.objective, "Test the app so users have fewer bugs.");
+    await page.getByRole("button", { name: "Save objective", exact: true }).click();
+    await page.reload();
+    const saved = await (await f.request("member", "/api/focuses/" + f.focus.id)).json();
+    assert.equal(saved.sections[0].objective, "Test the app so users have fewer bugs.");
+  } finally { await f.close(); }
+});
+
+test("a clear existing objective stays quiet when the coach keeps its wording", async () => {
+  const objective = "Learn accessibility auditing for my work.";
+  const met = { status: "met" as const, note: "Clear." };
+  const f = await world(() => ({ objective, assessment: { purpose: met, people: met, alignment: met } }));
+  try {
+    const { page } = f;
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    assert.equal((await f.request("member", "/api/focuses/" + f.focus.id, "PUT", {
+      title: f.focus.title, start: f.focus.start, end: f.focus.end, version: f.focus.version,
+      sections: [{ kind: "personal-development", objective, goals: [], alignment: { other: true, initiatives: [] } }],
+    })).status, 200);
+    await page.reload();
+    await page.getByRole("button", { name: "Guide with AI", exact: true }).click();
+    await page.getByRole("button", { name: "Improve objective", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue(objective);
+    await expect(page.getByRole("region", { name: "AI coach feedback" })).toContainText("The main elements are in place");
+    await expect(page.getByText(/could not improve/i)).toHaveCount(0);
+  } finally { await f.close(); }
+});
+
+test("unchanged refinement explains the result and Back preserves the answer", async () => {
+  const f = await world((stage, context) => {
+    if (stage === "review") return { assessment: {
+      purpose: { status: "needs_attention", note: "Describe your work." },
+      people: { status: "needs_attention", note: "Who benefits?" },
+      alignment: { status: "uncertain", note: "Connection is unclear." },
+    } };
+    return context.answers.length ? { objective: "stuff" } : { question: "What work do you do?" };
+  });
+  try {
+    const { page } = f;
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    assert.equal((await f.request("member", "/api/focuses/" + f.focus.id, "PUT", {
+      title: f.focus.title, start: f.focus.start, end: f.focus.end, version: f.focus.version,
+      sections: [{ kind: "normal", objective: "stuff", goals: [], alignment: { other: true, initiatives: [] } }],
+    })).status, 200);
+    await page.reload();
+    await page.getByRole("button", { name: "Guide with AI", exact: true }).click();
+    await page.getByRole("button", { name: "Improve objective", exact: true }).click();
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByLabel("Your answer", { exact: true }).fill("I test the app.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("stuff");
+    await expect(page.getByText(/could not improve/i)).toBeVisible();
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Improve objective", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Improve objective", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("stuff");
+    assert.equal(f.calls.filter(c => c.stage === "objective").at(-1)?.context.answers.at(-1)?.answer, "I test the app.");
+  } finally { await f.close(); }
+});
+
+test("an existing objective leaves refinement when the coach cannot draft, and feedback can improve and save it", async () => {
+  const f = await world((stage, context) => {
+    if (stage === "review") return { assessment: {
+      purpose: { status: "needs_attention", note: "Describe your work." },
+      people: { status: "needs_attention", note: "Who benefits?" },
+      alignment: { status: "uncertain", note: "Connection is unclear." },
+    } };
+    if (context.answers.length >= 2) return { objective: "Test the app for users to find functional bugs." };
+    return { question: context.answers.length ? "What kind of testing?" : "What work do you do?", ready: false };
+  });
+  try {
+    const { page } = f;
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    const response = await f.request("member", "/api/focuses/" + f.focus.id, "PUT", {
+      title: f.focus.title, start: f.focus.start, end: f.focus.end, version: f.focus.version,
+      sections: [{ kind: "normal", objective: "stuff", goals: [], alignment: { other: true, initiatives: [] } }],
+    });
+    assert.equal(response.status, 200);
+    await page.reload();
+    await page.getByRole("button", { name: "Guide with AI", exact: true }).click();
+    await page.getByRole("button", { name: "Improve objective", exact: true }).click();
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByLabel("Your answer", { exact: true }).fill("I test the app for users.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("stuff");
+    await expect(page.getByRole("region", { name: "AI coach feedback" })).toContainText("What kind of testing?");
+    await expect(page.getByText(/could not improve/i)).toBeVisible();
+    await page.getByRole("button", { name: "Help me address this", exact: true }).click();
+    await page.getByLabel("Details for the coach").fill("Functional testing to find bugs.");
+    await page.getByRole("button", { name: "Update objective", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Test the app for users to find functional bugs.");
+    assert.equal(f.calls.filter(c => c.stage === "review").at(-1)?.context.objective, "Test the app for users to find functional bugs.");
+    await page.getByRole("button", { name: "Save objective", exact: true }).click();
+    await page.reload();
+    const saved = await (await f.request("member", "/api/focuses/" + f.focus.id)).json();
+    assert.equal(saved.sections[0].objective, "Test the app for users to find functional bugs.");
+  } finally { await f.close(); }
+});
+
 test("switching methods during a refinement question preserves manual edits and the refinement stage", async () => {
   const f = await world(stage => stage === "objective" ? { question: "What outcome matters most?" } : { objective: "Unexpected replacement" });
   try {
