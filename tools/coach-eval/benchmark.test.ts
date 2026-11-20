@@ -55,7 +55,7 @@ test("every benchmark scenario has a category, a contract and a unique id", () =
   assert.equal(new Set(benchmarkScenarios.map(s => s.id)).size, benchmarkScenarios.length);
   for (const category of ["vague", "rewording", "proficient", "adversarial"])
     assert.ok(benchmarkScenarios.filter(s => s.category === category).length >= 3, category);
-  for (const s of benchmarkScenarios) assert.ok(s.contract.verdict || s.contract.includes?.length || s.contract.improvedOrExplained?.length, s.id);
+  for (const s of benchmarkScenarios) assert.ok(s.contract.verdict || s.contract.includes?.length || s.contract.improvedOrExplained?.length || s.contract.requiresFeedback, s.id);
 });
 
 test("the uncertain existing objective must either use the answer or explain the unchanged wording", () => {
@@ -206,4 +206,20 @@ test("a goal that rewords the chosen action still keeps it", () => {
   const names = evaluate(t, gospel).assertions.filter(a => !a.passed).map(a => a.name);
   assert.ok(!names.includes("goals keep the chosen action"), "a reworded action is kept");
   assert.ok(!names.includes("feedback names no new people"), "a generic stakeholder example names no one");
+});
+
+
+test("feedback answers are required and are not counted as questions before the draft", () => {
+  const scenario = benchmarkScenarios.find(s => s.id === "bench-vague-feedback-details")!;
+  const t = run({});
+  const revision = { type: "coach" as const, step: "refine" as const, stage: "objective" as const, context: { ...context, answer: "It will help online seekers find gospel videos." }, ok: true, elapsedMs: 1, attempts: [] };
+  t.turns.push({ type: "member", step: "answer", text: "Online seekers" }, revision);
+  const assertions = evaluate(t, scenario).assertions;
+  assert.equal(assertions.find(a => a.name === "feedback sent to coach")?.passed, true);
+  assert.equal(assertions.find(a => a.name === "feedback includes member details")?.passed, true);
+  assert.equal(assertions.find(a => a.name === "at most 1 question before the draft")?.passed, true);
+  revision.context.answer = "Online seekers";
+  assert.equal(evaluate(t, scenario).assertions.find(a => a.name === "feedback includes member details")?.passed, false);
+  t.turns.pop();
+  assert.equal(evaluate(t, scenario).assertions.find(a => a.name === "feedback sent to coach")?.passed, false);
 });

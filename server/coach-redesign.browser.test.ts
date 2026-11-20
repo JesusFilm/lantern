@@ -7,7 +7,7 @@ import { resolveFeatureConfig } from "./features.js";
 import type { CoachProvider } from "./coach-provider.js";
 import type { CoachCheckpoint, CoachSuggestion } from "../shared/coach.js";
 
-async function world(reply: (stage: string, context: CoachCheckpoint) => CoachSuggestion) {
+async function world(reply: (stage: string, context: CoachCheckpoint) => CoachSuggestion, options?: { start: string; end: string; timezoneId?: string }) {
   const calls: Array<{ stage: string; context: CoachCheckpoint }> = [];
   const coach: CoachProvider = { async suggest(_system, text, validate) {
     const input = JSON.parse(text); calls.push(input); return validate(reply(input.stage, input.context));
@@ -16,12 +16,12 @@ async function world(reply: (stage: string, context: CoachCheckpoint) => CoachSu
   const vite = await createServer({ server: { middlewareMode: true, hmr: false }, appType: "spa" });
   f.app.use(vite.middlewares);
   const browser = await chromium.launch();
-  const context = await browser.newContext();
+  const context = await browser.newContext(options?.timezoneId ? { timezoneId: options.timezoneId } : {});
   await context.addCookies([{ name: "lantern-session", value: "member", url: f.origin }]);
   const page = await context.newPage();
   page.setDefaultTimeout(5000);
   const focus = await (await f.request("member", "/api/focuses", "POST", {
-    title: "Trainer focus", start: "2026-11-01", end: "2027-04-30", sections: [],
+    title: "Trainer focus", start: options?.start ?? "2026-11-01", end: options?.end ?? "2027-04-30", sections: [],
   })).json();
   await page.goto(f.origin + "/?focus=" + focus.id);
   await page.getByRole("button", { name: "Add objective", exact: true }).click();
@@ -76,13 +76,14 @@ test("member can continue editing their own wording when the coach keeps asking 
 });
 
 test("goal ideas preserve the selected action and date, and the final check needs no model call", async () => {
+  const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
   const f = await world((stage, context) => {
     if (stage === "clarify") return { objective: "Help trainers deliver accessible workshops.", recommendedKind: "normal", initiativeIds: [] };
-    if (stage === "actions") return { actions: ["Try the workshop materials with captions"], suggestedDate: "2027-03-15" };
+    if (stage === "actions") return { actions: ["Try the workshop materials with captions"], suggestedDate: day(30) };
     if (stage === "goal" && !context.answers.length) return { question: "Which workshop will you use?", concern: "Choose a workshop within your control." };
     if (stage === "goal") return { goal: "By 15 March 2027, try the workshop materials with captions in my introductory session and note accessibility issues." };
     return { review: "The goal supports the objective. Check that the session date is feasible.", concern: "Confirm the session date before requesting review." };
-  });
+  }, { start: day(-10), end: day(60), timezoneId: "UTC" });
   try {
     const { page } = f;
     await page.getByRole("radio", { name: "Not sure", exact: true }).check();
@@ -92,11 +93,11 @@ test("goal ideas preserve the selected action and date, and the final check need
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByRole("button", { name: "Try the workshop materials with captions", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Try the workshop materials with captions", exact: true }).click();
-    await page.getByLabel("Target date", { exact: true }).fill("2027-05-01");
+    await page.getByLabel("Target date", { exact: true }).fill(day(61));
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("within this position focus period");
     assert.equal(f.calls.filter(c => c.stage === "goal").length, 0);
-    await page.getByLabel("Target date", { exact: true }).fill("2027-03-15");
+    await page.getByLabel("Target date", { exact: true }).fill(day(30));
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByText("Choose a workshop within your control.", { exact: true })).toBeVisible();
     await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
@@ -114,6 +115,60 @@ test("goal ideas preserve the selected action and date, and the final check need
     const saved = await (await f.request("member", "/api/focuses/" + f.focus.id)).json();
     assert.equal(saved.sections[0].objective, "Help trainers deliver accessible workshops.");
     assert.equal(saved.sections[0].goals.length, 1);
+  } finally { await f.close(); }
+});
+
+test("the coach's target date rejects past days inside an active focus", async () => {
+  const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+  const today = day(0), yesterday = day(-1);
+  const f = await world(stage => stage === "clarify"
+    ? { objective: "Help trainers deliver workshops." }
+    : stage === "actions" ? { actions: ["Review workshop materials"] }
+    : { goal: "Review workshop materials." }, { start: day(-10), end: day(30), timezoneId: "UTC" });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I help trainers deliver workshops.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByLabel("Other — none of these apply").check();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByRole("button", { name: "Review workshop materials", exact: true }).click();
+    const target = page.getByLabel("Target date", { exact: true });
+    await expect(target).toHaveAttribute("min", today);
+    await target.fill(yesterday);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("today or later");
+    assert.equal(f.calls.filter(call => call.stage === "goal").length, 0);
+    await target.fill(today);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("SMART goal", { exact: true })).toBeVisible();
+  } finally { await f.close(); }
+});
+
+test("the target-date minimum uses a future focus start", async () => {
+  const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+  const start = day(10), end = day(30);
+  const f = await world(stage => stage === "clarify"
+    ? { objective: "Help trainers deliver workshops." }
+    : stage === "actions" ? { actions: ["Review workshop materials"] }
+    : { goal: "Review workshop materials." }, { start, end, timezoneId: "UTC" });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I help trainers deliver workshops.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByLabel("Other — none of these apply").check();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByRole("button", { name: "Review workshop materials", exact: true }).click();
+    const target = page.getByLabel("Target date", { exact: true });
+    await expect(target).toHaveAttribute("min", start);
+    await target.fill(day(9));
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("within this position focus period");
+    assert.equal(f.calls.filter(call => call.stage === "goal").length, 0);
+    await target.fill(start);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("SMART goal", { exact: true })).toBeVisible();
   } finally { await f.close(); }
 });
 
@@ -399,6 +454,70 @@ test("member can give the coach a missing detail and revise the current objectiv
   } finally { await f.close(); }
 });
 
+test("unsent coach details cannot be silently discarded by Next, Save or changing methods", async () => {
+  const f = await world((stage, context) => stage === "clarify"
+    ? { objective: "Build a video application.", concern: "Who will use it?" }
+    : { objective: `Build a video application for ${context.answers.at(-1)?.answer}.` });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("Build a video app.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByLabel("Other — none of these apply").check();
+    await page.getByRole("button", { name: "Help me address this", exact: true }).click();
+    await page.getByLabel("Details for the coach", { exact: true }).fill("online seekers");
+    await expect(page.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Save objective", exact: true })).toBeDisabled();
+    await page.getByRole("button", { name: "Switch to Write myself", exact: true }).click();
+    await expect(page.getByLabel("Details for the coach", { exact: true })).toHaveValue("online seekers");
+    await expect(page.getByText("Update objective or clear these details before continuing or saving.")).toBeVisible();
+    await page.getByRole("button", { name: "Update objective", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a video application for online seekers.");
+    await expect(page.getByRole("button", { name: "Next", exact: true })).toBeEnabled();
+    await page.getByRole("button", { name: "Save objective", exact: true }).click();
+    const saved = await (await f.request("member", "/api/focuses/" + f.focus.id)).json();
+    assert.equal(saved.sections[0].objective, "Build a video application for online seekers.");
+  } finally { await f.close(); }
+});
+
+test("editing the draft keeps pending checklist details visible and clearable", async () => {
+  const assessment = { purpose: { status: "met", note: "Clear." }, people: { status: "needs_attention", note: "Who benefits?" }, alignment: { status: "met", note: "Clear." } } as const;
+  const f = await world(() => ({ objective: "Build an application.", assessment }));
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("Build an application.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByRole("button", { name: "Help me address this", exact: true }).click();
+    await page.getByLabel("Details for the coach", { exact: true }).fill("Online seekers");
+    await page.getByLabel("Objective", { exact: true }).fill("Build a video application.");
+    await expect(page.getByLabel("Details for the coach", { exact: true })).toHaveValue("Online seekers");
+    await page.getByRole("button", { name: "Clear details", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Next", exact: true })).toBeEnabled();
+  } finally { await f.close(); }
+});
+
+test("an unchanged feedback revision keeps details until the member clears or retries", async () => {
+  const f = await world(stage => stage === "clarify"
+    ? { objective: "Build a video application.", concern: "Who will use it?" }
+    : { objective: "Build a video application.", concern: "More detail is needed." });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("Build a video app.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByRole("button", { name: "Help me address this", exact: true }).click();
+    await page.getByLabel("Details for the coach", { exact: true }).fill("online seekers");
+    await page.getByRole("button", { name: "Update objective", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("could not update");
+    await expect(page.getByLabel("Details for the coach", { exact: true })).toHaveValue("online seekers");
+    await expect(page.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
+    await page.getByRole("button", { name: "Clear details", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Next", exact: true })).toBeEnabled();
+  } finally { await f.close(); }
+});
+
 test("a failed feedback revision keeps the member's draft and details", async () => {
   let revisions = 0;
   const f = await world(stage => {
@@ -441,6 +560,8 @@ test("a follow-up question after feedback appears as feedback beside the unchang
     await expect(page.getByRole("region", { name: "AI coach feedback" })).toContainText("How will they find the videos?");
     await expect(page.getByLabel("Your answer", { exact: true })).toHaveCount(0);
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a video application.");
+    await expect(page.getByLabel("Details for the coach", { exact: true })).toHaveValue("online seekers");
+    await expect(page.getByRole("button", { name: "Next", exact: true })).toBeDisabled();
   } finally { await f.close(); }
 });
 
@@ -566,6 +687,89 @@ test("feedback without new wording updates the checks for the wording on screen"
     await expect(feedback).toContainText("Name the group the videos are for.");
     await expect(feedback).not.toContainText("changed since the coach checked it");
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a gospel video app.");
+  } finally { await f.close(); }
+});
+
+test("Not sure selects and saves the coach's recommended type without a redundant switch", async () => {
+  const assessment = { purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Clear." } } as const;
+  const f = await world(() => ({ objective: "Grow my Playwright testing skills.", recommendedKind: "personal-development", assessment }));
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Not sure", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I want to learn Playwright.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByRole("radio", { name: "Personal development", exact: true })).toBeChecked();
+    await expect(page.getByRole("button", { name: "Switch to Personal development", exact: true })).toHaveCount(0);
+    await page.getByLabel("Other — none of these apply").check();
+    await page.getByRole("button", { name: "Save objective", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Add objective", exact: true })).toHaveCount(0);
+    await page.reload();
+    const saved = await (await f.request("member", "/api/focuses/" + f.focus.id)).json();
+    assert.equal(saved.sections[0].kind, "personal-development");
+  } finally { await f.close(); }
+});
+
+test("a recommended type keeps the draft available when returning from Back", async () => {
+  const f = await world(() => ({ objective: "Grow my testing skills.", recommendedKind: "personal-development" }));
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Not sure", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I want to grow my testing skills.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Grow my testing skills.");
+    await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
+    await page.getByLabel("Objective", { exact: true }).fill("My edited draft.");
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited draft.");
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Return to draft", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Return to draft", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("My edited draft.");
+    await page.getByRole("radio", { name: "Leadership", exact: true }).check();
+    await page.getByLabel("Other — none of these apply").check();
+    await page.getByRole("button", { name: "Save objective", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Add objective", exact: true })).toHaveCount(0);
+    const saved = await (await f.request("member", "/api/focuses/" + f.focus.id)).json();
+    assert.equal(saved.sections[0].kind, "leadership");
+  } finally { await f.close(); }
+});
+
+test("a later recommendation selects the type when Not sure is still unresolved", async () => {
+  const f = await world(stage => stage === "clarify"
+    ? { objective: "Grow my testing skills.", concern: "How will you learn?" }
+    : { objective: "Grow my testing skills through practice.", recommendedKind: "personal-development" });
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Not sure", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I want to grow my testing skills.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByRole("button", { name: "Help me address this", exact: true }).click();
+    await page.getByLabel("Details for the coach", { exact: true }).fill("Through practice");
+    await page.getByRole("button", { name: "Update objective", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Grow my testing skills through practice.");
+    await expect(page.getByRole("radio", { name: "Personal development", exact: true })).toBeChecked();
+  } finally { await f.close(); }
+});
+
+test("Not sure without a recommendation requires the member to choose a type", async () => {
+  const f = await world(() => ({ objective: "Grow my testing skills." }));
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Not sure", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I want to grow my testing skills.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByLabel("Objective", { exact: true })).toBeVisible();
+    await expect(page.getByRole("radio", { name: "Contribution", exact: true })).not.toBeChecked();
+    await page.getByLabel("Other — none of these apply").check();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("Choose an objective type");
+    await page.getByRole("button", { name: "Save objective", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("Choose an objective type");
+    assert.deepEqual((await (await f.request("member", "/api/focuses/" + f.focus.id)).json()).sections, []);
+    await page.getByRole("radio", { name: "Leadership", exact: true }).check();
+    await page.getByRole("button", { name: "Save objective", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Add objective", exact: true })).toHaveCount(0);
+    const saved = await (await f.request("member", "/api/focuses/" + f.focus.id)).json();
+    assert.equal(saved.sections[0].kind, "leadership");
   } finally { await f.close(); }
 });
 

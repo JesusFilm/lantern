@@ -20,6 +20,10 @@ Run the benchmark before and after changing any of these:
   that flow from `tools/coach-eval/flow.ts`, so update `flow.ts` in the same change;
 - the Guide content, synthetic mission or initiatives the coach reads.
 
+Benchmark scenarios use the focus start as a simulated current date for the
+replay, prompt and transcript. This keeps dated fixtures valid over time; browser
+and HTTP tests exercise actual local dates and time zones.
+
 Ordinary tests still prove the coaching workflow, persistence and access rules
 with fixture providers. They cannot show whether generated wording is useful;
 the benchmark does that.

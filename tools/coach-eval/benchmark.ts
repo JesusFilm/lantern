@@ -25,6 +25,8 @@ export interface Contract {
   improvedOrExplained?: Array<{ label: string; pattern: RegExp }>;
   /** The member's answer must be included in a subsequent coach request. */
   requiresAnswer?: boolean;
+  requiresFeedback?: boolean;
+  feedbackIncludes?: RegExp;
   /** Every goal must contain each pattern, usually words from the member's chosen action. */
   goalIncludes?: Array<{ label: string; pattern: RegExp }>;
   /** Coach-written objective wording and goals must not contain these. The member's own words shown back are exempt. */
@@ -33,6 +35,7 @@ export interface Contract {
   /** ready: all three checks met; not ready: at least one check not met. */
   verdict?: "ready" | "not ready";
   recommendedKind?: ObjectiveKind;
+  selectedKind?: ObjectiveKind;
   goals?: number;
 }
 
@@ -72,6 +75,15 @@ export const benchmarkScenarios: BenchmarkScenario[] = [
       { label: "testing", pattern: /test/i },
       { label: "users", pattern: /user/i },
     ] },
+  },
+  {
+    ...base, id: "bench-vague-feedback-details", category: "vague", role: "Developer", issues: ["#194"],
+    summary: "Add audience details to feedback on a vague application objective.",
+    work: "I want to build an application.",
+    member: { answers: ["I'm not sure."] },
+    respondToFeedback: true, feedbackDetail: "It will help online seekers find gospel videos.", typeChoice: "normal",
+    expect: { criteria: ["Details entered in feedback reach the coach before continuing."] },
+    contract: { maxQuestions: 1, requiresFeedback: true, feedbackIncludes: /^It will help online seekers find gospel videos\.$/i },
   },
   {
     ...base, id: "bench-vague-gospel-video", category: "vague", role: "Developer",
@@ -173,7 +185,7 @@ export const benchmarkScenarios: BenchmarkScenario[] = [
     contract: {
       maxQuestions: 1,
       includes: [{ label: "new engineers or mentoring", pattern: /new (engineers|team members|developers)|mentor/i }],
-      recommendedKind: "leadership", verdict: "ready",
+      recommendedKind: "leadership", selectedKind: "leadership", verdict: "ready",
     },
   },
   {
@@ -295,11 +307,19 @@ const introduced = (text: string, pattern: RegExp, own: string) =>
 
 /** Counts questions the coach asked before showing the first draft. */
 function draftQuestions(transcript: Transcript) {
-  let count = 0;
-  for (let i = 1; i < transcript.turns.length; i++) {
-    const turn = transcript.turns[i]!, previous = transcript.turns[i - 1]!;
-    if (turn.type === "member" && turn.step === "answer" && previous.type === "coach" &&
-      (previous.stage === "clarify" || (previous.step === "refine" && !!previous.suggestion?.question))) count++;
+  let count = 0, clarifications = 0, drafted = false;
+  for (let i = 0; i < transcript.turns.length; i++) {
+    const turn = transcript.turns[i]!;
+    if (turn.type === "coach" && turn.stage === "clarify" && turn.suggestion) {
+      clarifications++;
+      const reply = turn.suggestion;
+      if ((reply.objective && reply.ready !== false) || ((!reply.objective || reply.ready === false) && (!reply.question || clarifications > 1))) drafted = true;
+    }
+    if (turn.type === "coach" && turn.step === "refine" && turn.suggestion?.objective) drafted = true;
+    if (!drafted && turn.type === "member" && turn.step === "answer" && i > 0) {
+      const previous = transcript.turns[i - 1]!;
+      if (previous.type === "coach" && (previous.stage === "clarify" || (previous.step === "refine" && !!previous.suggestion?.question))) count++;
+    }
   }
   return count;
 }
@@ -318,6 +338,9 @@ export function evaluate(transcript: Transcript, scenario: BenchmarkScenario): {
   add("completed", transcript.outcome.completed, transcript.outcome.failure);
   add("draft shown", !!objective.trim());
   add("checks shown", !!checks, "No assessment for the visible objective.");
+  if (contract.requiresFeedback) add("feedback sent to coach", transcript.turns.some(turn => turn.type === "coach" && turn.stage === "objective" && !!turn.context.answer?.trim()));
+  if (contract.feedbackIncludes) add("feedback includes member details", transcript.turns.some(turn => turn.type === "coach" && turn.stage === "objective" && contract.feedbackIncludes!.test(turn.context.answer ?? "")));
+  if (contract.selectedKind) add(`selected type ${contract.selectedKind}`, transcript.outcome.kind === contract.selectedKind, transcript.outcome.kind);
   if (contract.requiresAnswer) {
     const submitted = transcript.turns.some((turn, i) => turn.type === "member" && turn.step === "answer" &&
       transcript.turns.slice(i + 1).some(next => next.type === "coach" && next.context.answers.some(a => a.answer === turn.text)));

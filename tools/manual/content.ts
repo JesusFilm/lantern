@@ -275,14 +275,14 @@ export const chapters: Chapter[] = [
         summary: "Choose an objective type, then describe your work. **coach-redesign** is hidden in production until released; **coach** must also be available.",
         tryIt: ["Choose **+ Add objective**, then **Guide with AI**.", "Choose a type or Not sure; describe your work and role.", "Review the suggestion; choose an initiative or Other."],
         check: [
-          "Recommendations offer a switch; your type stays selected.",
-          "Next requires an initiative or Other.",
-          "Checks appear automatically; edits make them stale.",
+          "Not sure selects the recommendation, or asks you to choose.",
+          "Update or clear typed coach details before continuing or saving.",
+          "Next requires an initiative or Other; edits make checks stale.",
           "Missing mission means uncertain; Back offers Try again.",
         ],
         shots: [
           { id: "guided-work", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Back")(page); }, ready: role("button", "Try again"), caption: "Return to your work to try again" },
-          { id: "guided-objective", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Help me address this")(page); }, ready: (p) => p.getByLabel("Details for the coach"), mode: longPage, caption: "Add details for the coach" },
+          { id: "guided-objective", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Help me address this")(page); await page.getByLabel("Details for the coach").fill("Engineers can find the cause of a failed deployment faster."); }, ready: (p) => p.getByText("Update objective or clear these details before continuing or saving."), mode: longPage, caption: "Pending coach details" },
         ],
       },
       {
@@ -308,7 +308,7 @@ export const chapters: Chapter[] = [
         summary: "**coach-redesign** suggests goal ideas immediately. Check the finished draft before saving. Hidden in production until released; requires **coach**.",
         tryIt: ["At SMART goals, select an idea or **Add SMART goal**.", "Pick or write an action and date, then **Next**.", "Edit the goal, **Add to objective**, then **Next** to the check."],
         check: [
-          "Dates outside the focus period are rejected.",
+          "Target dates must be today or later, within the focus period.",
           "Answer \"not sure\" about evidence: you still get an editable goal.",
           "Check shows your objective and goals without changing wording.",
           "No goals warns but permits saving; failure keeps your writing.",

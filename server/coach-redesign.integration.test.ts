@@ -5,13 +5,18 @@ import { resolveFeatureConfig } from "./features.js";
 import type { CoachProvider } from "./coach-provider.js";
 import type { CoachCheckpoint } from "../shared/coach.js";
 
+// The live-date guard uses the server clock; keep goal fixtures valid as the calendar advances.
+const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+const activeCheckpoint = { ...checkpoint, start: day(-30), end: day(90), date: day(30) };
+const activeDate = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "long", year: "numeric" }).format(new Date(activeCheckpoint.date + "T12:00:00Z"));
+
 test("redesigned coaching can clarify a goal after three answers without inventing a commitment", async () => {
   const reply = { question: "How would Spanish help your work?", concern: "The professional connection is unclear.", goal: "", options: [] };
   const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate(reply); } };
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
     const response = await f.request("member", "/api/coach/suggest", "POST", {
-      stage: "goal", context: { ...checkpoint, action: "Learn Spanish", answers: Array.from({ length: 4 }, (_, i) => ({ question: `Question ${i}`, answer: "I am still unsure." })) },
+      stage: "goal", context: { ...activeCheckpoint, action: "Learn Spanish", answers: Array.from({ length: 4 }, (_, i) => ({ question: `Question ${i}`, answer: "I am still unsure." })) },
     });
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { question: reply.question, concern: reply.concern, options: [] });
@@ -40,17 +45,55 @@ test("redesigned review uses department context without example leakage and is h
 
 test("redesigned date validation rejects out-of-period goals before inference and preserves access isolation", async () => {
   let calls = 0;
-  const coach: CoachProvider = { async suggest(_s, _c, validate) { calls++; return validate({ goal: "By 30 November 2026, review failure reports." }); } };
+  const coach: CoachProvider = { async suggest(_s, _c, validate) { calls++; return validate({ goal: `By ${activeDate}, review failure reports.` }); } };
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
-    for (const date of ["2026-09-30", "2027-04-01", ""]) {
-      assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...checkpoint, date } })).status, 400);
+    for (const date of [day(-31), day(91), ""]) {
+      assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...activeCheckpoint, date } })).status, 400);
     }
     assert.equal(calls, 0);
     const focus = await (await f.request("member", "/api/focuses", "POST", { title: "Private", start: checkpoint.start, end: checkpoint.end, sections: [] })).json();
     assert.equal((await f.request("peer", "/api/coach/suggest", "POST", { stage: "review", context: checkpoint, focusId: focus.id, version: focus.version })).status, 404);
     assert.equal(calls, 0);
-    assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint })).status, 200);
+    assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: activeCheckpoint })).status, 200);
+  } finally { await f.close(); }
+});
+
+test("the goal HTTP interface rejects past dates inside the focus before calling the coach", async () => {
+  let calls = 0;
+  const coach: CoachProvider = { async suggest(_s, _c, validate) { calls++; return validate({ goal: "Review reports." }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+  const input = { ...checkpoint, start: day(-10), end: day(30) };
+  try {
+    const past = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...input, date: day(-1) } });
+    assert.equal(past.status, 400);
+    assert.equal(calls, 0);
+    const today = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...input, date: day(0) } });
+    assert.equal(today.status, 200);
+    assert.equal(calls, 1);
+  } finally { await f.close(); }
+});
+
+test("goal date validation follows the member's time zone and rejects an invalid zone", async () => {
+  let calls = 0;
+  const coach: CoachProvider = { async suggest(_s, _c, validate) { calls++; return validate({ goal: "Review reports." }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    for (const timeZone of ["Pacific/Auckland", "America/Los_Angeles"]) {
+      const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+      const value = (name: string) => parts.find(part => part.type === name)!.value;
+      const today = `${value("year")}-${value("month")}-${value("day")}`;
+      const date = new Date(today + "T12:00:00Z");
+      const day = (offset: number) => new Date(date.getTime() + offset * 86400000).toISOString().slice(0, 10);
+      const context = { ...checkpoint, start: day(-10), end: day(30) };
+      assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...context, date: day(-1) }, timeZone })).status, 400);
+      assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...context, date: today }, timeZone })).status, 200);
+    }
+    assert.equal(calls, 2);
+    const invalid = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint, timeZone: "Invalid/Nowhere" });
+    assert.equal(invalid.status, 400);
+    assert.equal(calls, 2);
   } finally { await f.close(); }
 });
 
@@ -88,18 +131,18 @@ test("Lantern owns provisional and selected dates even when the coach supplies d
   } };
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
-    const actions = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context: checkpoint })).json();
-    assert.equal(actions.suggestedDate, checkpoint.end);
+    const actions = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context: activeCheckpoint })).json();
+    assert.equal(actions.suggestedDate, activeCheckpoint.end);
     for (const prefix of ["", "By 1 January 2027, ", "By January 1, 2027, ", "By 2027-01-01, ", "By 1st January 2027, ", "By January 1st, 2027, ",
       "By the end of March 2027, ", "By end of March 2027, ", "By March 2027, ", "By the end of Q1 2027, ", "By mid-January 2027, ",
       "By the end of 2027, ", "By mid-2027, ", "By early 2027, "]) {
       suppliedGoal = prefix + "review failure reports.";
-      const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint })).json();
-      assert.equal(goal.goal, "By 30 November 2026, review failure reports.");
+      const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: activeCheckpoint })).json();
+      assert.equal(goal.goal, `By ${activeDate}, review failure reports.`);
     }
     suppliedGoal = "By reviewing reports from January 2026, identify recurring failures.";
-    const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint })).json();
-    assert.equal(goal.goal, "By 30 November 2026, " + suppliedGoal);
+    const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: activeCheckpoint })).json();
+    assert.equal(goal.goal, `By ${activeDate}, ` + suppliedGoal);
   } finally { await f.close(); }
 });
 
@@ -392,13 +435,13 @@ test("after one answered goal question the coach drafts the goal from the member
   } };
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
-    const ask = async (answer: string) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...checkpoint, answer, question: answer ? "What evidence will you record?" : "", answers: answer ? [{ question: "What evidence will you record?", answer }] : [] } })).json();
+    const ask = async (answer: string) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...activeCheckpoint, answer, question: answer ? "What evidence will you record?" : "", answers: answer ? [{ question: "What evidence will you record?", answer }] : [] } })).json();
     assert.equal((await ask("")).question, "What evidence will you record?");
     const after = await ask("I'm not sure.");
     assert.equal(after.question, undefined);
     assert.match(after.concern, /how will you measure it/);
     // The member can't say how success will be shown; they still get an editable goal of their own action and date.
-    assert.equal(after.goal, "By 30 November 2026, Review logs");
+    assert.equal(after.goal, `By ${activeDate}, Review logs`);
   } finally { await f.close(); }
 });
 
@@ -407,11 +450,11 @@ test("a goal reply with only feedback still gives the member their action as a g
   const coach: CoachProvider = { async suggest(_s, _c, validate) { return validate(reply); } };
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
-    const ask = async (context = {}) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...checkpoint, ...context } })).json();
-    assert.deepEqual(await ask(), { concern: "Evidence is missing for this action.", goal: "By 30 November 2026, Review logs" });
+    const ask = async (context = {}) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...activeCheckpoint, ...context } })).json();
+    assert.deepEqual(await ask(), { concern: "Evidence is missing for this action.", goal: `By ${activeDate}, Review logs` });
     // A coach-written goal is kept as written.
     reply = { goal: "Review logs and note recurring causes.", concern: "Consider who sees the notes." };
-    assert.equal((await ask()).goal, "By 30 November 2026, Review logs and note recurring causes.");
+    assert.equal((await ask()).goal, `By ${activeDate}, Review logs and note recurring causes.`);
     // An unanswered question is still asked; the member has not yet had the chance to answer.
     reply = { question: "How does reviewing logs support this objective?" };
     assert.equal((await ask()).goal, undefined);
