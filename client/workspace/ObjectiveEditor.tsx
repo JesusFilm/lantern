@@ -10,6 +10,11 @@ import { FocusObjective } from "./FocusDocument.js";
 import { Dialog } from "./Dialog.js";
 
 const alignmentError = "Select an initiative or Other before saving this objective.";
+const typeError = "Choose an objective type before continuing.";
+const localToday = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
 
 export type AuthoringMethod = "choose" | "manual" | "guided";
 type Stage =
@@ -194,13 +199,14 @@ export function ObjectiveEditor({
           context: input,
           focusId: edit.source.id,
           version: edit.source.version,
+          ...(redesigned && requestStage === "goal" ? { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" } : {}),
         },
         controller.current.signal,
       );
       if (requestId === epoch.current) {
         if (redesigned) setConcern(result.concern ?? "");
         if (redesigned && (requestStage === "clarify" || requestStage === "objective") && result.objective) {
-          setAssessment({ checks: result.assessment, text: result.objective, kind: edit.kind });
+          setAssessment({ checks: result.assessment, text: result.objective, kind: chosenKind === "unsure" ? result.recommendedKind ?? edit.kind : edit.kind });
         } else if (redesigned && requestStage === "objective" && !result.question) {
           // Feedback without new wording: the checks describe the wording already on screen.
           setAssessment({ checks: result.assessment, text: input.objective, kind: edit.kind });
@@ -218,8 +224,11 @@ export function ObjectiveEditor({
   }
   const missingAlignment = edit.initiatives.status === "ready" &&
     !edit.alignment.other && !edit.alignment.initiatives.length;
+  const missingType = redesigned && chosenKind === "unsure";
+  const unsentDetails = redesigned && !!concernDetails.trim();
   async function save() {
     setError("");
+    if (missingType) { setError(typeError); if (method === "guided") setStage("objective"); return; }
     if (missingAlignment) {
       setError(alignmentError);
       if (method === "guided") setStage("objective");
@@ -235,6 +244,7 @@ export function ObjectiveEditor({
     }
   }
   function switchMethod(next: AuthoringMethod) {
+    if (next === "manual" && unsentDetails) { setError("Update or clear the coach details before switching methods."); return; }
     // A partially written goal becomes an ordinary editable goal when leaving guidance.
     // It is never silently excluded from Save objective.
     if (next === "manual" && (stage === "action" || stage === "goal" || pendingReply.current?.origin === "action")) {
@@ -299,6 +309,18 @@ export function ObjectiveEditor({
       if (reply.actions?.length) setPlan({ actions: reply.actions, action: "", date: boundedDate(reply.suggestedDate), text: "" });
     }, "goals");
   }
+  function selectRecommendation(kind: CoachSuggestion["recommendedKind"], basisAnswers = answers) {
+    if (!redesigned || chosenKind !== "unsure" || !kind) return;
+    onChange({ type: "kind", kind });
+    setChosenKind(kind);
+    if (objectiveBasis.current) {
+      const prior = objectiveBasis.current;
+      const revised = JSON.stringify([work, basisAnswers, kind]);
+      const cached = exploration.current.get(prior);
+      if (cached) exploration.current.set(revised, cached);
+      objectiveBasis.current = revised;
+    }
+  }
   async function addressConcern() {
     if (!concernDetails.trim()) return;
     if (answers.length + feedbackAnswers.length >= coachContextLimits.answers) {
@@ -307,19 +329,34 @@ export function ObjectiveEditor({
     }
     const feedback = concern || Object.values(assessment?.checks ?? {}).find(check => check.status !== "met")?.note || "Additional context for the objective";
     const nextAnswers = [...answers, ...feedbackAnswers, { question: feedback, answer: concernDetails }];
+    let revised = false;
     if (await guidedRequest("objective", { ...context(), entry: "objective", answers: nextAnswers, question: feedback, answer: concernDetails }, result => {
-      if (!result.objective) return;
+      if (!result.objective || result.objective.trim() === edit.text.trim()) {
+        setConcernDetails(concernDetails);
+        setAddressingConcern(true);
+        setError("The coach could not update the objective. Try again or clear these details to continue.");
+        return;
+      }
+      revised = true;
       update({ type: "objective-values", values: { text: result.objective } });
+      selectRecommendation(result.recommendedKind);
       setRecommended(result.recommendedKind);
       setRecommendedInitiatives(result.initiativeIds ?? []);
     }, "objective")) {
-      setFeedbackAnswers(nextAnswers.slice(answers.length));
-      setConcernDetails("");
-      setAddressingConcern(false);
+      if (revised || pendingReply.current) {
+        setFeedbackAnswers(nextAnswers.slice(answers.length));
+        setConcernDetails("");
+        setAddressingConcern(false);
+      }
     }
   }
+  function earliestDate() {
+    const today = localToday();
+    return today > edit.source.start ? today : edit.source.start;
+  }
   function boundedDate(value?: string) {
-    return value && value >= edit.source.start && value <= edit.source.end ? value : edit.source.end;
+    const earliest = earliestDate();
+    return value && value >= earliest && value <= edit.source.end ? value : edit.source.end;
   }
   async function next(forceRetry = false) {
     setError("");
@@ -390,8 +427,11 @@ export function ObjectiveEditor({
       setAnswers(nextAnswers);
       if (redesigned && (!result.objective || result.ready === false) && (!result.question || (stage === "question" && nextAnswers.length >= 1))) {
         if (!edit.text.trim()) update({ type: "objective-values", values: { text: work } });
-        setAssessment({ checks: result.assessment, text: edit.text.trim() ? edit.text : work, kind: edit.kind });
+        const kind = chosenKind === "unsure" ? result.recommendedKind ?? edit.kind : edit.kind;
         objectiveBasis.current = cacheKey;
+        selectRecommendation(result.recommendedKind, nextAnswers);
+        setRecommended(result.recommendedKind);
+        setAssessment({ checks: result.assessment, text: edit.text.trim() ? edit.text : work, kind });
         setConcern([result.concern, result.question].filter(Boolean).join(" "));
         setStage("objective");
         return;
@@ -405,6 +445,7 @@ export function ObjectiveEditor({
             },
           });
         objectiveBasis.current = cacheKey;
+        selectRecommendation(result.recommendedKind, nextAnswers);
         setRecommended(result.recommendedKind);
         setRecommendedInitiatives(result.initiativeIds ?? []);
         setStage("objective");
@@ -416,6 +457,7 @@ export function ObjectiveEditor({
         setStage("question");
       }
     } else if (stage === "objective") {
+      if (missingType) { setError(typeError); return; }
       if (missingAlignment) {
         setError(alignmentError);
         return;
@@ -429,8 +471,8 @@ export function ObjectiveEditor({
       if (redesigned) setConcern("");
       setStage("check");
     } else if (stage === "action") {
-      if (redesigned && (!plan.date || plan.date < edit.source.start || plan.date > edit.source.end)) {
-        setError("Choose a target date within this position focus period."); return;
+      if (redesigned && (!plan.date || plan.date < localToday() || plan.date < edit.source.start || plan.date > edit.source.end)) {
+        setError("Choose a target date today or later, within this position focus period."); return;
       }
       const signature = plan.action + "\n" + plan.date;
       if (plan.text && plan.generatedFor === signature) {
@@ -562,11 +604,12 @@ export function ObjectiveEditor({
         />
       </div>
       <ObjectiveTypeChoices
-        kind={edit.kind}
+        kind={missingType ? undefined : edit.kind}
         recommended={method === "guided" ? recommended : undefined}
-        onChange={(kind) => { onChange({ type: "kind", kind }); setChosenKind(kind); }}
+        onChange={(kind) => { onChange({ type: "kind", kind }); setChosenKind(kind); if (error === typeError) setError(""); }}
       />
-      {redesigned && method === "guided" && recommended && (recommended !== edit.kind || chosenKind === "unsure") && (
+      {missingType && <p>Choose an objective type to continue.</p>}
+      {redesigned && method === "guided" && recommended && recommended !== edit.kind && (
         <p>The coach suggests {objectiveTypes[recommended].label}. <button type="button" onClick={() => { onChange({ type: "kind", kind: recommended }); setChosenKind(recommended); }}>Switch to {objectiveTypes[recommended].label}</button></p>
       )}
       <InitiativeChoices
@@ -828,7 +871,7 @@ export function ObjectiveEditor({
                       <input
                         id="goal-date"
                         type="date"
-                        min={redesigned ? edit.source.start : undefined}
+                        min={redesigned ? earliestDate() : undefined}
                         max={redesigned ? edit.source.end : undefined}
                         value={plan.date}
                         onChange={(e) =>
@@ -901,11 +944,12 @@ export function ObjectiveEditor({
               </> : <p role="status">The coach did not provide an assessment for this draft. You can continue or add context.</p>)}
             {concern && <p role="status">{stage === "objective" && assessmentStale ? "Earlier feedback: " : ""}{concern}</p>}
             {stage === "objective" && !checks && <button type="button" disabled={busy || !edit.text.trim()} onClick={() => void suggest("review", { ...context(), entry: "objective" })}>Check this objective</button>}
-            {stage === "objective" && (concern || (checks && Object.values(checks).some(check => check.status !== "met"))) && (addressingConcern ? <div className="field">
+            {stage === "objective" && (addressingConcern || concern || (checks && Object.values(checks).some(check => check.status !== "met"))) && (addressingConcern ? <div className="field">
               <label htmlFor="concern-details">Details for the coach</label>
               <small>Optional. The coach will use your answer to update the objective.</small>
               <textarea id="concern-details" maxLength={4000} value={concernDetails} onChange={e => setConcernDetails(e.target.value)} disabled={busy} />
-              <div><button type="button" disabled={busy || !concernDetails.trim()} onClick={() => void addressConcern()}>Update objective</button></div>
+              {unsentDetails && <p role="status">Update objective or clear these details before continuing or saving.</p>}
+              <div><button type="button" disabled={busy || !concernDetails.trim()} onClick={() => void addressConcern()}>Update objective</button>{unsentDetails && <button type="button" disabled={busy} onClick={() => { setConcernDetails(""); setError(""); }}>Clear details</button>}</div>
             </div> : <button type="button" disabled={busy} onClick={() => setAddressingConcern(true)}>Help me address this</button>)}
           </section>}
           {redesigned && canSave && !edit.goals.some(g => g.trim()) && <p role="status">No SMART goals yet. You can save this draft and add goals later. Goals make the objective actionable.</p>}
@@ -925,7 +969,7 @@ export function ObjectiveEditor({
             {canSave && (
               <button
                 type="button"
-                disabled={busy || !edit.text.trim()}
+                disabled={busy || !edit.text.trim() || unsentDetails}
                 className={
                   method === "manual" || stage === "check"
                     ? "primary"
@@ -965,6 +1009,7 @@ export function ObjectiveEditor({
                 className="primary"
                 disabled={
                   busy ||
+                  (stage === "objective" && unsentDetails) ||
                   (stage === "work" && (!work.trim() || (redesigned && !chosenKind))) ||
                   (stage === "question" && !answer.trim()) ||
                   (stage === "objective" && !edit.text.trim()) ||

@@ -191,15 +191,26 @@ export function coachRoutes(
     if (
       !body ||
       Object.keys(body).some(
-        (k) => !["stage", "context", "focusId", "version"].includes(k),
+        (k) => !["stage", "context", "focusId", "version", "timeZone"].includes(k),
       ) ||
       !["clarify", "objective", "actions", "goal", ...(enhanced ? ["review"] : [])].includes(body.stage)
     )
       throw new AccessError(400, "Choose a valid coaching step.");
     const context = validateCheckpoint(body.context, enhanced ? coachContextLimits.answers : 3, enhanced ? coachContextLimits.characters : 32000),
       stage = body.stage as CoachStage;
-    if (enhanced && stage === "goal" && (!date(context.date) || context.date < context.start || context.date > context.end))
-      throw new AccessError(400, "Choose a target date within this position focus period.");
+    if (enhanced && stage === "goal") {
+      let today: string;
+      try {
+        if (body.timeZone !== undefined && (typeof body.timeZone !== "string" || body.timeZone.length > 100)) throw new Error();
+        const parts = new Intl.DateTimeFormat("en-CA", { timeZone: body.timeZone ?? "UTC", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+        const part = (type: string) => parts.find(item => item.type === type)?.value;
+        today = `${part("year")}-${part("month")}-${part("day")}`;
+      } catch {
+        throw new AccessError(400, "Choose a valid time zone.");
+      }
+      if (!date(context.date) || context.date < today || context.date < context.start || context.date > context.end)
+        throw new AccessError(400, "Choose a target date today or later, within this position focus period.");
+    }
     if (body.focusId !== undefined) {
       if (
         typeof body.focusId !== "string" ||
