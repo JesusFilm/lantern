@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { coachingFixture, checkpoint } from "./coach-test-support.js";
 import { resolveFeatureConfig } from "./features.js";
 import type { CoachProvider } from "./coach-provider.js";
+import type { CoachCheckpoint } from "../shared/coach.js";
 
 test("redesigned coaching can clarify a goal after three answers without inventing a commitment", async () => {
   const reply = { question: "How would Spanish help your work?", concern: "The professional connection is unclear.", goal: "", options: [] };
@@ -275,6 +276,59 @@ test("an answered follow-up is drafted into the visible objective and checked as
   } finally { await f.close(); }
 });
 
+test("an answer to an existing objective question is used in a draft and the visible wording is checked", async () => {
+  const calls: Array<{ stage: string; context: CoachCheckpoint }> = [];
+  let allChecksMet = false;
+  let failedDraft = false;
+  const coach: CoachProvider = { async suggest(_s, raw, validate) {
+    const input = JSON.parse(raw); calls.push(input);
+    if (input.stage === "review") return validate({ assessment: {
+      purpose: { status: "met", note: "Testing is clear." },
+      people: { status: allChecksMet ? "met" : "needs_attention", note: "How do users benefit?" },
+      alignment: { status: allChecksMet ? "met" : "uncertain", note: "Connection is unclear." },
+    } });
+    if (input.context.question || failedDraft) return validate({ question: "What kind of testing?", concern: "What kind of testing?", ready: false });
+    return validate({ objective: "Test the app so users have fewer bugs." });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const input = { ...checkpoint, entry: "objective", objective: "stuff", kind: "normal", question: "Who benefits?", answer: "Users have fewer bugs when I test the app.", answers: [{ question: "Who benefits?", answer: "Users have fewer bugs when I test the app." }] };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: input });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.objective, "Test the app so users have fewer bugs.");
+    assert.equal(result.question, undefined);
+    assert.match(result.concern, /What kind of testing\?/);
+    assert.equal(result.assessment.people.status, "needs_attention");
+    assert.deepEqual(calls.map(c => c.stage), ["objective", "objective", "review"]);
+    assert.equal(calls[1]!.context.answers[0]!.answer, input.answer);
+    assert.equal(calls[2]!.context.objective, result.objective);
+    allChecksMet = true;
+    const ready = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: { ...input, kind: "personal-development" } });
+    assert.equal(ready.status, 200);
+    const readyResult = await ready.json();
+    assert.equal(readyResult.objective, "Test the app so users have fewer bugs.");
+    assert.equal(readyResult.assessment.purpose.status, "met");
+    assert.equal(readyResult.assessment.people.status, "met");
+    assert.equal(readyResult.assessment.alignment.status, "met");
+    assert.equal(readyResult.concern, undefined, "The coach stays quiet when every check is met.");
+    allChecksMet = false;
+    const repeated = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: {
+      ...input, answers: [{ question: "What kind of testing?", answer: "Functional testing." }, ...input.answers],
+    } });
+    assert.equal(repeated.status, 200);
+    assert.equal((await repeated.json()).concern, undefined, "A question already answered earlier is not repeated as feedback.");
+    failedDraft = true;
+    const noDraft = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: {
+      ...input, answers: [{ question: "What kind of testing?", answer: "Functional testing." }, ...input.answers],
+    } });
+    assert.equal(noDraft.status, 200);
+    const fallback = await noDraft.json();
+    assert.equal(fallback.objective, undefined);
+    assert.equal(fallback.concern, undefined, "An answered question is not repeated when the retry also fails.");
+  } finally { await f.close(); }
+});
+
 test("answering feedback never starts a question loop and unchanged wording is still checked", async () => {
   const calls: Array<{ stage: string; context: typeof checkpoint }> = [];
   let reviews = 0;
@@ -298,9 +352,10 @@ test("answering feedback never starts a question loop and unchanged wording is s
     assert.equal(result.question, undefined);
     assert.equal(result.objective, undefined);
     assert.match(result.concern, /What is your role\?/);
+    assert.equal(result.concern.match(/What is your role\?/g)?.length, 1, "Repeated provider questions appear only once in feedback.");
     assert.equal(result.assessment.people.status, "needs_attention");
-    assert.deepEqual(calls.map(c => c.stage), ["objective", "review", "review"]);
-    assert.equal(calls[2]!.context.objective, "asdf jkl");
+    assert.deepEqual(calls.map(c => c.stage), ["objective", "objective", "review", "review"]);
+    assert.equal(calls[3]!.context.objective, "asdf jkl");
   } finally { await f.close(); }
 });
 

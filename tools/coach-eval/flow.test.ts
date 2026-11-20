@@ -115,7 +115,8 @@ test("replay preserves historical request context and keeps the member objective
   const { outcome } = await runCurrentFlow({ ...base, existing: { objective: "Help staff", kind: "normal" }, improvement: "Clearer", goals: [], endAtObjective: true }, paused.coach, member, { redesigned: true });
   assert.equal(outcome.completed, true);
   assert.equal(outcome.objective, "Help staff");
-  assert.equal(outcome.screens?.[0]?.concern, "Please clarify the intended beneficiary.");
+  assert.match(outcome.screens?.[0]?.concern ?? "", /Please clarify the intended beneficiary/);
+  assert.match(outcome.screens?.[0]?.concern ?? "", /could not improve/);
   assert.deepEqual(paused.calls.map(c => c.stage), ["objective"]);
 });
 
@@ -125,6 +126,13 @@ test("redesigned flow improves an existing objective using the Guide without ask
   assert.equal(calls[0]!.stage, "objective");
   assert.equal(calls[0]!.context.concern, "");
   assert.equal(outcome.objective, "Help trainers run accessible workshops.");
+});
+
+test("a clear existing objective remains quiet when its wording is unchanged", async () => {
+  const met = { status: "met" as const, note: "Clear." };
+  const { coach } = scripted({ objective: [{ objective: "Help trainers run accessible workshops.", assessment: { purpose: met, people: met, alignment: met } }] });
+  const { outcome } = await runCurrentFlow({ ...base, existing: { objective: "Help trainers run accessible workshops.", kind: "normal" }, goals: [], endAtObjective: true }, coach, member, { redesigned: true });
+  assert.equal(outcome.screens?.[0]?.concern, "");
 });
 
 test("redesigned replay can answer draft feedback and revise the objective", async () => {

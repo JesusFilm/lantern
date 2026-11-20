@@ -118,10 +118,17 @@ async function turn(input: {
       shown = memberWording;
     }
   } else if (stage === "objective") {
-    if (answered && suggestion.question && !drafted(suggestion))
-      // Answering feedback never starts a chain of questions: show the gap on the Objective screen.
-      suggestion = { ...suggestion, question: undefined, ready: undefined, objective: undefined, assessment: undefined,
-        concern: joined(suggestion.concern, suggestion.question) };
+    if (answered && suggestion.question && !drafted(suggestion)) {
+      // Give the member's answer one chance to become wording before showing any remaining gap.
+      const draft = await optional("objective", { ...context, question: "", answer: "" });
+      const feedback = (...parts: Array<string | undefined>) => joined(...new Set(parts.filter(part =>
+        !part || !context.answers.some(a => a.answer.trim() && a.question.trim().toLowerCase() === part.trim().toLowerCase()),
+      )));
+      suggestion = draft && drafted(draft)
+        ? { ...draft, ready: true, concern: feedback(draft.concern, suggestion.concern, suggestion.question) }
+        : { ...suggestion, question: undefined, ready: undefined, objective: undefined, assessment: undefined,
+            concern: feedback(suggestion.concern, suggestion.question, draft?.concern, draft?.question) };
+    }
     if (!suggestion.question) {
       if (suggestion.objective) shown = suggestion.objective;
       else {
