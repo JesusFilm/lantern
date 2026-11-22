@@ -287,6 +287,19 @@ export const chapters: Chapter[] = [
       },
       {
         kind: "feature",
+        title: "Guide with AI: objective type wording",
+        roles: ["Member"],
+        summary: "The coach uses the same objective type names as the editor. This path requires **coach** and **coach-redesign**.",
+        tryIt: ["Choose **Guide with AI** and select Contribution.", "Describe work that develops a skill, then choose **Next**.", "Read the coach's question and feedback."],
+        check: [
+          "The coach says Contribution, Personal development or Leadership.",
+          "It says Objective type when referring to the selected type.",
+          "You can still choose a different type on the Objective step.",
+        ],
+        shots: [{ id: "guided-type-language", persona: "member", path: draft, act: async (page) => { await click("+ Add objective", "Guide with AI")(page); await page.getByRole("radio", { name: "Contribution", exact: true }).check(); await page.getByLabel("Your work", { exact: true }).fill("I want to improve my Playwright testing skills."); await click("Next")(page); }, ready: heading("Objective type is currently Contribution. I recommend Personal development. Which testing skills do you want to build?", 2), caption: "A question about objective type" }],
+      },
+      {
+        kind: "feature",
         title: "Guide with AI: improve an existing objective",
         roles: ["Member"],
         summary: "Use **Guide with AI** on an existing objective. This path requires **coach** and **coach-redesign**.",
