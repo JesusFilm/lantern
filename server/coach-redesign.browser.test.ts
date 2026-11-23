@@ -98,6 +98,7 @@ test("goal ideas preserve the selected action and date, and the final check need
     await expect(page.getByRole("alert")).toContainText("within this position focus period");
     assert.equal(f.calls.filter(c => c.stage === "goal").length, 0);
     await page.getByLabel("Target date", { exact: true }).fill(day(30));
+    await expect(page.getByRole("alert")).toHaveCount(0);
     await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByText("Choose a workshop within your control.", { exact: true })).toBeVisible();
     await expect(page.locator(".cp-coach-wait")).not.toBeVisible();
@@ -493,6 +494,11 @@ test("editing the draft keeps pending checklist details visible and clearable", 
     await page.getByLabel("Details for the coach", { exact: true }).fill("Online seekers");
     await page.getByLabel("Objective", { exact: true }).fill("Build a video application.");
     await expect(page.getByLabel("Details for the coach", { exact: true })).toHaveValue("Online seekers");
+    const update=page.getByRole('button',{name:'Update objective',exact:true});
+    const clear=page.getByRole('button',{name:'Clear details',exact:true});
+    await expect(update).toHaveClass(/primary/);
+    const a=await update.boundingBox(),b=await clear.boundingBox();assert.ok(a&&b&&b.x>=a.x+a.width+8);
+
     await page.getByRole("button", { name: "Clear details", exact: true }).click();
     await expect(page.getByRole("button", { name: "Next", exact: true })).toBeEnabled();
   } finally { await f.close(); }
@@ -804,4 +810,17 @@ test("coach questions and options display objective type names members recognize
     await expect(page.getByRole("button", { name: "Leadership", exact: true })).toBeVisible();
     assert.equal(f.calls[0]?.context.kind, "normal");
   } finally { await f.close(); }
+});
+
+test('personal development feedback labels the members growth rather than a team contribution',async()=>{
+ const assessment={purpose:{status:'met',note:'Clear growth.'},people:{status:'met',note:'The member benefits.'},alignment:{status:'met',note:'Testing is part of their work.'}} as const;
+ const f=await world(()=>({objective:'Improve my Playwright test automation skills.',recommendedKind:'personal-development',assessment}));
+ try{
+  await f.page.getByRole('radio',{name:'Personal development',exact:true}).check();
+  await f.page.getByLabel('Your work',{exact:true}).fill('I want to get better at test automation with Playwright.');
+  await f.page.getByRole('button',{name:'Next',exact:true}).click();
+  await expect(f.page.getByText('Your growth',{exact:true})).toBeVisible();
+  await expect(f.page.getByText('Your contribution',{exact:true})).toHaveCount(0);
+  await expect(f.page.getByText('Your growth and benefit',{exact:true})).toBeVisible();
+ }finally{await f.close()}
 });

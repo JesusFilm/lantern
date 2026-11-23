@@ -51,6 +51,19 @@ const base = { issues: [] as string[], focus: cycle, goals: [] as Scenario["goal
 
 export const benchmarkScenarios: BenchmarkScenario[] = [
   {
+    ...base, id: "bench-personal-growth-no-team", category: "rewording", role: "QA engineer", issues: ["#205"],
+    summary: "Personal growth is its own benefit, without invented team or release outcomes.",
+    work: "I want to get better at test automation with Playwright.",
+    member: { replies: [{ when: /./, say: "I want to improve my own Playwright testing skills." }] },
+    typeChoice: "personal-development",
+    expect: { criteria: ["The member's own learning satisfies the beneficiary check; no team outcome is invented."] },
+    contract: {
+      includes: [{ label: "Playwright", pattern: /playwright/i }],
+      excludes: [{ label: "invented team or release outcome", pattern: /\b(team|release|releases|colleagues|engineers)\b/i }],
+      checks: { purpose: "met", people: "met" },
+    },
+  },
+  {
     ...base, id: "bench-vague-existing-testing", category: "vague", role: "QA engineer", issues: ["#191"],
     summary: "Improve a vague existing objective using the member's answer.",
     existing: { objective: "stuff", kind: "normal" },
@@ -363,13 +376,15 @@ export function evaluate(transcript: Transcript, scenario: BenchmarkScenario): {
     const memberWording = (value: string | undefined) => value && own.some(text => !!text.trim() && text.trim() === value.trim());
     const memberIdentifier = own.some(text => /\bpersonal[-_]development\b/i.test(text ?? ""));
     const memberRecommendedKind = own.some(text => /\brecommendedKind\b/i.test(text ?? ""));
-    const memberKind = own.some(text => /\bkind\b/i.test(text ?? ""));
+    const memberKind = own.some(text => /(?:`kind`|["']kind["']|\bkind\s*[:=]|\bkind\s+(?:field|key|parameter|property|to)\b|\b(?!(?:what|which|your|the|a|this|that|any|some)\b)[\w-]+\s+kind\b)/i.test(text ?? ""));
     const memberNormal = own.some(text => /\bnormal\b/i.test(text ?? ""));
     const draft = (value: string | undefined, memberDraft = false) => {
       let result = value;
+      result = result?.replace(/\b(?:the|a|an|this|my)\s+(?!(?:current|selected|recommended|objective)\b)(?:[\w-]+\s+){1,3}kind\s+(?:is|was)\s+normal\b/gi, "member field is member mode");
+      result = result?.replace(/\bnormal(?=\s+(?:is\s+)?(?:currently\s+)?selected\s+for\s+(?:the\s+)?(?!objective\b))/gi, "member mode");
       const preserveTechnicalKind = memberKind && memberNormal && (memberDraft || (!reply.recommendedKind && !/personal[-_ ]development|\brecommendedKind\b|\bobjective\s+(?:type|kind)\b/i.test(value ?? "")));
-      const explicitType = !preserveTechnicalKind && (/\b(?:kind|type)\s+(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:normal|Contribution|Personal[-_ ]development|Leadership)\b/i.test(value ?? "") ||
-        (!!reply.recommendedKind && /\bnormal\s+(?:is\s+)?(?:currently\s+)?selected\b/i.test(value ?? "")));
+      const explicitType = !preserveTechnicalKind && (/\b(?:kind|type)\s*(?:is|was|:|=|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:the\s+)?(?:normal|Contribution|Personal[-_ ]development|Leadership)\b/i.test(result ?? "") ||
+        (!!reply.recommendedKind && /\bnormal\s+(?:is\s+)?(?:currently\s+)?selected\b/i.test(result ?? "")));
       if (memberIdentifier) result = result?.replace(/\bpersonal[-_]development\b/gi, (match, offset: number, all: string) =>
         /(?:\b(?:recommend|suggest|choose|select)\s+(?:the\s+)?|\b(?:objective\s+type|kind|type)\s*(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?)["'`]*$/i.test(all.slice(0, offset)) && /^["'`]*\s*(?:[.,;!?]|$|objective\b|type\b)/i.test(all.slice(offset + match.length)) ? match : "member identifier");
       if (memberRecommendedKind) result = result?.replace(/\brecommendedKind\b/gi, "member field");

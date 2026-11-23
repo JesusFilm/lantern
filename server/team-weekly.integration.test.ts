@@ -30,8 +30,8 @@ test('team updates show the latest dated snapshot for active department peers an
   } finally { await f.close(); }
 });
 
-test('the team update route stays hidden when the feature is off', async () => {
-  const f=await coachingFixture(undefined,resolveFeatureConfig({LANTERN_FEATURES:'team-updates=off'},'local'));
-  try { assert.equal((await f.request('member','/api/team-updates?date=2026-11-19')).status,404); }
+test('team updates are available with production defaults', async () => {
+  const f=await coachingFixture(undefined,resolveFeatureConfig({},'production'));
+  try { assert.equal((await f.request('member','/api/team-updates?date=2026-11-19')).status,200); }
   finally {await f.close();}
 });

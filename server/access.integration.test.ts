@@ -224,7 +224,7 @@ test('OIDC boundary, persistent access, assignment restrictions and browser jour
       await expect(leadPage.getByRole('status')).toHaveText('User added to the department.');
       await memberPage.getByRole('button', { name: 'Check access' }).click();
       await expect(memberPage.getByRole('heading', { name: 'Position focuses', exact: true })).toBeVisible();
-      await expect(navigation.getByRole('link')).toHaveText(['Position focuses', 'Guide', 'Account']);
+      await expect(navigation.getByRole('link')).toHaveText(['Position focuses', 'My week', 'My team', 'Guide', 'Account']);
       await memberPage.getByRole('link', { name: 'Guide', exact: true }).click();
       await memberPage.getByRole('button', { name: 'Example', exact: true }).click();
       await expect(memberPage.getByRole('heading', { name: 'A simple position focus' })).toBeVisible();

@@ -933,6 +933,47 @@ test("technical kind and normal remain intact in coach questions and feedback", 
   } finally { await f.close(); }
 });
 
+test("type recommendations preserve technical modes while naming objective types clearly", async () => {
+  let suggestion = { question: "Your objective type is the normal type.", recommendedKind: "personal-development" };
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate(suggestion); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    let context = { ...checkpoint, work: "What kind of tests run during normal working hours?", answers: [], kind: "normal" };
+    let response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Your objective type is Contribution.");
+    suggestion = { question: "Kind: normal; I recommend personal-development.", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Objective type: Contribution; I recommend Personal development.");
+    context = { ...context, work: "Maintain the normal test kind for deployments while learning Playwright." };
+    suggestion = { question: "The test kind is normal; how do you verify it?", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, suggestion.question);
+    context = { ...context, work: "Maintain the normal API kind while learning Playwright." };
+    suggestion = { question: "The API kind is normal; how do you verify it?", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, suggestion.question);
+    context = { ...context, work: "Maintain the normal test kind while learning Playwright." };
+    suggestion = { question: "The test kind is normal; your kind is normal. I recommend personal-development.", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "The test kind is normal; your objective type is Contribution. I recommend Personal development.");
+    context = { ...context, work: "Keep releases reliable." };
+    suggestion = { question: "The deployment kind is normal. Is normal selected for the deployment mode?", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, suggestion.question);
+    suggestion = { question: "The runtime kind is normal. Is normal selected for the service mode?", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, suggestion.question);
+    context = { ...context, work: "What kind of tests run during normal working hours?" };
+    const withoutRecommendation = { question: "Kind: normal. What would you like to improve?" };
+    const plainCoach: CoachProvider = { async suggest(_system, _context, validate) { return validate(withoutRecommendation); } };
+    const plain = await coachingFixture(plainCoach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+    try {
+      response = await plain.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+      assert.equal((await response.json()).question, "Objective type: Contribution. What would you like to improve?");
+    } finally { await plain.close(); }
+  } finally { await f.close(); }
+});
+
 test("the member's recommendedKind API field survives rephrasing", async () => {
   const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ objective: "Update the recommendedKind field for every client.", assessment: {
     purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Clear." },

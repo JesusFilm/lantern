@@ -122,7 +122,7 @@ select:focus-visible {
   background: #00677b;
 }
 .link {
-  padding: var(--space-2);
+  padding: var(--space-2) 0;
   border-color: transparent;
   color: var(--accent);
   background: transparent;
@@ -368,7 +368,7 @@ dialog [role="alert"] {
   margin-top: var(--space-2);
 }
 .edit-action {
-  border-color: var(--border);
+  border-color: transparent;
 }
 .small-action {
   font-size: var(--text-small);
@@ -755,3 +755,5 @@ dialog [role="alert"] {
     flex: 1;
   }
 }
+
+.coach-detail-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }

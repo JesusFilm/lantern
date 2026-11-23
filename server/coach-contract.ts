@@ -14,25 +14,29 @@ const object = (v: unknown): v is Record<string, unknown> =>
 type MemberTerms = { development: boolean; kind: boolean; normal: boolean; recommendedKind: boolean };
 function memberFacingText(text: string, terms: MemberTerms, typeChoices = false, recommended = false, memberDraft = false): string {
   const typeContext = typeChoices || /personal[-_ ]development|\brecommendedKind\b|\bobjective\s+(?:type|kind)\b|\b(?:your|current|selected|recommended)\s+(?:kind|type)\b|\bkind\s*(?:is|was|:|=|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:normal|Contribution|Personal development|Leadership)\b/i.test(text);
-  const preserveTechnicalKind = terms.kind && terms.normal && (memberDraft || (!recommended && !/personal[-_ ]development|\brecommendedKind\b|\bobjective\s+(?:type|kind)\b/i.test(text)));
   let result = terms.development
     ? text.replace(/(\b(?:recommend|suggest|choose|select)\s+(?:the\s+)?["'`]*)(personal[-_]development)\b(?=["'`]*\s*(?:[.,;!?]|$|objective\b|type\b))/gi, "$1Personal development")
     : text.replace(/\bpersonal[-_]development\b/gi, "Personal development");
   if (terms.development) result = result.replace(/(\b(?:objective\s+type|kind|type)\s*(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*)(personal[-_]development)\b(?=["'`]*\s*(?:[.,;!?]|$))/gi, "$1Personal development");
   if (!terms.recommendedKind) result = result.replace(/\brecommendedKind\b/g, "recommended objective type");
+  result = result.replace(/(\bobjective\s+type\s+(?:is|was)\s+)the\s+normal\s+type\b/gi, "$1Contribution");
   if (typeContext) result = result.replace(/(\bobjective\s+(?:is|was)\s*["'`]*)(normal)\b(?!\s+(?:for|in|when|at|during|under|with)\b)/gi, "$1Contribution");
   result = result.replace(/(\b(?:objective\s+type|kind|type)\s*(?:is|was|:|=|currently|set to)\s*(?:(?:currently|set to)\s*)?["'`]*)(normal)\b(?!\s+(?:for|in|when|at|during|under|with)\b)/gi,
-    (match, prefix: string) => {
-      if ((/^type\b/i.test(prefix) && !typeContext) || (terms.kind && /^kind\s*[:=]/i.test(prefix)) || (preserveTechnicalKind && /^kind\b/i.test(prefix))) return match;
+    (match, prefix: string, _normal: string, offset: number, source: string) => {
+      const before = source.slice(0, offset);
+      const technicalKind = /\b(?:the|a|an|this|my)\s+(?!(?:current|selected|recommended|objective)\b)(?:[\w-]+\s+){1,3}$/i.test(before);
+      const explicitKind = /\b(?:your|current|selected|recommended)\s+$/i.test(before) || (recommended && /^kind\s*(?:[:=]|is\s+currently)/i.test(prefix));
+      if ((/^type\b/i.test(prefix) && !typeContext) || (/^kind\b/i.test(prefix) && (technicalKind || (terms.kind && terms.normal && (memberDraft || !explicitKind))))) return match;
       return prefix + "Contribution";
     });
   result = result.replace(/(\b(?:you\s+)?(?:chose|choose|select(?:ed)?|pick(?:ed)?)\s*["'`]*)(normal)\b(?=\s*(?:[.,;!?]|$|for\s+(?:the\s+)?objective\s+(?:type|kind)|(?:and|but)\s+I\s+(?:suggest|recommend)))/gi,
     (match, prefix: string) => typeContext ? prefix + "Contribution" : match);
   result = result.replace(/\bnormal(?=\s+objective\s+(?:kind|type)\b|\s+(?:is\s+)?(?:currently\s+)?selected\b)/gi,
-    match => typeContext || recommended || !terms.normal ? "Contribution" : match);
+    (match, offset: number, source: string) => /^(?:\s+is)?\s+(?:currently\s+)?selected\s+for\s+(?:the\s+)?(?!objective\b)/i.test(source.slice(offset + match.length)) ? match : typeContext || recommended || !terms.normal ? "Contribution" : match);
   if (!terms.kind) result = result.replace(/`kind`/gi, "`Objective type`");
   result = result.replace(/\bkind(?=\s*(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:Contribution|Personal development|Leadership)\b)/gi,
     match => match[0] === "K" ? "Objective type" : "objective type");
+  result = result.replace(/\bkind(?=\s*[:=]\s*["'`]*Contribution\b)/gi, match => match[0] === "K" ? "Objective type" : "objective type");
   if (!terms.kind) result = result.replace(/\bkind(?=\s*[:=])/gi, match => match[0] === "K" ? "Objective type" : "objective type");
   return result.replace(/\bin the editor\b/gi, match => typeContext || (recommended && /\bchange\s+(?:it|the type|your type)\s+in the editor\b/i.test(text)) ? "on the Objective step" : match);
 }
@@ -44,7 +48,7 @@ function memberFacingCoachText<T extends CoachSuggestion>(reply: T, context?: Pa
   const terms: MemberTerms = {
     development: memberText.some(own => /\bpersonal[-_]development\b/i.test(own ?? "")),
     recommendedKind: memberText.some(own => /\brecommendedKind\b/i.test(own ?? "")),
-    kind: memberText.some(own => /\bkind\b/i.test(own ?? "")),
+    kind: memberText.some(own => /(?:`kind`|["']kind["']|\bkind\s*[:=]|\bkind\s+(?:field|key|parameter|property|to)\b|\b(?!(?:what|which|your|the|a|this|that|any|some)\b)[\w-]+\s+kind\b)/i.test(own ?? "")),
     normal: memberText.some(own => /\bnormal\b/i.test(own ?? "")),
   };
   const typeChoices = /\bobjective (?:type|kind)\b/i.test(reply.question ?? "") ||

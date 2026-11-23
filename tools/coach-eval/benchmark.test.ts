@@ -128,8 +128,9 @@ test("the gate measures drops from the baseline as well as the absolute floor", 
   const threeFailures = sample(Object.fromEntries(benchmarkScenarios.slice(0, 3).map(s => [s.id, 2])));
   // Three scattered failures clear the floor and stay within the allowed drop.
   assert.deepEqual(failedGate(threeFailures, perfect), []);
-  const lower = sample(Object.fromEntries(benchmarkScenarios.slice(0, 11).map(s => [s.id, 2])));
-  // Eleven scattered failures leave every scenario with a majority, but cross both thresholds.
+  const failuresToCrossFloor = Math.floor(benchmarkScenarios.length * 3 * (1 - gate.minRunPassRate)) + 1;
+  const lower = sample(Object.fromEntries(benchmarkScenarios.slice(0, failuresToCrossFloor).map(s => [s.id, 2])));
+  // Scattered failures leave every scenario with a majority, but cross both thresholds.
   assert.deepEqual(failedGate(lower, perfect).sort(), ["drop from baseline", "overall runs"]);
   assert.ok(!failedGate(lower).includes("drop from baseline"), "without a baseline only the floor applies");
   const md = renderBenchmark(lower, perfect).markdown;
@@ -303,5 +304,20 @@ test("the type-name check distinguishes type references from a member's work", (
   assert.equal(passed(), false);
   first.context = { ...first.context, work: "Maintain the normal test kind for deployments." };
   first.suggestion = { objective: "Ensure the test kind is normal before each deployment", question: "The test kind is normal; how do you verify it?" };
+  assert.equal(passed(), true);
+  first.context = { ...first.context, work: "What kind of tests run during normal working hours?" };
+  first.suggestion = { question: "Kind: normal; I recommend personal-development.", recommendedKind: "personal-development" };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Kind: normal. What would you like to improve?" };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Your objective type is the normal type.", recommendedKind: "personal-development" };
+  assert.equal(passed(), false);
+  first.context = { ...first.context, work: "Maintain the normal test kind while learning Playwright." };
+  first.suggestion = { question: "The test kind is normal; your objective type is Contribution. I recommend Personal development.", recommendedKind: "personal-development" };
+  assert.equal(passed(), true);
+  first.suggestion = { question: "The test kind is normal; your kind is normal. I recommend personal-development.", recommendedKind: "personal-development" };
+  assert.equal(passed(), false);
+  first.context = { ...first.context, work: "Keep releases reliable." };
+  first.suggestion = { question: "The runtime kind is normal. Is normal selected for the service mode?", recommendedKind: "personal-development" };
   assert.equal(passed(), true);
 });

@@ -43,9 +43,9 @@ test('My team opens today and navigates dated teammate snapshots with retry and 
   } finally {await browser.close();await vite.close();await f.close();}
 });
 
-test('My team navigation and direct screen are hidden with the feature off', async () => {
-  const f=await coachingFixture(undefined,resolveFeatureConfig({LANTERN_FEATURES:'team-updates=off'},'local'));
+test('My team navigation and direct screen are available with production defaults', async () => {
+  const f=await coachingFixture(undefined,resolveFeatureConfig({},'production'));
   const vite=await createServer({server:{middlewareMode:{server:f.server},hmr:{server:f.server}},appType:'spa'});f.app.use(vite.middlewares);const browser=await chromium.launch();
-  try {const context=await browser.newContext();await context.addCookies([{name:'lantern-session',value:'member',url:f.origin}]);const page=await context.newPage();await page.goto(f.origin+'/?page=team');await expect(page.getByRole('heading',{name:'Page unavailable',exact:true})).toBeVisible();await expect(page.getByRole('link',{name:'My team',exact:true})).toHaveCount(0);await expect(page.getByRole('link',{name:'TV dashboard',exact:true})).toHaveCount(0);await page.goto(f.origin+'/?page=tv');await expect(page.getByRole('heading',{name:'Position focuses',exact:true})).toBeVisible();await expect(page.locator('.tv-stage')).toHaveCount(0);}
+  try {const context=await browser.newContext();await context.addCookies([{name:'lantern-session',value:'member',url:f.origin}]);const page=await context.newPage();await page.goto(f.origin+'/?page=team');await expect(page.getByRole('heading',{name:'My team',exact:true})).toBeVisible();await expect(page.getByRole('link',{name:'My team',exact:true})).toBeVisible();await expect(page.getByRole('link',{name:'TV dashboard',exact:true})).toHaveCount(0);await page.goto(f.origin+'/?page=tv');await expect(page.getByRole('heading',{name:'Position focuses',exact:true})).toBeVisible();await expect(page.locator('.tv-stage')).toHaveCount(0);}
   finally {await browser.close();await vite.close();await f.close();}
 });

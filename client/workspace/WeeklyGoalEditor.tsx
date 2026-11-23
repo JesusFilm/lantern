@@ -13,18 +13,18 @@ import { GoalDetailEditor, GoalMarkdown } from './GoalDescription.js';
 export const workLabels = { focus: 'Position focus', project: 'Project', repository: 'Repository', issue: 'Issue', other: 'Other work' };
 export const emptyWeeklyGoal = (): WeeklyGoalDraft => ({ text: '', links: [] });
 export function weeklyGoalDraft(goal: WeeklyGoal): WeeklyGoalDraft {
-  return { id: goal.id, text: goal.text, description: goal.description ?? '', completed: goal.completed ?? false, links: goal.links.map(link => link.kind === 'focus' ? { kind: 'focus', focusId: link.focusId } : link) };
+  return { id: goal.id, text: goal.text, visibility: goal.visibility, description: goal.description ?? '', completed: goal.completed ?? false, links: goal.links.map(link => link.kind === 'focus' ? { kind: 'focus', focusId: link.focusId, ...(link.target ? {target:{version:link.target.version,section:link.target.section,goal:link.target.goal}} : {}) } : link) };
 }
 export function WeeklyGoalLinks({ goal, showDescription = true }: { goal: WeeklyGoal; showDescription?: boolean }) {
   return <>{showDescription && goal.description?.trim() && <details className="week-history-description"><summary>Description</summary><GoalMarkdown text={goal.description} /></details>}
     {goal.links.length ? <ul className="week-work-links">{goal.links.map((link, i) => <li key={i}>
-    <a href={link.kind === 'focus' ? '/?focus=' + encodeURIComponent(link.focusId) : link.url} target="_blank" rel="noopener noreferrer">{workLabels[link.kind]}: {link.kind === 'focus' ? link.title : link.label}</a>
+    <a href={link.kind === 'focus' ? '/?focus=' + encodeURIComponent(link.focusId) : link.url} target="_blank" rel="noopener noreferrer">{workLabels[link.kind]}: {link.kind === 'focus' ? [link.title,link.target?.objective,link.target?.goalText].filter(Boolean).join(' · ') : link.label}</a>
   </li>)}</ul> : null}</>;
 }
-export function WeeklyGoalEditor({ goal, number, removable, onChange, onRemove, focuses, focusError, retryFocuses, saveError, onRetrySave, status, statusKey, onStatusChange }: {
-  goal: WeeklyGoalDraft; number: number; removable: boolean; onChange: (goal: WeeklyGoalDraft) => void;
+export function WeeklyGoalEditor({ goal, number, privacyEnabled = false, targetEnabled = false, removable, onChange, onRemove, focuses, focusError, retryFocuses, saveError, onRetrySave, status, statusKey, onStatusChange, statusDisabled = false }: {
+  goal: WeeklyGoalDraft; number: number; privacyEnabled?: boolean; targetEnabled?: boolean; removable: boolean; onChange: (goal: WeeklyGoalDraft) => void;
   onRemove: () => void; focuses: PositionFocus[] | undefined; focusError: string; retryFocuses: () => void;
-  status: GoalStatus | undefined; statusKey: string; onStatusChange: (status: GoalStatus) => void;
+  statusDisabled?: boolean; status: GoalStatus | undefined; statusKey: string; onStatusChange: (status: GoalStatus) => void;
   saveError?: string; onRetrySave?: () => void;
 }) {
   const [editing, setEditing] = useState<number | 'new' | null>(null);
@@ -60,17 +60,20 @@ export function WeeklyGoalEditor({ goal, number, removable, onChange, onRemove, 
     </div>
     </div>
     {descriptionOpen && <GoalDetailEditor title={goal.text} value={goal.description ?? ''} number={number}
-      onTitleChange={text => onChange({ ...goal, text })}
-      onChange={description => onChange({ ...goal, description })} onClose={() => setDescriptionOpen(false)}
-      saveError={saveError} onRetry={onRetrySave} />}
+      onSave={(text, description) => onChange({ ...goal, text, description })} onClose={() => setDescriptionOpen(false)} />}
     {!!goal.links.length && <div className="week-attached-work week-goal-linked-work" role="group" aria-label={`Work links for goal ${number}`} tabIndex={0}>
       {goal.links.map((link, index) => <div className="week-link-chip" key={index}>
         <button type="button" onClick={() => setEditing(index)} aria-label={`Edit work link ${index + 1} for goal ${number}`}><WorkLinkIcon link={link} size={12} /><span>{link.kind === 'focus' ? focuses?.find(focus => focus.id === link.focusId)?.title ?? 'Position focus' : workLinkLabel(link) || workLabels[link.kind]}</span></button>
         <button type="button" className="week-chip-remove" aria-label={`Remove work link ${index + 1} from goal ${number}`} onClick={() => { onChange({ ...goal, links: goal.links.filter((_, i) => i !== index) }); }}><X size={13} /></button>
       </div>)}
     </div>}
-    <GoalStatusFooter name={statusKey} title={goal.text || `goal ${number}`} status={status} onChange={onStatusChange} />
-    {editing !== null && <WeeklyLinkDialog initial={editing === 'new' ? undefined : goal.links[editing]}
+    {privacyEnabled && <label className="week-goal-visibility">Visible to
+      <select aria-label={`Who can see goal ${number}`} value={goal.visibility ?? 'team'} onChange={event => onChange({ ...goal, visibility: event.target.value as import('../../shared/weekly.js').GoalVisibility })}>
+        <option value="team">Team</option><option value="lead">Me and my career lead</option><option value="private">Only me</option>
+      </select>
+    </label>}
+    <GoalStatusFooter disabled={statusDisabled} name={statusKey} title={goal.text || `goal ${number}`} status={status} onChange={onStatusChange} />
+    {editing !== null && <WeeklyLinkDialog targetEnabled={targetEnabled} initial={editing === 'new' ? undefined : goal.links[editing]}
       focuses={focuses} focusError={focusError} retryFocuses={retryFocuses} onClose={() => setEditing(null)}
       onLink={link => onChange({ ...goal, links: editing === 'new' ? [...goal.links, link] : goal.links.map((current, index) => index === editing ? link : current) })} />}
     {confirmRemove && createPortal(<Dialog title="Delete this goal?" saveLabel="Delete goal" onClose={() => setConfirmRemove(false)}

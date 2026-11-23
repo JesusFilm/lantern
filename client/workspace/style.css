@@ -838,7 +838,7 @@ nav button {
 }
 
 .workspace:has(.guide-layout) {
-  max-width: 1100px;
+  max-width: var(--content-width);
 }
 .guide-layout {
   display: grid;
@@ -960,7 +960,7 @@ dialog [role="alert"],
   overflow-wrap: anywhere;
 }
 .workspace:has(.guide-layout) {
-  max-width: 1100px;
+  max-width: var(--content-width);
 }
 .topic-entry > button {
   width: 100%;
@@ -2109,3 +2109,22 @@ dialog .initiative-description-field textarea {
 .progress-note p { white-space:pre-wrap; margin:.3rem 0; }
 .progress-empty { font-size:.85rem; margin:.5rem 0 0; }
 @media(max-width:680px){.progress-panel{padding:1rem}.progress-row{align-items:flex-start;flex-direction:column;gap:.4rem}.progress-actions{flex-wrap:wrap}.progress-tabs button{min-height:44px}}
+
+/* Shared navigation and action geometry across reading and planning screens. */
+:is(.progress-tabs, .department-tabs, .weekly-link-sources) {
+  display: flex; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+:is(.progress-tabs, .department-tabs, .weekly-link-sources) > button {
+  min-height: 44px; padding: 10px 0; border: 0; border-bottom: 3px solid transparent;
+  border-radius: 0; background: transparent; color: var(--muted); font-size: 14px;
+}
+:is(.progress-tabs, .department-tabs, .weekly-link-sources) > button:is(.active, [aria-pressed="true"]) {
+  border-bottom-color: var(--accent); background: transparent; color: var(--accent); font-weight: 600;
+}
+.members .link { font-size: inherit; }
+
+.dialog-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.dialog-heading h2 { flex-shrink:1; margin:0; min-width:0; overflow-wrap:anywhere; }
+.dialog-close { flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:44px; padding:8px; border:0; background:transparent; color:var(--ink); }
+.mission-image-dialog input::file-selector-button { min-height:44px; padding:10px 16px; margin-right:12px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--ink); font:inherit; cursor:pointer; }

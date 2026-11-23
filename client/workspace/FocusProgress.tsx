@@ -2,6 +2,7 @@ import {createContext,useContext,useEffect,useRef,useState,type ReactNode} from 
 import type {PositionFocus} from '../../shared/focus.js';
 import type {ProgressRecord,ProgressStatus,ProgressTarget} from '../../shared/progress.js';
 import {api,ApiError} from './api.js';
+import {FocusWeeklyWork} from './FocusWeeklyWork.js';
 import {Dialog} from './Dialog.js';
 import {usePhoneLayout} from './usePhoneLayout.js';
 import {useSwipeNavigation} from './useSwipeNavigation.js';
@@ -27,8 +28,14 @@ function ProgressActivity({focus,data,row}:{focus:PositionFocus;data:ProgressRec
   {compact&&count>1&&!all&&<div className="objective-pager" role="navigation" aria-label="Objective navigation"><button aria-label="Previous objective" disabled={active===0} onClick={()=>move(active-1)}>← Previous</button><span role="status">{active+1} / {count}</span><button aria-label="Next objective" disabled={active===count-1} onClick={()=>move(active+1)}>Next →</button></div>}
  </div>;
 }
-export function FocusProgress({focus,memberId,enabled,children}:{focus:PositionFocus;memberId?:string;enabled:boolean;children:ReactNode}) {
- const [tab,setTab]=useState<'focus'|'activity'>('focus'),[data,setData]=useState<ProgressRecord>(),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
+export function FocusProgress({focus,memberId,enabled,weeklyLinksEnabled=false,children}:{focus:PositionFocus;memberId?:string;enabled:boolean;weeklyLinksEnabled?:boolean;children:ReactNode}) {
+ const [tab,setTab]=useState<'focus'|'activity'>(()=>new URLSearchParams(location.search).get('view')==='progress'?'activity':'focus'),[data,setData]=useState<ProgressRecord>(),[error,setError]=useState(''),[attempt,setAttempt]=useState(0);
+ function chooseTab(next:'focus'|'activity') {
+  const url=new URL(location.href);
+  if(next==='activity')url.searchParams.set('view','progress');else url.searchParams.delete('view');
+  history.replaceState(history.state,'',url.pathname+url.search+url.hash);
+  setTab(next);
+ }
  const [editing,setEditing]=useState<ProgressTarget>(),[conflict,setConflict]=useState<ProgressRecord>();
  const [editStatus,setEditStatus]=useState(''),[editBody,setEditBody]=useState('');
  const path=memberId?`/api/department/members/${encodeURIComponent(memberId)}/focuses/${encodeURIComponent(focus.id)}/progress`:`/api/focuses/${encodeURIComponent(focus.id)}/progress`;
@@ -65,10 +72,12 @@ export function FocusProgress({focus,memberId,enabled,children}:{focus:PositionF
    {hasNote?<div className="progress-note"><span className="muted">{new Date(note!.createdAt).toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'})}</span><p>{note!.body}</p></div>:<p className="muted progress-empty">No notes yet</p>}
   </section>;
  }
- if(!enabled)return <>{children}</>;
- return <><nav className="progress-tabs" aria-label="Position focus views"><button className={tab==='focus'?'active':''} aria-pressed={tab==='focus'} onClick={()=>setTab('focus')}>Focus</button><button className={tab==='activity'?'active':''} aria-pressed={tab==='activity'} onClick={()=>setTab('activity')}>Progress &amp; notes</button></nav>
+ const weeklyWork=weeklyLinksEnabled?<FocusWeeklyWork focusId={focus.id} onSuggest={!memberId&&enabled&&data?(target,value)=>{if(target.version!==focus.version||!focus.sections[target.section]||(target.goal!==null&&!focus.sections[target.section]?.goals[target.goal]))return;setEditStatus(value==='done'?'achieved':value==='on-track'?'in-progress':'needs-attention');setEditBody(data.notes.find(note=>same(note,target))?.body||'');setEditing({section:target.section,goal:target.goal})}:undefined}/>:null;
+ if(!enabled)return <>{children}{weeklyWork}</>;
+ return <><nav className="progress-tabs" aria-label="Position focus views"><button className={tab==='focus'?'active':''} aria-pressed={tab==='focus'} onClick={()=>chooseTab('focus')}>Focus</button><button className={tab==='activity'?'active':''} aria-pressed={tab==='activity'} onClick={()=>chooseTab('activity')}>Progress &amp; notes</button></nav>
   {error&&<p role="alert">{error} <button onClick={()=>setAttempt(x=>x+1)}>Try again</button></p>}
   {tab==='focus'?<ProgressContext.Provider value={data}>{children}</ProgressContext.Provider>:error?null:!data?<p role="status">Loading progress…</p>:<ProgressActivity focus={focus} data={data} row={row}/>}
+  {weeklyWork}
   {editing&&<Dialog title={`Progress · Objective ${editing.section+1}`+(editing.goal===null?'':` · SMART goal ${editing.goal+1}`)} onClose={()=>{if(conflict)setData(conflict);setConflict(undefined);setEditing(undefined)}} onSave={save} saveLabel="Save progress">
     {conflict&&<div className="progress-conflict"><p>Your edit is still below. Review the latest version, then use it as the base before saving your edit.</p><p>Latest saved status: {conflict.statuses.find(item=>same(item,editing))?.status ? labels[conflict.statuses.find(item=>same(item,editing))!.status!] : 'No status set'}</p><p>Latest saved note: {conflict.notes.find(item=>same(item,editing))?.body || 'No note'}</p><button type="button" onClick={()=>{if(editStatus===(status(editing)||''))setEditStatus(conflict.statuses.find(item=>same(item,editing))?.status||'');if(editBody===(data?.notes.find(item=>same(item,editing))?.body||''))setEditBody(conflict.notes.find(item=>same(item,editing))?.body||'');setData(conflict);setConflict(undefined)}}>Use latest version</button></div>}
     <label htmlFor="progress-status">Status</label><select id="progress-status" name="status" value={editStatus} onChange={event=>setEditStatus(event.target.value)}><option value="">No status set</option>{Object.entries(labels).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select>

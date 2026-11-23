@@ -90,6 +90,7 @@ export function workspaceHistoryIndex(): number {
 
 function navigate(id?: string) {
   const url = new URL(location.href);
+  url.searchParams.delete("view");
   if (id) url.searchParams.set("focus", id);
   else url.searchParams.delete("focus");
   const index = workspaceHistoryIndex() + 1;
