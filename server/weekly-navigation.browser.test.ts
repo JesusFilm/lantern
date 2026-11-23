@@ -5,8 +5,8 @@ import { createServer } from 'vite';
 import { coachingFixture } from './coach-test-support.js';
 import { resolveFeatureConfig } from './features.js';
 
-test('week history bounds are scoped to the active member and hidden with the feature', async () => {
-  const f = await coachingFixture();
+test('week history bounds stay scoped to the active member with production defaults', async () => {
+  const f = await coachingFixture(undefined, resolveFeatureConfig({}, 'production'));
   try {
     assert.equal((await f.request('missing', '/api/weeks')).status, 401);
     assert.deepEqual(await (await f.request('member', '/api/weeks')).json(), { firstWeek: null });
@@ -15,8 +15,6 @@ test('week history bounds are scoped to the active member and hidden with the fe
     assert.deepEqual(await (await f.request('member', '/api/weeks')).json(), { firstWeek:'2026-11-09' });
     assert.deepEqual(await (await f.request('lead', '/api/weeks')).json(), { firstWeek:null });
   } finally { await f.close(); }
-  const hidden = await coachingFixture(undefined, resolveFeatureConfig({}, 'production'));
-  try { assert.equal((await hidden.request('member', '/api/weeks')).status, 404); } finally { await hidden.close(); }
 });
 
 test('week navigation supports planning ahead and returns one week at a time', async () => {
