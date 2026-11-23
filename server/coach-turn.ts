@@ -1,10 +1,10 @@
 import { coachContextLimits, type CoachCheckpoint, type CoachSuggestion } from "../shared/coach.js";
 import type { DepartmentDirection } from "../shared/direction.js";
-import { validateCheckpoint, validateSuggestion, type CoachStage } from "./coach-contract.js";
+import { datedGoal, validateCheckpoint, validateSuggestion, type CoachStage, type ModelSuggestion } from "./coach-contract.js";
 import { coachPrompt } from "./coach-prompt.js";
 import type { CoachProvider } from "./coach-provider.js";
 
-type Ask = (stage: CoachStage, context: CoachCheckpoint, signal?: AbortSignal) => Promise<CoachSuggestion>;
+type Ask = (stage: CoachStage, context: CoachCheckpoint, signal?: AbortSignal) => Promise<ModelSuggestion>;
 
 /** Sends one stage to the provider using the shipped prompt and response contract. */
 export function providerAsk(provider: CoachProvider, direction: DepartmentDirection, enhanced: boolean): Ask {
@@ -20,6 +20,16 @@ export function providerAsk(provider: CoachProvider, direction: DepartmentDirect
 const allMet = (suggestion: CoachSuggestion) =>
   !!suggestion.assessment && Object.values(suggestion.assessment).every(check => check.status === "met");
 const joined = (...parts: Array<string | undefined>) => parts.filter(Boolean).join(" ") || undefined;
+const quoteWords = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, " ").split(" ").filter(word => word.length >= 3);
+const connectives = new Set(["the", "and", "for", "who", "our", "their", "with", "that", "this", "from", "are", "will", "can", "all"]);
+/** True when every meaningful word of the coach's quote appears in what the member wrote (allowing simple word endings). */
+export function memberSaid(quote: string, memberText: string) {
+  const said = new Set(quoteWords(memberText).map(word => word.slice(0, 5)));
+  const quoted = quoteWords(quote).filter(word => !connectives.has(word));
+  return quoted.length > 0 && quoted.every(word => said.has(word.slice(0, 5)));
+}
+/** Beyond this, a first reply probably waited on a provider timeout, so no optional call follows. */
+const retryWithinMs = 20000;
 
 /**
  * One member-facing coaching turn. In redesigned drafting the coach asks at most once
@@ -27,23 +37,26 @@ const joined = (...parts: Array<string | undefined>) => parts.filter(Boolean).jo
  * Objective screen. Every Objective screen gets checks of the exact wording it shows.
  * Optional follow-up steps never discard a usable draft; only cancellation stops the turn.
  */
-export async function coachTurn(input: {
+export async function coachTurn(input: Parameters<typeof turn>[0]): Promise<CoachSuggestion> {
+  // The beneficiary quote is for the server's check only.
+  const { beneficiary: _quote, ...reply } = await turn(input);
+  return reply;
+}
+
+async function turn(input: {
   ask: Ask;
   direction: DepartmentDirection;
   stage: CoachStage;
   context: CoachCheckpoint;
   enhanced: boolean;
   signal?: AbortSignal;
-}): Promise<CoachSuggestion> {
-  const { ask, direction, stage, context, enhanced, signal } = input;
+  /** Clock for the latency guard; injected by tests. */
+  now?: () => number;
+}): Promise<ModelSuggestion> {
+  const { ask, direction, stage, context, enhanced, signal, now = Date.now } = input;
+  const started = now();
   let suggestion = await ask(stage, context, signal);
   if (!enhanced) return suggestion;
-  if (stage === "actions" || stage === "goal") {
-    // The member has answered this step's question: show any remaining gap instead of asking again.
-    if (context.answer?.trim() && suggestion.question)
-      suggestion = { ...suggestion, question: undefined, options: undefined, concern: joined(suggestion.concern, suggestion.question) };
-    return suggestion;
-  }
   const optional = async (next: CoachStage, nextContext: CoachCheckpoint, tries = 1) => {
     for (let attempt = 0; attempt < tries; attempt++) {
       try {
@@ -54,6 +67,25 @@ export async function coachTurn(input: {
       }
     }
   };
+  if (stage === "actions" || stage === "goal") {
+    // The member has answered this step's question: show any remaining gap instead of asking again.
+    const asFeedback = (reply: CoachSuggestion) =>
+      ({ ...reply, question: undefined, options: undefined, concern: joined(reply.concern, reply.question) });
+    if (context.answer?.trim() && suggestion.question) suggestion = asFeedback(suggestion);
+    if (stage === "actions" && !suggestion.question && !suggestion.actions?.length && now() - started < retryWithinMs) {
+      // Feedback alone leaves the member nothing to choose: ask once more without the earlier question,
+      // unless the first reply was already slow enough to risk a long wait.
+      const retry = await optional("actions", { ...context, question: "", answer: "" });
+      if (retry?.actions?.length) suggestion = { ...asFeedback(retry), concern: joined(suggestion.concern, retry.concern, retry.question) };
+    }
+    if (stage === "goal" && !suggestion.question && !suggestion.goal?.trim()) {
+      // The member may not know how success will be shown. They still get an editable goal of
+      // their own action and selected date, with the coach's feedback beside it.
+      const goal = context.action?.trim() ? datedGoal(context.action, context.date ?? "") : undefined;
+      if (goal) suggestion = { ...suggestion, goal, ready: undefined };
+    }
+    return suggestion;
+  }
   const answered = context.answers.length > 0;
   const memberWording = context.objective.trim() || context.work;
   const drafted = (reply: CoachSuggestion) => !!reply.objective && reply.ready !== false && !reply.question;
@@ -63,6 +95,11 @@ export async function coachTurn(input: {
     if (!answered && !drafted(suggestion) && !suggestion.question && suggestion.concern?.trim().endsWith("?"))
       // A first reply that only asks, phrased as a concern, is the coach's one question.
       suggestion = { ...suggestion, question: suggestion.concern, concern: undefined, objective: undefined, assessment: undefined };
+    const lens = context.kind ?? suggestion.recommendedKind;
+    if (!answered && drafted(suggestion) && suggestion.beneficiary !== undefined && lens !== "personal-development" && lens !== "leadership" &&
+      !memberSaid(suggestion.beneficiary, [context.work, context.objective].join(" ")))
+      // The coach must not invent who the work serves: a first draft without the member's own beneficiary becomes the one question.
+      suggestion = { ...suggestion, objective: undefined, assessment: undefined, ready: false, question: "Who will benefit from this work, and how?" };
     if (drafted(suggestion)) shown = suggestion.objective;
     else if (answered) {
       // After the member answers, the editor stops asking and shows a draft built from the answers.
@@ -81,10 +118,17 @@ export async function coachTurn(input: {
       shown = memberWording;
     }
   } else if (stage === "objective") {
-    if (answered && suggestion.question && !drafted(suggestion))
-      // Answering feedback never starts a chain of questions: show the gap on the Objective screen.
-      suggestion = { ...suggestion, question: undefined, ready: undefined, objective: undefined, assessment: undefined,
-        concern: joined(suggestion.concern, suggestion.question) };
+    if (answered && suggestion.question && !drafted(suggestion)) {
+      // Give the member's answer one chance to become wording before showing any remaining gap.
+      const draft = await optional("objective", { ...context, question: "", answer: "" });
+      const feedback = (...parts: Array<string | undefined>) => joined(...new Set(parts.filter(part =>
+        !part || !context.answers.some(a => a.answer.trim() && a.question.trim().toLowerCase() === part.trim().toLowerCase()),
+      )));
+      suggestion = draft && drafted(draft)
+        ? { ...draft, ready: true, concern: feedback(draft.concern, suggestion.concern, suggestion.question) }
+        : { ...suggestion, question: undefined, ready: undefined, objective: undefined, assessment: undefined,
+            concern: feedback(suggestion.concern, suggestion.question, draft?.concern, draft?.question) };
+    }
     if (!suggestion.question) {
       if (suggestion.objective) shown = suggestion.objective;
       else {

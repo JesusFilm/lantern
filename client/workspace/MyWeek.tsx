@@ -235,7 +235,7 @@ export function MyWeek({ copyEnabled = false }: { copyEnabled?: boolean }) {
               onStatusChange={status => { if (!todayInWeek) return; setStatuses(values => ({ ...values, [goal.id ?? goal.key]: status })); setUpdateError(''); }}
               focuses={focuses} focusError={focusError} retryFocuses={() => setFocusReload(value => value + 1)}
               saveError={planError} onRetrySave={() => setPlanError('')} />}</GoalOrder>
-            {planError && <p role="alert">{planError} <button type="button" onClick={() => setPlanError('')}>Retry saving goals</button><button type="button" onClick={() => { if (window.confirm('Reload the saved week and discard your unsaved changes?')) setReload(value => value + 1); }}>Reload saved week</button></p>}
+            {planError && <p role="alert">{planError} <button type="button" onClick={() => setPlanError('')}>Retry saving goals</button><button type="button" disabled={busy || planSaving} onClick={() => { if (window.confirm('Reload the saved week and discard your unsaved changes?')) setReload(value => value + 1); }}>Reload saved week</button></p>}
           </form>
         </section>
         <section className="week-day-entries" aria-label="Daily updates">

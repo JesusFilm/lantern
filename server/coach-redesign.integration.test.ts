@@ -3,6 +3,12 @@ import { test } from "node:test";
 import { coachingFixture, checkpoint } from "./coach-test-support.js";
 import { resolveFeatureConfig } from "./features.js";
 import type { CoachProvider } from "./coach-provider.js";
+import type { CoachCheckpoint } from "../shared/coach.js";
+
+// The live-date guard uses the server clock; keep goal fixtures valid as the calendar advances.
+const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+const activeCheckpoint = { ...checkpoint, start: day(-30), end: day(90), date: day(30) };
+const activeDate = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "long", year: "numeric" }).format(new Date(activeCheckpoint.date + "T12:00:00Z"));
 
 test("redesigned coaching can clarify a goal after three answers without inventing a commitment", async () => {
   const reply = { question: "How would Spanish help your work?", concern: "The professional connection is unclear.", goal: "", options: [] };
@@ -10,7 +16,7 @@ test("redesigned coaching can clarify a goal after three answers without inventi
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
     const response = await f.request("member", "/api/coach/suggest", "POST", {
-      stage: "goal", context: { ...checkpoint, action: "Learn Spanish", answers: Array.from({ length: 4 }, (_, i) => ({ question: `Question ${i}`, answer: "I am still unsure." })) },
+      stage: "goal", context: { ...activeCheckpoint, action: "Learn Spanish", answers: Array.from({ length: 4 }, (_, i) => ({ question: `Question ${i}`, answer: "I am still unsure." })) },
     });
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { question: reply.question, concern: reply.concern, options: [] });
@@ -39,17 +45,55 @@ test("redesigned review uses department context without example leakage and is h
 
 test("redesigned date validation rejects out-of-period goals before inference and preserves access isolation", async () => {
   let calls = 0;
-  const coach: CoachProvider = { async suggest(_s, _c, validate) { calls++; return validate({ goal: "By 30 November 2026, review failure reports." }); } };
+  const coach: CoachProvider = { async suggest(_s, _c, validate) { calls++; return validate({ goal: `By ${activeDate}, review failure reports.` }); } };
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
-    for (const date of ["2026-09-30", "2027-04-01", ""]) {
-      assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...checkpoint, date } })).status, 400);
+    for (const date of [day(-31), day(91), ""]) {
+      assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...activeCheckpoint, date } })).status, 400);
     }
     assert.equal(calls, 0);
     const focus = await (await f.request("member", "/api/focuses", "POST", { title: "Private", start: checkpoint.start, end: checkpoint.end, sections: [] })).json();
     assert.equal((await f.request("peer", "/api/coach/suggest", "POST", { stage: "review", context: checkpoint, focusId: focus.id, version: focus.version })).status, 404);
     assert.equal(calls, 0);
-    assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint })).status, 200);
+    assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: activeCheckpoint })).status, 200);
+  } finally { await f.close(); }
+});
+
+test("the goal HTTP interface rejects past dates inside the focus before calling the coach", async () => {
+  let calls = 0;
+  const coach: CoachProvider = { async suggest(_s, _c, validate) { calls++; return validate({ goal: "Review reports." }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+  const input = { ...checkpoint, start: day(-10), end: day(30) };
+  try {
+    const past = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...input, date: day(-1) } });
+    assert.equal(past.status, 400);
+    assert.equal(calls, 0);
+    const today = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...input, date: day(0) } });
+    assert.equal(today.status, 200);
+    assert.equal(calls, 1);
+  } finally { await f.close(); }
+});
+
+test("goal date validation follows the member's time zone and rejects an invalid zone", async () => {
+  let calls = 0;
+  const coach: CoachProvider = { async suggest(_s, _c, validate) { calls++; return validate({ goal: "Review reports." }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    for (const timeZone of ["Pacific/Auckland", "America/Los_Angeles"]) {
+      const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+      const value = (name: string) => parts.find(part => part.type === name)!.value;
+      const today = `${value("year")}-${value("month")}-${value("day")}`;
+      const date = new Date(today + "T12:00:00Z");
+      const day = (offset: number) => new Date(date.getTime() + offset * 86400000).toISOString().slice(0, 10);
+      const context = { ...checkpoint, start: day(-10), end: day(30) };
+      assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...context, date: day(-1) }, timeZone })).status, 400);
+      assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...context, date: today }, timeZone })).status, 200);
+    }
+    assert.equal(calls, 2);
+    const invalid = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint, timeZone: "Invalid/Nowhere" });
+    assert.equal(invalid.status, 400);
+    assert.equal(calls, 2);
   } finally { await f.close(); }
 });
 
@@ -87,18 +131,18 @@ test("Lantern owns provisional and selected dates even when the coach supplies d
   } };
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
-    const actions = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context: checkpoint })).json();
-    assert.equal(actions.suggestedDate, checkpoint.end);
+    const actions = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context: activeCheckpoint })).json();
+    assert.equal(actions.suggestedDate, activeCheckpoint.end);
     for (const prefix of ["", "By 1 January 2027, ", "By January 1, 2027, ", "By 2027-01-01, ", "By 1st January 2027, ", "By January 1st, 2027, ",
       "By the end of March 2027, ", "By end of March 2027, ", "By March 2027, ", "By the end of Q1 2027, ", "By mid-January 2027, ",
       "By the end of 2027, ", "By mid-2027, ", "By early 2027, "]) {
       suppliedGoal = prefix + "review failure reports.";
-      const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint })).json();
-      assert.equal(goal.goal, "By 30 November 2026, review failure reports.");
+      const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: activeCheckpoint })).json();
+      assert.equal(goal.goal, `By ${activeDate}, review failure reports.`);
     }
     suppliedGoal = "By reviewing reports from January 2026, identify recurring failures.";
-    const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint })).json();
-    assert.equal(goal.goal, "By 30 November 2026, " + suppliedGoal);
+    const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: activeCheckpoint })).json();
+    assert.equal(goal.goal, `By ${activeDate}, ` + suppliedGoal);
   } finally { await f.close(); }
 });
 
@@ -275,6 +319,59 @@ test("an answered follow-up is drafted into the visible objective and checked as
   } finally { await f.close(); }
 });
 
+test("an answer to an existing objective question is used in a draft and the visible wording is checked", async () => {
+  const calls: Array<{ stage: string; context: CoachCheckpoint }> = [];
+  let allChecksMet = false;
+  let failedDraft = false;
+  const coach: CoachProvider = { async suggest(_s, raw, validate) {
+    const input = JSON.parse(raw); calls.push(input);
+    if (input.stage === "review") return validate({ assessment: {
+      purpose: { status: "met", note: "Testing is clear." },
+      people: { status: allChecksMet ? "met" : "needs_attention", note: "How do users benefit?" },
+      alignment: { status: allChecksMet ? "met" : "uncertain", note: "Connection is unclear." },
+    } });
+    if (input.context.question || failedDraft) return validate({ question: "What kind of testing?", concern: "What kind of testing?", ready: false });
+    return validate({ objective: "Test the app so users have fewer bugs." });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const input = { ...checkpoint, entry: "objective", objective: "stuff", kind: "normal", question: "Who benefits?", answer: "Users have fewer bugs when I test the app.", answers: [{ question: "Who benefits?", answer: "Users have fewer bugs when I test the app." }] };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: input });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.objective, "Test the app so users have fewer bugs.");
+    assert.equal(result.question, undefined);
+    assert.match(result.concern, /What kind of testing\?/);
+    assert.equal(result.assessment.people.status, "needs_attention");
+    assert.deepEqual(calls.map(c => c.stage), ["objective", "objective", "review"]);
+    assert.equal(calls[1]!.context.answers[0]!.answer, input.answer);
+    assert.equal(calls[2]!.context.objective, result.objective);
+    allChecksMet = true;
+    const ready = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: { ...input, kind: "personal-development" } });
+    assert.equal(ready.status, 200);
+    const readyResult = await ready.json();
+    assert.equal(readyResult.objective, "Test the app so users have fewer bugs.");
+    assert.equal(readyResult.assessment.purpose.status, "met");
+    assert.equal(readyResult.assessment.people.status, "met");
+    assert.equal(readyResult.assessment.alignment.status, "met");
+    assert.equal(readyResult.concern, undefined, "The coach stays quiet when every check is met.");
+    allChecksMet = false;
+    const repeated = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: {
+      ...input, answers: [{ question: "What kind of testing?", answer: "Functional testing." }, ...input.answers],
+    } });
+    assert.equal(repeated.status, 200);
+    assert.equal((await repeated.json()).concern, undefined, "A question already answered earlier is not repeated as feedback.");
+    failedDraft = true;
+    const noDraft = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: {
+      ...input, answers: [{ question: "What kind of testing?", answer: "Functional testing." }, ...input.answers],
+    } });
+    assert.equal(noDraft.status, 200);
+    const fallback = await noDraft.json();
+    assert.equal(fallback.objective, undefined);
+    assert.equal(fallback.concern, undefined, "An answered question is not repeated when the retry also fails.");
+  } finally { await f.close(); }
+});
+
 test("answering feedback never starts a question loop and unchanged wording is still checked", async () => {
   const calls: Array<{ stage: string; context: typeof checkpoint }> = [];
   let reviews = 0;
@@ -298,9 +395,10 @@ test("answering feedback never starts a question loop and unchanged wording is s
     assert.equal(result.question, undefined);
     assert.equal(result.objective, undefined);
     assert.match(result.concern, /What is your role\?/);
+    assert.equal(result.concern.match(/What is your role\?/g)?.length, 1, "Repeated provider questions appear only once in feedback.");
     assert.equal(result.assessment.people.status, "needs_attention");
-    assert.deepEqual(calls.map(c => c.stage), ["objective", "review", "review"]);
-    assert.equal(calls[2]!.context.objective, "asdf jkl");
+    assert.deepEqual(calls.map(c => c.stage), ["objective", "objective", "review", "review"]);
+    assert.equal(calls[3]!.context.objective, "asdf jkl");
   } finally { await f.close(); }
 });
 
@@ -330,18 +428,60 @@ test("a first concern-only reply becomes the member's question, and an unusable 
   } finally { await f.close(); }
 });
 
-test("after one answered goal question the coach works with what it has", async () => {
+test("after one answered goal question the coach drafts the goal from the member's action", async () => {
   const coach: CoachProvider = { async suggest(_s, raw, validate) {
     const input = JSON.parse(raw);
     return validate({ ready: false, question: input.context.answer ? "And how will you measure it?" : "What evidence will you record?" });
   } };
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
-    const ask = async (answer: string) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...checkpoint, answer, question: answer ? "What evidence will you record?" : "", answers: answer ? [{ question: "What evidence will you record?", answer }] : [] } })).json();
+    const ask = async (answer: string) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...activeCheckpoint, answer, question: answer ? "What evidence will you record?" : "", answers: answer ? [{ question: "What evidence will you record?", answer }] : [] } })).json();
     assert.equal((await ask("")).question, "What evidence will you record?");
     const after = await ask("I'm not sure.");
     assert.equal(after.question, undefined);
     assert.match(after.concern, /how will you measure it/);
+    // The member can't say how success will be shown; they still get an editable goal of their own action and date.
+    assert.equal(after.goal, `By ${activeDate}, Review logs`);
+  } finally { await f.close(); }
+});
+
+test("a goal reply with only feedback still gives the member their action as a goal, without inventing evidence", async () => {
+  let reply: Record<string, unknown> = { concern: "Evidence is missing for this action." };
+  const coach: CoachProvider = { async suggest(_s, _c, validate) { return validate(reply); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const ask = async (context = {}) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...activeCheckpoint, ...context } })).json();
+    assert.deepEqual(await ask(), { concern: "Evidence is missing for this action.", goal: `By ${activeDate}, Review logs` });
+    // A coach-written goal is kept as written.
+    reply = { goal: "Review logs and note recurring causes.", concern: "Consider who sees the notes." };
+    assert.equal((await ask()).goal, `By ${activeDate}, Review logs and note recurring causes.`);
+    // An unanswered question is still asked; the member has not yet had the chance to answer.
+    reply = { question: "How does reviewing logs support this objective?" };
+    assert.equal((await ask()).goal, undefined);
+  } finally { await f.close(); }
+});
+
+test("when goal ideas come back empty the coach is asked once more without the earlier question", async () => {
+  const questions: string[] = [];
+  let replies: Array<Record<string, unknown>> = [];
+  const coach: CoachProvider = { async suggest(_s, raw, validate) {
+    questions.push(JSON.parse(raw).context.question);
+    return validate(replies.shift() ?? { concern: "Still unclear." });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const answered = { ...checkpoint, entry: "goal", action: "", goal: "", question: "Who reviews the plan?", answer: "My team.", answers: [{ question: "Who reviews the plan?", answer: "My team." }] };
+    const ask = async () => (await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context: answered })).json();
+    replies = [{ concern: "Who reviews the plan?" }, { actions: ["Review three failure reports with the on-call engineer"] }];
+    const first = await ask();
+    assert.deepEqual(first.actions, ["Review three failure reports with the on-call engineer"]);
+    assert.match(first.concern, /Who reviews the plan\?/);
+    assert.deepEqual(questions, ["Who reviews the plan?", ""]);
+    // If the retry has no ideas either, the feedback is shown and no third call is made.
+    questions.length = 0;
+    const none = await ask();
+    assert.equal(none.actions, undefined);
+    assert.equal(questions.length, 2);
   } finally { await f.close(); }
 });
 
@@ -359,5 +499,42 @@ test("a check reply without checks is retried", async () => {
     const result = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, kind: "personal-development" } })).json();
     assert.equal(result.assessment.people.status, "met");
     assert.equal(reviews, 2);
+  } finally { await f.close(); }
+});
+
+test("a first draft whose beneficiary is not in the member's words becomes the coach's one question", async () => {
+  const stages: string[] = [];
+  let reply: Record<string, unknown> = {};
+  const assessment = { purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Supports the mission." } };
+  const coach: CoachProvider = { async suggest(_s, raw, validate) { stages.push(JSON.parse(raw).stage); return validate(stages.at(-1) === "review" ? { assessment } : reply); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const ask = async (context: Record<string, unknown>) => {
+      stages.length = 0;
+      return (await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, objective: "", work: "I'm building an application that generates gospel videos.", kind: "normal", ...context } })).json();
+    };
+    // Invented audience: the member never named viewers.
+    reply = { objective: "Build an app that generates gospel videos for viewers seeking Jesus.", beneficiary: "viewers seeking Jesus", ready: true, initiativeIds: [] };
+    const invented = await ask({});
+    assert.equal(invented.objective, undefined);
+    assert.match(invented.question, /who/i);
+    assert.equal(invented.beneficiary, undefined);
+    assert.deepEqual(stages, ["clarify"]);
+    // The coach says the member has not named anyone.
+    reply = { ...reply, beneficiary: "" };
+    assert.match((await ask({})).question, /who/i);
+    // A beneficiary taken from the member's own words is drafted and checked as usual.
+    reply = { objective: "Deliver subtitles before outreach events for churches in East Africa.", beneficiary: "Churches in East Africa", ready: true, initiativeIds: [] };
+    const grounded = await ask({ work: "I translate subtitles, and churches in east Africa need them before their outreach events." });
+    assert.equal(grounded.objective, "Deliver subtitles before outreach events for churches in East Africa.");
+    assert.equal(grounded.beneficiary, undefined);
+    assert.deepEqual(stages, ["clarify", "review"]);
+    // Development objectives serve the member, and answers already given are never followed by another question.
+    reply = { objective: "Grow my Playwright skills.", beneficiary: "engineers", ready: true, initiativeIds: [] };
+    assert.equal((await ask({ kind: "personal-development" })).objective, "Grow my Playwright skills.");
+    reply = { objective: "Build an app that generates gospel videos for seekers.", beneficiary: "seekers", ready: true, initiativeIds: [] };
+    const answered = await ask({ answers: [{ question: "Who is it for?", answer: "Not sure yet." }] });
+    assert.equal(answered.objective, "Build an app that generates gospel videos for seekers.");
+    assert.equal(answered.question, undefined);
   } finally { await f.close(); }
 });

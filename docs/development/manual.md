@@ -59,7 +59,7 @@ The manual documents the Light, Dark and System setting, but its application scr
 
 Slides live in [content.ts](../../tools/manual/content.ts), together with the scenes that photograph them. A scene names a synthetic person, a device and a path. It lists the interactions that reach the state, a `ready` locator that must be visible, and a capture mode. Numbered `highlight` targets draw callouts. Reference them in the slide text as ①, ②, and so on. Generation fails when slide text does not fit, so keep Try it and Check lists to about four short lines each.
 
-Use `npm run manual -- --only=scene-id,…` while iterating. It writes previews to `output/manual-preview` and leaves the manual untouched.
+Use `npm run manual -- --only=scene-id,…` while iterating. It writes previews to `output/manual-preview` and leaves the manual untouched. Add `--preview-dir=path` to give a capture its own output directory.
 
 The synthetic world in [world.ts](../../tools/manual/world.ts) seeds people, departments, initiatives, focuses, review requests and notes through the public HTTP API, then pins the stored timestamps. The coach is a fixed fake, so AI screens are repeatable. Scenes that save data set `mutates: true`; the world is rebuilt after them.
 
@@ -94,6 +94,10 @@ Screenshots are pixel-compared, and the manual uses system fonts (`system-ui`, `
 | `ui-monospace, monospace` | DejaVu Sans Mono |
 | Emoji | Noto Color Emoji |
 | Network | the app and the browser talk over loopback. When a proxy is configured through `HTTP_PROXY` and `NODE_USE_ENV_PROXY=1`, set `NO_PROXY=127.0.0.1,localhost`; otherwise generation fails with `fetch failed` |
+
+The capture browser disables subpixel font positioning to keep repeated text
+captures stable. This changes font spacing slightly, so review screenshots and
+rendered pages after changing the browser or rendering environment.
 
 These font files reproduced the committed screenshots exactly (0 of 44 changed) on 3 November 2026:
 

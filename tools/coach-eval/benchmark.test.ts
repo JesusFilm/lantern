@@ -55,7 +55,29 @@ test("every benchmark scenario has a category, a contract and a unique id", () =
   assert.equal(new Set(benchmarkScenarios.map(s => s.id)).size, benchmarkScenarios.length);
   for (const category of ["vague", "rewording", "proficient", "adversarial"])
     assert.ok(benchmarkScenarios.filter(s => s.category === category).length >= 3, category);
-  for (const s of benchmarkScenarios) assert.ok(s.contract.verdict || s.contract.includes?.length, s.id);
+  for (const s of benchmarkScenarios) assert.ok(s.contract.verdict || s.contract.includes?.length || s.contract.improvedOrExplained?.length || s.contract.requiresFeedback, s.id);
+});
+
+test("the uncertain existing objective must either use the answer or explain the unchanged wording", () => {
+  const scenario = benchmarkScenarios.find(s => s.id === "bench-vague-existing-testing")!;
+  const notMet = { status: "needs_attention" as const, note: "Describe the work." };
+  const check = (objective: string, concern: string) => {
+    const t = run({ objective, concern, assessment: { purpose: notMet, people: notMet, alignment: notMet } }, []);
+    const second = t.turns[2]!;
+    if (second.type === "coach") second.context = { ...second.context, answers: [{ question: "Who?", answer: "People who don't yet know Jesus." }] };
+    return evaluate({ ...t, scenario: scenario.id }, scenario).assertions.filter(a => !a.passed).map(a => a.name);
+  };
+  assert.deepEqual(check("Test the app.", ""), []);
+  assert.deepEqual(check("stuff", "The coach could not improve this objective yet."), []);
+  assert.ok(check("stuff", "Who benefits?").some(name => name.includes("or explains no improvement")));
+  assert.ok(check("Test the website.", "The coach could not improve this objective yet.").some(name => name.includes("or explains no improvement")));
+});
+
+test("the existing-objective scenario requires the member's answer to reach the coach", () => {
+  const scenario = benchmarkScenarios.find(s => s.id === "bench-vague-existing-testing")!;
+  const t = run({ objective: "stuff", concern: "The coach could not improve this objective yet.", assessment: { purpose: { status: "needs_attention", note: "Work?" }, people: { status: "needs_attention", note: "Who?" }, alignment: { status: "uncertain", note: "Why?" } } }, []);
+  const fails = evaluate(t, scenario).assertions.filter(a => !a.passed).map(a => a.name);
+  assert.ok(fails.includes("member answer sent to coach"));
 });
 
 test("embedded instructions fail only when the coach writes them, and never pass as ready", () => {
@@ -104,16 +126,26 @@ test("the committed gate allows Qwen's usual variation but not a lost kind of me
 test("the gate measures drops from the baseline as well as the absolute floor", () => {
   const perfect = sample();
   const threeFailures = sample(Object.fromEntries(benchmarkScenarios.slice(0, 3).map(s => [s.id, 2])));
-  // 36 of 39 runs (92%) clears the floor and is within the allowed drop from 100%.
+  // Three scattered failures clear the floor and stay within the allowed drop.
   assert.deepEqual(failedGate(threeFailures, perfect), []);
-  const lower = sample(Object.fromEntries(benchmarkScenarios.slice(0, 9).map(s => [s.id, 2])));
-  // 30 of 39 (77%), spread so every scenario keeps its majority, is below the floor and more than the allowed drop.
+  const lower = sample(Object.fromEntries(benchmarkScenarios.slice(0, 11).map(s => [s.id, 2])));
+  // Eleven scattered failures leave every scenario with a majority, but cross both thresholds.
   assert.deepEqual(failedGate(lower, perfect).sort(), ["drop from baseline", "overall runs"]);
   assert.ok(!failedGate(lower).includes("drop from baseline"), "without a baseline only the floor applies");
   const md = renderBenchmark(lower, perfect).markdown;
   assert.match(md, /Gate: FAIL/);
   assert.match(md, /tools\/coach-eval\/gate\.json/);
   assert.equal(renderBenchmark(lower, perfect).passed, false);
+});
+
+test("the baseline drop compares only scenarios present in both results", () => {
+  const current = sample();
+  const added = current.scenarios[0]!.id;
+  const baseline = sample({}, [added]);
+  const reduced = { ...current, scenarios: current.scenarios.map(s => s.id === added ? { ...s, passes: 0 } : { ...s, passes: 2 }) };
+  const drop = applyGate(reduced, gate, baseline).checks.find(c => c.name === "drop from baseline")!;
+  assert.match(drop.actual, /^67% vs baseline 100%/);
+  assert.equal(drop.passed, false);
 });
 
 test("runs the harness could not record count as failures, so a partial sample cannot pass", () => {
@@ -133,4 +165,61 @@ test("runs the harness could not record count as failures, so a partial sample c
   const oneMissing = countMissingRuns(sample({}, ["bench-qa-injection"]), benchmarkScenarios.map(s => s.id), 3);
   assert.equal(applyGate(oneMissing).passed, false);
   assert.deepEqual(failedGate(oneMissing), ["every scenario ran"]);
+});
+
+test("the goal-evidence scenario checks the drafted goal keeps the member's action and adds no agreement", () => {
+  const evidence = benchmarkScenarios.find(s => s.id === "bench-vague-goal-evidence")!;
+  const objective = "Cut short versions of new gospel films for social media so young people who haven't heard the gospel watch them.";
+  const score = (goal: string) => evaluate({ ...run({ objective }, [goal]), scenario: evidence.id }, evidence).assertions.filter(a => !a.passed).map(a => a.name);
+  assert.deepEqual(score("By 30 April 2027, Cut short versions of new films for social media"), []);
+  assert.ok(score("By 30 April 2027, Cut short versions and share them with the career lead for feedback").includes("no invented reviewer or agreement"));
+  assert.ok(score("By 30 April 2027, Publish a newsletter").includes("goal includes the member's action"));
+});
+
+test("every run's goals keep the chosen action, add no outcome, and feedback names no new people", () => {
+  const plan = (action: string, goal: string, concerns: string[] = []) => ({ actions: [action], action, date: "2027-04-30", goal, concerns });
+  const score = (plans: ReturnType<typeof plan>[], concern = "") => {
+    const t = run({ concern }, plans.map(p => p.goal));
+    t.outcome.plans = plans;
+    return evaluate(t, gospel).assertions.filter(a => !a.passed).map(a => a.name);
+  };
+  const action = "Publish a first video and ask three seekers for feedback";
+  assert.deepEqual(score([plan(action, "By 30 April 2027, publish a first video and ask three seekers for feedback.")]), []);
+  assert.ok(score([plan(action, "By 30 April 2027, write a blog post.")]).includes("goals keep the chosen action"), "expected failure: goals keep the chosen action");
+  assert.ok(score([plan(action, "By 30 April 2027, publish a first video and ask three seekers for feedback, so that the app is ready for launch.")]).includes("goals add no outcome"), "expected failure: goals add no outcome");
+  // An outcome the member chose is theirs.
+  assert.deepEqual(score([plan(action + " so that seekers can respond", "By 30 April 2027, publish a first video and ask three seekers for feedback so that seekers can respond.")]), []);
+  assert.ok(score([plan(action, "By 30 April 2027, publish a first video and ask three seekers for feedback.", ["Who will you confirm this with, such as your career lead?"])]).includes("feedback names no new people"), "expected failure: feedback names no new people");
+  assert.ok(score([], "Check with your manager first.").includes("feedback names no new people"), "expected failure: feedback names no new people");
+});
+
+test("the gospel audience may be phrased as people who have not yet met Jesus", () => {
+  assert.deepEqual(failed(run({ objective: "Build an application that generates gospel videos for people who have not yet met Jesus." })), []);
+});
+
+test("a goal that rewords the chosen action still keeps it", () => {
+  const t = run({});
+  const action = "Investigate partner support logs to identify common film search failures.";
+  const goal = "By 30 April 2027, Review partner support logs to identify patterns in requests related to not finding Spanish films.";
+  t.outcome.goals = [goal];
+  t.outcome.plans = [{ actions: [action], action, date: "2027-04-30", goal, concerns: ["Consider asking an internal stakeholder which films are hardest to find."] }];
+  const names = evaluate(t, gospel).assertions.filter(a => !a.passed).map(a => a.name);
+  assert.ok(!names.includes("goals keep the chosen action"), "a reworded action is kept");
+  assert.ok(!names.includes("feedback names no new people"), "a generic stakeholder example names no one");
+});
+
+
+test("feedback answers are required and are not counted as questions before the draft", () => {
+  const scenario = benchmarkScenarios.find(s => s.id === "bench-vague-feedback-details")!;
+  const t = run({});
+  const revision = { type: "coach" as const, step: "refine" as const, stage: "objective" as const, context: { ...context, answer: "It will help online seekers find gospel videos." }, ok: true, elapsedMs: 1, attempts: [] };
+  t.turns.push({ type: "member", step: "answer", text: "Online seekers" }, revision);
+  const assertions = evaluate(t, scenario).assertions;
+  assert.equal(assertions.find(a => a.name === "feedback sent to coach")?.passed, true);
+  assert.equal(assertions.find(a => a.name === "feedback includes member details")?.passed, true);
+  assert.equal(assertions.find(a => a.name === "at most 1 question before the draft")?.passed, true);
+  revision.context.answer = "Online seekers";
+  assert.equal(evaluate(t, scenario).assertions.find(a => a.name === "feedback includes member details")?.passed, false);
+  t.turns.pop();
+  assert.equal(evaluate(t, scenario).assertions.find(a => a.name === "feedback sent to coach")?.passed, false);
 });

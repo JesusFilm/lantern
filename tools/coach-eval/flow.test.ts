@@ -115,7 +115,8 @@ test("replay preserves historical request context and keeps the member objective
   const { outcome } = await runCurrentFlow({ ...base, existing: { objective: "Help staff", kind: "normal" }, improvement: "Clearer", goals: [], endAtObjective: true }, paused.coach, member, { redesigned: true });
   assert.equal(outcome.completed, true);
   assert.equal(outcome.objective, "Help staff");
-  assert.equal(outcome.screens?.[0]?.concern, "Please clarify the intended beneficiary.");
+  assert.match(outcome.screens?.[0]?.concern ?? "", /Please clarify the intended beneficiary/);
+  assert.match(outcome.screens?.[0]?.concern ?? "", /could not improve/);
   assert.deepEqual(paused.calls.map(c => c.stage), ["objective"]);
 });
 
@@ -125,6 +126,13 @@ test("redesigned flow improves an existing objective using the Guide without ask
   assert.equal(calls[0]!.stage, "objective");
   assert.equal(calls[0]!.context.concern, "");
   assert.equal(outcome.objective, "Help trainers run accessible workshops.");
+});
+
+test("a clear existing objective remains quiet when its wording is unchanged", async () => {
+  const met = { status: "met" as const, note: "Clear." };
+  const { coach } = scripted({ objective: [{ objective: "Help trainers run accessible workshops.", assessment: { purpose: met, people: met, alignment: met } }] });
+  const { outcome } = await runCurrentFlow({ ...base, existing: { objective: "Help trainers run accessible workshops.", kind: "normal" }, goals: [], endAtObjective: true }, coach, member, { redesigned: true });
+  assert.equal(outcome.screens?.[0]?.concern, "");
 });
 
 test("redesigned replay can answer draft feedback and revise the objective", async () => {
@@ -178,4 +186,77 @@ test("redesigned replay records each objective screen and answers feedback the m
   ]);
   assert.deepEqual(calls[1]?.context.answers.at(-1), { question: "Who will watch the videos?", answer: "People who don't yet know Jesus." });
   assert.equal(calls.filter(c => c.stage === "objective").length, 1, "The member stops once every check is met.");
+});
+
+test("redesigned replay applies Not sure recommendations and requires a choice when absent", async () => {
+  const withType = scripted({ clarify: [{ objective: "Develop testing skills.", recommendedKind: "personal-development" }] });
+  const scenario = { ...base, typeChoice: "recommended" as const, goals: [], endAtObjective: true };
+  const selected = await runCurrentFlow(scenario, withType.coach, member, { redesigned: true });
+  assert.equal(selected.outcome.screens?.[0]?.kind, "personal-development");
+  const withoutType = scripted({ clarify: [{ objective: "Develop testing skills." }] });
+  const unresolved = await runCurrentFlow(scenario, withoutType.coach, member, { redesigned: true });
+  assert.equal(unresolved.outcome.completed, false);
+  assert.match(unresolved.outcome.failure ?? "", /type needs a member choice/);
+});
+
+test("redesigned replay rejects a past target before requesting a goal", async () => {
+  const { coach, calls } = scripted({
+    clarify: [{ objective: "Help staff." }],
+    actions: [{ actions: ["Try captions"], suggestedDate: "2026-11-25" }],
+  });
+  const { outcome } = await runCurrentFlow({ ...base, goals: [{ action: 0, date: "2026-11-19" }] }, coach, member, { redesigned: true, today: "2026-11-20" });
+  assert.equal(outcome.completed, false);
+  assert.match(outcome.failure ?? "", /target date/);
+  assert.equal(calls.some(call => call.stage === "goal"), false);
+});
+
+test("a later coach recommendation does not silently change an already selected type", async () => {
+  const { coach } = scripted({
+    clarify: [{ objective: "Develop testing skills.", recommendedKind: "personal-development", concern: "How will you learn?" }],
+    objective: [{ objective: "Develop testing skills through practice.", recommendedKind: "leadership" }],
+  });
+  const scenario = { ...base, typeChoice: "recommended" as const, respondToFeedback: true, goals: [], endAtObjective: true };
+  const { outcome } = await runCurrentFlow(scenario, coach, { answer: async () => "Through practice" }, { redesigned: true });
+  assert.equal(outcome.kind, "personal-development");
+  assert.equal(outcome.recommendedKind, "leadership");
+});
+
+test("feedback without a revised objective does not resolve an unchosen type", async () => {
+  const { coach } = scripted({
+    clarify: [{ objective: "Develop testing skills.", concern: "How will you learn?" }],
+    objective: [{ concern: "More detail is needed.", recommendedKind: "leadership" }],
+  });
+  const scenario = { ...base, typeChoice: "recommended" as const, respondToFeedback: true, goals: [], endAtObjective: true };
+  const { outcome } = await runCurrentFlow(scenario, coach, { answer: async () => "Through practice" }, { redesigned: true });
+  assert.equal(outcome.completed, false);
+  assert.match(outcome.failure ?? "", /type needs a member choice/);
+});
+
+test("replay uses a stable fixture date unless a member date is supplied", async () => {
+  const { coach } = scripted({ clarify: [{ objective: "Help staff." }], actions: [{ actions: ["Try captions"], suggestedDate: "2026-11-10" }], goal: [{ goal: "By 10 November 2026, try captions." }] });
+  const { outcome } = await runCurrentFlow({ ...base, goals: [{ action: 0, date: "2026-11-10" }] }, coach, member, { redesigned: true });
+  assert.equal(outcome.completed, true);
+});
+
+
+test("a member may explicitly clear details after an unchanged revision", async () => {
+  const { coach } = scripted({ clarify: [{ objective: "Help staff.", concern: "Who benefits?" }], objective: [{ objective: "Help staff.", concern: "More detail is needed." }] });
+  const scenario = { ...base, respondToFeedback: true, goals: [], endAtObjective: true };
+  const { outcome, turns } = await runCurrentFlow(scenario, coach, { answer: async () => "Trainers" }, { redesigned: true });
+  assert.equal(outcome.completed, true);
+  assert.equal(outcome.objective, "Help staff.");
+  assert.ok(turns.some(turn => turn.type === "member" && turn.step === "objective" && turn.text === "Clear details"));
+});
+
+test("cleared feedback is omitted from subsequent goal requests", async () => {
+  const { coach, calls } = scripted({
+    clarify: [{ objective: "Help staff.", concern: "Who benefits?" }],
+    objective: [{ objective: "Help staff.", concern: "More detail is needed." }],
+    actions: [{ actions: ["Try captions"], suggestedDate: "2027-02-01" }],
+    goal: [{ goal: "By 1 February 2027, try captions." }],
+  });
+  const scenario = { ...base, respondToFeedback: true, goals: [{ action: 0, date: "2027-02-01" }] };
+  const { outcome } = await runCurrentFlow(scenario, coach, { answer: async () => "online seekers" }, { redesigned: true });
+  assert.equal(outcome.completed, true);
+  assert.equal(calls.find(call => call.stage === "actions")?.context.answers.some(answer => answer.answer === "online seekers"), false);
 });

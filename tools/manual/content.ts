@@ -37,6 +37,9 @@ const guided = async (page: Page) => {
   await page.getByRole("radio", { name: "Contribution", exact: true }).check();
   await page.getByLabel("Your work", { exact: true }).fill("I look after our deployment pipeline. When deployments fail, engineers often lose hours working out why.");
 };
+const guideExisting = async (page: Page) => {
+  await page.locator(".read-section").first().getByRole("button", { name: "Guide with AI", exact: true }).click();
+};
 const planGoal = async (page: Page) => {
   await guided(page);
   await click("Next")(page);
@@ -279,15 +282,30 @@ export const chapters: Chapter[] = [
         summary: "Choose an objective type, then describe your work. **coach-redesign** is hidden in production until released; **coach** must also be available.",
         tryIt: ["Choose **+ Add objective**, then **Guide with AI**.", "Choose a type or Not sure; describe your work and role.", "Review the suggestion; choose an initiative or Other."],
         check: [
-          "Recommendations offer a switch; your type stays selected.",
-          "Next requires an initiative or Other; choosing either clears the error.",
-          "Checks appear automatically; missing mission means uncertain.",
-          "Edits make earlier checks stale; check again without rewriting.",
-          "Back then Try again requests a new draft.",
+          "Not sure selects the recommendation, or asks you to choose.",
+          "Update or clear typed coach details before continuing or saving.",
+          "Next requires an initiative or Other; edits make checks stale.",
+          "Missing mission means uncertain; Back offers Try again.",
         ],
         shots: [
           { id: "guided-work", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Back")(page); }, ready: role("button", "Try again"), caption: "Return to your work to try again" },
-          { id: "guided-objective", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Help me address this")(page); }, ready: (p) => p.getByLabel("Details for the coach"), mode: longPage, caption: "Add details for the coach" },
+          { id: "guided-objective", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Help me address this")(page); await page.getByLabel("Details for the coach").fill("Engineers can find the cause of a failed deployment faster."); }, ready: (p) => p.getByText("Update objective or clear these details before continuing or saving."), mode: longPage, caption: "Pending coach details" },
+        ],
+      },
+      {
+        kind: "feature",
+        title: "Guide with AI: improve an existing objective",
+        roles: ["Member"],
+        summary: "Use **Guide with AI** on an existing objective. This path requires **coach** and **coach-redesign**.",
+        tryIt: ["On a draft, choose **Guide with AI** beside an objective.", "Choose **Improve objective** and answer any question.", "Review the wording and use **Help me address this** for further details."],
+        check: [
+          "The answer can update the objective; checks match the wording shown.",
+          "If the coach cannot improve it, it says so and keeps the editable wording.",
+          "Feedback can be answered; Back keeps the earlier answer.",
+        ],
+        shots: [
+          { id: "guided-existing-question", persona: "member", path: draft, act: async (page) => { await guideExisting(page); await click("Improve objective")(page); }, ready: (p) => p.getByLabel("Your answer"), mode: { kind: "viewport", crop: ".workspace" }, caption: "Answer a question about an existing objective" },
+          { id: "guided-existing-feedback", persona: "member", path: draft, act: async (page) => { await guideExisting(page); await click("Improve objective")(page); await page.locator(".cp-coach-wait").waitFor({ state: "hidden" }); await page.getByLabel("Your answer").fill("I am not sure yet."); await click("Next")(page); }, ready: (p) => p.getByText("The coach could not improve this objective yet.", { exact: false }), mode: { kind: "element", target: 'role=region[name="AI coach feedback"]' }, caption: "Feedback when the objective could not be improved" },
         ],
       },
       {
@@ -297,7 +315,8 @@ export const chapters: Chapter[] = [
         summary: "**coach-redesign** suggests goal ideas immediately. Check the finished draft before saving. Hidden in production until released; requires **coach**.",
         tryIt: ["At SMART goals, select an idea or **Add SMART goal**.", "Pick or write an action and date, then **Next**.", "Edit the goal, **Add to objective**, then **Next** to the check."],
         check: [
-          "Dates outside the focus period are rejected.",
+          "Target dates must be today or later, within the focus period.",
+          "Answer \"not sure\" about evidence: you still get an editable goal.",
           "Check shows your objective and goals without changing wording.",
           "No goals warns but permits saving; failure keeps your writing.",
         ],

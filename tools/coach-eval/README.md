@@ -51,7 +51,9 @@ coach feedback when they have something relevant to add.
 
 Every run must complete, show a draft with its three checks, ask few questions,
 avoid repeated questions and invented numbers, keep goal dates in the focus
-period and stay quiet once every check is met. Each scenario adds a contract
+period and stay quiet once every check is met. Goals must keep the chosen action
+and add no result the member did not supply, and feedback must not introduce
+people the member did not mention. Each scenario adds a contract
 written before running: wording the visible objective must or must not contain,
 expected check results, whether the draft should be ready, and recommended type
 or goals. A scenario passes when most of its runs pass. The run passes when it

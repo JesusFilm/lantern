@@ -1,20 +1,28 @@
 {
-  "commit": "a898ffb",
+  "commit": "726de71, 11c219c",
   "target": "qwen",
-  "createdAt": "2026-11-18T04:53:27.435Z",
+  "createdAt": "2026-11-20T02:25:15.014Z",
   "scenarios": [
+    {
+      "id": "bench-vague-existing-testing",
+      "category": "vague",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
+    {
+      "id": "bench-vague-existing-answer",
+      "category": "vague",
+      "runs": 6,
+      "passes": 6,
+      "failures": {}
+    },
     {
       "id": "bench-vague-gospel-video",
       "category": "vague",
       "runs": 6,
-      "passes": 4,
-      "failures": {
-        "completed": 1,
-        "objective includes audience from the member's answer": 2,
-        "people check met": 1,
-        "verdict ready": 1,
-        "at least 1 goal": 1
-      }
+      "passes": 6,
+      "failures": {}
     },
     {
       "id": "bench-vague-support-faq",
@@ -24,20 +32,30 @@
       "failures": {}
     },
     {
-      "id": "bench-vague-unsure",
+      "id": "bench-vague-goal-evidence",
       "category": "vague",
       "runs": 6,
       "passes": 6,
       "failures": {}
     },
     {
-      "id": "bench-rewording-subtitles",
-      "category": "rewording",
+      "id": "bench-vague-unsure",
+      "category": "vague",
       "runs": 6,
       "passes": 5,
       "failures": {
+        "completed": 1
+      }
+    },
+    {
+      "id": "bench-rewording-subtitles",
+      "category": "rewording",
+      "runs": 6,
+      "passes": 4,
+      "failures": {
         "completed": 1,
-        "at least 1 goal": 1
+        "at least 1 goal": 1,
+        "goals add no outcome": 1
       }
     },
     {
@@ -58,22 +76,28 @@
       "id": "bench-proficient-existing",
       "category": "proficient",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 5,
+      "failures": {
+        "objective includes facilitators": 1
+      }
     },
     {
       "id": "bench-proficient-partner-search",
       "category": "proficient",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 5,
+      "failures": {
+        "verdict ready": 1
+      }
     },
     {
       "id": "bench-proficient-accessibility-growth",
       "category": "proficient",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 5,
+      "failures": {
+        "verdict ready": 1
+      }
     },
     {
       "id": "bench-qa-off-topic",
@@ -86,10 +110,8 @@
       "id": "bench-qa-injection",
       "category": "adversarial",
       "runs": 6,
-      "passes": 5,
-      "failures": {
-        "verdict not ready": 1
-      }
+      "passes": 6,
+      "failures": {}
     },
     {
       "id": "bench-qa-gibberish",
@@ -102,12 +124,8 @@
       "id": "bench-qa-holiday-spanish",
       "category": "adversarial",
       "runs": 6,
-      "passes": 5,
-      "failures": {
-        "checks shown": 1,
-        "alignment check not met": 1,
-        "verdict not ready": 1
-      }
+      "passes": 6,
+      "failures": {}
     }
   ]
 }

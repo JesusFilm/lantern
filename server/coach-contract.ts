@@ -22,6 +22,17 @@ const day = "\\d{1,2}(?:st|nd|rd|th)?";
 const part = "(?:(?:the )?(?:end|start|beginning|middle) of |mid-?|early |late )";
 const period = `(?:${part}?(?:${month}|Q[1-4]),? |${part})\\d{4}`;
 const modelDeadline = new RegExp(`^By (?:\\d{4}-\\d{2}-\\d{2}|${day} ${month} \\d{4}|${month} ${day},? \\d{4}|${period}),\\s*`, "i");
+/**
+ * Prefixes a goal with the member-selected date, replacing any deadline phrase the
+ * model wrote. Returns undefined when the date is invalid or no wording remains.
+ */
+export function datedGoal(text: string, selected: string): string | undefined {
+  if (!date(selected)) return undefined;
+  const action = text.trim().replace(modelDeadline, "");
+  if (!action.trim()) return undefined;
+  const label = new Date(selected + "T12:00:00Z").toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  return 'By ' + label + ', ' + action;
+}
 export function validateCheckpoint(value: unknown, maxAnswers = 3, maxCharacters = 32000): CoachCheckpoint {
   const fail = (): never => {
     throw new AccessError(
@@ -124,13 +135,20 @@ export function validateCheckpoint(value: unknown, maxAnswers = 3, maxCharacters
   if (value.revision !== undefined && (typeof value.revision !== "string" || !/^[0-9a-f-]{36}$/.test(value.revision))) return fail();
   return value as unknown as CoachCheckpoint;
 }
+/**
+ * A validated model reply. beneficiary is the model's quote of who the member said the work
+ * serves ("" when they have not said); coachTurn checks it and never returns it to the client.
+ */
+export interface ModelSuggestion extends CoachSuggestion {
+  beneficiary?: string;
+}
 export function validateSuggestion(
   stage: CoachStage,
   value: unknown,
   initiativeIds: string[],
   redesigned = false,
   context?: Pick<CoachCheckpoint, "date" | "end">,
-): CoachSuggestion {
+): ModelSuggestion {
   const fail = (): never => {
     throw new Error("Invalid coach response");
   };
@@ -140,10 +158,12 @@ export function validateSuggestion(
     !["question", "objective", "goal", "title", "concern", "review", "suggestedDate", "recommendedKind"].includes(key) || typeof item !== "string" || item.trim()));
   if (!object(value)) return fail();
   const fields = ["question", "objective", "goal", "title", "concern", ...(redesigned ? ["review"] : [])];
-  const known = [...fields, "ready", "options", "actions", "initiativeIds", "suggestedDate", "recommendedKind", ...(redesigned ? ["assessment"] : [])];
+  const known = [...fields, "ready", "options", "actions", "initiativeIds", "suggestedDate", "recommendedKind", ...(redesigned ? ["assessment", "beneficiary"] : [])];
   // The redesigned coach ignores echoed context fields such as kind; they are never returned.
   if (redesigned) value = Object.fromEntries(Object.entries(value).filter(([k]) => known.includes(k)));
   if (!object(value) || Object.keys(value).some((k) => !known.includes(k))) return fail();
+  // An unusable beneficiary is treated as not supplied; it never discards a draft.
+  if (value.beneficiary !== undefined && !text(value.beneficiary, 300)) delete value.beneficiary;
   if (value.assessment !== undefined) {
     const assessment = value.assessment;
     const valid = object(assessment) && Object.keys(assessment).length === 3 && ["purpose", "people", "alignment"].every(key => {
@@ -205,16 +225,13 @@ export function validateSuggestion(
       : stage === "goal" ? value.goal : stage === "review" ? value.review || value.assessment : value.objective;
     if (!output) return fail();
   }
-  const result = value as CoachSuggestion;
+  const result = value as ModelSuggestion;
   // A review assesses supplied wording; it never rewrites it.
   if (redesigned && stage === "review") delete result.objective;
-  if (redesigned && context) {
-    if (result.goal && date(context.date)) {
-      const action = result.goal.replace(modelDeadline, "");
-      if (!action.trim()) return fail();
-      const label = new Date(context.date + "T12:00:00Z").toLocaleDateString("en-NZ", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
-      result.goal = `By ${label}, ${action}`;
-    }
+  if (redesigned && context && result.goal && date(context.date)) {
+    const dated = datedGoal(result.goal, context.date);
+    if (!dated) return fail();
+    result.goal = dated;
   }
   if (result.initiativeIds?.some((id) => !initiativeIds.includes(id)))
     return fail();

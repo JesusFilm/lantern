@@ -101,3 +101,33 @@ test('copying handles an empty previous week and refuses excess goals without ch
     assert.deepEqual(await (await f.request('member', '/api/weeks/2026-11-23')).json(), saved);
   } finally { await browser.close(); await vite.close(); await f.close(); }
 });
+
+test('reload stays unavailable during a pending copy and failed goal edits can still autosave afterwards', async () => {
+  const f = await coachingFixture();
+  for (const [week, text] of [['2026-11-16', 'Recurring smoke test'], ['2026-11-23', 'Original goal']]) {
+    await f.request('member', `/api/weeks/${week}/plans`, 'POST', { version: 0, goals: [{ text, links: [] }] });
+  }
+  const vite = await createServer({ server: { middlewareMode: { server: f.server }, hmr: { server: f.server } }, appType: 'spa' });
+  f.app.use(vite.middlewares);
+  const browser = await chromium.launch();
+  let release!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  try {
+    const context = await browser.newContext({ timezoneId: 'Pacific/Auckland' });
+    await context.clock.setFixedTime(new Date('2026-11-19T10:00:00+13:00'));
+    await context.addCookies([{ name: 'lantern-session', value: 'member', url: f.origin }]);
+    const page = await context.newPage(); page.setDefaultTimeout(5000);
+    await page.goto(f.origin + '/?page=week&week=2026-11-23');
+    await page.route('**/api/weeks/2026-11-23/plans', route => route.fulfill({ status: 503, json: { error: 'Could not save goals.' } }));
+    await page.getByRole('textbox', { name: 'Weekly goal 1', exact: true }).fill('Keep my failed edit');
+    await expect(page.getByRole('alert')).toContainText('Could not save goals.');
+    await page.route('**/api/weeks/2026-11-16', async route => { await held; await route.continue(); });
+    await page.getByRole('button', { name: 'Copy last week’s goals', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Reload saved week', exact: true })).toBeDisabled();
+    await page.unroute('**/api/weeks/2026-11-23/plans');
+    release();
+    await expect(page.getByRole('textbox', { name: 'Weekly goal 2', exact: true })).toHaveValue('Recurring smoke test');
+    await expect.poll(async () => (await (await f.request('member', '/api/weeks/2026-11-23')).json()).plans.at(-1)?.goals.map((goal: { text: string }) => goal.text)).toEqual(['Keep my failed edit', 'Recurring smoke test']);
+    await expect(page.getByRole('button', { name: 'Next week', exact: true })).toBeEnabled();
+  } finally { release(); await browser.close(); await vite.close(); await f.close(); }
+});
