@@ -19,6 +19,7 @@ test('sidebar and review list flag unread work until its review is opened',async
  await expect(count).toHaveCount(0);
  await page.reload();await expect(count).toHaveCount(0);
  assert.deepEqual((await(await f.request('lead','/api/review-activity')).json()).items,[]);
+ await page.getByRole('button',{name:'Review requests',exact:true}).click();
  await f.request('member',path+'/notes','POST',{version:focus.version,body:'A new member reply'});
  await page.reload();await expect(count).toBeVisible();
  await page.getByRole('button',{name:'Review focus',exact:true}).click();
