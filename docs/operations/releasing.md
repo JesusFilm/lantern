@@ -88,3 +88,17 @@ Keep `weekly-updates`, `team-updates` and `team-api` hidden until the owner
 releases them. The separate TV controller holds its department-scoped token
 privately and proxies updates and images; production does not permit local
 identity access. See [Team API](../development/team-api.md).
+
+### Schema 18 and weekly privacy
+
+Schema 18 adds per-user review-request read markers. The migration is additive and
+compatible with the schema-17 application still serving. Apply it through the
+manual schema-release process and verify health advertises schema 18. Keep the
+new table on rollback; read markers can be retained without affecting older code.
+
+Deploy compatible team, TV and focus-backlink readers before enabling
+`weekly-goal-privacy` for any account. Once private goals exist, do not roll back
+to an application that lacks visibility filtering: older readers expose all
+weekly goals. Turn the choices off to stop new privacy changes while keeping
+saved visibility enforced, or fix forward. `weekly-focus-links` and
+`review-activity` also remain hidden in production until explicitly released.

@@ -39,6 +39,11 @@ test('member records status and goal note; lead reads progress after reload', {t
   await page.getByRole('button',{name:'Progress & notes'}).click();
   await expect(page.getByRole('button',{name:'Progress & notes'})).toHaveAttribute('aria-pressed','true');
   await expect(page.getByRole('button',{name:'Focus',exact:true})).toHaveAttribute('aria-pressed','false');
+  await expect(page).toHaveURL(/view=progress/);
+  await page.reload();
+  await expect(page.getByRole('button',{name:'Progress & notes'})).toHaveAttribute('aria-pressed','true');
+  const shared=await mc.newPage();await shared.goto(page.url());
+  await expect(shared.getByRole('button',{name:'Progress & notes'})).toHaveAttribute('aria-pressed','true');await shared.close();
   await expect(page.getByText('Track progress and add notes to each objective or SMART goal.')).toBeVisible();
   await expect(page.getByRole('heading',{name:'Notes',exact:true})).toHaveCount(0);
   await expect(page.getByRole('region',{name:'Objective 1'})).toBeVisible();

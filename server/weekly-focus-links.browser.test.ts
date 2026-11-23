@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import {test} from 'node:test';
+import {chromium,expect} from '@playwright/test';
+import {createServer} from 'vite';
+import {coachingFixture,draft} from './coach-test-support.js';
+
+test('member links a weekly goal to a confirmed SMART goal and reviews a suggested progress change before saving',async t=>{
+ const f=await coachingFixture();t.after(()=>f.close());
+ const focus=await(await f.request('member','/api/focuses','POST',draft)).json();
+ await f.request('member','/api/coach/focuses/'+focus.id+'/request','POST',{version:focus.version});
+ await f.request('lead','/api/coach/focuses/'+focus.id+'/confirm','POST',{version:focus.version});
+ const vite=await createServer({server:{middlewareMode:true,hmr:false},appType:'spa'});t.after(()=>vite.close());f.app.use(vite.middlewares);
+ const browser=await chromium.launch();t.after(()=>browser.close());const context=await browser.newContext();
+ await context.addCookies([{name:'lantern-session',value:'member',url:f.origin}]);const page=await context.newPage();page.setDefaultTimeout(5000);
+ await page.goto(f.origin+'/?page=week&week=2026-11-23');await page.getByRole('textbox',{name:'Weekly goal 1',exact:true}).fill('Run smoke tests');
+ await page.getByLabel('Who can see goal 1',{exact:true}).selectOption('lead');
+ await page.getByRole('button',{name:'Actions for goal 1',exact:true}).click();await page.getByRole('menuitem',{name:'Add link',exact:true}).click();
+ await page.getByRole('button',{name:new RegExp(draft.title)}).click();await page.getByLabel('Link to',{exact:true}).selectOption('goal:0:0');
+ await page.getByRole('dialog').getByRole('button',{name:'Add link',exact:true}).click();
+ await expect.poll(async()=>(await(await f.request('member','/api/weeks/2026-11-23')).json()).plans.at(-1)?.goals[0]?.links[0]?.target?.goal).toBe(0);
+ const saved=await(await f.request('member','/api/weeks/2026-11-23')).json();
+ await f.request('member','/api/weeks/2026-11-23/updates','POST',{date:'2026-11-23',body:'Finished',planVersion:saved.plans.at(-1).version,goalStatuses:[{goalId:saved.plans.at(-1).goals[0].id,status:'done'}]});
+ await page.goto(f.origin+'/?focus='+focus.id);
+ await expect(page.getByRole('region',{name:'Linked weekly work'})).toContainText('Run smoke tests');
+ const progress=async()=>await(await f.request('member','/api/focuses/'+focus.id+'/progress')).json();
+ assert.deepEqual((await progress()).statuses,[]);
+ await page.getByRole('button',{name:'Review suggested progress',exact:true}).click();
+ await expect(page.getByLabel('Status',{exact:true})).toHaveValue('achieved');assert.deepEqual((await progress()).statuses,[]);
+ await page.getByRole('button',{name:'Cancel',exact:true}).click();assert.deepEqual((await progress()).statuses,[]);
+ await page.getByRole('button',{name:'Review suggested progress',exact:true}).click();await page.getByRole('button',{name:'Save progress',exact:true}).click();
+ await expect.poll(async()=>(await progress()).statuses[0]?.status).toBe('achieved');
+ await page.reload();await expect(page.getByRole('region',{name:'Linked weekly work'})).toContainText('Run smoke tests');
+ await page.goto(f.origin+'/?page=week&week=2026-11-30');await page.getByRole('button',{name:'Copy last week’s goals',exact:true}).click();
+ await expect.poll(async()=>(await(await f.request('member','/api/weeks/2026-11-30')).json()).plans.at(-1)?.goals[0]?.links[0]?.target?.goal).toBe(0);
+ await page.reload();await expect(page.getByLabel('Who can see goal 1',{exact:true})).toHaveValue('lead');
+ await page.getByRole('button',{name:'Edit work link 1 for goal 1',exact:true}).click();await expect(page.getByLabel('Link to',{exact:true})).toHaveValue('goal:0:0');
+});

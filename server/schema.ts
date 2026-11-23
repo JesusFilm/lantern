@@ -238,6 +238,14 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
       CREATE INDEX team_api_token_owner ON team_api_tokens(user_id,department_id);
       INSERT INTO schema_migrations(version) VALUES(17);`);
     }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=18')).rowCount) {
+      await client.query(`CREATE TABLE focus_request_reads (
+        request_id uuid NOT NULL REFERENCES focus_review_requests(id) ON DELETE CASCADE,
+        user_id uuid NOT NULL REFERENCES users(id),
+        PRIMARY KEY(request_id,user_id)
+      );
+      INSERT INTO schema_migrations(version) VALUES(18);`);
+    }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
@@ -247,8 +255,8 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17)');
-  if (result.rowCount !== 17) throw new Error('Required migration is missing.');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18)');
+  if (result.rowCount !== 18) throw new Error('Required migration is missing.');
   const reviewGuard = await database.query(`SELECT 1 FROM pg_trigger WHERE tgrelid='position_focuses'::regclass
     AND tgname='guard_focus_review' AND tgenabled='O' AND tgfoid='guard_focus_review()'::regprocedure`);
   if (!reviewGuard.rowCount) throw new Error('Focus review guard is missing.');
@@ -257,6 +265,7 @@ export async function assertSchemaReady(database: Pool | PoolClient) {
   if (!identityGuard.rowCount) throw new Error('Membership identity guard is missing.');
   await database.query('SELECT subject,email,verified_at FROM auth_identity_candidates LIMIT 0');
   await database.query('SELECT token_hash,revoked_at,expires_at FROM team_api_tokens LIMIT 0');
+  await database.query('SELECT request_id,user_id FROM focus_request_reads LIMIT 0');
   await database.query('SELECT github_username FROM users LIMIT 0');
   await database.query('SELECT p.goals,u.body,u.goal_statuses FROM weekly_plans p,daily_updates u LIMIT 0');
   await database.query('SELECT department_id,mission,mission_image,initiatives,version FROM department_direction LIMIT 0');

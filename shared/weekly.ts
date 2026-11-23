@@ -1,13 +1,16 @@
+export type GoalVisibility = 'team' | 'lead' | 'private';
+export interface FocusWorkTarget {version: number; section: number; goal: number | null}
+export interface SavedFocusWorkTarget extends FocusWorkTarget {objective: string; goalText?: string}
 export type ExternalWorkKind = 'project' | 'repository' | 'issue' | 'other';
 export type WeeklyGoalLinkDraft =
-  | { kind: 'focus'; focusId: string }
+  | { kind: 'focus'; focusId: string; target?: FocusWorkTarget }
   | { kind: ExternalWorkKind; label: string; url: string };
 export type WeeklyGoalLink =
-  | { kind: 'focus'; focusId: string; title: string }
+  | { kind: 'focus'; focusId: string; title: string; target?: SavedFocusWorkTarget }
   | { kind: ExternalWorkKind; label: string; url: string };
 export const maxWeeklyGoalDescriptionLength = 20_000;
-export interface WeeklyGoalDraft { id?: string; text: string; description?: string; completed?: boolean; links: WeeklyGoalLinkDraft[] }
-export interface WeeklyGoal { id: string; text: string; description?: string; completed?: boolean; links: WeeklyGoalLink[] }
+export interface WeeklyGoalDraft { id?: string; text: string; visibility?: GoalVisibility; description?: string; completed?: boolean; links: WeeklyGoalLinkDraft[] }
+export interface WeeklyGoal { id: string; text: string; visibility?: GoalVisibility; description?: string; completed?: boolean; links: WeeklyGoalLink[] }
 export interface WeeklyPlan {
   version: number;
   goals: WeeklyGoal[];
@@ -47,3 +50,5 @@ export interface TeamDay {
   firstDate: string | null;
   members: TeamDayMember[];
 }
+
+export interface FocusWeeklyWork {items: Array<{week:string;goal:WeeklyGoal;target?:SavedFocusWorkTarget;status?:GoalStatus}>}

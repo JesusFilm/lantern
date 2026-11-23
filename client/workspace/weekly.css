@@ -1,4 +1,4 @@
-.my-week { max-width: 760px; margin: 0 auto; }
+.my-week { max-width: var(--content-width); margin: 0 auto; }
 .week-header { display: block; }
 .week-header > button { flex-shrink: 0; }
 .week-header h1 { margin: 6px 0 12px; }
@@ -82,7 +82,7 @@ dialog.fullscreen-dialog > form { height: 100%; max-height: none; }
 .fullscreen-dialog .dialog-heading h2 { margin: 0; }
 .fullscreen-dialog .dialog-close { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; padding: 8px; background: transparent; border: 0; color: var(--ink); }
 .fullscreen-dialog .dialog-content { flex: 1; padding: 24px; }
-.fullscreen-dialog .dialog-fields { max-width: 960px; margin: 0 auto; }
+.fullscreen-dialog .dialog-fields { width: 100%; margin: 0; }
 .fullscreen-dialog .dialog-actions { margin-top: 0; padding: 16px 24px; }
 .fullscreen-dialog > form > [role="alert"] { padding: 0 24px; }
 .week-autosave { font-size: 13px; color: #64758a; margin: 16px 0 0; }
@@ -222,7 +222,7 @@ dialog.week-goal-editor[open] { display: flex; flex-direction: column; }
 html[data-theme="dark"] .weekly-personal-order, html[data-theme="dark"] .weekly-personal-notice { color: #b6c6d9; }
 html[data-theme="dark"] .weekly-work-relevance { color: #8fd0d7; }
 .workspace:has(.week-daily-layout) { max-width: var(--content-width); }
-.my-week.is-daily { max-width: 760px; }
+.my-week.is-daily { max-width: var(--content-width); }
 .week-goals-next { display: flex; justify-content: flex-end; margin-top: 24px; }
 .week-goals-next > button { display: inline-flex; align-items: center; gap: 10px; }
 .week-daily-layout { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 28px; }
@@ -285,7 +285,7 @@ html[data-theme="dark"] .flag-done { --flag-color: #8fd0d7; --flag-tint: #24515b
 .week-header-actions { flex-shrink: 0; }
 .week-navigation { display: inline-flex; align-items: stretch; gap: 0; width: fit-content; max-width: 100%; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; background: var(--surface); color: var(--muted); font-size: 13px; }
 .week-navigation-current > span { min-width: 0; text-align: center; line-height: 1.5; }
-.week-navigation > button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 34px; width: 34px; height: auto; min-height: 34px; padding: 6px; border: 0; border-radius: 0; background: var(--surface); color: var(--ink); }
+.week-navigation > button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: auto; min-height: 44px; padding: 6px; border: 0; border-radius: 0; background: var(--surface); color: var(--ink); }
 .week-navigation > button:hover:not(:disabled) { background: var(--surface-subtle); color: var(--accent); }
 .week-navigation > button:disabled { background: var(--surface-subtle); color: #b0bac5; opacity: 1; cursor: default; }
 html[data-theme="dark"] .week-navigation > button:disabled { color: #526577; }
@@ -296,7 +296,7 @@ html[data-theme="dark"] .week-navigation > button:disabled { color: #526577; }
 .week-heading-controls { display: flex; flex-wrap: wrap; align-items: stretch; justify-content: space-between; gap: 12px; width: 100%; min-width: 0; }
 .week-heading-controls > .week-navigation { flex-shrink: 0; min-width: 0; }
 .week-heading-controls > .week-header-actions { align-items: stretch; }
-.week-header-actions > .week-add { min-height: 36px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--ink); font-size: 13px; white-space: nowrap; }
+.week-header-actions > .week-add { min-height: 44px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--ink); font-size: 13px; white-space: nowrap; }
 .week-header-actions > .week-add:hover:not(:disabled) { background: var(--surface-subtle); color: var(--accent); }
 
 .week-today-goals { list-style: none; margin: 16px 0 24px; padding: 0; }
@@ -326,3 +326,10 @@ html[data-theme="dark"] .week-navigation > button:disabled { color: #526577; }
   .week-header-actions > .week-add { min-height: 44px; }
   .week-navigation > button { min-height: 44px; }
 }
+
+.week-goal-visibility { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; font-size: 13px; color: var(--muted); }
+.week-goal-visibility select { width: auto; min-height: 44px; margin: 0; font-size: 13px; }
+
+/* Match the shared underline tabs, including the dark theme. */
+html .weekly-link-sources > button, html[data-theme="dark"] .weekly-link-sources > button { min-height:44px; padding:10px 0; border:0; border-bottom:3px solid transparent; border-radius:0; background:transparent; color:var(--muted); font-size:14px; }
+html .weekly-link-sources > button[aria-pressed="true"], html[data-theme="dark"] .weekly-link-sources > button[aria-pressed="true"] { background:transparent; border-bottom-color:var(--accent); color:var(--accent); font-weight:600; }

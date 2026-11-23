@@ -52,9 +52,9 @@ export function Dialog({
             .finally(() => setBusy(false));
         }}
       >
-        {fullScreen ? <div className="dialog-heading"><h2 id="dialog-title">{title}</h2>
+        {<div className="dialog-heading"><h2 id="dialog-title">{title}</h2>
           <button type="button" className="dialog-close" aria-label={closeLabel} disabled={busy} onClick={onClose}><X size={24} /></button>
-        </div> : <h2 id="dialog-title">{title}</h2>}
+        </div>}
         <div className="dialog-content">
           <fieldset disabled={busy} className="dialog-fields">
             {children}

@@ -112,7 +112,7 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     const address = server.address();
     assert.ok(address && typeof address !== "string");
     const origin = `http://127.0.0.1:${address.port}`;
-    const app = createApp(fixture.runtime, { origin, provider: signInOnly, flagOwnerEmail: people.lead.email, coach: fakeCoach(() => firstInitiative), features: resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on,sidebar-collapse=on,focus-progress=on,weekly-updates=on,weekly-goal-copy=on,team-updates=on,team-api=on" }, "production") });
+    const app = createApp(fixture.runtime, { origin, provider: signInOnly, flagOwnerEmail: people.lead.email, coach: fakeCoach(() => firstInitiative), features: resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on,sidebar-collapse=on,focus-progress=on,weekly-updates=on,weekly-goal-copy=on,weekly-goal-privacy=on,weekly-focus-links=on,review-activity=on,team-updates=on,team-api=on" }, "production") });
     app.use(express.static(resolve(clientDirectory)));
     server.on("request", app);
 

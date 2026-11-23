@@ -138,3 +138,42 @@ test('weekly goals retain typed work links and stable identity through edits wit
     assert.deepEqual((await (await f.request('peer', path)).json()).plans, []);
   } finally { await f.close(); }
 });
+
+test('weekly work targets a saved objective or SMART goal with trusted labels and privacy-filtered backlinks', async t => {
+  const f = await coachingFixture(); t.after(() => f.close());
+  const draft = { title: 'Testing focus', start: '2026-01-01', end: '2026-12-31', sections: [{ kind: 'normal', objective: 'Improve release confidence', goals: ['Smoke test the apps'] }] };
+  const created = await (await f.request('member', '/api/focuses', 'POST', draft)).json();
+  await f.request('member', '/api/coach/focuses/' + created.id + '/request', 'POST', {version: created.version});
+  const focus = (await (await f.request('lead', '/api/coach/focuses/' + created.id + '/confirm', 'POST', {version: created.version})).json()).focus;
+  const target = { version: focus.version, section: 0, goal: 0 };
+  const path = '/api/weeks/2026-11-23';
+  const saved = await f.request('member', path + '/plans', 'POST', { version: 0, goals: [{ text: 'Run the smoke test', links: [{ kind: 'focus', focusId: focus.id, target }] }] });
+  assert.equal(saved.status, 201);
+  const goal = (await saved.json()).plans.at(-1).goals[0];
+  assert.deepEqual(goal.links[0].target, { ...target, objective: 'Improve release confidence', goalText: 'Smoke test the apps' });
+  const backlinks = await f.request('member', `/api/focuses/${focus.id}/weekly-work`);
+  assert.equal(backlinks.status, 200);
+  assert.equal((await backlinks.json()).items[0].goal.text, 'Run the smoke test');
+  for (const actor of ['peer', 'outsider']) assert.equal((await f.request(actor, `/api/focuses/${focus.id}/weekly-work`)).status, 404);
+  assert.equal((await f.request('member', path + '/plans', 'POST', { version: 1, goals: [{ id: goal.id, text: goal.text, links: [{ kind: 'focus', focusId: focus.id, target: { ...target, section: 50 } }] }] })).status, 400);
+  assert.equal((await f.request('member', path + '/plans', 'POST', { version: 1, goals: [{ id: goal.id, text: goal.text, links: [{ kind: 'focus', focusId: focus.id, target: { ...target, goalText: 'Forged' } }] }] })).status, 400);
+  const leadView=await f.request('lead', `/api/focuses/${focus.id}/weekly-work`);assert.equal(leadView.status,200);assert.equal((await leadView.json()).items.length,1);
+  await f.request('member',path+'/plans','POST',{version:1,goals:[{id:goal.id,text:goal.text,visibility:'private',links:[{kind:'focus',focusId:focus.id,target}]}]});
+  assert.deepEqual((await(await f.request('lead', `/api/focuses/${focus.id}/weekly-work`)).json()).items,[]);
+  const unknown = await f.request('member', path + '/plans', 'POST', { version: 2, goals: [{ id: goal.id, text: goal.text, links: [{ kind: 'focus', focusId: focus.id, target: { ...target, version: 9 } }] }] });
+  assert.equal(unknown.status, 409);
+});
+
+test('hidden focus targets reject new targeting but keep existing targeted links editable',async t=>{
+ const config=resolveFeatureConfig({},'local'),states=new Map(config.states);
+ const f=await coachingFixture(undefined,{...config,states});t.after(()=>f.close());
+ const draft={title:'Locked targets',start:'2026-01-01',end:'2026-12-31',sections:[{kind:'normal',objective:'Test releases',goals:['Smoke apps']}]};
+ const focus=await(await f.request('member','/api/focuses','POST',draft)).json();
+ await f.request('member','/api/coach/focuses/'+focus.id+'/request','POST',{version:focus.version});const confirmed=await(await f.request('lead','/api/coach/focuses/'+focus.id+'/confirm','POST',{version:focus.version})).json();
+ const link={kind:'focus',focusId:focus.id,target:{version:confirmed.focus.version,section:0,goal:0}},path='/api/weeks/2026-11-23';
+ const first=await(await f.request('member',path+'/plans','POST',{version:0,goals:[{text:'Smoke',links:[link]}]})).json();
+ states.set('weekly-focus-links','off');
+ assert.equal((await f.request('member','/api/focuses/'+focus.id+'/weekly-work')).status,404);
+ assert.equal((await f.request('member',path+'/plans','POST',{version:1,goals:[{id:first.plans[0].goals[0].id,text:'Smoke again',links:[link]}]})).status,201);
+ assert.equal((await f.request('member','/api/weeks/2026-11-30/plans','POST',{version:0,goals:[{text:'New target',links:[link]}]})).status,404);
+});

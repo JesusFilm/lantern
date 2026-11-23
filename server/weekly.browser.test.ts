@@ -31,7 +31,7 @@ test('a member plans a week and records daily updates with persistent history an
     await expect(page.getByLabel('Week starting')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Save weekly goals', exact: true })).toHaveCount(0);
     await page.getByRole('textbox', { name: 'Weekly goal 1', exact: true }).fill('Test sign-in with three people');
-    await page.getByRole('button', { name: 'Add Goal', exact: true }).click();
+    await page.getByRole('button', { name: 'Add goal', exact: true }).click();
     await page.getByRole('textbox', { name: 'Weekly goal 2', exact: true }).fill('Investigate upload delays');
     await expect(page.getByRole('textbox', { name: 'Weekly goal 1', exact: true })).toHaveValue('Test sign-in with three people');
     await expect(page.getByRole('region', { name: 'Daily update', exact: true })).toBeVisible();

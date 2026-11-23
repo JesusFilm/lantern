@@ -258,6 +258,8 @@ export async function runCurrentFlow(
       typeof choice.action === "number"
         ? (plan.actions[choice.action] ?? plan.actions[0] ?? "")
         : choice.action;
+    // The browser clears stale date validation feedback when the member changes this value.
+    // This replay supplies the corrected choice directly; no extra model turn is introduced.
     const date = choice.date ?? plan.date;
     const record: GoalPlan = {
       actions: plan.actions,

@@ -1,6 +1,6 @@
 import { Router, type Request } from 'express';
 import type { Pool } from 'pg';
-import { requireFeature, type FeatureConfig } from './features.js';
+import { featureEnabled, requireFeature, type FeatureConfig } from './features.js';
 import { AccessError } from './membership.js';
 import type { DailyGoalStatus, WeeklyGoalDraft, WeeklyGoalLinkDraft } from '../shared/weekly.js';
 import { dailyGoalStatuses, maxWeeklyGoalDescriptionLength } from '../shared/weekly.js';
@@ -15,12 +15,19 @@ function object(value: unknown, keys: string[]): asserts value is Record<string,
     throw new AccessError(400, 'Supply only the weekly plan or update fields.');
 }
 function goalLink(value: unknown): WeeklyGoalLinkDraft {
-  object(value, ['kind', 'focusId', 'label', 'url']);
+  object(value, ['kind', 'focusId', 'label', 'url', 'target']);
   if (value.kind === 'focus') {
-    object(value, ['kind', 'focusId']);
+    object(value, ['kind', 'focusId', 'target']);
     if (typeof value.focusId !== 'string' || !value.focusId || value.focusId.length > 100)
       throw new AccessError(400, 'Choose a position focus.');
-    return { kind: 'focus', focusId: value.focusId };
+    let target: import('../shared/weekly.js').FocusWorkTarget | undefined;
+    if (value.target !== undefined) {
+      object(value.target,['version','section','goal']);
+      const t=value.target;
+      if(!Number.isSafeInteger(t.version)||Number(t.version)<1||!Number.isSafeInteger(t.section)||Number(t.section)<0||t.goal!==null&&(!Number.isSafeInteger(t.goal)||Number(t.goal)<0))throw new AccessError(400,'Choose an objective or SMART goal.');
+      target={version:Number(t.version),section:Number(t.section),goal:t.goal===null?null:Number(t.goal)};
+    }
+    return { kind: 'focus', focusId: value.focusId, ...(target?{target}:{}) };
   }
   object(value, ['kind', 'label', 'url']);
   if (value.kind !== 'project' && value.kind !== 'repository' && value.kind !== 'issue' && value.kind !== 'other')
@@ -36,7 +43,8 @@ function goalLink(value: unknown): WeeklyGoalLinkDraft {
   return { kind: value.kind, label: value.label.trim(), url: url.href };
 }
 function goalDraft(value: unknown): WeeklyGoalDraft {
-  object(value, ['id', 'text', 'description', 'links', 'completed']);
+  object(value, ['id', 'text', 'description', 'links', 'completed', 'visibility']);
+  if (value.visibility !== undefined && !['team','lead','private'].includes(String(value.visibility))) throw new AccessError(400, 'Choose who can see this goal.');
   if (value.description !== undefined && (typeof value.description !== 'string' || value.description.length > maxWeeklyGoalDescriptionLength))
     throw new AccessError(400, 'Goal descriptions must be Markdown text of up to 20,000 characters.');
   if (value.completed !== undefined && typeof value.completed !== 'boolean')
@@ -47,7 +55,7 @@ function goalDraft(value: unknown): WeeklyGoalDraft {
     throw new AccessError(400, 'Supply a valid weekly goal.');
   if (!Array.isArray(value.links) || value.links.length > 5)
     throw new AccessError(400, 'Add up to five work links per weekly goal.');
-  return { ...(typeof value.id === 'string' ? { id: value.id } : {}), text: value.text.trim(),
+  return { ...(typeof value.id === 'string' ? { id: value.id } : {}), text: value.text.trim(), ...(value.visibility !== undefined ? {visibility: value.visibility as import('../shared/weekly.js').GoalVisibility} : {}),
     ...(typeof value.description === 'string' ? { description: value.description } : {}),
     ...(typeof value.completed === 'boolean' ? { completed: value.completed } : {}), links: value.links.map(goalLink) };
 }
@@ -60,6 +68,10 @@ export function weeklyRoutes(db: Pool, requireUser: (request: Request) => Promis
     if (!date(week) || new Date(week).getUTCDay() !== 1) throw new AccessError(400, 'Choose a week starting on Monday.');
     return { id: user.id, week };
   }
+  router.get('/api/focuses/:id/weekly-work',async(req,res)=>{
+    const user=await requireUser(req);requireFeature(features,'weekly-updates',user.email);requireFeature(features,'weekly-focus-links',user.email);
+    res.json(await store.linkedWork(user.id,String(req.params.id)));
+  });
   router.get('/api/weeks', async (req, res) => {
     const user = await requireUser(req);
     requireFeature(features, 'weekly-updates', user.email);
@@ -76,7 +88,18 @@ export function weeklyRoutes(db: Pool, requireUser: (request: Request) => Promis
       throw new AccessError(400, 'Supply the current weekly plan version.');
     if (!Array.isArray(body.goals) || body.goals.length < 1 || body.goals.length > 10)
       throw new AccessError(400, 'Enter 1–10 weekly goals, each between 1 and 1,000 characters.');
-    res.status(201).json(await store.savePlan(id, week, { version: Number(body.version), goals: body.goals.map(goalDraft) }));
+    const goals = body.goals.map(goalDraft);
+    const user = await requireUser(req);
+    if (!featureEnabled(features, 'weekly-focus-links', user.email) && goals.some(goal => goal.links.some(link => link.kind === 'focus' && link.target))) {
+      const saved = (await store.get(id, week)).plans.at(-1);
+      for (const goal of goals) for (const link of goal.links) {
+        if (link.kind !== 'focus' || !link.target) continue;
+        const existing = saved?.goals.find(item => item.id === goal.id)?.links.some(item => item.kind === 'focus' && item.focusId === link.focusId && item.target?.version === link.target!.version && item.target?.section === link.target!.section && item.target?.goal === link.target!.goal);
+        if (!existing) requireFeature(features, 'weekly-focus-links', user.email);
+      }
+    }
+    if (body.goals.some(value => value && typeof value === 'object' && 'visibility' in value)) requireFeature(features,'weekly-goal-privacy',(await requireUser(req)).email);
+    res.status(201).json(await store.savePlan(id, week, { version: Number(body.version), goals }));
   });
   router.post('/api/weeks/:week/updates', async (req, res) => {
     const { id, week } = await owner(req), body: unknown = req.body;

@@ -34,8 +34,8 @@ const labelDate = (value: string) => {
 type EditableGoal = WeeklyGoalDraft & { key: string };
 const editableGoal = (goal: WeeklyGoalDraft): EditableGoal => ({ ...goal, key: crypto.randomUUID() });
 const planGoals = (goals: WeeklyGoalDraft[]) => goals.map(goal => ({
-  ...(goal.id ? { id: goal.id } : {}), text: goal.text.trim(), description: goal.description ?? '', completed: goal.completed ?? false,
-  links: goal.links.map(link => link.kind === 'focus' ? { kind: link.kind, focusId: link.focusId }
+  ...(goal.id ? { id: goal.id } : {}), text: goal.text.trim(), ...(goal.visibility ? { visibility: goal.visibility } : {}), description: goal.description ?? '', completed: goal.completed ?? false,
+  links: goal.links.map(link => link.kind === 'focus' ? { kind: link.kind, focusId: link.focusId, ...(link.target ? {target:link.target} : {}) }
     : { kind: link.kind, label: link.label, url: link.url }),
 }));
 
@@ -44,7 +44,7 @@ function dailyDraft(plan: WeeklyPlan | undefined, date: string, body: string, st
     goalStatuses: plan?.goals.filter(goal => statuses[goal.id]).map(goal => ({ goalId: goal.id, status: statuses[goal.id]! })) ?? [] };
 }
 
-export function MyWeek({ copyEnabled = false }: { copyEnabled?: boolean }) {
+export function MyWeek({ copyEnabled = false, privacyEnabled = false, targetEnabled = false }: { copyEnabled?: boolean; privacyEnabled?: boolean; targetEnabled?: boolean }) {
   const [week, setWeek] = useState(initialWeek), [reload, setReload] = useState(0);
   const [record, setRecord] = useState<WeekRecord>();
   const [firstWeek, setFirstWeek] = useState<string | null>(null);
@@ -96,7 +96,7 @@ export function MyWeek({ copyEnabled = false }: { copyEnabled?: boolean }) {
     const timer = window.setTimeout(() => {
       const sent = goals, current = generation.current;
       setPlanSaving(true);
-      void api<WeekRecord>(`/api/weeks/${week}/plans`, 'POST', { version: latest?.version ?? 0, goals: planGoals(sent) })
+      void api<WeekRecord>(`/api/weeks/${week}/plans`, 'POST', { version: latest?.version ?? 0, goals: planGoals(sent).map(goal => privacyEnabled ? goal : (({visibility: _visibility, ...rest}) => rest)(goal)) })
         .then(saved => {
           if (generation.current !== current) return;
           const savedGoals = saved.plans.at(-1)!.goals;
@@ -208,7 +208,7 @@ export function MyWeek({ copyEnabled = false }: { copyEnabled?: boolean }) {
         <button type="button" className="week-navigation-current" aria-label="Go to this week" title="Go to this week" disabled={!record || busy || planSaving} onClick={() => chooseWeek(currentWeek)}><span aria-live="polite">{labelDate(week)} – {labelDate(shift(week, 4))}</span></button>
         <button type="button" aria-label="Next week" disabled={!record || busy || planSaving} onClick={() => chooseWeek(week < oldestWeek ? oldestWeek : shift(week, 7))}><ChevronRight size={18} /></button>
       </div>
-      <div className="week-header-actions">{record && copyEnabled && <button type="button" className="week-add" disabled={busy || planSaving || goals.filter(goal => goal.text.trim()).length >= 10} onClick={() => void copyLastWeek()}>Copy last week’s goals</button>}{record && <button type="button" className="week-add" disabled={goals.length >= 10} onClick={addGoal}><Plus size={16} /> Add Goal</button>}
+      <div className="week-header-actions">{record && copyEnabled && <button type="button" className="week-add" disabled={busy || planSaving || goals.filter(goal => goal.text.trim()).length >= 10} onClick={() => void copyLastWeek()}>Copy last week’s goals</button>}{record && <button type="button" className="week-add" disabled={goals.length >= 10} onClick={addGoal}><Plus size={16} /> Add goal</button>}
       </div>
       </div>
     </header>
@@ -218,6 +218,7 @@ export function MyWeek({ copyEnabled = false }: { copyEnabled?: boolean }) {
     {!record ? (!error && <p role="status">Loading your week…</p>) : <>
       <div className="week-daily-layout">
         <section className="week-card week-goals-panel" aria-label="Weekly goals">
+          <p className="muted">Goals are due at the end of this week.</p>
           <details className="week-goal-guidance"><summary>What makes a useful weekly goal?</summary>
             <p>Tasks are fine. Make the intended result clear, for example: “Run the pre-release smoke test and record the results.”</p>
             <p>Goals stay in their own week and do not repeat automatically.{copyEnabled ? ' Use “Copy last week’s goals” to reuse them, then edit them for this week.' : ' Add recurring work again for each week.'}</p>
@@ -229,7 +230,7 @@ export function MyWeek({ copyEnabled = false }: { copyEnabled?: boolean }) {
               const [goal] = next.splice(from, 1);
               next.splice(index, 0, goal!);
               return next;
-            })}>{(goal, index) => <WeeklyGoalEditor goal={goal} number={index + 1} removable={goals.length > 1}
+            })}>{(goal, index) => <WeeklyGoalEditor goal={goal} privacyEnabled={privacyEnabled} targetEnabled={targetEnabled} number={index + 1} removable={goals.length > 1}
               onChange={next => changeGoals(values => values.map(value => value.key === goal.key ? { ...next, key: goal.key } : value))}
               onRemove={() => changeGoals(values => values.filter(value => value.key !== goal.key))}
               statusDisabled={!todayInWeek} status={statuses[goal.id ?? goal.key]} statusKey={goal.id ?? goal.key}
@@ -247,6 +248,7 @@ export function MyWeek({ copyEnabled = false }: { copyEnabled?: boolean }) {
             const status = statuses[goal.id ?? goal.key];
             return <li key={goal.key}><span className={`week-today-goal-title${status === 'done' ? ' is-done' : ''}`}>{goal.text}</span><span className={`week-today-status${status ? ` flag-${status}` : ''}`}>{status ? goalStatusLabels[status] : '—'}</span></li>;
           })}</ul>
+          <p className="muted">Daily updates are visible to your department and on the team TV.</p>
           <div className="week-update-notes">
             <textarea aria-label="Daily update" maxLength={4000} rows={1} value={body} onChange={e => { setBody(e.target.value); setUpdateError(''); }} placeholder="A short update is plenty…" />
           </div>

@@ -80,7 +80,7 @@ export async function grantApplicationPrivileges(db: Database, roles: DatabaseRo
   await db.query(`GRANT SELECT, INSERT ON focus_progress_statuses TO ${runtime}`);
   await db.query(`GRANT UPDATE (status, revision, updated_at) ON focus_progress_statuses TO ${runtime}`);
   await db.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON focus_progress_notes, focus_progress_statuses TO ${admin}`);
-  await db.query(`GRANT SELECT, INSERT ON coach_checkpoints, focus_review_requests, focus_review_notes, focus_note_reads TO ${runtime}`);
+  await db.query(`GRANT SELECT, INSERT ON coach_checkpoints, focus_review_requests, focus_review_notes, focus_note_reads, focus_request_reads TO ${runtime}`);
   await db.query(`GRANT UPDATE, DELETE ON coach_checkpoints TO ${runtime}`);
   await db.query(`GRANT UPDATE (deleted_at) ON focus_review_notes TO ${runtime}`);
   await db.query(`GRANT SELECT, INSERT ON team_api_tokens TO ${runtime}`);
@@ -88,7 +88,7 @@ export async function grantApplicationPrivileges(db: Database, roles: DatabaseRo
   await db.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON team_api_tokens TO ${admin}`);
   await db.query(`GRANT SELECT, INSERT ON weekly_plans, daily_updates TO ${runtime}`);
   await db.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON weekly_plans, daily_updates TO ${admin}`);
-  await db.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON coach_checkpoints, focus_review_requests, focus_review_notes, focus_note_reads TO ${admin}`);
+  await db.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON coach_checkpoints, focus_review_requests, focus_review_notes, focus_note_reads, focus_request_reads TO ${admin}`);
   await db.query(`GRANT EXECUTE ON FUNCTION enroll_member(uuid,text) TO ${runtime}, ${admin}`);
   await db.query(`GRANT INSERT, UPDATE, DELETE ON approved_emails, users, departments, memberships, position_focuses, sessions, login_attempts TO ${admin}`);
 }

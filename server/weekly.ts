@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
-import type { DailyUpdate, DailyUpdateDraft, WeekRecord, WeeklyPlan, WeeklyPlanDraft, WeeklyGoal, WeeklyRange } from '../shared/weekly.js';
+import type { DailyUpdate, DailyUpdateDraft, WeekRecord, WeeklyPlan, WeeklyPlanDraft, WeeklyGoal, WeeklyRange, FocusWeeklyWork } from '../shared/weekly.js';
+import { coachStore } from './coach-store.js';
 import { readOwnedFocus } from './focus.js';
 import { AccessError, membership, membershipWrite } from './membership.js';
 
@@ -24,6 +25,14 @@ export function weeklyStore(db: Pool) {
     return { week, plans: plans.rows, updates: updates.rows };
   }
   return {
+    linkedWork: (userId:string,focusId:string):Promise<FocusWeeklyWork> => owned(userId,async(client,department)=>{
+      const access=await coachStore(db).access(client,userId,focusId);
+      const ownerId:string=access.owner;
+      const rows=await client.query<{week:string;goals:WeeklyGoal[];statuses:DailyUpdate['goalStatuses']}>(`SELECT DISTINCT ON(p.week_start) to_char(p.week_start,'YYYY-MM-DD') AS week,p.goals,
+        coalesce((SELECT goal_statuses FROM daily_updates u WHERE u.user_id=$1 AND u.department_id=$2 AND u.week_start=p.week_start ORDER BY u.update_date DESC,u.created_at DESC,u.id DESC LIMIT 1),'[]'::jsonb) AS statuses
+        FROM weekly_plans p WHERE p.user_id=$1 AND p.department_id=$2 ORDER BY p.week_start DESC,p.version DESC`,[ownerId,department]);
+      return {items:rows.rows.flatMap(row=>row.goals.filter(goal=>ownerId===userId||goal.visibility!=='private').flatMap(goal=>goal.links.filter(link=>link.kind==='focus'&&link.focusId===focusId).map(link=>({week:row.week,goal,...(link.kind==='focus'&&link.target?{target:link.target}:{}),status:row.statuses.find(status=>status.goalId===goal.id)?.status}))))};
+    }),
     range: (userId: string) => owned(userId, async (client, department) => {
       const result = await client.query<WeeklyRange>(`SELECT to_char(min(week_start),'YYYY-MM-DD') AS "firstWeek"
         FROM weekly_plans WHERE user_id=$1 AND department_id=$2`, [userId, department]);
@@ -45,10 +54,17 @@ export function weeklyStore(db: Pool) {
         for (const link of goal.links) {
           if (link.kind === 'focus') {
             const focus = await readOwnedFocus(client, userId, department, link.focusId);
-            links.push({ kind: 'focus', focusId: focus.id, title: focus.title });
+            if(link.target) {
+              if(focus.status!=='confirmed')throw new AccessError(400,'Specific targets are available in confirmed focuses.');
+              if(link.target.version!==focus.version)throw new AccessError(409,'This focus changed. Choose its current objective or SMART goal.');
+              const section=focus.sections[link.target.section], goal=link.target.goal===null?undefined:section?.goals[link.target.goal];
+              if(!section||link.target.goal!==null&&!goal)throw new AccessError(400,'Choose an objective or SMART goal in this focus.');
+              links.push({kind:'focus',focusId:focus.id,title:focus.title,target:{...link.target,objective:section.objective,...(goal?{goalText:goal}:{})}});
+            } else links.push({ kind: 'focus', focusId: focus.id, title: focus.title });
           } else links.push(link);
         }
-        goals.push({ id, text: goal.text, ...(goal.description !== undefined ? { description: goal.description } : {}),
+        const visibility = goal.visibility ?? previous.plans.at(-1)?.goals.find(item => item.id === id)?.visibility;
+        goals.push({ id, text: goal.text, ...(visibility ? {visibility} : {}), ...(goal.description !== undefined ? { description: goal.description } : {}),
           ...(goal.completed !== undefined ? { completed: goal.completed } : {}), links });
       }
       await client.query(`INSERT INTO weekly_plans(user_id,department_id,week_start,version,goals) VALUES($1,$2,$3,$4,$5)`,

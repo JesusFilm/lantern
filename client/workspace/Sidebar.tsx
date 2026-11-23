@@ -4,6 +4,8 @@ import type { SessionView } from "../../shared/access.js";
 import "./sidebar.css";
 import { usePhoneLayout } from "./usePhoneLayout.js";
 
+import { useReviewActivity } from "./useReviewActivity.js";
+
 const preferenceKey = "lantern-sidebar";
 function readCollapsed() {
   try { return localStorage.getItem(preferenceKey) === "collapsed"; }
@@ -17,6 +19,7 @@ export function Sidebar({ session, activePage, onNavigate, hrefForPage }: {
   hrefForPage: (page: string) => string;
 }) {
   const phone = usePhoneLayout();
+  const activity = useReviewActivity(session?.department?.role === "career-lead" && !!session.features?.includes("review-activity"));
   const canCollapse = session?.features?.includes("sidebar-collapse") ?? false;
   const mobileMenu = phone && canCollapse;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -72,8 +75,10 @@ export function Sidebar({ session, activePage, onNavigate, hrefForPage }: {
       }}>
         <Icon size={20} strokeWidth={1.7} aria-hidden="true" />
         <span className="sidebar-label">{label}</span>
+        {id === 'reviews' && activity.items.length > 0 && <span className="review-unread-count" aria-label={`${activity.items.length} ${activity.items.length === 1 ? 'focus' : 'focuses'} with unread review activity`}>{activity.items.length}</span>}
       </a>)}
     </nav>
+    {activity.error && <p className="sidebar-activity-error">Review activity unavailable. <button className="link" onClick={activity.retry}>Retry</button></p>}
     {!phone && canCollapse && <div className="sidebar-actions">
       <button className="sidebar-toggle" type="button" aria-label={toggleLabel} title={toggleLabel} aria-expanded={!collapsed} aria-controls="main-navigation" onClick={toggle}>
         <ToggleIcon size={18} aria-hidden="true" />

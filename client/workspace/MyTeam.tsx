@@ -35,7 +35,7 @@ function MemberUpdate({member}:{member:TeamDayMember}) {
         const status=flags.get(goal.id);
         return <li key={goal.id}><div className="team-goal-main"><span className={`week-today-goal-title${status==='done'?' is-done':''}`}>{goal.text}</span>{status && <span className={`week-today-status flag-${status}`}>{goalStatusLabels[status]}</span>}</div>
           {!!goal.links.length && <div className="team-work-links" role="group" aria-label={`Work links for ${goal.text}`} tabIndex={0}>{goal.links.map((link,index)=>link.kind==='focus'
-            ? <span key={index}><WorkLinkIcon link={link} size={12} />{link.title}</span>
+            ? <span key={index}><WorkLinkIcon link={link} size={12} />{[link.title,link.target?.objective,link.target?.goalText].filter(Boolean).join(' · ')}</span>
             : <a key={index} href={link.url} target="_blank" rel="noreferrer"><WorkLinkIcon link={link} size={12} />{workLinkLabel(link)}</a>)}</div>}
         </li>;
       })}</ul>}

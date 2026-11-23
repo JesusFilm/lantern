@@ -35,6 +35,7 @@ const pageTitles = {
 };
 function pageHref(page: string) {
   const url = new URL(location.href);
+  url.searchParams.delete("view");
   url.searchParams.delete("member");
   url.searchParams.delete("memberFocus");
   if (page === "team" && currentPage() !== "team") url.searchParams.delete("date");
@@ -187,7 +188,7 @@ function App() {
               ) : page === "team" ? (
                 session.features?.includes("team-updates") ? <MyTeam /> : <section><h1>Page unavailable</h1></section>
               ) : page === "week" ? (
-                session.features?.includes("weekly-updates") ? <MyWeek copyEnabled={session.features.includes("weekly-goal-copy")} /> : <section><h1>Page unavailable</h1></section>
+                session.features?.includes("weekly-updates") ? <MyWeek targetEnabled={session.features.includes("weekly-focus-links")} privacyEnabled={session.features.includes("weekly-goal-privacy")} copyEnabled={session.features.includes("weekly-goal-copy")} /> : <section><h1>Page unavailable</h1></section>
               ) : page === "focuses" ||
                 (page === "department" &&
                   session.department.role !== "career-lead") ? (

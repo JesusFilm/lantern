@@ -8,6 +8,7 @@ import { FocusProgress } from "../workspace/FocusProgress.js";
 import { formatFocusDate } from "../workspace/focusDate.js";
 import { api } from "../workspace/api.js";
 import { hasReviewableContribution } from "../workspace/reviewEligibility.js";
+import { useReviewActivity } from "../workspace/useReviewActivity.js";
 import { StatusBadge } from "./StatusBadge.js";
 import "./coach.css";
 import "./status-badge.css";
@@ -53,6 +54,8 @@ export function CoachWorkspace({
   confirmedView?: boolean;
 }) {
   const actor = session.user!.id;
+  const activityEnabled = session.department?.role === "career-lead" && session.features.includes("review-activity");
+  const activity = useReviewActivity(lead && activityEnabled);
   const [records, setRecords] = useState<CoachRecord[]>([]),
     [selected, setSelected] = useState(focusId || "");
   const [view, setView] = useState<"home" | "request" | "review">(
@@ -116,6 +119,14 @@ export function CoachWorkspace({
     };
   }, [focusId]);
   useEffect(() => {
+    if (!activityEnabled || !displayedFocus || !request) return;
+    let active = true;
+    void api(base + '/focuses/' + displayedFocus + '/request-read', 'POST', { requestId: request.id })
+      .then(() => { if(active) window.dispatchEvent(new Event('lantern-review-read')); })
+      .catch((error: Error) => { if(active) setError(error.message); });
+    return () => { active = false; };
+  }, [activityEnabled, displayedFocus, request?.id, actor, readRetry]);
+  useEffect(() => {
     const noteIds = JSON.parse(unreadIds) as string[];
     if (!displayedFocus || !noteIds.length) return;
     const controller = new AbortController();
@@ -131,6 +142,7 @@ export function CoachWorkspace({
           ? { ...current, readIds: [...new Set([...current.readIds, ...acknowledged])] }
           : current));
         changed.current?.();
+        window.dispatchEvent(new Event("lantern-review-read"));
       })
       .catch(e => { if (active && mounted.current) setError((e as Error).message); });
     return () => { active = false; controller.abort(); };
@@ -378,6 +390,7 @@ export function CoachWorkspace({
                 {r.memberId === actor ? "Your review request" : r.memberName} · {r.requests.at(-1)?.document.title ?? r.focus.title}
               </h2>
               <div className="cp-row">
+                {activity.items.some(item => item.focusId === r.focus.id) && <span className="review-new">New</span>}
                 <StatusBadge status={r.focus.status === "confirmed" ? "confirmed" : "review-requested"} />
                 {r.focus.status !== "confirmed" && r.requests.at(-1)?.document.version !== r.focus.version && <StatusBadge status="unsent-changes" />}
                 {r.notes.some(
@@ -463,7 +476,7 @@ export function CoachWorkspace({
                 </details>
               )}
               {old && comparison(old, request.document)}
-              {locked ? <FocusProgress key={record.focus.id} focus={record.focus} memberId={record.memberId} enabled={session.features.includes("focus-progress")}>
+              {locked ? <FocusProgress weeklyLinksEnabled={session.features.includes("weekly-focus-links")} key={record.focus.id} focus={record.focus} memberId={record.memberId} enabled={session.features.includes("focus-progress")}>
                 <FocusDocument focus={request.document} />
               </FocusProgress> : <FocusDocument focus={request.document} />}
               {!locked && (

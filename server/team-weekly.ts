@@ -1,5 +1,5 @@
 import type { Pool } from 'pg';
-import type { TeamDay, TeamDayMember } from '../shared/weekly.js';
+import type { TeamDay, TeamDayMember, WeeklyGoal } from '../shared/weekly.js';
 import { AccessError, membership, membershipWrite } from './membership.js';
 
 export function teamWeeklyStore(db: Pool) {
@@ -11,8 +11,9 @@ export function teamWeeklyStore(db: Pool) {
         const first = await client.query<{ firstDate: string | null }>(`SELECT to_char(min(u.update_date),'YYYY-MM-DD') AS "firstDate"
           FROM daily_updates u JOIN memberships m ON m.user_id=u.user_id AND m.department_id=u.department_id
           WHERE u.department_id=$1 AND m.deleted_at IS NULL`, [department.id]);
-        const members = await client.query<TeamDayMember>(`SELECT person.id,person.name,person.github_username AS "githubUsername",
+        const members = await client.query<TeamDayMember & {privacyHistory: WeeklyGoal[][]}>(`SELECT person.id,person.name,person.github_username AS "githubUsername",
           coalesce(plan.goals,'[]'::jsonb) AS goals,
+          (SELECT coalesce(jsonb_agg(h.goals ORDER BY h.version DESC),'[]'::jsonb) FROM weekly_plans h WHERE h.user_id=person.id AND h.department_id=$1 AND h.week_start=date_trunc('week',$2::date)::date) AS "privacyHistory",
           CASE WHEN entry.id IS NULL THEN NULL ELSE jsonb_build_object('id',entry.id,'date',to_char(entry.update_date,'YYYY-MM-DD'),
             'body',entry.body,'planVersion',entry.plan_version,'goalStatuses',entry.goal_statuses,'createdAt',entry.created_at) END AS update
           FROM memberships m JOIN users person ON person.id=m.user_id
@@ -22,7 +23,16 @@ export function teamWeeklyStore(db: Pool) {
             AND p.week_start=date_trunc('week',$2::date)::date AND (entry.id IS NULL OR p.version=entry.plan_version)
             ORDER BY p.version DESC LIMIT 1) plan ON true
           WHERE m.department_id=$1 AND m.deleted_at IS NULL ORDER BY lower(person.name),person.id`, [department.id,date]);
-        return { date, firstDate: first.rows[0]!.firstDate, members: members.rows };
+        const visible = members.rows.map(({privacyHistory, ...person}) => {
+          const latest = new Map<string,WeeklyGoal>();
+          for(const plan of privacyHistory)for(const goal of plan)if(!latest.has(goal.id))latest.set(goal.id,goal);
+          const allowed = (goal:WeeklyGoal) => !expectedDepartmentId && person.id===userId ||
+            !goal.visibility || goal.visibility==='team' || !expectedDepartmentId && department.role==='career-lead' && goal.visibility==='lead';
+          const goals=person.goals.filter(goal=>allowed(goal)&&allowed(latest.get(goal.id)??goal));
+          const ids=new Set(goals.map(goal=>goal.id));
+          return {...person,goals,update:person.update?{...person.update,goalStatuses:person.update.goalStatuses.filter(status=>ids.has(status.goalId))}:null};
+        });
+        return { date, firstDate: first.rows[0]!.firstDate, members: visible };
       });
     },
   };
