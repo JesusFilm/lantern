@@ -391,7 +391,15 @@ export function CoachWorkspace({
       {view === "home" && (
         <>
           <h1>Review requests</h1>
-          {records.map((r) => (
+          {(activityEnabled && activity.loaded
+            ? [
+                { title: "New activity", records: records.filter(r => activity.items.some(item => item.focusId === r.focus.id)) },
+                { title: "Previously viewed", records: records.filter(r => !activity.items.some(item => item.focusId === r.focus.id)) },
+              ].filter(group => group.records.length)
+            : [{ title: "", records }]
+          ).map(group => <div key={group.title || "all"} role={group.title ? "group" : undefined} aria-label={group.title || undefined}>
+            {group.title && <h2 className="review-activity-heading">{group.title}</h2>}
+            {group.records.map((r) => (
             <section className="cp-card" key={r.focus.id}>
               <h2>
                 {r.memberId === actor ? "Your review request" : r.memberName} · {r.requests.at(-1)?.document.title ?? r.focus.title}
@@ -409,7 +417,7 @@ export function CoachWorkspace({
               </div>
               <button onClick={() => void review(r)}>Review focus</button>
             </section>
-          ))}
+          ))}</div>)}
           {!records.length && <p>No requests waiting.</p>}
         </>
       )}
