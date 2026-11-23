@@ -312,6 +312,12 @@ test("the type-name check distinguishes type references from a member's work", (
   assert.equal(passed(), false);
   first.suggestion = { question: "Your objective type is the normal type.", recommendedKind: "personal-development" };
   assert.equal(passed(), false);
+  first.suggestion = { question: "Your objective type is currently set to normal.", recommendedKind: "personal-development" };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Normal is selected for your objective.", recommendedKind: "personal-development" };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "normal is currently selected" };
+  assert.equal(passed(), false);
   first.context = { ...first.context, work: "Maintain the normal test kind while learning Playwright." };
   first.suggestion = { question: "The test kind is normal; your objective type is Contribution. I recommend Personal development.", recommendedKind: "personal-development" };
   assert.equal(passed(), true);

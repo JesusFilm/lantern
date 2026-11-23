@@ -381,10 +381,10 @@ export function evaluate(transcript: Transcript, scenario: BenchmarkScenario): {
     const draft = (value: string | undefined, memberDraft = false) => {
       let result = value;
       result = result?.replace(/\b(?:the|a|an|this|my)\s+(?!(?:current|selected|recommended|objective)\b)(?:[\w-]+\s+){1,3}kind\s+(?:is|was)\s+normal\b/gi, "member field is member mode");
-      result = result?.replace(/\bnormal(?=\s+(?:is\s+)?(?:currently\s+)?selected\s+for\s+(?:the\s+)?(?!objective\b))/gi, "member mode");
+      result = result?.replace(/\bnormal(?=\s+(?:is\s+)?(?:currently\s+)?selected\s+for\b(?!\s+(?:(?:the|your)\s+)?objective\b))/gi, "member mode");
       const preserveTechnicalKind = memberKind && memberNormal && (memberDraft || (!reply.recommendedKind && !/personal[-_ ]development|\brecommendedKind\b|\bobjective\s+(?:type|kind)\b/i.test(value ?? "")));
-      const explicitType = !preserveTechnicalKind && (/\b(?:kind|type)\s*(?:is|was|:|=|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:the\s+)?(?:normal|Contribution|Personal[-_ ]development|Leadership)\b/i.test(result ?? "") ||
-        (!!reply.recommendedKind && /\bnormal\s+(?:is\s+)?(?:currently\s+)?selected\b/i.test(result ?? "")));
+      const explicitType = !preserveTechnicalKind && (/\b(?:kind|type)\s*(?:is|was|:|=|currently|set to|should be|could be|might be)\s*(?:currently\s+)?(?:set to\s+)?["'`]*(?:the\s+)?(?:normal|Contribution|Personal[-_ ]development|Leadership)\b/i.test(result ?? "") ||
+        (!memberDraft && /\bnormal\s+(?:is\s+)?(?:currently\s+)?selected\b/i.test(result ?? "")));
       if (memberIdentifier) result = result?.replace(/\bpersonal[-_]development\b/gi, (match, offset: number, all: string) =>
         /(?:\b(?:recommend|suggest|choose|select)\s+(?:the\s+)?|\b(?:objective\s+type|kind|type)\s*(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?)["'`]*$/i.test(all.slice(0, offset)) && /^["'`]*\s*(?:[.,;!?]|$|objective\b|type\b)/i.test(all.slice(offset + match.length)) ? match : "member identifier");
       if (memberRecommendedKind) result = result?.replace(/\brecommendedKind\b/gi, "member field");
@@ -400,7 +400,7 @@ export function evaluate(transcript: Transcript, scenario: BenchmarkScenario): {
   const internalTypeNames = [
     /personal[-_]development|\brecommendedKind\b|`kind`|\bkind\s*[:=]/i,
     /\bkind\s*(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:normal|Contribution|Personal development|Leadership)\b/i,
-    /\b(?:objective\s+type|kind|(?:your|current|selected|recommended)\s+type)\s*(?:is|was|:|=|currently|set to)\s*["'`]*(?:the\s+)?normal\b(?!\s+(?:for|in|when|at|during|under|with)\b)/i,
+    /\b(?:objective\s+type|kind|(?:your|current|selected|recommended)\s+type)\s*(?:is|was|:|=|currently|set to)\s*(?:currently\s+)?(?:set to\s+)?["'`]*(?:the\s+)?normal\b(?!\s+(?:for|in|when|at|during|under|with)\b)/i,
     /\bnormal\s+objective\s+(?:kind|type)\b|\bnormal\s+(?:is\s+)?(?:currently\s+)?selected\b/i,
   ];
   const typeContextPattern = /personal[-_ ]development|\brecommendedKind\b|\bobjective\s+(?:type|kind)\b|\b(?:your|current|selected|recommended)\s+(?:kind|type)\b|\bkind\s*(?:is|was|:|=|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:normal|Contribution|Personal development|Leadership)\b/i;

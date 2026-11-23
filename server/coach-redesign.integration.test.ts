@@ -971,6 +971,22 @@ test("type recommendations preserve technical modes while naming objective types
       response = await plain.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
       assert.equal((await response.json()).question, "Objective type: Contribution. What would you like to improve?");
     } finally { await plain.close(); }
+    suggestion = { question: "Your objective type is currently set to normal.", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Your objective type is currently set to Contribution.");
+    suggestion = { question: "Normal is selected for your objective.", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Contribution is selected for your objective.");
+  } finally { await f.close(); }
+});
+
+test("a selected objective type is translated without a recommendation when work mentions normal hours", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "normal is currently selected" }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, work: "I test applications during normal working hours.", answers: [], kind: "normal" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Contribution is currently selected");
   } finally { await f.close(); }
 });
 

@@ -21,7 +21,7 @@ function memberFacingText(text: string, terms: MemberTerms, typeChoices = false,
   if (!terms.recommendedKind) result = result.replace(/\brecommendedKind\b/g, "recommended objective type");
   result = result.replace(/(\bobjective\s+type\s+(?:is|was)\s+)the\s+normal\s+type\b/gi, "$1Contribution");
   if (typeContext) result = result.replace(/(\bobjective\s+(?:is|was)\s*["'`]*)(normal)\b(?!\s+(?:for|in|when|at|during|under|with)\b)/gi, "$1Contribution");
-  result = result.replace(/(\b(?:objective\s+type|kind|type)\s*(?:is|was|:|=|currently|set to)\s*(?:(?:currently|set to)\s*)?["'`]*)(normal)\b(?!\s+(?:for|in|when|at|during|under|with)\b)/gi,
+  result = result.replace(/(\b(?:objective\s+type|kind|type)\s*(?:is|was|:|=|currently|set to)\s*(?:currently\s+)?(?:set to\s+)?["'`]*)(normal)\b(?!\s+(?:for|in|when|at|during|under|with)\b)/gi,
     (match, prefix: string, _normal: string, offset: number, source: string) => {
       const before = source.slice(0, offset);
       const technicalKind = /\b(?:the|a|an|this|my)\s+(?!(?:current|selected|recommended|objective)\b)(?:[\w-]+\s+){1,3}$/i.test(before);
@@ -32,7 +32,7 @@ function memberFacingText(text: string, terms: MemberTerms, typeChoices = false,
   result = result.replace(/(\b(?:you\s+)?(?:chose|choose|select(?:ed)?|pick(?:ed)?)\s*["'`]*)(normal)\b(?=\s*(?:[.,;!?]|$|for\s+(?:the\s+)?objective\s+(?:type|kind)|(?:and|but)\s+I\s+(?:suggest|recommend)))/gi,
     (match, prefix: string) => typeContext ? prefix + "Contribution" : match);
   result = result.replace(/\bnormal(?=\s+objective\s+(?:kind|type)\b|\s+(?:is\s+)?(?:currently\s+)?selected\b)/gi,
-    (match, offset: number, source: string) => /^(?:\s+is)?\s+(?:currently\s+)?selected\s+for\s+(?:the\s+)?(?!objective\b)/i.test(source.slice(offset + match.length)) ? match : typeContext || recommended || !terms.normal ? "Contribution" : match);
+    (match, offset: number, source: string) => /^(?:\s+is)?\s+(?:currently\s+)?selected\s+for\b(?!\s+(?:(?:the|your)\s+)?objective\b)/i.test(source.slice(offset + match.length)) ? match : typeContext || recommended || !memberDraft || !terms.normal ? "Contribution" : match);
   if (!terms.kind) result = result.replace(/`kind`/gi, "`Objective type`");
   result = result.replace(/\bkind(?=\s*(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:Contribution|Personal development|Leadership)\b)/gi,
     match => match[0] === "K" ? "Objective type" : "objective type");
