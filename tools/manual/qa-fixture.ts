@@ -44,6 +44,8 @@ export async function resetQaDepartment(db: Pool, options: { participants: strin
     // A focus lock stops new requests, but not notes on existing requests.
     // Lock each cascading parent before validating its children.
     await client.query("SELECT r.id FROM focus_review_requests r JOIN position_focuses f ON f.id=r.focus_id WHERE f.department_id=$1 FOR UPDATE OF r", [id]);
+    const foreignRequestReads = await client.query(`SELECT x.user_id FROM focus_request_reads x JOIN focus_review_requests r ON r.id=x.request_id JOIN position_focuses f ON f.id=r.focus_id WHERE f.department_id=$1 AND NOT (x.user_id=ANY($2::uuid[])) FOR UPDATE OF x`, [id, users.map((u) => u.id)]);
+    if (foreignRequestReads.rowCount) throw new Error("Unexpected request reader prevents QA reset.");
     const foreignNotes = await client.query(`SELECT n.id FROM focus_review_notes n JOIN focus_review_requests r ON r.id=n.request_id JOIN position_focuses f ON f.id=r.focus_id WHERE f.department_id=$1 AND NOT (n.author_id=ANY($2::uuid[])) FOR UPDATE OF n`, [id, users.map((u) => u.id)]);
     if (foreignNotes.rowCount) throw new Error("Unexpected note author prevents QA reset.");
     await client.query("SELECT n.id FROM focus_review_notes n JOIN focus_review_requests r ON r.id=n.request_id JOIN position_focuses f ON f.id=r.focus_id WHERE f.department_id=$1 FOR UPDATE OF n", [id]);
