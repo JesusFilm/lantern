@@ -32,7 +32,7 @@ export function Department({
     focus: new URLSearchParams(location.search).get("memberFocus"),
   });
   const [selection, setSelection] = useState(route);
-  const canManageGitHub = session.department.role === "career-lead" && session.features.includes("weekly-updates");
+  const canManageGitHub = session.department.role === "career-lead";
   const [tab, setTab] = useState(() => {
     const value = new URLSearchParams(location.search).get("departmentTab");
     return value === "direction" || (value === "settings" && canManageGitHub) ? value : "people";
@@ -115,7 +115,7 @@ export function Department({
       <MemberFocuses
         key={`${selection.member}:${selection.focus}:${accessRevision}`}
         memberId={selection.member}
-        weeklyLinksEnabled={session.features.includes("weekly-updates") && session.features.includes("weekly-focus-links")} progressEnabled={session.features.includes("focus-progress")}
+        weeklyLinksEnabled={session.features.includes("weekly-focus-links")} progressEnabled={session.features.includes("focus-progress")}
         viewerId={viewerId}
         focusId={selection.focus}
         navigate={navigate}

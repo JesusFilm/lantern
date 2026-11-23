@@ -63,18 +63,16 @@ export function weeklyRoutes(db: Pool, requireUser: (request: Request) => Promis
   const router = Router(), store = weeklyStore(db);
   async function owner(req: Request) {
     const user = await requireUser(req);
-    requireFeature(features, 'weekly-updates', user.email);
     const week = String(req.params.week);
     if (!date(week) || new Date(week).getUTCDay() !== 1) throw new AccessError(400, 'Choose a week starting on Monday.');
     return { id: user.id, week };
   }
   router.get('/api/focuses/:id/weekly-work',async(req,res)=>{
-    const user=await requireUser(req);requireFeature(features,'weekly-updates',user.email);requireFeature(features,'weekly-focus-links',user.email);
+    const user=await requireUser(req);requireFeature(features,'weekly-focus-links',user.email);
     res.json(await store.linkedWork(user.id,String(req.params.id)));
   });
   router.get('/api/weeks', async (req, res) => {
     const user = await requireUser(req);
-    requireFeature(features, 'weekly-updates', user.email);
     res.json(await store.range(user.id));
   });
   router.get('/api/weeks/:week', async (req, res) => {

@@ -78,19 +78,28 @@ test('weekly plans reject invalid and stale writes and isolate every member incl
   } finally { await f.close(); }
 });
 
-test('the weekly feature is hidden by default and preview follows server-resolved identity', async () => {
-  for (const setting of [undefined, 'weekly-updates=preview']) {
-    const f = await coachingFixture(undefined, setting ? resolveFeatureConfig({ LANTERN_FEATURES: setting, LANTERN_PREVIEW_EMAILS: 'member@example.test' }, 'production') : undefined, { defaultFeatures: false });
-    try {
-      for (const actor of ['member', 'peer']) {
-        const visible = setting && actor === 'member';
-        assert.equal((await f.request(actor, '/api/weeks/2026-11-16')).status, visible ? 200 : 404);
-        assert.equal((await f.request(actor, '/api/weeks/2026-11-16/plans', 'POST', { version: 0, goals: goalDrafts('A goal') })).status, visible ? 201 : 404);
-        const record = await (await f.request(actor, '/api/weeks/2026-11-16')).json();
-        assert.equal((await f.request(actor, '/api/weeks/2026-11-16/updates', 'POST', { date: '2026-11-17', body: 'An update', planVersion: 1, goalStatuses: record.plans?.[0]?.goals.map((goal: WeeklyGoal) => ({ goalId: goal.id, status: 'on-track' })) ?? [] })).status, visible ? 201 : 404);
-      }
-    } finally { await f.close(); }
-  }
+test('every active member can use My week and My team with production defaults and no feature configuration', async () => {
+  const f = await coachingFixture(undefined, undefined, { defaultFeatures: false });
+  try {
+    const path = '/api/weeks/2026-11-16';
+    for (const actor of ['member', 'peer', 'lead', 'outsider']) {
+      assert.equal((await f.request(actor, '/api/weeks')).status, 200);
+      assert.equal((await f.request(actor, path)).status, 200);
+      assert.equal((await f.request(actor, path + '/plans', 'POST', { version: 0, goals: goalDrafts(actor + ' goal') })).status, 201);
+      const record = await (await f.request(actor, path)).json();
+      assert.equal((await f.request(actor, path + '/updates', 'POST', { date: '2026-11-17', body: actor + ' update', planVersion: 1,
+        goalStatuses: record.plans[0].goals.map((goal: WeeklyGoal) => ({ goalId: goal.id, status: 'on-track' })) })).status, 201);
+      const saved = await (await f.request(actor, path)).json();
+      assert.equal(saved.plans[0].goals[0].text, actor + ' goal');
+      assert.equal(saved.updates[0].body, actor + ' update');
+      assert.equal((await f.request(actor, '/api/team-updates?date=2026-11-17')).status, 200);
+    }
+    const team = await (await f.request('member', '/api/team-updates?date=2026-11-17')).json();
+    assert.deepEqual(team.members.map((member: { id: string }) => member.id).sort(), [f.ids.member, f.ids.peer, f.ids.lead].sort());
+    assert.equal(team.members.find((member: { id: string }) => member.id === f.ids.peer).update.body, 'peer update');
+    assert.equal((await f.request('missing', path)).status, 401);
+    assert.equal((await f.request('missing', '/api/team-updates?date=2026-11-17')).status, 401);
+  } finally { await f.close(); }
 });
 
 test('weekly goals retain typed work links and stable identity through edits without trusting foreign focuses', async () => {

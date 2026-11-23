@@ -10,7 +10,7 @@ import type {AvatarOptions} from './github-avatars.js';
 export function teamAPIRoutes(db:Pool,requireUser:(req:Request)=>Promise<{id:string;email:string}>,features:FeatureConfig,avatars?:AvatarOptions,localUserId?:string){
  const router=Router(),tokens=teamAPITokenStore(db,localUserId);
  async function manager(req:Request){
-  const user=await requireUser(req);requireFeature(features,'team-api',user.email);requireFeature(features,'team-updates',user.email);return user;
+  const user=await requireUser(req);requireFeature(features,'team-api',user.email);return user;
  }
  router.get('/api/team-api-tokens',async(req,res)=>{const user=await manager(req);res.json({tokens:await tokens.list(user.id)});});
  router.post('/api/team-api-tokens',async(req,res)=>{
@@ -29,8 +29,8 @@ export function teamAPIRoutes(db:Pool,requireUser:(req:Request)=>Promise<{id:str
   if(!match)throw new AccessError(401,'A team API bearer token is required.');
   const user=await tokens.authenticate(match[1]!);requireFeature(features,'team-api',user.email);return user;
  }
- router.use(teamWeeklyRoutes(db,bearer,features,'/api/v1/team-updates'));
- router.use(githubAvatarRoutes(db,bearer,features,avatars,'/api/v1/github-avatars/:username'));
+ router.use(teamWeeklyRoutes(db,bearer,'/api/v1/team-updates'));
+ router.use(githubAvatarRoutes(db,bearer,avatars,'/api/v1/github-avatars/:username'));
  router.use('/api/v1',(error:unknown,_req:Request,res:Response,next:NextFunction)=>{
   if(error instanceof AccessError && error.status===401)res.set('WWW-Authenticate','Bearer realm="Lantern team API"');
   next(error);

@@ -1,14 +1,13 @@
 import { Router, type Request } from 'express';
 import type { Pool } from 'pg';
 import { AccessError, membership } from './membership.js';
-import { requireFeature, type FeatureConfig } from './features.js';
 import { githubAvatarCache, type AvatarOptions } from './github-avatars.js';
 
-export function githubAvatarRoutes(db:Pool,requireUser:(req:Request)=>Promise<{id:string;email:string;departmentId?:string}>,features:FeatureConfig,options?:AvatarOptions,path='/api/github-avatars/:username') {
+export function githubAvatarRoutes(db:Pool,requireUser:(req:Request)=>Promise<{id:string;email:string;departmentId?:string}>,options?:AvatarOptions,path='/api/github-avatars/:username') {
   const router=Router(),cache=githubAvatarCache(options);
   router.get(path,async(req,res)=>{
     res.set('Cache-Control','private, no-store');
-    const user=await requireUser(req);requireFeature(features,'team-updates',user.email);
+    const user=await requireUser(req);
     const department=await membership(db,user.id);
     if(!department || (user.departmentId && department.id!==user.departmentId))throw new AccessError(403,'Active department membership is required.');
     const username=String(req.params.username).toLowerCase();

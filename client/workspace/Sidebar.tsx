@@ -49,8 +49,8 @@ export function Sidebar({ session, activePage, onNavigate, hrefForPage }: {
   const items: { id: string; label: string; icon: LucideIcon }[] = [
     ...(session?.user ? [
       { id: "focuses", label: "Position focuses", icon: FileText },
-      ...(session.department && session.features?.includes("weekly-updates") ? [{ id: "week", label: "My week", icon: CalendarDays }] : []),
-      ...(session.department && session.features?.includes("team-updates") ? [{ id: "team", label: "My team", icon: UsersRound }] : []),
+      ...(session.department ? [{ id: "week", label: "My week", icon: CalendarDays }] : []),
+      ...(session.department ? [{ id: "team", label: "My team", icon: UsersRound }] : []),
       ...(session.department?.role === "career-lead" ? [{ id: "reviews", label: "Review requests", icon: ClipboardCheck }] : []),
       { id: "guide", label: "Guide", icon: BookOpen },
       { id: "account", label: "Account", icon: UserRound },

@@ -10,7 +10,7 @@ establish production availability.
 
 ## WW-01 — Week-end deadline
 
-Status: agreed, behind `weekly-updates`. Goals are due at the end of the selected
+Status: agreed; available to every active member. Goals are due at the end of the selected
 week. No per-goal date picker is required. Tasks are acceptable when the intended
 result is clear. Recurring work is copied explicitly, never carried automatically.
 

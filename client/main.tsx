@@ -164,8 +164,8 @@ function App() {
                 <CoachWorkspace key={page} session={session} lead={page === "reviews"}/>
               ) : page === "account" ? (
                 <Account
-                  teamAPIEnabled={!!session.department && session.features.includes("team-api") && session.features.includes("team-updates")}
-                  githubEnabled={!!session.department && session.features.includes('weekly-updates')}
+                  teamAPIEnabled={!!session.department && session.features.includes("team-api")}
+                  githubEnabled={!!session.department}
                   appearance={appearance}
                   onAppearanceChange={choose}
                   user={session.user}
@@ -187,9 +187,9 @@ function App() {
                   <button onClick={() => void refresh()}>Check access</button>
                 </section>
               ) : page === "team" ? (
-                session.features?.includes("team-updates") ? <MyTeam /> : <section><h1>Page unavailable</h1></section>
+                <MyTeam />
               ) : page === "week" ? (
-                session.features?.includes("weekly-updates") ? <MyWeek targetEnabled={session.features.includes("weekly-focus-links")} privacyEnabled={session.features.includes("weekly-goal-privacy")} copyEnabled={session.features.includes("weekly-goal-copy")} /> : <section><h1>Page unavailable</h1></section>
+                <MyWeek targetEnabled={session.features.includes("weekly-focus-links")} privacyEnabled={session.features.includes("weekly-goal-privacy")} copyEnabled={session.features.includes("weekly-goal-copy")} />
               ) : page === "focuses" ||
                 (page === "department" &&
                   session.department.role !== "career-lead") ? (
