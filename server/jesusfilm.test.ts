@@ -65,3 +65,37 @@ test("Jesus Film OIDC uses PKCE and verifies signed identity, issuer, audience, 
     }
   } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); }
 });
+
+test("Jesus Film sign-in fails closed when the signing-key response body stalls", { timeout: 10000 }, async () => {
+  const keys = await generateKeyPair("EdDSA");
+  let issuer = "";
+  let keysRequested = false;
+  const server = createServer(async (req, res) => {
+    if (req.url === "/api/auth/jwks") {
+      keysRequested = true;
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.write('{"keys":');
+      return;
+    }
+    const now = Math.floor(Date.now() / 1000);
+    const token = await new SignJWT({ iss: issuer, aud: "fixture-client", sub: "fixture-sub", iat: now,
+      exp: now + 3600, nonce: "fixture-nonce", email: "person@example.test", email_verified: true,
+      "https://jesusfilm.org/claims/actor_type": "human" })
+      .setProtectedHeader({ alg: "EdDSA", kid: "fixture" }).sign(keys.privateKey);
+    res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ id_token: token }));
+  });
+  await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.ok(address && typeof address !== "string");
+  issuer = `http://127.0.0.1:${address.port}/api/auth`;
+  try {
+    const provider = jesusFilmProvider("fixture-client", "https://lantern.example.test", { issuer, timeoutMs: 1000 });
+    await assert.rejects(provider.exchange("code", "verifier", "fixture-nonce"), {
+      message: "Jesus Film sign-in could not be verified.",
+    });
+    assert.equal(keysRequested, true);
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>(resolve => server.close(() => resolve()));
+  }
+});
