@@ -74,7 +74,7 @@ test('copying last week appends fresh goals with details and links, without stat
 });
 
 test('the copy control stays hidden when its flag is off while weekly editing remains available', async t => {
-  const f = await copyBrowserFixture(t, resolveFeatureConfig({ LANTERN_FEATURES: 'weekly-updates=on' }, 'production'));
+  const f = await copyBrowserFixture(t, resolveFeatureConfig({}, 'production'));
   const browser = f.browser;
   const context = await browser.newContext();
   await context.addCookies([{ name: 'lantern-session', value: 'member', url: f.origin }]);

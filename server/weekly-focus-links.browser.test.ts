@@ -36,7 +36,7 @@ test('member links a weekly goal to a confirmed SMART goal and reviews a suggest
  await page.getByRole('button',{name:'Edit work link 1 for goal 1',exact:true}).click();await expect(page.getByLabel('Link to',{exact:true})).toHaveValue('goal:0:0');
 });
 
-test('lead sees whole-focus draft backlinks in department and review views only while both flags are enabled',async t=>{
+test('lead sees whole-focus draft backlinks in department and review views only while weekly focus links are enabled',async t=>{
  const {resolveFeatureConfig}=await import('./features.js');const config=resolveFeatureConfig({},'local'),states=new Map(config.states);
  const f=await coachingFixture(undefined,{...config,states});t.after(()=>f.close());
  const focus=await(await f.request('member','/api/focuses','POST',draft)).json();
@@ -46,7 +46,7 @@ test('lead sees whole-focus draft backlinks in department and review views only 
  const browser=await chromium.launch();t.after(()=>browser.close());const context=await browser.newContext();await context.addCookies([{name:'lantern-session',value:'lead',url:f.origin}]);const page=await context.newPage();page.setDefaultTimeout(5000);
  await page.goto(f.origin+'/?page=department&member='+f.ids.member+'&memberFocus='+focus.id);await expect(page.getByRole('region',{name:'Linked weekly work'})).toContainText('Draft weekly support');
  await page.goto(f.origin+'/?page=reviews');await page.getByRole('button',{name:'Review focus',exact:true}).click();await expect(page.getByRole('region',{name:'Linked weekly work'})).toContainText('Draft weekly support');
- states.set('weekly-updates','off');await page.reload();await expect(page.getByRole('heading',{name:draft.title,exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'Linked weekly work'})).toHaveCount(0);
+ states.set('weekly-focus-links','off');await page.reload();await expect(page.getByRole('heading',{name:draft.title,exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'Linked weekly work'})).toHaveCount(0);
  assert.equal((await f.request('lead','/api/focuses/'+focus.id+'/weekly-work')).status,404);
  await page.goto(f.origin+'/?page=department&member='+f.ids.member+'&memberFocus='+focus.id);await expect(page.getByRole('heading',{name:draft.title,exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'Linked weekly work'})).toHaveCount(0);
 });

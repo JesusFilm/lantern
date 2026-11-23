@@ -92,7 +92,7 @@ test('weekly goals and daily updates can be edited together without replacing ei
   } finally { await browser.close(); await vite.close(); await f.close(); }
 });
 
-test('hidden weekly entry points stay absent even at the direct page URL', async () => {
+test('My week is available with production defaults and no feature flag', async () => {
   const f = await coachingFixture(undefined, resolveFeatureConfig({}, 'production'));
   const vite = await createServer({ server: { middlewareMode: { server: f.server }, hmr: { server: f.server } }, appType: 'spa' });
   f.app.use(vite.middlewares);
@@ -102,8 +102,8 @@ test('hidden weekly entry points stay absent even at the direct page URL', async
     await context.addCookies([{ name: 'lantern-session', value: 'member', url: f.origin }]);
     const page = await context.newPage();
     await page.goto(f.origin + '/?page=week');
-    await expect(page.getByRole('heading', { name: 'Page unavailable', exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'My week', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'My week', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'My week', exact: true })).toBeVisible();
   } finally { await browser.close(); await vite.close(); await f.close(); }
 });
 

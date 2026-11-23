@@ -3,12 +3,11 @@ import { Router, type Request } from 'express';
 import type { Pool } from 'pg';
 import type { GitHubWorkKind } from '../shared/github.js';
 import type { GitHubConnection } from './github.js';
-import { requireFeature, type FeatureConfig } from './features.js';
 import { AccessError, membership } from './membership.js';
 import { githubProfileStore } from './github-profile.js';
 
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
-export function githubRoutes(db: Pool, requireUser: (request: Request) => Promise<{ id: string; email: string }>, features: FeatureConfig,
+export function githubRoutes(db: Pool, requireUser: (request: Request) => Promise<{ id: string; email: string }>,
   origin: string, connection?: { ownerId: string; source: GitHubConnection }) {
   const router = Router();
   const profiles = githubProfileStore(db);
@@ -17,7 +16,6 @@ export function githubRoutes(db: Pool, requireUser: (request: Request) => Promis
   const cookieOptions = { httpOnly: true, sameSite: 'lax' as const, secure: origin.startsWith('https:'), path: '/', maxAge: 20 * 60000 };
   async function actor(req: Request) {
     const user = await requireUser(req);
-    requireFeature(features, 'weekly-updates', user.email);
     const department = await membership(db, user.id);
     if (!department) throw new AccessError(403, 'Active department membership is required.');
     return { user, department: department.id, role: department.role };

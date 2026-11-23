@@ -483,9 +483,9 @@ export function CoachWorkspace({
                 </details>
               )}
               {old && comparison(old, request.document)}
-              {locked ? <FocusProgress weeklyLinksEnabled={session.features.includes("weekly-updates") && session.features.includes("weekly-focus-links")} key={record.focus.id} focus={record.focus} memberId={record.memberId} enabled={session.features.includes("focus-progress")}>
+              {locked ? <FocusProgress weeklyLinksEnabled={session.features.includes("weekly-focus-links")} key={record.focus.id} focus={record.focus} memberId={record.memberId} enabled={session.features.includes("focus-progress")}>
                 <FocusDocument focus={request.document} />
-              </FocusProgress> : <><FocusDocument focus={request.document} />{session.features.includes("weekly-updates") && session.features.includes("weekly-focus-links") && <FocusWeeklyWork focusId={record.focus.id}/>}</>}
+              </FocusProgress> : <><FocusDocument focus={request.document} />{session.features.includes("weekly-focus-links") && <FocusWeeklyWork focusId={record.focus.id}/>}</>}
               {!locked && (
                 <>
                 {record.focus.version !== request.document.version && <p className="cp-muted">This focus has changed since review was requested. Request review of the latest saved version before confirming.</p>}

@@ -84,9 +84,10 @@ HTTP API; it cannot rewrite saved history or token scope. Apply through the
 manual schema-release process, retain these migrations on rollback, and verify
 health advertises schema 17.
 
-Keep `weekly-updates`, `team-updates` and `team-api` hidden until the owner
-releases them. The separate TV controller holds its department-scoped token
-privately and proxies updates and images; production does not permit local
+My week and My team are available to all active members without feature flags.
+Keep `team-api` hidden until the owner releases it. The separate TV controller
+holds its department-scoped token privately and proxies updates and images;
+production does not permit local
 identity access. See [Team API](../development/team-api.md).
 
 ### Schema 18 and weekly privacy
