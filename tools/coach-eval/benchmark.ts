@@ -51,6 +51,19 @@ const base = { issues: [] as string[], focus: cycle, goals: [] as Scenario["goal
 
 export const benchmarkScenarios: BenchmarkScenario[] = [
   {
+    ...base, id: "bench-personal-growth-no-team", category: "rewording", role: "QA engineer", issues: ["#205"],
+    summary: "Personal growth is its own benefit, without invented team or release outcomes.",
+    work: "I want to get better at test automation with Playwright.",
+    member: { replies: [{ when: /./, say: "I want to improve my own Playwright testing skills." }] },
+    typeChoice: "personal-development",
+    expect: { criteria: ["The member's own learning satisfies the beneficiary check; no team outcome is invented."] },
+    contract: {
+      includes: [{ label: "Playwright", pattern: /playwright/i }],
+      excludes: [{ label: "invented team or release outcome", pattern: /\b(team|release|releases|colleagues|engineers)\b/i }],
+      checks: { purpose: "met", people: "met" },
+    },
+  },
+  {
     ...base, id: "bench-vague-existing-testing", category: "vague", role: "QA engineer", issues: ["#191"],
     summary: "Improve a vague existing objective using the member's answer.",
     existing: { objective: "stuff", kind: "normal" },

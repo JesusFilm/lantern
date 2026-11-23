@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { Dialog } from './Dialog.js';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { maxWeeklyGoalDescriptionLength } from '../../shared/weekly.js';
@@ -11,31 +11,19 @@ export function GoalMarkdown({ text }: { text: string }) {
   >{text}</Markdown></div>;
 }
 
-export function GoalDetailEditor({ title, value, number, onTitleChange, onChange, onClose, saveError, onRetry }: {
-  title: string; value: string; number: number; onTitleChange: (value: string) => void;
-  onChange: (value: string) => void; onClose: () => void; saveError?: string; onRetry?: () => void;
+export function GoalDetailEditor({ title, value, number, onSave, onClose }: {
+  title: string; value: string; number: number;
+  onSave: (title: string, description: string) => void; onClose: () => void;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const element = dialog.current!;
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    element.showModal();
-    return () => { element.close(); document.body.style.overflow = overflow; };
-  }, []);
-  return createPortal(<dialog ref={dialog} className="week-goal-editor" aria-label={`Edit goal ${number}`}
-    onCancel={event => { event.preventDefault(); onClose(); }}>
-    <header className="week-goal-editor-heading">
-      <input type="text" aria-label="Goal title" className="week-goal-editor-title" required maxLength={1000}
-        placeholder="Write a goal…" value={title} onChange={event => onTitleChange(event.target.value)} />
-      <button type="button" className="week-goal-editor-close" aria-label="Close goal editor" onClick={onClose}><X size={24} /></button>
-    </header>
-    <div className="week-goal-editor-body">
-      <textarea className="week-goal-editor-markdown" aria-label={`Markdown description for goal ${number}`} autoFocus
-        value={value} maxLength={maxWeeklyGoalDescriptionLength} rows={8}
-        placeholder={'Add context, a plan, or supporting information…\n\n## What success looks like\n- …\n\n## Notes\nLinks, code, and anything else that helps.'}
-        onChange={event => onChange(event.target.value)} />
-    {saveError && <p role="alert" className="week-goal-editor-error">{saveError} <button type="button" onClick={onRetry}>Retry saving</button></p>}
-    </div>
-  </dialog>, document.body);
+  const [draftTitle, setTitle] = useState(title), [description, setDescription] = useState(value);
+  return createPortal(<Dialog title={`Edit goal ${number}`} saveLabel="Save details" onClose={onClose}
+    onSave={async () => { onSave(draftTitle, description); onClose(); }}>
+    <label>Goal title<input type="text" required maxLength={1000} value={draftTitle}
+      onChange={event => setTitle(event.target.value)} /></label>
+    <label>Markdown description for goal {number}<textarea autoFocus rows={10}
+      maxLength={maxWeeklyGoalDescriptionLength} value={description}
+      placeholder="Add context, a plan, or supporting information…"
+      onChange={event => setDescription(event.target.value)} /></label>
+    <p className="muted">Save details to apply your changes to the weekly plan.</p>
+  </Dialog>, document.body);
 }

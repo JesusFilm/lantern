@@ -14,18 +14,19 @@ test('editable draggable goals share one page with a saved entry for today', asy
     await context.clock.setFixedTime(new Date('2026-11-19T10:00:00+13:00'));
     await context.addCookies([{ name: 'lantern-session', value: 'member', url: f.origin }]);
     const page = await context.newPage(); page.setDefaultTimeout(5000);
+    await page.setViewportSize({width:1280,height:1200});
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(f.origin + '/?page=week&week=2026-11-16');
     await expect(page.getByRole('textbox', { name: 'Weekly goal 1', exact: true })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'My week sections' })).toHaveCount(0);
     await expect(page.getByRole('radio').and(page.locator(':checked'))).toHaveCount(0);
     await page.getByRole('textbox', { name: 'Weekly goal 1', exact: true }).fill('Ship the sign-in flow');
-    await page.getByRole('button', { name: 'Add Goal', exact: true }).click();
+    await page.getByRole('button', { name: 'Add goal', exact: true }).click();
     await page.getByRole('textbox', { name: 'Weekly goal 2', exact: true }).fill('Investigate upload delays');
     await page.getByRole('button', { name: 'Actions for goal 1', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Edit details', exact: true }).click();
     await page.getByRole('textbox', { name: 'Markdown description for goal 1', exact: true }).fill('Supporting information for agents');
-    await page.getByRole('button', { name: 'Close goal editor', exact: true }).click();
+    await page.getByRole('button', { name: 'Save details', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Continue to daily update', exact: true })).toHaveCount(0);
     await expect(page.getByRole('checkbox')).toHaveCount(0);
     await expect.poll(async () => (await (await f.request('member', '/api/weeks/2026-11-16')).json()).plans.at(-1)?.goals.length).toBe(2);
@@ -42,7 +43,7 @@ test('editable draggable goals share one page with a saved entry for today', asy
     await expect(page.getByRole('heading', { name: 'Your goals', exact: true })).toHaveCount(0);
     await expect(page.getByText('How is each goal going today?', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Edit goals', exact: true })).toHaveCount(0);
-    await expect(page.locator('.week-header').getByRole('button', { name: 'Add Goal', exact: true })).toBeVisible();
+    await expect(page.locator('.week-header').getByRole('button', { name: 'Add goal', exact: true })).toBeVisible();
     await expect(goals.getByText('Description', { exact: true })).toHaveCount(0);
     await expect(goals.getByText('Supporting information for agents', { exact: true })).toHaveCount(0);
     const card = goals.locator('.week-goal-block').first();
@@ -102,10 +103,11 @@ test('inline goals keep their daily statuses when newly added, renamed and dragg
     await context.clock.setFixedTime(new Date('2026-11-19T10:00:00+13:00'));
     await context.addCookies([{ name: 'lantern-session', value: 'member', url: f.origin }]);
     const page = await context.newPage(); page.setDefaultTimeout(5000);
+    await page.setViewportSize({width:1280,height:1200});
     await page.goto(f.origin + '/?page=week&week=2026-11-16');
     await page.getByRole('group', { name: 'Status for First', exact: true }).getByRole('radio', { name: 'Blocked', exact: true }).check();
     await page.getByRole('textbox', { name: 'Daily update', exact: true }).fill('Working on these together.');
-    await page.getByRole('button', { name: 'Add Goal', exact: true }).click();
+    await page.getByRole('button', { name: 'Add goal', exact: true }).click();
     await page.getByRole('group', { name: 'Status for goal 3', exact: true }).getByRole('radio', { name: 'At risk', exact: true }).check();
     await page.getByRole('textbox', { name: 'Weekly goal 3', exact: true }).fill('Third');
     await expect.poll(async () => {

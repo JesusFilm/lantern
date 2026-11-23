@@ -2,6 +2,7 @@
 
 These area files record product decisions: what should happen, why, and the exceptions. The [PRD](../PRD.md) indexes migrated areas. The catalogue is partial: its silence on a question does not mean that no rule or guidance exists. For areas not yet migrated, consult the PRD, glossary and relevant guidance; distinguish an owner decision from observed implementation or guidance, and report an unresolved provenance rather than assuming either approval or a lack of policy.
 
+- [Weekly work](weekly-work.md)
 - [Review, confirmation and the cycle](review-and-confirmation.md)
 
 Each rule has a stable ID, status, decision reference, explanation and exceptions where relevant. An in-effect rule describes current intended behavior. Agreed but undelivered rules are labeled accordingly. Open and deferred entries state the question and current behavior without deciding the answer. ADRs record architectural choices; issues and PRs hold discussion and proposals.

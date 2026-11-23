@@ -30,7 +30,15 @@ test('goal actions open from a dismissible menu and deletion still requires conf
     await actions.click(); await menu.getByRole('menuitem', { name: 'Edit details', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Edit goal 1', exact: true })).toBeVisible();
     await page.getByRole('textbox', { name: 'Markdown description for goal 1', exact: true }).fill('Supporting notes');
-    await page.getByRole('button', { name: 'Close goal editor', exact: true }).click();
+    const editor = page.getByRole('dialog', { name: 'Edit goal 1', exact: true });
+    await editor.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await actions.click(); await menu.getByRole('menuitem', { name: 'Edit details', exact: true }).click();
+    await expect(page.getByRole('textbox', { name: 'Markdown description for goal 1', exact: true })).toHaveValue('');
+    await page.getByRole('textbox', { name: 'Markdown description for goal 1', exact: true }).fill('Saved supporting notes');
+    await editor.getByRole('button', { name: 'Save details', exact: true }).click();
+    await expect.poll(async () => (await (await f.request('member', path)).json()).plans.at(-1)?.goals[0]?.description).toBe('Saved supporting notes');
+    await page.reload();
+    await expect(page.getByRole('textbox', { name: 'Weekly goal 1', exact: true })).toHaveValue('First');
     await actions.click(); await menu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
     const confirmation = page.getByRole('dialog', { name: 'Delete this goal?', exact: true });
     await expect(confirmation).toBeVisible();

@@ -92,8 +92,8 @@ read that file and print each rule with its required value.
 
 | Rule | Value | Why |
 | --- | --- | --- |
-| Overall runs passing | at least 80% | The baseline passes 94% (90 of 96 runs); 80% leaves room for variation and small intended trade-offs. |
-| Drop from baseline | at most 10 points | Measured on the same scenarios. With the current baseline this means at least 84%. It stops quality sliding gradually as each change spends the margin. |
+| Overall runs passing | at least 80% | The baseline passes 97% (105 of 108 runs); 80% leaves room for variation and small intended trade-offs. |
+| Drop from baseline | at most 10 points | Measured on the same scenarios. With the current baseline this means at least 87%. It stops quality sliding gradually as each change spends the margin. |
 | Scenarios below majority | at most 2 | One or two unstable scenarios are tolerated; more indicates a behavior change. |
 | Runs passing in each category | at least 60% | No kind of member, including QA probing, can be traded away for the others. |
 

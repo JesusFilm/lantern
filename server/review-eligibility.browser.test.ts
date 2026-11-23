@@ -81,6 +81,9 @@ test("a lead reviews and confirms their own request without a note or another re
     await page.getByRole("button", { name: "Confirm focus", exact: true }).click();
     await expect(page.getByText("Confirmed", { exact: true })).toBeVisible();
     await page.reload();
+    await expect(page.getByText("Your position focus", { exact: true })).toBeVisible();
+    await expect(page.getByText("Confirmed", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Review requests", exact: true }).click();
     await expect(page.locator("section").filter({ has: page.getByRole("heading", { name: "Your review request · My next half", exact: true }) }).getByText("Confirmed", { exact: true })).toBeVisible();
     const saved = await (await f.request("lead", `/api/coach/focuses/${own.id}`)).json();
     assert.equal(saved.focus.status, "confirmed");

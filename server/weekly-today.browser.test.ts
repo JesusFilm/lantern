@@ -35,7 +35,7 @@ test('today stays editable after saving and reflects live goals while past days 
     await expect(text).toBeEditable();
     await expect(today.locator('summary')).toHaveCount(0);
     const record=await(await f.request('member',path)).json();assert.equal(record.updates.length,4);assert.equal(record.updates[3].goalStatuses[0].status,'done');assert.equal(record.updates[2].body,'Yesterday’s notes');
-    await page.getByRole('button',{name:'Add Goal',exact:true}).click();
+    await page.getByRole('button',{name:'Add goal',exact:true}).click();
     await page.getByRole('textbox',{name:'Weekly goal 2',exact:true}).fill('Prepare the demo');
     await expect(page.getByRole('group',{name:'Status for Prepare the demo',exact:true}).getByRole('radio',{name:'On track',exact:true})).not.toBeChecked();
     await page.getByRole('group',{name:'Status for Prepare the demo',exact:true}).getByRole('radio',{name:'On track',exact:true}).check();

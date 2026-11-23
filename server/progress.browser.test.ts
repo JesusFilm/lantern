@@ -39,6 +39,11 @@ test('member records status and goal note; lead reads progress after reload', {t
   await page.getByRole('button',{name:'Progress & notes'}).click();
   await expect(page.getByRole('button',{name:'Progress & notes'})).toHaveAttribute('aria-pressed','true');
   await expect(page.getByRole('button',{name:'Focus',exact:true})).toHaveAttribute('aria-pressed','false');
+  await expect(page).toHaveURL(/view=progress/);
+  await page.reload();
+  await expect(page.getByRole('button',{name:'Progress & notes'})).toHaveAttribute('aria-pressed','true');
+  const shared=await mc.newPage();await shared.goto(page.url());
+  await expect(shared.getByRole('button',{name:'Progress & notes'})).toHaveAttribute('aria-pressed','true');await shared.close();
   await expect(page.getByText('Track progress and add notes to each objective or SMART goal.')).toBeVisible();
   await expect(page.getByRole('heading',{name:'Notes',exact:true})).toHaveCount(0);
   await expect(page.getByRole('region',{name:'Objective 1'})).toBeVisible();
@@ -110,6 +115,9 @@ test('member records status and goal note; lead reads progress after reload', {t
   await goal.getByRole('button',{name:'Add note'}).click();await page.getByLabel('Progress note').fill('Published the guide.');await page.getByRole('button',{name:'Save progress'}).click();
   await expect(goal.locator('.progress-pill')).toHaveCount(0);await expect(goal.getByRole('button',{name:'Edit progress'})).toBeVisible();
   const leadPage=await lc.newPage();const duplicateKeyErrors:string[]=[];leadPage.on('console', message=>{if(message.type()==='error' && message.text().includes('same key')) duplicateKeyErrors.push(message.text())});await leadPage.goto(`${origin}/?page=department&member=${member}&memberFocus=${focus.id}`);await leadPage.getByRole('button',{name:'Progress & notes'}).click();await expect(leadPage.getByText('Published the guide.')).toBeVisible();await expect(leadPage.getByRole('button',{name:'Add note'})).toHaveCount(0);assert.deepEqual(duplicateKeyErrors,[],'rendering the lead view must not duplicate React keys');
+  await leadPage.goto(`${origin}/?page=reviews`);await leadPage.getByRole('button',{name:'Review focus',exact:true}).click();await leadPage.getByRole('button',{name:'Progress & notes',exact:true}).click();
+  const reviewUrl=leadPage.url();await leadPage.reload();await expect(leadPage.getByRole('button',{name:'Progress & notes',exact:true})).toHaveAttribute('aria-pressed','true');
+  const sharedReview=await lc.newPage();await sharedReview.goto(reviewUrl);await expect(sharedReview.getByRole('button',{name:'Progress & notes',exact:true})).toHaveAttribute('aria-pressed','true');await sharedReview.close();
  } finally {await browser.close();await vite?.close();server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await f.close();}
 });
 

@@ -874,9 +874,10 @@ export function ObjectiveEditor({
                         min={redesigned ? earliestDate() : undefined}
                         max={redesigned ? edit.source.end : undefined}
                         value={plan.date}
-                        onChange={(e) =>
-                          setPlan({ ...plan, date: e.target.value })
-                        }
+                        onChange={(e) => {
+                          setPlan({ ...plan, date: e.target.value });
+                          setError("");
+                        }}
                       />
                     </div>
                   </section>
@@ -933,7 +934,7 @@ export function ObjectiveEditor({
               <p role="status">Your objective or type changed since the coach checked it. The earlier checks may no longer apply.</p> : checks ? <>
                 <p>{Object.values(checks).every(check => check.status === "met") && !concern ? "The main elements are in place. You can continue to SMART goals." : "Here is what the coach found. You can respond or continue with your draft."}</p>
                 <ul className="coach-checks">
-                  {([ ["purpose", "Your contribution"], ["people", "Who benefits and how"], ["alignment", checkedKind === "normal" ? "Connection to the mission" : "Connection to your work"] ] as const).map(([key, label]) => {
+                  {([ ["purpose", checkedKind === "personal-development" ? "Your growth" : "Your contribution"], ["people", checkedKind === "personal-development" ? "Your growth and benefit" : "Who benefits and how"], ["alignment", checkedKind === "normal" ? "Connection to the mission" : "Connection to your work"] ] as const).map(([key, label]) => {
                     const check = checks[key];
                     return <li key={key} className={`coach-check coach-check-${check.status}`}>
                       <div><span aria-hidden="true">{check.status === "met" ? "✓" : check.status === "needs_attention" ? "!" : "?"}</span> <strong>{label}</strong> — <span>{check.status === "met" ? "Met" : check.status === "needs_attention" ? "Needs attention" : "Not sure"}</span></div>
@@ -949,7 +950,7 @@ export function ObjectiveEditor({
               <small>Optional. The coach will use your answer to update the objective.</small>
               <textarea id="concern-details" maxLength={4000} value={concernDetails} onChange={e => setConcernDetails(e.target.value)} disabled={busy} />
               {unsentDetails && <p role="status">Update objective or clear these details before continuing or saving.</p>}
-              <div><button type="button" disabled={busy || !concernDetails.trim()} onClick={() => void addressConcern()}>Update objective</button>{unsentDetails && <button type="button" disabled={busy} onClick={() => { setConcernDetails(""); setError(""); }}>Clear details</button>}</div>
+              <div className="coach-detail-actions"><button type="button" className="primary" disabled={busy || !concernDetails.trim()} onClick={() => void addressConcern()}>Update objective</button>{unsentDetails && <button type="button" disabled={busy} onClick={() => { setConcernDetails(""); setError(""); }}>Clear details</button>}</div>
             </div> : <button type="button" disabled={busy} onClick={() => setAddressingConcern(true)}>Help me address this</button>)}
           </section>}
           {redesigned && canSave && !edit.goals.some(g => g.trim()) && <p role="status">No SMART goals yet. You can save this draft and add goals later. Goals make the objective actionable.</p>}
