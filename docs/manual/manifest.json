@@ -3,7 +3,7 @@
   "editionDate": "2026-11-23",
   "deck": "2fb89dc201881d7d4a373e556c9dab3805de23f1ebcebb0f9b7cc6d045782fa9",
   "sources": {
-    "fingerprint": "5e693b10e1bf95009771e1e3caf52028d6d682110bd2602f038fc575a718a2f4",
+    "fingerprint": "ec1a0e850b80731aa6e93b923632006c4b35a0cdfd18280af081f9c77f1c2cb9",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -44,7 +44,7 @@
       "client/workspace/MissionBanner.tsx": "317c8886f63b10c398e69ccccf4ce77234383b99910a2a92d7fd8db3e9389b6a",
       "client/workspace/MissionImageDialog.tsx": "27adf5505b6ed72ba704e63ff324bf3f4db9bdd957cb861c6a56b8b6e2bdcc3e",
       "client/workspace/MyTeam.tsx": "4024452238359263866ac546a72a2da151eba47e2203b71ff76c14d502b4ccc8",
-      "client/workspace/MyWeek.tsx": "69a74a24e1fc7633ac753262794c09c9ce13b2aef39ce7e17a582dc2c359fa7a",
+      "client/workspace/MyWeek.tsx": "d4d2180f06435ed88afc1cba2671ad50c6a619a00260f2cd77c71820f10cc034",
       "client/workspace/ObjectiveEditor.tsx": "e5655ce5f0b6c33cdd91efe753fa418041e99afbe8c076c4eef8a6de96d8b870",
       "client/workspace/ObjectiveType.tsx": "dc86782a595827dd2f96db9b90d10c0c35d9b896a5efb409168020ffe6390174",
       "client/workspace/ProceduresGuide.tsx": "a0bde6ee5b83106f3f4bd6e0da6863b5e41a1036bccef94a8253bcc83d6892f8",
@@ -256,7 +256,7 @@
   },
   "pdf": "f6122394b6562c3e435db3f0ba2514d32b5704085a251c351deb84ef0b1cbe82",
   "verification": {
-    "generatedAt": "2026-11-23T03:14:00.664Z",
+    "generatedAt": "2026-11-23T03:29:42.436Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -298,7 +298,7 @@
       "client/workspace/MissionBanner.tsx": "317c8886f63b10c398e69ccccf4ce77234383b99910a2a92d7fd8db3e9389b6a",
       "client/workspace/MissionImageDialog.tsx": "27adf5505b6ed72ba704e63ff324bf3f4db9bdd957cb861c6a56b8b6e2bdcc3e",
       "client/workspace/MyTeam.tsx": "4024452238359263866ac546a72a2da151eba47e2203b71ff76c14d502b4ccc8",
-      "client/workspace/MyWeek.tsx": "69a74a24e1fc7633ac753262794c09c9ce13b2aef39ce7e17a582dc2c359fa7a",
+      "client/workspace/MyWeek.tsx": "d4d2180f06435ed88afc1cba2671ad50c6a619a00260f2cd77c71820f10cc034",
       "client/workspace/ObjectiveEditor.tsx": "e5655ce5f0b6c33cdd91efe753fa418041e99afbe8c076c4eef8a6de96d8b870",
       "client/workspace/ObjectiveType.tsx": "dc86782a595827dd2f96db9b90d10c0c35d9b896a5efb409168020ffe6390174",
       "client/workspace/ProceduresGuide.tsx": "a0bde6ee5b83106f3f4bd6e0da6863b5e41a1036bccef94a8253bcc83d6892f8",

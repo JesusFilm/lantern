@@ -57,6 +57,7 @@ export function MyWeek({ copyEnabled = false }: { copyEnabled?: boolean }) {
   const [savedUpdate, setSavedUpdate] = useState(''), [updateError, setUpdateError] = useState('');
   const generation = useRef(0);
   const currentGoals = useRef(goals); currentGoals.current = goals;
+  const currentStatuses = useRef(statuses); currentStatuses.current = statuses;
   const [copyError, setCopyError] = useState(''), [copyMessage, setCopyMessage] = useState('');
   const latest = record?.plans.at(-1);
   const goalDirty = !!record && JSON.stringify(planGoals(goals)) !== JSON.stringify(planGoals(latest?.goals.map(weeklyGoalDraft) ?? [emptyWeeklyGoal()]));
@@ -176,7 +177,7 @@ export function MyWeek({ copyEnabled = false }: { copyEnabled?: boolean }) {
       if (generation.current !== current) return;
       const source = previous.plans.at(-1)?.goals ?? [];
       if (!source.length) { setCopyMessage('No goals to copy from last week.'); return; }
-      const existing = currentGoals.current.filter(goal => goal.text.trim() || goal.description?.trim() || goal.links.length);
+      const existing = currentGoals.current.filter(goal => goal.id || currentStatuses.current[goal.key] || goal.text.trim() || goal.description?.trim() || goal.links.length);
       if (existing.length + source.length > 10) {
         setCopyError('Copying would exceed the limit of 10 goals. Remove some goals before trying again.'); return;
       }
