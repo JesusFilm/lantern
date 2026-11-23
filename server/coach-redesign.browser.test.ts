@@ -794,6 +794,24 @@ test("with Not sure chosen, the alignment check is labelled for the type the coa
   } finally { await f.close(); }
 });
 
+test("coach questions and options display objective type names members recognize", async () => {
+  const f = await world(() => ({
+    question: "Kind is currently normal. Which objective type fits your work?",
+    options: ["normal", "personal-development", "leadership"],
+  }));
+  try {
+    const { page } = f;
+    await page.getByRole("radio", { name: "Contribution", exact: true }).check();
+    await page.getByLabel("Your work", { exact: true }).fill("I want to learn Playwright to automate regression testing.");
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Objective type is currently Contribution. Which objective type fits your work?", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Contribution", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Personal development", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Leadership", exact: true })).toBeVisible();
+    assert.equal(f.calls[0]?.context.kind, "normal");
+  } finally { await f.close(); }
+});
+
 test('personal development feedback labels the members growth rather than a team contribution',async()=>{
  const assessment={purpose:{status:'met',note:'Clear growth.'},people:{status:'met',note:'The member benefits.'},alignment:{status:'met',note:'Testing is part of their work.'}} as const;
  const f=await world(()=>({objective:'Improve my Playwright test automation skills.',recommendedKind:'personal-development',assessment}));

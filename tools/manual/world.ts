@@ -42,6 +42,8 @@ function fakeCoach(initiative: () => string): CoachProvider {
   return {
     async suggest(_system: string, _context: string, validate: (value: unknown) => any) {
       const { stage, context } = JSON.parse(_context);
+      if (stage === "clarify" && context.work === "I want to improve my Playwright testing skills.")
+        return validate({ question: "Kind is currently normal. I recommend personal-development. Which testing skills do you want to build?" });
       if (context.objective === "Help engineers ship safely by making deployment failures quick to understand and fix.") {
         if (stage === "objective") return validate({ question: "What would you like to make clearer?", ready: false });
         if (stage === "review") return validate({ assessment: {

@@ -157,6 +157,15 @@ export const benchmarkScenarios: BenchmarkScenario[] = [
     },
   },
   {
+    ...base, id: "bench-rewording-objective-type-names", category: "rewording", role: "QA engineer", issues: ["#193"],
+    summary: "A member chooses Contribution while describing learning Playwright.",
+    work: "I want to learn Playwright so I can automate my regression testing.",
+    member: { answers: ["I test our application and want to automate regression checks."] },
+    typeChoice: "normal",
+    expect: { criteria: ["Use member-facing objective type names throughout the coaching text."] },
+    contract: { maxQuestions: 1, recommendedKind: "personal-development", includes: [{ label: "Playwright or test automation", pattern: /playwright|automat/i }] },
+  },
+  {
     ...base, id: "bench-rewording-subtitles", category: "rewording", role: "Translator",
     summary: "A rambling but complete description of translation work.",
     work: "So basically I translate our videos into Swahili and Amharic, mostly the subtitles, and the problem is churches in East Africa keep telling us the subtitles come out late so they can't use them for their outreach events. I'd like to fix that somehow this year.",
@@ -359,6 +368,62 @@ export function evaluate(transcript: Transcript, scenario: BenchmarkScenario): {
       transcript.turns.slice(i + 1).some(next => next.type === "coach" && next.context.answers.some(a => a.answer === turn.text)));
     add("member answer sent to coach", submitted);
   }
+  const coachText = transcript.turns.flatMap(turn => {
+    if (turn.type !== "coach" || !turn.suggestion) return [];
+    const reply = turn.suggestion;
+    const own = [turn.context.work, turn.context.objective, turn.context.action, turn.context.goal, turn.context.answer ?? "", turn.context.title,
+      ...turn.context.answers.map(answer => answer.answer), ...(turn.context.siblings ?? [])];
+    const memberWording = (value: string | undefined) => value && own.some(text => !!text.trim() && text.trim() === value.trim());
+    const memberIdentifier = own.some(text => /\bpersonal[-_]development\b/i.test(text ?? ""));
+    const memberRecommendedKind = own.some(text => /\brecommendedKind\b/i.test(text ?? ""));
+    const memberKind = own.some(text => /(?:`kind`|["']kind["']|\bkind\s*[:=]|\bkind\s+(?:field|key|parameter|property|to)\b|\b(?!(?:what|which|your|the|a|this|that|any|some)\b)[\w-]+\s+kind\b)/i.test(text ?? ""));
+    const memberNormal = own.some(text => /\bnormal\b/i.test(text ?? ""));
+    const draft = (value: string | undefined, memberDraft = false) => {
+      let result = value;
+      result = result?.replace(/\b(?:the|a|an|this|my)\s+(?!(?:current|selected|recommended|objective)\b)(?:[\w-]+\s+){1,3}kind\s+(?:is|was)\s+normal\b/gi, "member field is member mode");
+      result = result?.replace(/\bnormal(?=\s+(?:is\s+)?(?:currently\s+)?selected\s+for\b(?!\s+(?:(?:the|your)\s+)?objective\b))/gi, "member mode");
+      const preserveTechnicalKind = memberKind && memberNormal && (memberDraft || (!reply.recommendedKind && !/personal[-_ ]development|\brecommendedKind\b|\bobjective\s+(?:type|kind)\b/i.test(value ?? "")));
+      const explicitType = !preserveTechnicalKind && (/\b(?:kind|type)\s*(?:is|was|:|=|currently|set to|should be|could be|might be)\s*(?:currently\s+)?(?:set to\s+)?["'`]*(?:the\s+)?(?:normal|Contribution|Personal[-_ ]development|Leadership)\b/i.test(result ?? "") ||
+        (!memberDraft && /\bnormal\s+(?:is\s+)?(?:currently\s+)?selected\b/i.test(result ?? "")));
+      if (memberIdentifier) result = result?.replace(/\bpersonal[-_]development\b/gi, (match, offset: number, all: string) =>
+        /(?:\b(?:recommend|suggest|choose|select)\s+(?:the\s+)?|\b(?:objective\s+type|kind|type)\s*(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?)["'`]*$/i.test(all.slice(0, offset)) && /^["'`]*\s*(?:[.,;!?]|$|objective\b|type\b)/i.test(all.slice(offset + match.length)) ? match : "member identifier");
+      if (memberRecommendedKind) result = result?.replace(/\brecommendedKind\b/gi, "member field");
+      if (memberKind && !explicitType) result = result?.replace(/`?\bkind\b`?/gi, "member field");
+      if (memberNormal && !explicitType) result = result?.replace(/\bnormal\b/gi, "member mode");
+      return result;
+    };
+    return [draft(reply.question), draft(reply.concern), memberWording(reply.objective) ? undefined : draft(reply.objective, true),
+      memberWording(reply.goal && goalText(reply.goal)) ? undefined : draft(reply.goal, true), draft(reply.title, true), draft(reply.review),
+      ...(reply.options ?? []).map(value => draft(value, true)), ...(reply.actions ?? []).map(value => draft(value, true)),
+      ...Object.values(reply.assessment ?? {}).map(check => draft(check.note))].filter((text): text is string => !!text);
+  });
+  const internalTypeNames = [
+    /personal[-_]development|\brecommendedKind\b|`kind`|\bkind\s*[:=]/i,
+    /\bkind\s*(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:normal|Contribution|Personal development|Leadership)\b/i,
+    /\b(?:objective\s+type|kind|(?:your|current|selected|recommended)\s+type)\s*(?:is|was|:|=|currently|set to)\s*(?:currently\s+)?(?:set to\s+)?["'`]*(?:the\s+)?normal\b(?!\s+(?:for|in|when|at|during|under|with)\b)/i,
+    /\bnormal\s+objective\s+(?:kind|type)\b|\bnormal\s+(?:is\s+)?(?:currently\s+)?selected\b/i,
+  ];
+  const typeContextPattern = /personal[-_ ]development|\brecommendedKind\b|\bobjective\s+(?:type|kind)\b|\b(?:your|current|selected|recommended)\s+(?:kind|type)\b|\bkind\s*(?:is|was|:|=|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:normal|Contribution|Personal development|Leadership)\b/i;
+  const leaks = coachText.filter(text => internalTypeNames.some(pattern => pattern.test(text)) ||
+    (typeContextPattern.test(text) && /\bin the editor\b|\bobjective\s+(?:is|was)\s+["'`]*normal\b/i.test(text)));
+  for (const turn of transcript.turns) {
+    if (turn.type !== "coach") continue;
+    const options = turn.suggestion?.options ?? [];
+    const typeChoices = /\bobjective (?:type|kind)\b/i.test(turn.suggestion?.question ?? "") ||
+      (options.length > 1 && options.some(option => /^(personal[-_ ]development|leadership)$/i.test(option.trim())) &&
+        options.every(option => /^(normal|contribution|personal[-_ ]development|leadership)$/i.test(option.trim())));
+    if (typeChoices) leaks.push(...options.filter(option => option.trim().toLowerCase() === "normal"));
+    const reply = turn.suggestion;
+    const prose = [reply?.question, reply?.concern, reply?.review, ...(reply?.options ?? []), ...(reply?.actions ?? []),
+      ...Object.values(reply?.assessment ?? {}).map(check => check.note)].filter((value): value is string => !!value);
+    for (const value of prose) {
+      const typeContext = typeChoices || typeContextPattern.test(value);
+      if (typeContext && /\btype\s*(?:is|was|:|=|currently|set to)\s*(?:(?:currently|set to)\s*)?["'`]*normal\b/i.test(value)) leaks.push(value);
+      if (typeContext && /\b(?:you\s+)?(?:chose|choose|select(?:ed)?|pick(?:ed)?)\s*["'`]*normal\b(?=\s*(?:[.,;!?]|$|for\s+(?:the\s+)?objective\s+(?:type|kind)|(?:and|but)\s+I\s+(?:suggest|recommend)))/i.test(value)) leaks.push(value);
+      if (reply?.recommendedKind && /\bchange\s+(?:it|the type|your type)\s+in the editor\b/i.test(value)) leaks.push(value);
+    }
+  }
+  add("coach uses member-facing objective type names", !leaks.length, leaks.join(" | "));
   const questions = draftQuestions(transcript), limit = contract.maxQuestions ?? 2;
   add(`at most ${limit} question${limit === 1 ? "" : "s"} before the draft`, questions <= limit, `${questions} asked`);
   add("no repeated question", !metrics.repeatedQuestion);

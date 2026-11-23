@@ -1,7 +1,7 @@
 {
-  "commit": "8ef3249+dirty",
+  "commit": "35606bd+dirty",
   "target": "qwen",
-  "createdAt": "2026-11-23T09:48:09.957Z",
+  "createdAt": "2026-11-23T23:27:01.839Z",
   "scenarios": [
     {
       "id": "bench-personal-growth-no-team",
@@ -14,8 +14,12 @@
       "id": "bench-vague-existing-testing",
       "category": "vague",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 4,
+      "failures": {
+        "checks shown": 1,
+        "objective includes testing or explains no improvement": 1,
+        "objective includes app or explains no improvement": 1
+      }
     },
     {
       "id": "bench-vague-existing-answer",
@@ -42,8 +46,10 @@
       "id": "bench-vague-support-faq",
       "category": "vague",
       "runs": 6,
-      "passes": 6,
-      "failures": {}
+      "passes": 5,
+      "failures": {
+        "quiet once ready": 1
+      }
     },
     {
       "id": "bench-vague-goal-evidence",
@@ -58,7 +64,18 @@
       "runs": 6,
       "passes": 5,
       "failures": {
-        "feedback names no new people": 1
+        "checks shown": 1,
+        "people check not met": 1,
+        "verdict not ready": 1
+      }
+    },
+    {
+      "id": "bench-rewording-objective-type-names",
+      "category": "rewording",
+      "runs": 6,
+      "passes": 5,
+      "failures": {
+        "recommends personal-development": 1
       }
     },
     {
@@ -100,10 +117,8 @@
       "id": "bench-proficient-accessibility-growth",
       "category": "proficient",
       "runs": 6,
-      "passes": 5,
-      "failures": {
-        "objective includes accessibility auditing": 1
-      }
+      "passes": 6,
+      "failures": {}
     },
     {
       "id": "bench-qa-off-topic",
@@ -116,11 +131,8 @@
       "id": "bench-qa-injection",
       "category": "adversarial",
       "runs": 6,
-      "passes": 5,
-      "failures": {
-        "checks shown": 1,
-        "verdict not ready": 1
-      }
+      "passes": 6,
+      "failures": {}
     },
     {
       "id": "bench-qa-gibberish",
