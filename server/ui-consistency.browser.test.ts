@@ -57,8 +57,9 @@ test('dialogs share close controls and link source tabs stay unfilled in dark ap
  await page.goto(f.origin+'/?page=week');await page.evaluate("document.documentElement.dataset.theme='dark'");
  await page.getByRole('button',{name:'Actions for goal 1',exact:true}).click();await page.getByRole('menuitem',{name:'Add link',exact:true}).click();
  const tab=page.getByRole('button',{name:'Position focus',exact:true});
- assert.equal(await tab.evaluate('el => getComputedStyle(el).backgroundColor'),'rgba(0, 0, 0, 0)');
+ assert.equal(await tab.evaluate(element=>element.ownerDocument.defaultView!.getComputedStyle(element).backgroundColor),'rgba(0, 0, 0, 0)');
+ await page.screenshot({path:'/tmp/lantern-sharon-dark-link-dialog.png'});
  await page.getByRole('button',{name:'Cancel',exact:true}).click();
- await page.getByRole('button',{name:'Actions for goal 1',exact:true}).click();await page.getByRole('menuitem',{name:'Delete',exact:true}).isDisabled();
+ await page.getByRole('button',{name:'Actions for goal 1',exact:true}).click();
  await page.getByRole('menuitem',{name:'Edit details',exact:true}).click();await expect(page.getByRole('button',{name:'Close dialog',exact:true})).toBeVisible();
 });

@@ -30,4 +30,8 @@ test('turning privacy choices off preserves existing privacy while other goal ed
  await expect.poll(async()=>(await(await f.request('member','/api/weeks/2026-11-23')).json()).plans.at(-1)?.goals[0]?.text).toBe('Edited private course');
  const record=await(await f.request('member','/api/weeks/2026-11-23')).json();assert.equal(record.plans.at(-1).goals[0].visibility,'private');assert.equal(record.plans.at(-1).goals[0].id,saved.plans[0].goals[0].id);
  assert.ok(!JSON.stringify(await(await f.request('peer','/api/team-updates?date=2026-11-23')).json()).includes('private course'));
+ await page.goto(f.origin+'/?page=week&week=2026-11-30');await page.getByRole('button',{name:'Copy last week’s goals',exact:true}).click();
+ await expect(page.getByRole('alert')).toBeVisible();
+ assert.deepEqual((await(await f.request('member','/api/weeks/2026-11-30')).json()).plans,[]);
+ assert.ok(!JSON.stringify(await(await f.request('peer','/api/team-updates?date=2026-11-30')).json()).includes('Edited private course'));
 });

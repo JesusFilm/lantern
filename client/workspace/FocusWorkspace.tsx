@@ -162,7 +162,7 @@ export function FocusWorkspace({
             </p>
           )}
           {reviewing && focus.status === "draft" && <CoachWorkspace session={session} focusId={focus.id} displayedVersion={focus.version} onChanged={() => void refreshRecord()} />}
-          {focus.status === "confirmed" ? <FocusProgress weeklyLinksEnabled={session.features.includes("weekly-focus-links")} key={focus.id} focus={focus} enabled={session.features.includes("focus-progress")}><FocusObjectives focus={focus} />
+          {focus.status === "confirmed" ? <FocusProgress weeklyLinksEnabled={session.features.includes("weekly-updates") && session.features.includes("weekly-focus-links")} key={focus.id} focus={focus} enabled={session.features.includes("focus-progress")}><FocusObjectives focus={focus} />
             {record && (record.requests.length ?
               <CoachWorkspace key={focus.id} session={session} focusId={focus.id} confirmedView onChanged={() => void refreshRecord()} /> :
               <section className="cp-notes"><h2>Notes</h2><p className="cp-muted">No notes yet.</p></section>)}
@@ -173,7 +173,7 @@ export function FocusWorkspace({
             onCoach={
               !reviewing && coachAvailable ? (target) => start(target, "guided") : undefined
             }
-          />{session.features.includes("weekly-focus-links") && <FocusWeeklyWork key={focus.id} focusId={focus.id} />}</>}
+          />{session.features.includes("weekly-updates") && session.features.includes("weekly-focus-links") && <FocusWeeklyWork key={focus.id} focusId={focus.id} />}</>}
         </>
       ) : (
         <div className="focus-overview">

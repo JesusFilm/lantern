@@ -115,7 +115,7 @@ export function Department({
       <MemberFocuses
         key={`${selection.member}:${selection.focus}:${accessRevision}`}
         memberId={selection.member}
-        weeklyLinksEnabled={session.features.includes("weekly-focus-links")} progressEnabled={session.features.includes("focus-progress")}
+        weeklyLinksEnabled={session.features.includes("weekly-updates") && session.features.includes("weekly-focus-links")} progressEnabled={session.features.includes("focus-progress")}
         viewerId={viewerId}
         focusId={selection.focus}
         navigate={navigate}

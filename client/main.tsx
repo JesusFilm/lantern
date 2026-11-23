@@ -36,6 +36,7 @@ const pageTitles = {
 function pageHref(page: string) {
   const url = new URL(location.href);
   url.searchParams.delete("view");
+  url.searchParams.delete("reviewFocus");
   url.searchParams.delete("member");
   url.searchParams.delete("memberFocus");
   if (page === "team" && currentPage() !== "team") url.searchParams.delete("date");

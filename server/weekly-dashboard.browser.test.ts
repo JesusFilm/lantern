@@ -14,6 +14,7 @@ test('editable draggable goals share one page with a saved entry for today', asy
     await context.clock.setFixedTime(new Date('2026-11-19T10:00:00+13:00'));
     await context.addCookies([{ name: 'lantern-session', value: 'member', url: f.origin }]);
     const page = await context.newPage(); page.setDefaultTimeout(5000);
+    await page.setViewportSize({width:1280,height:1200});
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(f.origin + '/?page=week&week=2026-11-16');
     await expect(page.getByRole('textbox', { name: 'Weekly goal 1', exact: true })).toBeVisible();
@@ -102,6 +103,7 @@ test('inline goals keep their daily statuses when newly added, renamed and dragg
     await context.clock.setFixedTime(new Date('2026-11-19T10:00:00+13:00'));
     await context.addCookies([{ name: 'lantern-session', value: 'member', url: f.origin }]);
     const page = await context.newPage(); page.setDefaultTimeout(5000);
+    await page.setViewportSize({width:1280,height:1200});
     await page.goto(f.origin + '/?page=week&week=2026-11-16');
     await page.getByRole('group', { name: 'Status for First', exact: true }).getByRole('radio', { name: 'Blocked', exact: true }).check();
     await page.getByRole('textbox', { name: 'Daily update', exact: true }).fill('Working on these together.');

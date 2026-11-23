@@ -177,6 +177,12 @@ export function MyWeek({ copyEnabled = false, privacyEnabled = false, targetEnab
       if (generation.current !== current) return;
       const source = previous.plans.at(-1)?.goals ?? [];
       if (!source.length) { setCopyMessage('No goals to copy from last week.'); return; }
+      if (!privacyEnabled && source.some(goal => goal.visibility && goal.visibility !== 'team')) {
+        setCopyError('These goals have sharing choices that cannot currently be copied. Your current week has not changed.'); return;
+      }
+      if (!targetEnabled && source.some(goal => goal.links.some(link => link.kind === 'focus' && link.target))) {
+        setCopyError('These goals have specific focus links that cannot currently be copied. Your current week has not changed.'); return;
+      }
       const existing = currentGoals.current.filter(goal => goal.id || currentStatuses.current[goal.key] || goal.text.trim() || goal.description?.trim() || goal.links.length);
       if (existing.length + source.length > 10) {
         setCopyError('Copying would exceed the limit of 10 goals. Remove some goals before trying again.'); return;

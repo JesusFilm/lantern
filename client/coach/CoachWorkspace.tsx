@@ -4,6 +4,7 @@ import type { PositionFocus } from "../../shared/focus.js";
 import type { SessionView } from "../../shared/access.js";
 import { objectiveTypes } from "../workspace/ObjectiveType.js";
 import { FocusDocument } from "../workspace/FocusDocument.js";
+import { FocusWeeklyWork } from "../workspace/FocusWeeklyWork.js";
 import { FocusProgress } from "../workspace/FocusProgress.js";
 import { formatFocusDate } from "../workspace/focusDate.js";
 import { api } from "../workspace/api.js";
@@ -57,9 +58,9 @@ export function CoachWorkspace({
   const activityEnabled = session.department?.role === "career-lead" && session.features.includes("review-activity");
   const activity = useReviewActivity(lead && activityEnabled);
   const [records, setRecords] = useState<CoachRecord[]>([]),
-    [selected, setSelected] = useState(focusId || "");
+    [selected, setSelected] = useState(focusId || (lead ? new URLSearchParams(location.search).get("reviewFocus") : "") || "");
   const [view, setView] = useState<"home" | "request" | "review">(
-    confirmedView ? "review" : focusId ? "request" : "home",
+    confirmedView || lead && new URLSearchParams(location.search).has("reviewFocus") ? "review" : focusId ? "request" : "home",
   );
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(""),
@@ -170,6 +171,10 @@ export function CoachWorkspace({
   }
   function review(r: CoachRecord) {
     if (!canLeaveNote()) return;
+    if (lead) {
+      const url = new URL(location.href); url.searchParams.set("reviewFocus", r.focus.id); url.searchParams.delete("view");
+      history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+    }
     setSelected(r.focus.id);
     setView("review");
     setCompose(false);
@@ -369,6 +374,8 @@ export function CoachWorkspace({
             if (!canLeaveNote()) return;
             setNote("");
             setView("home");
+            const url = new URL(location.href); url.searchParams.delete("reviewFocus"); url.searchParams.delete("view");
+            history.replaceState(history.state, "", url.pathname + url.search + url.hash);
             void refresh();
           }}
         >
@@ -476,9 +483,9 @@ export function CoachWorkspace({
                 </details>
               )}
               {old && comparison(old, request.document)}
-              {locked ? <FocusProgress weeklyLinksEnabled={session.features.includes("weekly-focus-links")} key={record.focus.id} focus={record.focus} memberId={record.memberId} enabled={session.features.includes("focus-progress")}>
+              {locked ? <FocusProgress weeklyLinksEnabled={session.features.includes("weekly-updates") && session.features.includes("weekly-focus-links")} key={record.focus.id} focus={record.focus} memberId={record.memberId} enabled={session.features.includes("focus-progress")}>
                 <FocusDocument focus={request.document} />
-              </FocusProgress> : <FocusDocument focus={request.document} />}
+              </FocusProgress> : <><FocusDocument focus={request.document} />{session.features.includes("weekly-updates") && session.features.includes("weekly-focus-links") && <FocusWeeklyWork focusId={record.focus.id}/>}</>}
               {!locked && (
                 <>
                 {record.focus.version !== request.document.version && <p className="cp-muted">This focus has changed since review was requested. Request review of the latest saved version before confirming.</p>}

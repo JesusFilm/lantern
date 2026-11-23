@@ -44,7 +44,7 @@ function goalLink(value: unknown): WeeklyGoalLinkDraft {
 }
 function goalDraft(value: unknown): WeeklyGoalDraft {
   object(value, ['id', 'text', 'description', 'links', 'completed', 'visibility']);
-  if (value.visibility !== undefined && !['team','lead','private'].includes(String(value.visibility))) throw new AccessError(400, 'Choose who can see this goal.');
+  if (value.visibility !== undefined && (typeof value.visibility !== 'string' || !['team','lead','private'].includes(value.visibility))) throw new AccessError(400, 'Choose who can see this goal.');
   if (value.description !== undefined && (typeof value.description !== 'string' || value.description.length > maxWeeklyGoalDescriptionLength))
     throw new AccessError(400, 'Goal descriptions must be Markdown text of up to 20,000 characters.');
   if (value.completed !== undefined && typeof value.completed !== 'boolean')
