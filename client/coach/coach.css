@@ -313,3 +313,5 @@
     animation: none;
   }
 }
+
+.coach-workspace .review-activity-heading { margin: 24px 0 8px; font-size: 14px; color: var(--accent); }

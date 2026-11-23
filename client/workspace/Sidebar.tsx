@@ -68,14 +68,14 @@ export function Sidebar({ session, activePage, onNavigate, hrefForPage }: {
       {mobileMenu && <button type="button" className="mobile-menu-close" aria-label="Close menu" onClick={() => setMenuOpen(false)}><X size={22} /></button>}
     </div>
     <nav id="main-navigation" aria-label="Main navigation">
-      {items.map(({ id, label, icon: Icon }) => <a key={id} href={hrefForPage(id)} aria-label={label} title={collapsed ? label : undefined} aria-current={activePage === id ? "page" : undefined} className={`sidebar-link${activePage === id ? " active" : ""}`} onClick={event => {
+      {items.map(({ id, label, icon: Icon }) => <a key={id} href={hrefForPage(id)} aria-label={label} aria-describedby={id === "reviews" && activity.items.length ? "review-unread-count" : undefined} title={collapsed ? label : undefined} aria-current={activePage === id ? "page" : undefined} className={`sidebar-link${activePage === id ? " active" : ""}`} onClick={event => {
         if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
         onNavigate(id); setMenuOpen(false);
       }}>
         <Icon size={20} strokeWidth={1.7} aria-hidden="true" />
         <span className="sidebar-label">{label}</span>
-        {id === 'reviews' && activity.items.length > 0 && <span className="review-unread-count" aria-label={`${activity.items.length} ${activity.items.length === 1 ? 'focus' : 'focuses'} with unread review activity`}>{activity.items.length}</span>}
+        {id === 'reviews' && activity.items.length > 0 && <span id="review-unread-count" className="review-unread-count" aria-label={`${activity.items.length} ${activity.items.length === 1 ? 'focus' : 'focuses'} with unread review activity`}>{activity.items.length > 99 ? '99+' : activity.items.length}</span>}
       </a>)}
     </nav>
     {activity.error && <p className="sidebar-activity-error">Review activity unavailable. <button className="link" onClick={activity.retry}>Retry</button></p>}
