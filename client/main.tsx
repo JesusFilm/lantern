@@ -187,7 +187,7 @@ function App() {
               ) : page === "team" ? (
                 session.features?.includes("team-updates") ? <MyTeam /> : <section><h1>Page unavailable</h1></section>
               ) : page === "week" ? (
-                session.features?.includes("weekly-updates") ? <MyWeek /> : <section><h1>Page unavailable</h1></section>
+                session.features?.includes("weekly-updates") ? <MyWeek copyEnabled={session.features.includes("weekly-goal-copy")} /> : <section><h1>Page unavailable</h1></section>
               ) : page === "focuses" ||
                 (page === "department" &&
                   session.department.role !== "career-lead") ? (

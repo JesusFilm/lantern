@@ -18,6 +18,7 @@ test('editable draggable goals share one page with a saved entry for today', asy
     await page.goto(f.origin + '/?page=week&week=2026-11-16');
     await expect(page.getByRole('textbox', { name: 'Weekly goal 1', exact: true })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'My week sections' })).toHaveCount(0);
+    await expect(page.getByRole('radio').and(page.locator(':checked'))).toHaveCount(0);
     await page.getByRole('textbox', { name: 'Weekly goal 1', exact: true }).fill('Ship the sign-in flow');
     await page.getByRole('button', { name: 'Add Goal', exact: true }).click();
     await page.getByRole('textbox', { name: 'Weekly goal 2', exact: true }).fill('Investigate upload delays');
@@ -28,6 +29,8 @@ test('editable draggable goals share one page with a saved entry for today', asy
     await expect(page.getByRole('button', { name: 'Continue to daily update', exact: true })).toHaveCount(0);
     await expect(page.getByRole('checkbox')).toHaveCount(0);
     await expect.poll(async () => (await (await f.request('member', '/api/weeks/2026-11-16')).json()).plans.at(-1)?.goals.length).toBe(2);
+    await expect(page.getByRole('radio').and(page.locator(':checked'))).toHaveCount(0);
+    assert.deepEqual((await (await f.request('member', '/api/weeks/2026-11-16')).json()).updates, []);
     const goals = page.getByRole('region', { name: 'Weekly goals', exact: true });
     const update = page.getByRole('region', { name: 'Daily update', exact: true });
     await expect(goals).toBeVisible(); await expect(update).toBeVisible();

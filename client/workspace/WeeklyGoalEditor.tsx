@@ -21,10 +21,10 @@ export function WeeklyGoalLinks({ goal, showDescription = true }: { goal: Weekly
     <a href={link.kind === 'focus' ? '/?focus=' + encodeURIComponent(link.focusId) : link.url} target="_blank" rel="noopener noreferrer">{workLabels[link.kind]}: {link.kind === 'focus' ? link.title : link.label}</a>
   </li>)}</ul> : null}</>;
 }
-export function WeeklyGoalEditor({ goal, number, removable, onChange, onRemove, focuses, focusError, retryFocuses, saveError, onRetrySave, status, statusKey, onStatusChange }: {
+export function WeeklyGoalEditor({ goal, number, removable, onChange, onRemove, focuses, focusError, retryFocuses, saveError, onRetrySave, status, statusKey, onStatusChange, statusDisabled = false }: {
   goal: WeeklyGoalDraft; number: number; removable: boolean; onChange: (goal: WeeklyGoalDraft) => void;
   onRemove: () => void; focuses: PositionFocus[] | undefined; focusError: string; retryFocuses: () => void;
-  status: GoalStatus | undefined; statusKey: string; onStatusChange: (status: GoalStatus) => void;
+  statusDisabled?: boolean; status: GoalStatus | undefined; statusKey: string; onStatusChange: (status: GoalStatus) => void;
   saveError?: string; onRetrySave?: () => void;
 }) {
   const [editing, setEditing] = useState<number | 'new' | null>(null);
@@ -69,7 +69,7 @@ export function WeeklyGoalEditor({ goal, number, removable, onChange, onRemove, 
         <button type="button" className="week-chip-remove" aria-label={`Remove work link ${index + 1} from goal ${number}`} onClick={() => { onChange({ ...goal, links: goal.links.filter((_, i) => i !== index) }); }}><X size={13} /></button>
       </div>)}
     </div>}
-    <GoalStatusFooter name={statusKey} title={goal.text || `goal ${number}`} status={status} onChange={onStatusChange} />
+    <GoalStatusFooter disabled={statusDisabled} name={statusKey} title={goal.text || `goal ${number}`} status={status} onChange={onStatusChange} />
     {editing !== null && <WeeklyLinkDialog initial={editing === 'new' ? undefined : goal.links[editing]}
       focuses={focuses} focusError={focusError} retryFocuses={retryFocuses} onClose={() => setEditing(null)}
       onLink={link => onChange({ ...goal, links: editing === 'new' ? [...goal.links, link] : goal.links.map((current, index) => index === editing ? link : current) })} />}

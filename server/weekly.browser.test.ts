@@ -79,7 +79,8 @@ test('weekly goals and daily updates can be edited together without replacing ei
   const browser = await chromium.launch();
   try {
     await f.request('member', '/api/weeks/2026-11-16/plans', 'POST', { version: 0, goals: goalDrafts('Original weekly goal') });
-    const context = await browser.newContext();
+    const context = await browser.newContext({ timezoneId: 'Pacific/Auckland' });
+    await context.clock.setFixedTime(new Date('2026-11-19T10:00:00+13:00'));
     await context.addCookies([{ name: 'lantern-session', value: 'member', url: f.origin }]);
     const page = await context.newPage(); page.setDefaultTimeout(5000);
     await page.goto(f.origin + '/?page=week&week=2026-11-16');
