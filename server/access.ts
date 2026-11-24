@@ -1,4 +1,5 @@
 import type {CoachProvider} from './coach-provider.js';
+import {reviewActivityRoutes} from './review-activity-http.js';
 import {coachRoutes} from './coach-http.js';
 import { registerSession } from './accounts.js';
 import { isAdmitted, normalizeEmail } from './admission.js';
@@ -108,14 +109,15 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     const user = await currentUser(req);
     res.json({ coachAvailable: !!config.coach && featureEnabled(features, 'coach', user?.email), features: enabledFeatures(features, user?.email), user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !config.hostingOnly && !!config.provider, localAccess: !!config.localUserId });
   });
+  router.use(reviewActivityRoutes(db, requireUser, features));
   router.use(coachRoutes(db, requireUser, config.coach, (user) => featureEnabled(features, 'coach', user.email), (user) => featureEnabled(features, 'coach-redesign', user.email)));
   router.use(focusRoutes(db, requireUser, features));
   router.use(directionRoutes(db, requireUser));
   router.use(weeklyRoutes(db, requireUser, features));
-  router.use(teamWeeklyRoutes(db, requireUser, features));
+  router.use(teamWeeklyRoutes(db, requireUser));
   router.use(teamAPIRoutes(db, requireUser, features, config.githubAvatars, config.localUserId));
-  router.use(githubAvatarRoutes(db, requireUser, features, config.githubAvatars));
-  router.use(githubRoutes(db, requireUser, features, config.origin, config.github));
+  router.use(githubAvatarRoutes(db, requireUser, config.githubAvatars));
+  router.use(githubRoutes(db, requireUser, config.origin, config.github));
   router.patch('/api/account', async (req, res) => {
     const user = await requireUser(req);
     if (!req.body || Object.keys(req.body).some(k => k !== 'name') || typeof req.body.name !== 'string' || !req.body.name.trim() || req.body.name.trim().length > 100) throw new AccessError(400, 'Enter a display name of 1–100 characters.');

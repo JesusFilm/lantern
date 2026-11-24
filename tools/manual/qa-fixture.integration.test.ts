@@ -170,7 +170,7 @@ test("provision two registered QA participants and preserve unrelated acceptance
 });
 
 
-for (const reference of ["note", "read receipt"] as const) test(`reset preserves an outside ${reference} committed concurrently with its ownership checks`, async () => {
+for (const reference of ["note", "read receipt", "request read receipt"] as const) test(`reset preserves an outside ${reference} committed concurrently with its ownership checks`, async () => {
   const f = await coachingFixture();
   const writer = await f.migration.connect();
   let resetting: Promise<unknown> | undefined;
@@ -188,12 +188,14 @@ for (const reference of ["note", "read receipt"] as const) test(`reset preserves
     const existingNote = (await f.admin.query("SELECT id FROM focus_review_notes WHERE request_id=$1", [request.id])).rows[0].id;
     if (reference === "note")
       await writer.query("INSERT INTO focus_review_notes(id,request_id,author_id,body) VALUES($1,$2,$3,'Outside note')", [noteId, request.id, f.ids.outsider]);
+    else if (reference === "request read receipt")
+      await writer.query("INSERT INTO focus_request_reads(request_id,user_id) VALUES($1,$2)", [request.id, f.ids.outsider]);
     else
       await writer.query("INSERT INTO focus_note_reads(note_id,user_id) VALUES($1,$2)", [existingNote, f.ids.outsider]);
     // The writer bypasses the application's cooperative advisory lock. Wait for
     // the reset's real FK/row lock conflict, then commit the new reference.
     resetting = resetQaDepartment(f.migration, options);
-    const rejected = assert.rejects(resetting, reference === "note" ? /unexpected note author/i : /unexpected note reader/i);
+    const rejected = assert.rejects(resetting, reference === "note" ? /unexpected note author/i : reference === "request read receipt" ? /unexpected request reader/i : /unexpected note reader/i);
     const deadline = Date.now() + 5000;
     while (!(await f.admin.query("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE $1=ANY(pg_blocking_pids(pid))) AS waiting", [pid])).rows[0].waiting) {
       assert.ok(Date.now() < deadline, "reset must reach the concurrent writer");
@@ -203,6 +205,8 @@ for (const reference of ["note", "read receipt"] as const) test(`reset preserves
     await rejected;
     if (reference === "note")
       assert.equal((await f.admin.query("SELECT count(*)::int n FROM focus_review_notes WHERE id=$1", [noteId])).rows[0].n, 1);
+    else if (reference === "request read receipt")
+      assert.equal((await f.admin.query("SELECT count(*)::int n FROM focus_request_reads WHERE request_id=$1 AND user_id=$2", [request.id, f.ids.outsider])).rows[0].n, 1);
     else
       assert.equal((await f.admin.query("SELECT count(*)::int n FROM focus_note_reads WHERE note_id=$1 AND user_id=$2", [existingNote, f.ids.outsider])).rows[0].n, 1);
     assert.equal((await f.admin.query("SELECT count(*)::int n FROM position_focuses WHERE id=$1", [request.focus_id])).rows[0].n, 1);

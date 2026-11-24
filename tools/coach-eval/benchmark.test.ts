@@ -55,7 +55,29 @@ test("every benchmark scenario has a category, a contract and a unique id", () =
   assert.equal(new Set(benchmarkScenarios.map(s => s.id)).size, benchmarkScenarios.length);
   for (const category of ["vague", "rewording", "proficient", "adversarial"])
     assert.ok(benchmarkScenarios.filter(s => s.category === category).length >= 3, category);
-  for (const s of benchmarkScenarios) assert.ok(s.contract.verdict || s.contract.includes?.length, s.id);
+  for (const s of benchmarkScenarios) assert.ok(s.contract.verdict || s.contract.includes?.length || s.contract.improvedOrExplained?.length || s.contract.requiresFeedback, s.id);
+});
+
+test("the uncertain existing objective must either use the answer or explain the unchanged wording", () => {
+  const scenario = benchmarkScenarios.find(s => s.id === "bench-vague-existing-testing")!;
+  const notMet = { status: "needs_attention" as const, note: "Describe the work." };
+  const check = (objective: string, concern: string) => {
+    const t = run({ objective, concern, assessment: { purpose: notMet, people: notMet, alignment: notMet } }, []);
+    const second = t.turns[2]!;
+    if (second.type === "coach") second.context = { ...second.context, answers: [{ question: "Who?", answer: "People who don't yet know Jesus." }] };
+    return evaluate({ ...t, scenario: scenario.id }, scenario).assertions.filter(a => !a.passed).map(a => a.name);
+  };
+  assert.deepEqual(check("Test the app.", ""), []);
+  assert.deepEqual(check("stuff", "The coach could not improve this objective yet."), []);
+  assert.ok(check("stuff", "Who benefits?").some(name => name.includes("or explains no improvement")));
+  assert.ok(check("Test the website.", "The coach could not improve this objective yet.").some(name => name.includes("or explains no improvement")));
+});
+
+test("the existing-objective scenario requires the member's answer to reach the coach", () => {
+  const scenario = benchmarkScenarios.find(s => s.id === "bench-vague-existing-testing")!;
+  const t = run({ objective: "stuff", concern: "The coach could not improve this objective yet.", assessment: { purpose: { status: "needs_attention", note: "Work?" }, people: { status: "needs_attention", note: "Who?" }, alignment: { status: "uncertain", note: "Why?" } } }, []);
+  const fails = evaluate(t, scenario).assertions.filter(a => !a.passed).map(a => a.name);
+  assert.ok(fails.includes("member answer sent to coach"));
 });
 
 test("embedded instructions fail only when the coach writes them, and never pass as ready", () => {
@@ -104,16 +126,27 @@ test("the committed gate allows Qwen's usual variation but not a lost kind of me
 test("the gate measures drops from the baseline as well as the absolute floor", () => {
   const perfect = sample();
   const threeFailures = sample(Object.fromEntries(benchmarkScenarios.slice(0, 3).map(s => [s.id, 2])));
-  // 36 of 39 runs (92%) clears the floor and is within the allowed drop from 100%.
+  // Three scattered failures clear the floor and stay within the allowed drop.
   assert.deepEqual(failedGate(threeFailures, perfect), []);
-  const lower = sample(Object.fromEntries(benchmarkScenarios.slice(0, 9).map(s => [s.id, 2])));
-  // 30 of 39 (77%), spread so every scenario keeps its majority, is below the floor and more than the allowed drop.
+  const failuresToCrossFloor = Math.floor(benchmarkScenarios.length * 3 * (1 - gate.minRunPassRate)) + 1;
+  const lower = sample(Object.fromEntries(benchmarkScenarios.slice(0, failuresToCrossFloor).map(s => [s.id, 2])));
+  // Scattered failures leave every scenario with a majority, but cross both thresholds.
   assert.deepEqual(failedGate(lower, perfect).sort(), ["drop from baseline", "overall runs"]);
   assert.ok(!failedGate(lower).includes("drop from baseline"), "without a baseline only the floor applies");
   const md = renderBenchmark(lower, perfect).markdown;
   assert.match(md, /Gate: FAIL/);
   assert.match(md, /tools\/coach-eval\/gate\.json/);
   assert.equal(renderBenchmark(lower, perfect).passed, false);
+});
+
+test("the baseline drop compares only scenarios present in both results", () => {
+  const current = sample();
+  const added = current.scenarios[0]!.id;
+  const baseline = sample({}, [added]);
+  const reduced = { ...current, scenarios: current.scenarios.map(s => s.id === added ? { ...s, passes: 0 } : { ...s, passes: 2 }) };
+  const drop = applyGate(reduced, gate, baseline).checks.find(c => c.name === "drop from baseline")!;
+  assert.match(drop.actual, /^67% vs baseline 100%/);
+  assert.equal(drop.passed, false);
 });
 
 test("runs the harness could not record count as failures, so a partial sample cannot pass", () => {
@@ -174,4 +207,123 @@ test("a goal that rewords the chosen action still keeps it", () => {
   const names = evaluate(t, gospel).assertions.filter(a => !a.passed).map(a => a.name);
   assert.ok(!names.includes("goals keep the chosen action"), "a reworded action is kept");
   assert.ok(!names.includes("feedback names no new people"), "a generic stakeholder example names no one");
+});
+
+
+test("feedback answers are required and are not counted as questions before the draft", () => {
+  const scenario = benchmarkScenarios.find(s => s.id === "bench-vague-feedback-details")!;
+  const t = run({});
+  const revision = { type: "coach" as const, step: "refine" as const, stage: "objective" as const, context: { ...context, answer: "It will help online seekers find gospel videos." }, ok: true, elapsedMs: 1, attempts: [] };
+  t.turns.push({ type: "member", step: "answer", text: "Online seekers" }, revision);
+  const assertions = evaluate(t, scenario).assertions;
+  assert.equal(assertions.find(a => a.name === "feedback sent to coach")?.passed, true);
+  assert.equal(assertions.find(a => a.name === "feedback includes member details")?.passed, true);
+  assert.equal(assertions.find(a => a.name === "at most 1 question before the draft")?.passed, true);
+  revision.context.answer = "Online seekers";
+  assert.equal(evaluate(t, scenario).assertions.find(a => a.name === "feedback includes member details")?.passed, false);
+  t.turns.pop();
+  assert.equal(evaluate(t, scenario).assertions.find(a => a.name === "feedback sent to coach")?.passed, false);
+});
+
+test("member-visible coach text cannot expose internal objective type names", () => {
+  const t = run({});
+  const first = t.turns[0]!;
+  assert.equal(first.type, "coach");
+  if (first.type !== "coach") return;
+  first.suggestion = { question: "I recommend personal-development. Kind is currently normal." };
+  assert.ok(evaluate(t, gospel).assertions.some(a => a.name === "coach uses member-facing objective type names" && !a.passed));
+  first.suggestion = { question: "What kind of tests do you run during normal working hours?" };
+  assert.equal(evaluate(t, gospel).assertions.find(a => a.name === "coach uses member-facing objective type names")?.passed, true);
+  first.suggestion = { question: "What kind is best for smoke testing?" };
+  assert.equal(evaluate(t, gospel).assertions.find(a => a.name === "coach uses member-facing objective type names")?.passed, true);
+});
+
+test("the type-name check permits the member's own exact objective wording", () => {
+  const t = run({});
+  const first = t.turns[0]!;
+  assert.equal(first.type, "coach");
+  if (first.type !== "coach") return;
+  first.context = { ...first.context, work: "Maintain personal-development scripts for trainers." };
+  first.suggestion = { objective: "Maintain personal-development scripts for trainers." };
+  assert.equal(evaluate(t, gospel).assertions.find(a => a.name === "coach uses member-facing objective type names")?.passed, true);
+});
+
+test("the type-name check distinguishes type references from a member's work", () => {
+  const t = run({});
+  const first = t.turns[0]!;
+  assert.equal(first.type, "coach");
+  if (first.type !== "coach") return;
+  const passed = () => evaluate(t, gospel).assertions.find(a => a.name === "coach uses member-facing objective type names")?.passed;
+  first.suggestion = { question: "Select normal for the objective type." };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "You chose normal.", options: ["normal", "leadership"] };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Which test mode do you prefer? Choose normal." };
+  assert.equal(passed(), true);
+  first.suggestion = { question: "What kind of testing do you prefer? Choose normal." };
+  assert.equal(passed(), true);
+  first.suggestion = { question: "The kind should be personal-development." };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Would you like to change it in the editor?", recommendedKind: "personal-development" };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Your type is Contribution; change it in the editor." };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Your objective is normal for this stage." };
+  assert.equal(passed(), true);
+  first.suggestion = { question: "The objective is normal. Would personal-development be a better type?" };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Ensure the deployment type is normal before releases." };
+  assert.equal(passed(), true);
+  first.suggestion = { question: "Kind is the name of our test environment." };
+  assert.equal(passed(), true);
+  first.suggestion = { question: "What kind of video is this? Change it in the editor." };
+  assert.equal(passed(), true);
+  first.context = { ...first.context, work: "I maintain personal-development scripts and the normal type of deployment." };
+  first.suggestion = { objective: "Maintain the personal-development scripts and the normal type of deployment for trainers." };
+  assert.equal(passed(), true);
+  first.suggestion = { question: "How do you maintain the personal-development scripts?" };
+  assert.equal(passed(), true);
+  first.suggestion = { question: "You chose normal and I suggest personal-development." };
+  first.context = { ...first.context, work: "I maintain scripts." };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Which type fits?", options: ["normal", "leadership"] };
+  assert.equal(passed(), false);
+  first.context = { ...first.context, work: "Set `kind` to normal for API payloads.", action: "Check normal is selected for deployment." };
+  first.suggestion = { objective: "Set `kind` to normal for all API payloads.", goal: "By 30 April 2027, verify normal is selected for deployment." };
+  assert.equal(passed(), true);
+  first.context = { ...first.context, work: "Update API payloads containing recommendedKind." };
+  first.suggestion = { objective: "Update the recommendedKind field for every client." };
+  assert.equal(passed(), true);
+  first.context = { ...first.context, work: "Maintain personal-development scripts and check the normal mode." };
+  first.suggestion = { question: "Kind is currently normal; I recommend personal-development." };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "The kind should be personal-development." };
+  assert.equal(passed(), false);
+  first.context = { ...first.context, work: "Learn Playwright during normal working hours." };
+  first.suggestion = { question: "normal is currently selected", recommendedKind: "personal-development" };
+  assert.equal(passed(), false);
+  first.context = { ...first.context, work: "Maintain the normal test kind for deployments." };
+  first.suggestion = { objective: "Ensure the test kind is normal before each deployment", question: "The test kind is normal; how do you verify it?" };
+  assert.equal(passed(), true);
+  first.context = { ...first.context, work: "What kind of tests run during normal working hours?" };
+  first.suggestion = { question: "Kind: normal; I recommend personal-development.", recommendedKind: "personal-development" };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Kind: normal. What would you like to improve?" };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Your objective type is the normal type.", recommendedKind: "personal-development" };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Your objective type is currently set to normal.", recommendedKind: "personal-development" };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "Normal is selected for your objective.", recommendedKind: "personal-development" };
+  assert.equal(passed(), false);
+  first.suggestion = { question: "normal is currently selected" };
+  assert.equal(passed(), false);
+  first.context = { ...first.context, work: "Maintain the normal test kind while learning Playwright." };
+  first.suggestion = { question: "The test kind is normal; your objective type is Contribution. I recommend Personal development.", recommendedKind: "personal-development" };
+  assert.equal(passed(), true);
+  first.suggestion = { question: "The test kind is normal; your kind is normal. I recommend personal-development.", recommendedKind: "personal-development" };
+  assert.equal(passed(), false);
+  first.context = { ...first.context, work: "Keep releases reliable." };
+  first.suggestion = { question: "The runtime kind is normal. Is normal selected for the service mode?", recommendedKind: "personal-development" };
+  assert.equal(passed(), true);
 });

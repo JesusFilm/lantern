@@ -97,6 +97,6 @@ account can issue and use tokens without an email approval, matching local
 browser access. This exception is unavailable in production.
 
 Tokens are stored as SHA-256 digests, never
-as recoverable plaintext. Both `team-api` and `team-updates` must be enabled for
-the issuing account; both default to hidden in production. Migration 17 adds
+as recoverable plaintext. The `team-api` flag must be enabled for
+the issuing account; it defaults to hidden in production. Migration 17 adds
 the token table and restricted runtime grants; retain it when rolling back the app.

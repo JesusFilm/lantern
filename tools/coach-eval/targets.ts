@@ -140,7 +140,7 @@ export function needsOpenRouter(target: Target) {
 }
 
 /** Runs the shipped server coaching turn: prompt, provider, response contract and follow-up steps. */
-export function coachCaller(target: Target, env: EvalEnvironment, redesigned = false, department = direction): CoachCall {
+export function coachCaller(target: Target, env: EvalEnvironment, redesigned = false, department = direction, today?: string): CoachCall {
   const config = providerConfig(target, env);
   const ids = department.initiatives.filter((i) => !i.archived).map((i) => i.id);
   return async (stage, context) => {
@@ -150,7 +150,7 @@ export function coachCaller(target: Target, env: EvalEnvironment, redesigned = f
     const models = { primary: config.primary.model, fallback: config.fallback.model };
     const started = performance.now();
     const ask = (next: CoachStage, nextContext: CoachCheckpoint, signal?: AbortSignal) =>
-      provider.suggest(coachPrompt(department, redesigned, next), JSON.stringify({ stage: next, context: nextContext }), (value: unknown) => {
+      provider.suggest(today ? coachPrompt(department, redesigned, next).replace(/Current date: \d{4}-\d{2}-\d{2}/, `Current date: ${today}`) : coachPrompt(department, redesigned, next), JSON.stringify({ stage: next, context: nextContext }), (value: unknown) => {
         const attempt = attempts.at(-1);
         try {
           const result = validateSuggestion(next, value, ids, redesigned, nextContext);

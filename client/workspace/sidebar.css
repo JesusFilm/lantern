@@ -142,3 +142,9 @@
 }
 
 .sidebar nav a {display:flex;align-items:center;box-sizing:border-box;width:100%;margin:5px 0;text-align:left;text-decoration:none;background:transparent;}
+
+.review-unread-count { margin-left: auto; min-width: 22px; padding: 1px 6px; border-radius: 12px; background: var(--accent); color: white; font-size: 12px; text-align: center; }
+.sidebar--collapsed nav a:has(.review-unread-count) { position: relative; }
+.sidebar--collapsed .review-unread-count { position: absolute; top: 3px; right: 2px; min-width: 20px; padding: 1px 4px; font-size: 11px; line-height: 18px; }
+.sidebar-activity-error { padding: 0 16px; font-size: 12px; }
+.review-new { color: var(--accent); font-size: 13px; font-weight: 600; }

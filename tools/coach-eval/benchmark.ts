@@ -21,6 +21,12 @@ export interface Contract {
   maxQuestions?: number;
   /** The visible objective must contain each pattern, usually facts from the member's answers. */
   includes?: Array<{ label: string; pattern: RegExp }>;
+  /** For uncertain input, allow unchanged wording only with an explicit explanation. */
+  improvedOrExplained?: Array<{ label: string; pattern: RegExp }>;
+  /** The member's answer must be included in a subsequent coach request. */
+  requiresAnswer?: boolean;
+  requiresFeedback?: boolean;
+  feedbackIncludes?: RegExp;
   /** Every goal must contain each pattern, usually words from the member's chosen action. */
   goalIncludes?: Array<{ label: string; pattern: RegExp }>;
   /** Coach-written objective wording and goals must not contain these. The member's own words shown back are exempt. */
@@ -29,6 +35,7 @@ export interface Contract {
   /** ready: all three checks met; not ready: at least one check not met. */
   verdict?: "ready" | "not ready";
   recommendedKind?: ObjectiveKind;
+  selectedKind?: ObjectiveKind;
   goals?: number;
 }
 
@@ -43,6 +50,54 @@ const mission = /\b(mission|connect\w*|relat\w*|align\w*|support\w*|work|role|jo
 const base = { issues: [] as string[], focus: cycle, goals: [] as Scenario["goals"], endAtObjective: true };
 
 export const benchmarkScenarios: BenchmarkScenario[] = [
+  {
+    ...base, id: "bench-personal-growth-no-team", category: "rewording", role: "QA engineer", issues: ["#205"],
+    summary: "Personal growth is its own benefit, without invented team or release outcomes.",
+    work: "I want to get better at test automation with Playwright.",
+    member: { replies: [{ when: /./, say: "I want to improve my own Playwright testing skills." }] },
+    typeChoice: "personal-development",
+    expect: { criteria: ["The member's own learning satisfies the beneficiary check; no team outcome is invented."] },
+    contract: {
+      includes: [{ label: "Playwright", pattern: /playwright/i }],
+      excludes: [{ label: "invented team or release outcome", pattern: /\b(team|release|releases|colleagues|engineers)\b/i }],
+      checks: { purpose: "met", people: "met" },
+    },
+  },
+  {
+    ...base, id: "bench-vague-existing-testing", category: "vague", role: "QA engineer", issues: ["#191"],
+    summary: "Improve a vague existing objective using the member's answer.",
+    existing: { objective: "stuff", kind: "normal" },
+    member: { answers: ["not sure, may be testing, benefits app"] },
+    respondToFeedback: true,
+    typeChoice: "keep",
+    expect: { criteria: ["The coach uses the testing and app details, or explains that it could not improve the wording."] },
+    contract: { maxQuestions: 1, requiresAnswer: true, improvedOrExplained: [
+      { label: "testing", pattern: /test/i },
+      { label: "app", pattern: /app/i },
+    ] },
+  },
+  {
+    ...base, id: "bench-vague-existing-answer", category: "vague", role: "QA engineer", issues: ["#191"],
+    summary: "Improve a vague existing objective after a clear answer.",
+    existing: { objective: "stuff", kind: "normal" },
+    member: { answers: ["I test the app so users have fewer bugs."] },
+    respondToFeedback: true,
+    typeChoice: "keep",
+    expect: { criteria: ["The improved objective uses the member's testing and user details."] },
+    contract: { maxQuestions: 1, requiresAnswer: true, includes: [
+      { label: "testing", pattern: /test/i },
+      { label: "users", pattern: /user/i },
+    ] },
+  },
+  {
+    ...base, id: "bench-vague-feedback-details", category: "vague", role: "Developer", issues: ["#194"],
+    summary: "Add audience details to feedback on a vague application objective.",
+    work: "I want to build an application.",
+    member: { answers: ["I'm not sure."] },
+    respondToFeedback: true, feedbackDetail: "It will help online seekers find gospel videos.", typeChoice: "normal",
+    expect: { criteria: ["Details entered in feedback reach the coach before continuing."] },
+    contract: { maxQuestions: 1, requiresFeedback: true, feedbackIncludes: /^It will help online seekers find gospel videos\.$/i },
+  },
   {
     ...base, id: "bench-vague-gospel-video", category: "vague", role: "Developer",
     summary: "One-line product idea; the member supplies the audience when asked.",
@@ -102,6 +157,15 @@ export const benchmarkScenarios: BenchmarkScenario[] = [
     },
   },
   {
+    ...base, id: "bench-rewording-objective-type-names", category: "rewording", role: "QA engineer", issues: ["#193"],
+    summary: "A member chooses Contribution while describing learning Playwright.",
+    work: "I want to learn Playwright so I can automate my regression testing.",
+    member: { answers: ["I test our application and want to automate regression checks."] },
+    typeChoice: "normal",
+    expect: { criteria: ["Use member-facing objective type names throughout the coaching text."] },
+    contract: { maxQuestions: 1, recommendedKind: "personal-development", includes: [{ label: "Playwright or test automation", pattern: /playwright|automat/i }] },
+  },
+  {
     ...base, id: "bench-rewording-subtitles", category: "rewording", role: "Translator",
     summary: "A rambling but complete description of translation work.",
     work: "So basically I translate our videos into Swahili and Amharic, mostly the subtitles, and the problem is churches in East Africa keep telling us the subtitles come out late so they can't use them for their outreach events. I'd like to fix that somehow this year.",
@@ -143,7 +207,7 @@ export const benchmarkScenarios: BenchmarkScenario[] = [
     contract: {
       maxQuestions: 1,
       includes: [{ label: "new engineers or mentoring", pattern: /new (engineers|team members|developers)|mentor/i }],
-      recommendedKind: "leadership", verdict: "ready",
+      recommendedKind: "leadership", selectedKind: "leadership", verdict: "ready",
     },
   },
   {
@@ -265,10 +329,19 @@ const introduced = (text: string, pattern: RegExp, own: string) =>
 
 /** Counts questions the coach asked before showing the first draft. */
 function draftQuestions(transcript: Transcript) {
-  let count = 0;
-  for (let i = 1; i < transcript.turns.length; i++) {
-    const turn = transcript.turns[i]!, previous = transcript.turns[i - 1]!;
-    if (turn.type === "member" && turn.step === "answer" && previous.type === "coach" && previous.stage === "clarify") count++;
+  let count = 0, clarifications = 0, drafted = false;
+  for (let i = 0; i < transcript.turns.length; i++) {
+    const turn = transcript.turns[i]!;
+    if (turn.type === "coach" && turn.stage === "clarify" && turn.suggestion) {
+      clarifications++;
+      const reply = turn.suggestion;
+      if ((reply.objective && reply.ready !== false) || ((!reply.objective || reply.ready === false) && (!reply.question || clarifications > 1))) drafted = true;
+    }
+    if (turn.type === "coach" && turn.step === "refine" && turn.suggestion?.objective) drafted = true;
+    if (!drafted && turn.type === "member" && turn.step === "answer" && i > 0) {
+      const previous = transcript.turns[i - 1]!;
+      if (previous.type === "coach" && (previous.stage === "clarify" || (previous.step === "refine" && !!previous.suggestion?.question))) count++;
+    }
   }
   return count;
 }
@@ -287,6 +360,70 @@ export function evaluate(transcript: Transcript, scenario: BenchmarkScenario): {
   add("completed", transcript.outcome.completed, transcript.outcome.failure);
   add("draft shown", !!objective.trim());
   add("checks shown", !!checks, "No assessment for the visible objective.");
+  if (contract.requiresFeedback) add("feedback sent to coach", transcript.turns.some(turn => turn.type === "coach" && turn.stage === "objective" && !!turn.context.answer?.trim()));
+  if (contract.feedbackIncludes) add("feedback includes member details", transcript.turns.some(turn => turn.type === "coach" && turn.stage === "objective" && contract.feedbackIncludes!.test(turn.context.answer ?? "")));
+  if (contract.selectedKind) add(`selected type ${contract.selectedKind}`, transcript.outcome.kind === contract.selectedKind, transcript.outcome.kind);
+  if (contract.requiresAnswer) {
+    const submitted = transcript.turns.some((turn, i) => turn.type === "member" && turn.step === "answer" &&
+      transcript.turns.slice(i + 1).some(next => next.type === "coach" && next.context.answers.some(a => a.answer === turn.text)));
+    add("member answer sent to coach", submitted);
+  }
+  const coachText = transcript.turns.flatMap(turn => {
+    if (turn.type !== "coach" || !turn.suggestion) return [];
+    const reply = turn.suggestion;
+    const own = [turn.context.work, turn.context.objective, turn.context.action, turn.context.goal, turn.context.answer ?? "", turn.context.title,
+      ...turn.context.answers.map(answer => answer.answer), ...(turn.context.siblings ?? [])];
+    const memberWording = (value: string | undefined) => value && own.some(text => !!text.trim() && text.trim() === value.trim());
+    const memberIdentifier = own.some(text => /\bpersonal[-_]development\b/i.test(text ?? ""));
+    const memberRecommendedKind = own.some(text => /\brecommendedKind\b/i.test(text ?? ""));
+    const memberKind = own.some(text => /(?:`kind`|["']kind["']|\bkind\s*[:=]|\bkind\s+(?:field|key|parameter|property|to)\b|\b(?!(?:what|which|your|the|a|this|that|any|some)\b)[\w-]+\s+kind\b)/i.test(text ?? ""));
+    const memberNormal = own.some(text => /\bnormal\b/i.test(text ?? ""));
+    const draft = (value: string | undefined, memberDraft = false) => {
+      let result = value;
+      result = result?.replace(/\b(?:the|a|an|this|my)\s+(?!(?:current|selected|recommended|objective)\b)(?:[\w-]+\s+){1,3}kind\s+(?:is|was)\s+normal\b/gi, "member field is member mode");
+      result = result?.replace(/\bnormal(?=\s+(?:is\s+)?(?:currently\s+)?selected\s+for\b(?!\s+(?:(?:the|your)\s+)?objective\b))/gi, "member mode");
+      const preserveTechnicalKind = memberKind && memberNormal && (memberDraft || (!reply.recommendedKind && !/personal[-_ ]development|\brecommendedKind\b|\bobjective\s+(?:type|kind)\b/i.test(value ?? "")));
+      const explicitType = !preserveTechnicalKind && (/\b(?:kind|type)\s*(?:is|was|:|=|currently|set to|should be|could be|might be)\s*(?:currently\s+)?(?:set to\s+)?["'`]*(?:the\s+)?(?:normal|Contribution|Personal[-_ ]development|Leadership)\b/i.test(result ?? "") ||
+        (!memberDraft && /\bnormal\s+(?:is\s+)?(?:currently\s+)?selected\b/i.test(result ?? "")));
+      if (memberIdentifier) result = result?.replace(/\bpersonal[-_]development\b/gi, (match, offset: number, all: string) =>
+        /(?:\b(?:recommend|suggest|choose|select)\s+(?:the\s+)?|\b(?:objective\s+type|kind|type)\s*(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?)["'`]*$/i.test(all.slice(0, offset)) && /^["'`]*\s*(?:[.,;!?]|$|objective\b|type\b)/i.test(all.slice(offset + match.length)) ? match : "member identifier");
+      if (memberRecommendedKind) result = result?.replace(/\brecommendedKind\b/gi, "member field");
+      if (memberKind && !explicitType) result = result?.replace(/`?\bkind\b`?/gi, "member field");
+      if (memberNormal && !explicitType) result = result?.replace(/\bnormal\b/gi, "member mode");
+      return result;
+    };
+    return [draft(reply.question), draft(reply.concern), memberWording(reply.objective) ? undefined : draft(reply.objective, true),
+      memberWording(reply.goal && goalText(reply.goal)) ? undefined : draft(reply.goal, true), draft(reply.title, true), draft(reply.review),
+      ...(reply.options ?? []).map(value => draft(value, true)), ...(reply.actions ?? []).map(value => draft(value, true)),
+      ...Object.values(reply.assessment ?? {}).map(check => draft(check.note))].filter((text): text is string => !!text);
+  });
+  const internalTypeNames = [
+    /personal[-_]development|\brecommendedKind\b|`kind`|\bkind\s*[:=]/i,
+    /\bkind\s*(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:normal|Contribution|Personal development|Leadership)\b/i,
+    /\b(?:objective\s+type|kind|(?:your|current|selected|recommended)\s+type)\s*(?:is|was|:|=|currently|set to)\s*(?:currently\s+)?(?:set to\s+)?["'`]*(?:the\s+)?normal\b(?!\s+(?:for|in|when|at|during|under|with)\b)/i,
+    /\bnormal\s+objective\s+(?:kind|type)\b|\bnormal\s+(?:is\s+)?(?:currently\s+)?selected\b/i,
+  ];
+  const typeContextPattern = /personal[-_ ]development|\brecommendedKind\b|\bobjective\s+(?:type|kind)\b|\b(?:your|current|selected|recommended)\s+(?:kind|type)\b|\bkind\s*(?:is|was|:|=|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:normal|Contribution|Personal development|Leadership)\b/i;
+  const leaks = coachText.filter(text => internalTypeNames.some(pattern => pattern.test(text)) ||
+    (typeContextPattern.test(text) && /\bin the editor\b|\bobjective\s+(?:is|was)\s+["'`]*normal\b/i.test(text)));
+  for (const turn of transcript.turns) {
+    if (turn.type !== "coach") continue;
+    const options = turn.suggestion?.options ?? [];
+    const typeChoices = /\bobjective (?:type|kind)\b/i.test(turn.suggestion?.question ?? "") ||
+      (options.length > 1 && options.some(option => /^(personal[-_ ]development|leadership)$/i.test(option.trim())) &&
+        options.every(option => /^(normal|contribution|personal[-_ ]development|leadership)$/i.test(option.trim())));
+    if (typeChoices) leaks.push(...options.filter(option => option.trim().toLowerCase() === "normal"));
+    const reply = turn.suggestion;
+    const prose = [reply?.question, reply?.concern, reply?.review, ...(reply?.options ?? []), ...(reply?.actions ?? []),
+      ...Object.values(reply?.assessment ?? {}).map(check => check.note)].filter((value): value is string => !!value);
+    for (const value of prose) {
+      const typeContext = typeChoices || typeContextPattern.test(value);
+      if (typeContext && /\btype\s*(?:is|was|:|=|currently|set to)\s*(?:(?:currently|set to)\s*)?["'`]*normal\b/i.test(value)) leaks.push(value);
+      if (typeContext && /\b(?:you\s+)?(?:chose|choose|select(?:ed)?|pick(?:ed)?)\s*["'`]*normal\b(?=\s*(?:[.,;!?]|$|for\s+(?:the\s+)?objective\s+(?:type|kind)|(?:and|but)\s+I\s+(?:suggest|recommend)))/i.test(value)) leaks.push(value);
+      if (reply?.recommendedKind && /\bchange\s+(?:it|the type|your type)\s+in the editor\b/i.test(value)) leaks.push(value);
+    }
+  }
+  add("coach uses member-facing objective type names", !leaks.length, leaks.join(" | "));
   const questions = draftQuestions(transcript), limit = contract.maxQuestions ?? 2;
   add(`at most ${limit} question${limit === 1 ? "" : "s"} before the draft`, questions <= limit, `${questions} asked`);
   add("no repeated question", !metrics.repeatedQuestion);
@@ -307,6 +444,12 @@ export function evaluate(transcript: Transcript, scenario: BenchmarkScenario): {
   if (allMet) add("quiet once ready", !screen?.concern, screen?.concern);
 
   for (const { label, pattern } of contract.includes ?? []) add(`objective includes ${label}`, pattern.test(objective), objective);
+  if (contract.improvedOrExplained) {
+    const unchanged = objective.trim() === scenario.existing?.objective.trim();
+    const explained = unchanged && /could not improve/i.test(screen?.concern ?? "");
+    for (const { label, pattern } of contract.improvedOrExplained)
+      add(`objective includes ${label} or explains no improvement`, pattern.test(objective) || explained, objective);
+  }
   const ownWording = [scenario.work, scenario.existing?.objective].some((text) => text?.trim() === objective.trim());
   for (const { label, pattern } of contract.excludes ?? [])
     add(`no ${label}`, ![ownWording ? "" : objective, ...goals].some((text) => pattern.test(text)), objective);
@@ -449,7 +592,8 @@ export function applyGate(result: BenchmarkResult, rules: Gate = gate, baseline?
     const same = baseline.scenarios.filter((s) => ran.some((r) => r.id === s.id));
     if (same.length) {
       const before = rate(same), floor = before - rules.maxDropFromBaseline;
-      checks.push({ name: "drop from baseline", passed: atLeast(overall, floor), actual: `${percent(overall)} vs baseline ${percent(before)}`, required: `≥ ${percent(Math.max(0, floor))} (baseline − ${percent(rules.maxDropFromBaseline)})` });
+      const comparable = rate(ran.filter((r) => same.some((s) => s.id === r.id)));
+      checks.push({ name: "drop from baseline", passed: atLeast(comparable, floor), actual: `${percent(comparable)} vs baseline ${percent(before)}`, required: `≥ ${percent(Math.max(0, floor))} (baseline − ${percent(rules.maxDropFromBaseline)})` });
     }
   }
   const losing = ran.filter((s) => !majority(s)).length + missing.length;

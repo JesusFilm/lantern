@@ -37,6 +37,9 @@ const guided = async (page: Page) => {
   await page.getByRole("radio", { name: "Contribution", exact: true }).check();
   await page.getByLabel("Your work", { exact: true }).fill("I look after our deployment pipeline. When deployments fail, engineers often lose hours working out why.");
 };
+const guideExisting = async (page: Page) => {
+  await page.locator(".read-section").first().getByRole("button", { name: "Guide with AI", exact: true }).click();
+};
 const planGoal = async (page: Page) => {
   await guided(page);
   await click("Next")(page);
@@ -153,17 +156,39 @@ export const chapters: Chapter[] = [
   },
   {
     title: "Weekly goals and team updates",
-    summary: "Plan weekly work, record a daily update and read the team's dated snapshots. These features remain hidden in production until their flags are released.",
+    summary: "Plan weekly work, record a daily update and read the team's dated snapshots. My week and My team are available to every active member. Optional controls have separate flags.",
     slides: [
-      {kind:"feature",title:"My week",roles:["Member"],summary:"Weekly goals and today's update save automatically. Flag: weekly-updates; hidden in production until released.",
-        tryIt:["Open **My week** and edit a goal.","Add goal details or a supporting work link.","Choose a goal status and write today's update.","Wait for Saved, then reload."],
-        check:["Goals, order, details and updates survive reload.","Earlier weeks retain their saved history.","A failed save shows a retry and retains your input."],
+      {kind:"feature",title:"My week",roles:["Member"],summary:"Weekly goals and today's update save automatically. Available to every active member.",
+        tryIt:["Open **My week** and edit a goal.","Edit details; Save applies, Cancel discards.","Choose a goal status and write today's update.","Pause for autosave, then reload."],
+        check:["Goals, order, details and updates survive reload.","New and empty goals have no selected status.","Goals are due at week end; failed saves retain input."],
         shots:[{id:"weekly-plan",persona:"member",path:"/?page=week&week=2026-11-02",ready:(p)=>p.getByText("Publish the release recovery guide",{exact:true}).first(),mode:{kind:"viewport",crop:".workspace"},caption:"Weekly goals and daily update"}]},
-      {kind:"feature",title:"My team",roles:["Member","Career lead"],summary:"Read active teammates' dated updates and their saved goal statuses. Flag: team-updates; hidden in production until released.",
+      {kind:"feature",title:"Plan ahead and reuse goals",roles:["Member"],summary:"Reuse weekly work. Flag: weekly-goal-copy; hidden in production until released.",
+        tryIt:["Use Next week to add goals in advance.","Copy last week’s goals, then edit.","Read the goal guidance; tasks are fine.","Pause, then reload to check autosave."],
+        check:["Copies append; details, privacy and links persist.","Statuses and updates are not copied.","Unavailable sharing/target choices refuse copying safely.","Future weeks disable daily status editing."],
+        shots:[{id:"weekly-copy",persona:"member",path:"/?page=week&week=2026-11-09",mutates:true,
+          act:async(p)=>{await p.getByRole("button",{name:"Copy last week’s goals",exact:true}).click();await p.getByText("What makes a useful weekly goal?",{exact:true}).click();},
+          ready:(p)=>p.getByText("Last week’s goals copied. Edit them for this week.",{exact:true}),mode:{kind:"viewport",crop:".workspace"},caption:"Copy recurring work into a future week"},
+          {id:"weekly-empty-phone",persona:"member",device:"phone",path:"/?page=week&week=2026-11-09",ready:role("textbox","Weekly goal 1"),caption:"Plan ahead with unselected statuses"}]},
+      {kind:"feature",title:"Choose weekly goal visibility",roles:["Member","Career lead"],summary:"Flag: weekly-goal-privacy. Team is the default; daily updates always go to the team and TV.",
+        tryIt:["Choose Team, Me and my career lead, or Only me.","Reload; compare My team as a peer and lead.","Keep private details out of daily update text."],
+        check:["Private titles, details, links and statuses stay hidden.","TV shows only team goals, even with a lead's token.","Historical snapshots respect later restrictions."],
+        shots:[{id:"weekly-privacy",persona:"member",path:"/?page=week&week=2026-11-02",ready:(p)=>p.getByLabel("Who can see goal 1",{exact:true}),caption:"Choose who can read a weekly goal"}]},
+      {kind:"feature",title:"Link weekly work to focus progress",roles:["Member"],summary:"Flag: weekly-focus-links. Confirmed objectives and SMART goals can be targets; drafts link to the whole focus.",
+        tryIt:["Add link → Position focus; choose a confirmed target.","Open the focus and read Linked weekly work.","Review suggested progress; Cancel, then Save."],
+        check:["On track → In progress; At risk/Blocked → Needs attention.","Done suggests Achieved; only Save changes progress.","Whole-focus links show work without a target suggestion."],
+        shots:[{id:"weekly-link-target",persona:"member",path:"/?page=week&week=2026-11-02",act:async(p)=>{await p.getByRole("button",{name:"Actions for goal 1",exact:true}).click();await p.getByRole("menuitem",{name:"Add link",exact:true}).click();await p.getByRole("button",{name:/Second half 2026/}).click();await p.getByLabel("Link to",{exact:true}).selectOption("goal:0:0");},ready:(p)=>p.getByLabel("Link to",{exact:true}),caption:"Choose a confirmed objective or SMART goal"},
+          {id:"weekly-linked-work",persona:"member",path:confirmed,mutates:true,act:async(p,ids)=>{
+            const call=async(path:string,method="GET",body?:unknown)=>{const response=await p.request.fetch(new URL(path,p.url()).href,{method,headers:{Origin:new URL(p.url()).origin},data:body});if(!response.ok())throw new Error(`Linked work fixture failed: ${response.status()}`);return response.json();};
+            const focus=await call(`/api/focuses/${ids.confirmedFocus}`);
+            const plan=await call("/api/weeks/2026-11-23/plans","POST",{version:0,goals:[{text:"Review the release recovery guide",links:[{kind:"focus",focusId:ids.confirmedFocus,target:{version:focus.version,section:0,goal:0}}]}]});
+            await call("/api/weeks/2026-11-23/updates","POST",{date:"2026-11-23",body:"The guide is ready for review.",planVersion:plan.plans[0].version,goalStatuses:[{goalId:plan.plans[0].goals[0].id,status:"on-track"}]});
+            await p.reload();
+          },ready:(p)=>p.getByText("Review the release recovery guide",{exact:true}),mode:{kind:"element",target:'role=region[name="Linked weekly work"]'},caption:"Linked weekly work and suggested progress"}]},
+      {kind:"feature",title:"My team",roles:["Member","Career lead"],summary:"Read active teammates' dated updates and their saved goal statuses. Available to every active member.",
         tryIt:["Open **My team**.","Move to an earlier date, then return to Today.","Compare the saved update and goal statuses."],
-        check:["Only active teammates in your department appear.","Saved updates retain the matching weekly goal version.","A failed request offers Retry."],
+        check:["Only active teammates in your department appear.","Goals and statuses respect Team / Lead / Only me.","A failed request offers Retry."],
         shots:[{id:"team-updates",persona:"member",path:"/?page=team&date=2026-11-02",ready:(p)=>p.getByRole("heading",{name:"My team",exact:true}),mode:{kind:"viewport",crop:".workspace"},caption:"Dated team updates"}]},
-      {kind:"feature",title:"Team API access",roles:["Member","Career lead"],summary:"Issue a read-only integration token for your department. Flags: team-api and team-updates; hidden in production until released.",
+      {kind:"feature",title:"Team API access",roles:["Member","Career lead"],summary:"Issue a read-only integration token for your department. Flag: team-api; hidden in production until released.",
         tryIt:["Open **Account → Team API access**.","Name and create a token; copy its one-time value privately.","Use it from the integration backend, then revoke it."],
         check:["Reload hides the full token; its name remains listed.","Revocation, expiry and ended membership stop access.","The token cannot edit data or read another department."],
         shots:[{id:"team-api-access",persona:"member",path:"/?page=account",ready:(p)=>p.getByRole("region",{name:"Team API access",exact:true}),mode:{kind:"element",target:"role=region[name=\"Team API access\"]"},caption:"Read-only integration tokens"}]},
@@ -272,15 +297,43 @@ export const chapters: Chapter[] = [
         summary: "Choose an objective type, then describe your work. **coach-redesign** is hidden in production until released; **coach** must also be available.",
         tryIt: ["Choose **+ Add objective**, then **Guide with AI**.", "Choose a type or Not sure; describe your work and role.", "Review the suggestion; choose an initiative or Other."],
         check: [
-          "Recommendations offer a switch; your type stays selected.",
-          "Next requires an initiative or Other; choosing either clears the error.",
-          "Checks appear automatically; missing mission means uncertain.",
-          "Edits make earlier checks stale; check again without rewriting.",
-          "Back then Try again requests a new draft.",
+          "Not sure selects the recommendation, or asks you to choose.",
+          "Update objective is primary; Clear details is spaced apart.",
+          "Next requires an initiative or Other; edits make checks stale.",
+          "Personal development counts your growth, without invented team benefits.",
         ],
         shots: [
           { id: "guided-work", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Back")(page); }, ready: role("button", "Try again"), caption: "Return to your work to try again" },
-          { id: "guided-objective", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Help me address this")(page); }, ready: (p) => p.getByLabel("Details for the coach"), mode: longPage, caption: "Add details for the coach" },
+          { id: "guided-objective", persona: "member", path: draft, act: async (page) => { await guided(page); await click("Next", "Help me address this")(page); await page.getByLabel("Details for the coach").fill("Engineers can find the cause of a failed deployment faster."); }, ready: (p) => p.getByText("Update objective or clear these details before continuing or saving."), mode: longPage, caption: "Pending coach details" },
+        ],
+      },
+      {
+        kind: "feature",
+        title: "Guide with AI: objective type wording",
+        roles: ["Member"],
+        summary: "The coach uses the same objective type names as the editor. This path requires **coach** and **coach-redesign**.",
+        tryIt: ["Choose **Guide with AI** and select Contribution.", "Describe work that develops a skill, then choose **Next**.", "Read the coach's question and feedback."],
+        check: [
+          "The coach says Contribution, Personal development or Leadership.",
+          "It says Objective type when referring to the selected type.",
+          "You can still choose a different type on the Objective step.",
+        ],
+        shots: [{ id: "guided-type-language", persona: "member", path: draft, act: async (page) => { await click("+ Add objective", "Guide with AI")(page); await page.getByRole("radio", { name: "Contribution", exact: true }).check(); await page.getByLabel("Your work", { exact: true }).fill("I want to improve my Playwright testing skills."); await click("Next")(page); }, ready: heading("Objective type is currently Contribution. I recommend Personal development. Which testing skills do you want to build?", 2), caption: "A question about objective type" }],
+      },
+      {
+        kind: "feature",
+        title: "Guide with AI: improve an existing objective",
+        roles: ["Member"],
+        summary: "Use **Guide with AI** on an existing objective. This path requires **coach** and **coach-redesign**.",
+        tryIt: ["On a draft, choose **Guide with AI** beside an objective.", "Choose **Improve objective** and answer any question.", "Review the wording and use **Help me address this** for further details."],
+        check: [
+          "The answer can update the objective; checks match the wording shown.",
+          "If the coach cannot improve it, it says so and keeps the editable wording.",
+          "Feedback can be answered; Back keeps the earlier answer.",
+        ],
+        shots: [
+          { id: "guided-existing-question", persona: "member", path: draft, act: async (page) => { await guideExisting(page); await click("Improve objective")(page); }, ready: (p) => p.getByLabel("Your answer"), mode: { kind: "viewport", crop: ".workspace" }, caption: "Answer a question about an existing objective" },
+          { id: "guided-existing-feedback", persona: "member", path: draft, act: async (page) => { await guideExisting(page); await click("Improve objective")(page); await page.locator(".cp-coach-wait").waitFor({ state: "hidden" }); await page.getByLabel("Your answer").fill("I am not sure yet."); await click("Next")(page); }, ready: (p) => p.getByText("The coach could not improve this objective yet.", { exact: false }), mode: { kind: "element", target: 'role=region[name="AI coach feedback"]' }, caption: "Feedback when the objective could not be improved" },
         ],
       },
       {
@@ -290,7 +343,7 @@ export const chapters: Chapter[] = [
         summary: "**coach-redesign** suggests goal ideas immediately. Check the finished draft before saving. Hidden in production until released; requires **coach**.",
         tryIt: ["At SMART goals, select an idea or **Add SMART goal**.", "Pick or write an action and date, then **Next**.", "Edit the goal, **Add to objective**, then **Next** to the check."],
         check: [
-          "Dates outside the focus period are rejected.",
+          "Target dates must be today or later, within the focus period.",
           "Answer \"not sure\" about evidence: you still get an editable goal.",
           "Check shows your objective and goals without changing wording.",
           "No goals warns but permits saving; failure keeps your writing.",
@@ -317,7 +370,7 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Ask your career lead for a review",
         roles: ["Member"],
-        summary: "**Review & discussion** shows the focus read-only, with a request form and the notes. Saving alone never sends a review request.",
+        summary: "Saved drafts, including personal development, are visible to your career lead. **Review & discussion** sends the whole focus; saving alone never requests review.",
         tryIt: ["Open a draft with a Contribution objective and at least one goal.", "Choose **Review & discussion**.", "Add an optional ① note and choose ② **Send request**."],
         check: [
           "The career lead sees the request under Review requests.",
@@ -362,12 +415,13 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Review requests",
         roles: ["Career lead"],
-        summary: "Career leads see department review requests, including their own, with status and new notes.",
+        summary: "Career leads see department review requests and unread counts. **review-activity** is hidden in production until released.",
         tryIt: ["Sign in as the career lead.", "Open **Review requests**.", "Choose ① **Review focus**."],
         check: [
+          "New activity appears above previously viewed requests.",
+          "Count stays visible when the sidebar is collapsed.",
           "Only your department appears, including your own requested focus.",
-          "“New notes” clears once you have read them.",
-          "Confirmed focuses show as Confirmed.",
+          "Opening a review clears its New marker and notes.",
         ],
         shots: [{ id: "lead-reviews", persona: "lead", path: "/?page=reviews", ready: heading("Review requests"), highlight: ['role=button[name="Review focus"] >> nth=0'], caption: "Review requests" }],
       },

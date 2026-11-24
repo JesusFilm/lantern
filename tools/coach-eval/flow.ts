@@ -22,12 +22,15 @@ export async function runCurrentFlow(
   scenario: Scenario,
   coach: CoachCall,
   member: Member,
-  options: { retries?: number; redesigned?: boolean } = {},
+  options: { retries?: number; redesigned?: boolean; today?: string } = {},
 ): Promise<{ turns: Turn[]; outcome: Outcome }> {
   const retries = options.retries ?? 1;
   const redesigned = options.redesigned ?? false;
   const turns: Turn[] = [];
   const focus = { ...scenario.focus, version: 3 };
+  const today = options.today ?? focus.start;
+  const earliest = today > focus.start ? today : focus.start;
+  let kindResolved = scenario.typeChoice !== "recommended" || !!scenario.existing;
   const edit = {
     text: scenario.existing?.objective ?? "",
     kind: (scenario.existing?.kind ?? (redesigned && !["keep", "recommended"].includes(scenario.typeChoice) ? scenario.typeChoice : "normal")) as ObjectiveKind,
@@ -56,7 +59,7 @@ export async function runCurrentFlow(
     answer,
     options: choices,
     objective: edit.text,
-    kind: redesigned && scenario.typeChoice === "recommended" && !edit.text ? undefined : edit.kind,
+    kind: redesigned && !kindResolved ? undefined : edit.kind,
     initiatives: [...edit.initiatives],
     other: edit.other,
     actions: plan.actions,
@@ -128,7 +131,8 @@ export async function runCurrentFlow(
 
   function chooseObjectiveFields() {
     if (scenario.typeChoice === "recommended") {
-      if (recommendedKind) edit.kind = recommendedKind;
+      // The redesigned editor selects a recommendation as the draft appears.
+      if (!redesigned && recommendedKind) edit.kind = recommendedKind;
     } else if (scenario.typeChoice !== "keep") edit.kind = scenario.typeChoice;
     // Next requires an initiative or Other; the member accepts the recommendation.
     if (recommendedInitiatives.length) edit.initiatives = [...recommendedInitiatives];
@@ -149,6 +153,8 @@ export async function runCurrentFlow(
         concern: redesigned ? "" : scenario.improvement ?? "",
       });
       if (!result) return { turns, outcome: outcome("coach unavailable") };
+      const unchanged = !result.objective || result.objective.trim() === edit.text.trim();
+      const checksMet = !!result.assessment && Object.values(result.assessment).every(check => check.status === "met");
       // Without new wording the editor keeps the member's objective and shows checks of it.
       // Refinement replaces the wording only; type and alignment stay as saved.
       if (result.objective) edit.text = result.objective;
@@ -157,7 +163,7 @@ export async function runCurrentFlow(
       if (scenario.typeChoice === "recommended" && recommendedKind) edit.kind = recommendedKind;
       else if (scenario.typeChoice !== "keep" && scenario.typeChoice !== "recommended")
         edit.kind = scenario.typeChoice;
-      if (redesigned) showScreen(result);
+      if (redesigned) showScreen(result, unchanged && !checksMet ? "The coach could not improve this objective yet." : "");
     }
   } else {
     work = scenario.work ?? "";
@@ -171,6 +177,8 @@ export async function runCurrentFlow(
       answers = nextAnswers;
       if (redesigned && (!result.objective || result.ready === false) && (!result.question || step === "question")) {
         edit.text = work;
+        recommendedKind = result.recommendedKind;
+        if (scenario.typeChoice === "recommended" && recommendedKind) { edit.kind = recommendedKind; kindResolved = true; }
         showScreen(result, result.question ?? "");
         break;
       }
@@ -178,6 +186,7 @@ export async function runCurrentFlow(
         edit.text = result.objective;
         recommendedKind = result.recommendedKind;
         recommendedInitiatives = result.initiativeIds ?? [];
+        if (redesigned && scenario.typeChoice === "recommended" && recommendedKind) { edit.kind = recommendedKind; kindResolved = true; }
         if (redesigned) showScreen(result);
         break;
       }
@@ -191,22 +200,35 @@ export async function runCurrentFlow(
   }
 
   // Help me address this: the member answers the first gap, while they have something to add.
-  const rounds = !redesigned ? 0 : scenario.respondToFeedback ? 1 : member.respond ? 2 : 0;
+  const alreadyAnswered = turns.some(turn => turn.type === "member" && turn.step === "answer");
+  const rounds = !redesigned ? 0 : scenario.respondToFeedback && (!scenario.existing || !alreadyAnswered) ? 1 : member.respond ? 2 : 0;
   for (let round = 0; round < rounds; round++) {
     const screen = screens.at(-1);
     const gap = screen?.concern || Object.values(screen?.assessment ?? {}).find(check => check.status !== "met")?.note;
     if (!gap) break;
-    const detail = scenario.respondToFeedback ? await member.answer(gap, []) : await member.respond!(gap);
+    const detail = scenario.feedbackDetail ?? (scenario.respondToFeedback ? await member.answer(gap, []) : await member.respond!(gap));
     if (!detail?.trim()) break;
+    const priorAnswers = answers;
     answers = [...answers, { question: gap, answer: detail }];
     turns.push({ type: "member", step: "answer", text: detail });
     const revision = await ask("refine", "objective", { ...context(), entry: "objective", question: gap, answer: detail });
     if (!revision) return { turns, outcome: outcome("coach unavailable") };
-    if (revision.objective) edit.text = revision.objective;
-    recommendedKind = revision.recommendedKind ?? recommendedKind;
-    recommendedInitiatives = revision.initiativeIds ?? recommendedInitiatives;
+    if (revision.objective && revision.objective.trim() !== edit.text.trim()) {
+      edit.text = revision.objective;
+      recommendedKind = revision.recommendedKind;
+      if (!scenario.existing && !kindResolved && scenario.typeChoice === "recommended" && recommendedKind) { edit.kind = recommendedKind; kindResolved = true; }
+      recommendedInitiatives = revision.initiativeIds ?? [];
+    } else {
+      showScreen(revision, "The coach could not update the objective. Details remain for retry or clearing.");
+      // The member explicitly clears the details and continues with the existing draft.
+      answers = priorAnswers;
+      turns.push({ type: "member", step: "objective", text: "Clear details" });
+      break;
+    }
     showScreen(revision);
   }
+  if (!scenario.existing && redesigned && scenario.typeChoice === "recommended" && !kindResolved)
+    return { turns, outcome: outcome("objective type needs a member choice") };
   if (!scenario.existing) chooseObjectiveFields();
   if (scenario.endAtObjective && !scenario.goals.length) return { turns, outcome: outcome() };
 
@@ -229,13 +251,15 @@ export async function runCurrentFlow(
     plan = {
       actions: suggested.actions ?? [],
       action: "",
-      date: redesigned && suggested.suggestedDate && (suggested.suggestedDate < focus.start || suggested.suggestedDate > focus.end) ? focus.end : suggested.suggestedDate ?? focus.end,
+      date: redesigned && suggested.suggestedDate && (suggested.suggestedDate < earliest || suggested.suggestedDate > focus.end) ? focus.end : suggested.suggestedDate ?? focus.end,
       text: "",
     };
     const action =
       typeof choice.action === "number"
         ? (plan.actions[choice.action] ?? plan.actions[0] ?? "")
         : choice.action;
+    // The browser clears stale date validation feedback when the member changes this value.
+    // This replay supplies the corrected choice directly; no extra model turn is introduced.
     const date = choice.date ?? plan.date;
     const record: GoalPlan = {
       actions: plan.actions,
@@ -247,8 +271,8 @@ export async function runCurrentFlow(
     plans.push(record);
     plan = { ...plan, action, date };
     turns.push({ type: "member", step: "plan", text: JSON.stringify({ action, date }) });
-    if (redesigned && (date < focus.start || date > focus.end)) {
-      record.concerns.push("Choose a target date within this position focus period.");
+    if (redesigned && (date < earliest || date > focus.end)) {
+      record.concerns.push("Choose a target date today or later, within this position focus period.");
       return { turns, outcome: outcome("target date outside focus period; member correction needed") };
     }
     const written = await ask("goal", "goal", { ...context(), entry: "goal", question: "", answer: "" });

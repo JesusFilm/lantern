@@ -20,6 +20,10 @@ Run the benchmark before and after changing any of these:
   that flow from `tools/coach-eval/flow.ts`, so update `flow.ts` in the same change;
 - the Guide content, synthetic mission or initiatives the coach reads.
 
+Benchmark scenarios use the focus start as a simulated current date for the
+replay, prompt and transcript. This keeps dated fixtures valid over time; browser
+and HTTP tests exercise actual local dates and time zones.
+
 Ordinary tests still prove the coaching workflow, persistence and access rules
 with fixture providers. They cannot show whether generated wording is useful;
 the benchmark does that.
@@ -62,7 +66,7 @@ coach must serve and the ways QA tries to break it.
 
 | Category | Member | Scenarios |
 | --- | --- | --- |
-| vague | A rough idea, then answers that range from useful to unsure | gospel video app, support FAQ, goal evidence unknown, "not sure" tester |
+| vague | A rough idea, then answers that range from useful to unsure | existing testing objective, gospel video app, support FAQ, goal evidence unknown, "not sure" tester |
 | rewording | Knows their work but not how to phrase an objective | subtitles for East African churches, Playwright growth, mentoring new engineers |
 | proficient | A well-formed objective that needs little or no help | existing captions objective, partner search, accessibility auditing growth |
 | adversarial | QA probing | off-topic fitness answers, embedded instructions, gibberish, holiday Spanish |
@@ -88,8 +92,8 @@ read that file and print each rule with its required value.
 
 | Rule | Value | Why |
 | --- | --- | --- |
-| Overall runs passing | at least 80% | The baseline passes 94% (73 of 78 runs). Single runs of the same code passed 90% and 97%; 80% leaves room for that variation and small intended trade-offs. |
-| Drop from baseline | at most 10 points | Measured on the same scenarios. With the current baseline this means at least 84%. It stops quality sliding gradually as each change spends the margin. |
+| Overall runs passing | at least 80% | The baseline passes 97% (105 of 108 runs); 80% leaves room for variation and small intended trade-offs. |
+| Drop from baseline | at most 10 points | Measured on the same scenarios. With the current baseline this means at least 87%. It stops quality sliding gradually as each change spends the margin. |
 | Scenarios below majority | at most 2 | One or two unstable scenarios are tolerated; more indicates a behavior change. |
 | Runs passing in each category | at least 60% | No kind of member, including QA probing, can be traded away for the others. |
 

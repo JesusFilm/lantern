@@ -139,13 +139,14 @@ async function transcripts(suite: Scenario[] = scenarios) {
     if (spending() >= maxCost) return void skipped++;
     const started = Date.now();
     try {
-      const result = await runCurrentFlow(scenario, coachCaller(targets[target]!, env, true), memberFor(scenario, env), { redesigned: true });
+      const today = scenario.focus.start;
+      const result = await runCurrentFlow(scenario, coachCaller(targets[target]!, env, true, direction, today), memberFor(scenario, env), { redesigned: true, today });
       const transcript: Transcript = {
         flow: "redesigned",
         scenario: scenario.id,
         target,
         repeat,
-        today: new Date().toISOString().slice(0, 10),
+        today,
         startedAt: new Date(started).toISOString(),
         durationMs: Date.now() - started,
         ...result,

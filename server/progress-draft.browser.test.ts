@@ -100,8 +100,7 @@ test("confirmed focus status badges do not appear on earlier-draft review snapsh
     await expect(leadPage.getByText("The sessions are complete.")).toBeVisible();
     await expect(leadPage.getByRole("button", { name: "Edit progress", exact: true })).toHaveCount(0);
     await leadPage.reload();
-    await leadPage.getByRole("button", { name: "Review focus", exact: true }).click();
-    await leadPage.getByRole("button", { name: "Progress & notes", exact: true }).click();
+    await expect(leadPage.getByRole("button", { name: "Progress & notes", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(leadPage.getByText("The sessions are complete.")).toBeVisible();
   } finally {
     await browser.close();

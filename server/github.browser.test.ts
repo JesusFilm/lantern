@@ -90,7 +90,7 @@ test('department GitHub settings recover status failures and report blocked conn
   } finally { await browser.close(); await vite.close(); await f.close(); }
 });
 
-test('hidden weekly feature also hides GitHub department settings and rejects connection requests', async () => {
+test('production defaults expose GitHub settings without a weekly flag', async () => {
   const f = await coachingFixture(undefined, resolveFeatureConfig({}, 'production'), { github: githubSource() });
   const vite = await createServer({ server: { middlewareMode: { server: f.server }, hmr: { server: f.server } }, appType: 'spa' });
   f.app.use(vite.middlewares);
@@ -101,9 +101,9 @@ test('hidden weekly feature also hides GitHub department settings and rejects co
     const page = await context.newPage();
     await page.goto(f.origin + '/?page=department&departmentTab=settings');
     await expect(page.getByRole('heading', { name: 'Department', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Settings', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: 'GitHub connection', exact: true })).toHaveCount(0);
-    assert.equal((await context.request.get(f.origin + '/auth/github/connect', { maxRedirects: 0 })).status(), 404);
+    await expect(page.getByRole('button', { name: 'Settings', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'GitHub connection', exact: true })).toBeVisible();
+    assert.equal((await context.request.get(f.origin + '/auth/github/connect', { maxRedirects: 0 })).status(), 302);
   } finally { await browser.close(); await vite.close(); await f.close(); }
 });
 

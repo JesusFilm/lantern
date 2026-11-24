@@ -4,10 +4,12 @@ import type { PositionFocus } from "../../shared/focus.js";
 import type { SessionView } from "../../shared/access.js";
 import { objectiveTypes } from "../workspace/ObjectiveType.js";
 import { FocusDocument } from "../workspace/FocusDocument.js";
+import { FocusWeeklyWork } from "../workspace/FocusWeeklyWork.js";
 import { FocusProgress } from "../workspace/FocusProgress.js";
 import { formatFocusDate } from "../workspace/focusDate.js";
 import { api } from "../workspace/api.js";
 import { hasReviewableContribution } from "../workspace/reviewEligibility.js";
+import { useReviewActivity } from "../workspace/useReviewActivity.js";
 import { StatusBadge } from "./StatusBadge.js";
 import "./coach.css";
 import "./status-badge.css";
@@ -53,10 +55,12 @@ export function CoachWorkspace({
   confirmedView?: boolean;
 }) {
   const actor = session.user!.id;
+  const activityEnabled = session.department?.role === "career-lead" && session.features.includes("review-activity");
+  const activity = useReviewActivity(lead && activityEnabled);
   const [records, setRecords] = useState<CoachRecord[]>([]),
-    [selected, setSelected] = useState(focusId || "");
+    [selected, setSelected] = useState(focusId || (lead ? new URLSearchParams(location.search).get("reviewFocus") : "") || "");
   const [view, setView] = useState<"home" | "request" | "review">(
-    confirmedView ? "review" : focusId ? "request" : "home",
+    confirmedView || lead && new URLSearchParams(location.search).has("reviewFocus") ? "review" : focusId ? "request" : "home",
   );
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(""),
@@ -116,6 +120,14 @@ export function CoachWorkspace({
     };
   }, [focusId]);
   useEffect(() => {
+    if (!activityEnabled || !displayedFocus || !request) return;
+    let active = true;
+    void api(base + '/focuses/' + displayedFocus + '/request-read', 'POST', { requestId: request.id })
+      .then(() => { if(active) window.dispatchEvent(new Event('lantern-review-read')); })
+      .catch((error: Error) => { if(active) setError(error.message); });
+    return () => { active = false; };
+  }, [activityEnabled, displayedFocus, request?.id, actor, readRetry]);
+  useEffect(() => {
     const noteIds = JSON.parse(unreadIds) as string[];
     if (!displayedFocus || !noteIds.length) return;
     const controller = new AbortController();
@@ -131,6 +143,7 @@ export function CoachWorkspace({
           ? { ...current, readIds: [...new Set([...current.readIds, ...acknowledged])] }
           : current));
         changed.current?.();
+        window.dispatchEvent(new Event("lantern-review-read"));
       })
       .catch(e => { if (active && mounted.current) setError((e as Error).message); });
     return () => { active = false; controller.abort(); };
@@ -158,6 +171,10 @@ export function CoachWorkspace({
   }
   function review(r: CoachRecord) {
     if (!canLeaveNote()) return;
+    if (lead) {
+      const url = new URL(location.href); url.searchParams.set("reviewFocus", r.focus.id); url.searchParams.delete("view");
+      history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+    }
     setSelected(r.focus.id);
     setView("review");
     setCompose(false);
@@ -357,6 +374,8 @@ export function CoachWorkspace({
             if (!canLeaveNote()) return;
             setNote("");
             setView("home");
+            const url = new URL(location.href); url.searchParams.delete("reviewFocus"); url.searchParams.delete("view");
+            history.replaceState(history.state, "", url.pathname + url.search + url.hash);
             void refresh();
           }}
         >
@@ -372,12 +391,21 @@ export function CoachWorkspace({
       {view === "home" && (
         <>
           <h1>Review requests</h1>
-          {records.map((r) => (
+          {(activityEnabled && activity.loaded
+            ? [
+                { title: "New activity", records: records.filter(r => activity.items.some(item => item.focusId === r.focus.id)) },
+                { title: "Previously viewed", records: records.filter(r => !activity.items.some(item => item.focusId === r.focus.id)) },
+              ].filter(group => group.records.length)
+            : [{ title: "", records }]
+          ).map(group => <div key={group.title || "all"} role={group.title ? "group" : undefined} aria-label={group.title || undefined}>
+            {group.title && <h2 className="review-activity-heading">{group.title}</h2>}
+            {group.records.map((r) => (
             <section className="cp-card" key={r.focus.id}>
               <h2>
                 {r.memberId === actor ? "Your review request" : r.memberName} · {r.requests.at(-1)?.document.title ?? r.focus.title}
               </h2>
               <div className="cp-row">
+                {activity.items.some(item => item.focusId === r.focus.id) && <span className="review-new">New</span>}
                 <StatusBadge status={r.focus.status === "confirmed" ? "confirmed" : "review-requested"} />
                 {r.focus.status !== "confirmed" && r.requests.at(-1)?.document.version !== r.focus.version && <StatusBadge status="unsent-changes" />}
                 {r.notes.some(
@@ -389,7 +417,7 @@ export function CoachWorkspace({
               </div>
               <button onClick={() => void review(r)}>Review focus</button>
             </section>
-          ))}
+          ))}</div>)}
           {!records.length && <p>No requests waiting.</p>}
         </>
       )}
@@ -463,9 +491,9 @@ export function CoachWorkspace({
                 </details>
               )}
               {old && comparison(old, request.document)}
-              {locked ? <FocusProgress key={record.focus.id} focus={record.focus} memberId={record.memberId} enabled={session.features.includes("focus-progress")}>
+              {locked ? <FocusProgress weeklyLinksEnabled={session.features.includes("weekly-focus-links")} key={record.focus.id} focus={record.focus} memberId={record.memberId} enabled={session.features.includes("focus-progress")}>
                 <FocusDocument focus={request.document} />
-              </FocusProgress> : <FocusDocument focus={request.document} />}
+              </FocusProgress> : <><FocusDocument focus={request.document} />{session.features.includes("weekly-focus-links") && <FocusWeeklyWork focusId={record.focus.id}/>}</>}
               {!locked && (
                 <>
                 {record.focus.version !== request.document.version && <p className="cp-muted">This focus has changed since review was requested. Request review of the latest saved version before confirming.</p>}

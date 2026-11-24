@@ -39,6 +39,8 @@ export interface Scenario {
   endAtObjective?: boolean;
   /** The simulated member chooses to answer feedback on the drafted objective. */
   respondToFeedback?: boolean;
+  /** Specific detail the member enters in the feedback field, after any initial question. */
+  feedbackDetail?: string;
   /**
    * Scripted answers are used in order; facts drive a simulated member. Replies answer
    * the first matching question or feedback, like a member who knows only those things.

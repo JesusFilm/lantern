@@ -4,6 +4,8 @@ import type { SessionView } from "../../shared/access.js";
 import "./sidebar.css";
 import { usePhoneLayout } from "./usePhoneLayout.js";
 
+import { useReviewActivity } from "./useReviewActivity.js";
+
 const preferenceKey = "lantern-sidebar";
 function readCollapsed() {
   try { return localStorage.getItem(preferenceKey) === "collapsed"; }
@@ -17,6 +19,7 @@ export function Sidebar({ session, activePage, onNavigate, hrefForPage }: {
   hrefForPage: (page: string) => string;
 }) {
   const phone = usePhoneLayout();
+  const activity = useReviewActivity(session?.department?.role === "career-lead" && !!session.features?.includes("review-activity"));
   const canCollapse = session?.features?.includes("sidebar-collapse") ?? false;
   const mobileMenu = phone && canCollapse;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -46,8 +49,8 @@ export function Sidebar({ session, activePage, onNavigate, hrefForPage }: {
   const items: { id: string; label: string; icon: LucideIcon }[] = [
     ...(session?.user ? [
       { id: "focuses", label: "Position focuses", icon: FileText },
-      ...(session.department && session.features?.includes("weekly-updates") ? [{ id: "week", label: "My week", icon: CalendarDays }] : []),
-      ...(session.department && session.features?.includes("team-updates") ? [{ id: "team", label: "My team", icon: UsersRound }] : []),
+      ...(session.department ? [{ id: "week", label: "My week", icon: CalendarDays }] : []),
+      ...(session.department ? [{ id: "team", label: "My team", icon: UsersRound }] : []),
       ...(session.department?.role === "career-lead" ? [{ id: "reviews", label: "Review requests", icon: ClipboardCheck }] : []),
       { id: "guide", label: "Guide", icon: BookOpen },
       { id: "account", label: "Account", icon: UserRound },
@@ -65,15 +68,17 @@ export function Sidebar({ session, activePage, onNavigate, hrefForPage }: {
       {mobileMenu && <button type="button" className="mobile-menu-close" aria-label="Close menu" onClick={() => setMenuOpen(false)}><X size={22} /></button>}
     </div>
     <nav id="main-navigation" aria-label="Main navigation">
-      {items.map(({ id, label, icon: Icon }) => <a key={id} href={hrefForPage(id)} aria-label={label} title={collapsed ? label : undefined} aria-current={activePage === id ? "page" : undefined} className={`sidebar-link${activePage === id ? " active" : ""}`} onClick={event => {
+      {items.map(({ id, label, icon: Icon }) => <a key={id} href={hrefForPage(id)} aria-label={label} aria-describedby={id === "reviews" && activity.items.length ? "review-unread-count" : undefined} title={collapsed ? label : undefined} aria-current={activePage === id ? "page" : undefined} className={`sidebar-link${activePage === id ? " active" : ""}`} onClick={event => {
         if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
         onNavigate(id); setMenuOpen(false);
       }}>
         <Icon size={20} strokeWidth={1.7} aria-hidden="true" />
         <span className="sidebar-label">{label}</span>
+        {id === 'reviews' && activity.items.length > 0 && <span id="review-unread-count" className="review-unread-count" aria-label={`${activity.items.length} ${activity.items.length === 1 ? 'focus' : 'focuses'} with unread review activity`}>{activity.items.length > 99 ? '99+' : activity.items.length}</span>}
       </a>)}
     </nav>
+    {activity.error && <p className="sidebar-activity-error">Review activity unavailable. <button className="link" onClick={activity.retry}>Retry</button></p>}
     {!phone && canCollapse && <div className="sidebar-actions">
       <button className="sidebar-toggle" type="button" aria-label={toggleLabel} title={toggleLabel} aria-expanded={!collapsed} aria-controls="main-navigation" onClick={toggle}>
         <ToggleIcon size={18} aria-hidden="true" />

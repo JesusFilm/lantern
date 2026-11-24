@@ -5,10 +5,11 @@ import type { PositionFocus } from '../../shared/focus.js';
 import type { GitHubConnectionStatus, GitHubRepositoryChoice, GitHubWorkItem, GitHubWorkKind, GitHubWorkResults } from '../../shared/github.js';
 import type { ExternalWorkKind, WeeklyGoalLinkDraft } from '../../shared/weekly.js';
 import { api } from './api.js';
+import { formatFocusDate } from './focusDate.js';
 import { Dialog } from './Dialog.js';
 
-export function WeeklyLinkDialog({ initial, focuses, focusError, retryFocuses, onLink, onClose }: {
-  initial?: WeeklyGoalLinkDraft; focuses?: PositionFocus[]; focusError: string; retryFocuses: () => void;
+export function WeeklyLinkDialog({ initial, targetEnabled = false, focuses, focusError, retryFocuses, onLink, onClose }: {
+  initial?: WeeklyGoalLinkDraft; targetEnabled?: boolean; focuses?: PositionFocus[]; focusError: string; retryFocuses: () => void;
   onLink: (link: WeeklyGoalLinkDraft) => void; onClose: () => void;
 }) {
   const [mode, setMode] = useState<'github' | 'focus' | 'url'>(initial && initial.kind !== 'focus' ? 'url' : 'focus');
@@ -22,6 +23,8 @@ export function WeeklyLinkDialog({ initial, focuses, focusError, retryFocuses, o
   const [selected, setSelected] = useState<GitHubWorkItem>();
   const [loading, setLoading] = useState(false), [searchError, setSearchError] = useState(''), [searchRetry, setSearchRetry] = useState(0);
   const [focusQuery, setFocusQuery] = useState(''), [focusId, setFocusId] = useState(initial?.kind === 'focus' ? initial.focusId : '');
+  const [targetChoice, setTargetChoice] = useState(initial?.kind === 'focus' && initial.target ? (initial.target.goal === null ? `objective:${initial.target.section}` : `goal:${initial.target.section}:${initial.target.goal}`) : '');
+  const selectedFocus = focuses?.find(focus => focus.id === focusId);
   const [linkKind, setLinkKind] = useState<ExternalWorkKind>(initial && initial.kind !== 'focus' ? initial.kind : 'other');
   const [url, setUrl] = useState(initial && initial.kind !== 'focus' ? initial.url : '');
   const [label, setLabel] = useState(initial && initial.kind !== 'focus' ? initial.label : '');
@@ -67,7 +70,9 @@ export function WeeklyLinkDialog({ initial, focuses, focusError, retryFocuses, o
       onLink({ kind: selected.kind, label: selected.label.slice(0, 200), url: selected.url });
     } else if (mode === 'focus') {
       if (!focusId) throw new Error('Choose a position focus.');
-      onLink({ kind: 'focus', focusId });
+      const parts = targetChoice.split(':');
+      const target = !targetEnabled && initial?.kind === 'focus' && initial.focusId === focusId ? initial.target : targetEnabled && selectedFocus?.status === 'confirmed' && targetChoice ? {version:selectedFocus.version, section:Number(parts[1]), goal:parts[0] === 'goal' ? Number(parts[2]) : null} : undefined;
+      onLink({ kind: 'focus', focusId, ...(target ? {target} : {}) });
     } else {
       let parsed: URL;
       try { parsed = new URL(url); } catch { throw new Error('Enter a valid web address.'); }
@@ -123,7 +128,8 @@ export function WeeklyLinkDialog({ initial, focuses, focusError, retryFocuses, o
       </> : mode === 'focus' ? <>
         {focusError && <p role="alert">{focusError} <button type="button" onClick={retryFocuses}>Retry</button></p>}
         {!focuses && !focusError && <p role="status">Loading position focuses…</p>}
-        <div className="weekly-link-results">{focuses?.filter(focus => focus.title.toLowerCase().includes(focusQuery.toLowerCase())).map(focus => <button type="button" className="weekly-link-result" aria-pressed={focusId === focus.id} key={focus.id} onClick={() => setFocusId(focus.id)}><span><strong>{focus.title}</strong><small>{focus.start} – {focus.end}</small></span>{focusId === focus.id && <Check size={18} />}</button>)}</div>
+        <div className="weekly-link-results">{focuses?.filter(focus => focus.title.toLowerCase().includes(focusQuery.toLowerCase())).map(focus => <button type="button" className="weekly-link-result" aria-pressed={focusId === focus.id} key={focus.id} onClick={() => {setFocusId(focus.id);setTargetChoice('')}}><span><strong>{focus.title}</strong><small>{formatFocusDate(focus.start)} – {formatFocusDate(focus.end)}</small></span>{focusId === focus.id && <Check size={18} />}</button>)}</div>
+        {targetEnabled && selectedFocus && (selectedFocus.status === 'confirmed' ? <label>Link to<select aria-label="Link to" value={targetChoice} onChange={event => setTargetChoice(event.target.value)}><option value="">Whole position focus</option>{selectedFocus.sections.map((section,i) => <optgroup key={i} label={`Objective ${i+1}`}><option value={`objective:${i}`}>{section.objective}</option>{section.goals.map((goal,j) => <option key={j} value={`goal:${i}:${j}`}>SMART goal {j+1}: {goal}</option>)}</optgroup>)}</select></label> : <p className="muted">Drafts link to the whole focus. Confirm the focus before linking a specific objective or SMART goal.</p>)}
         {focuses?.length === 0 && <p className="weekly-link-empty">No saved position focuses yet.</p>}
       </> : <div className="weekly-manual-link">
         <label>URL<input autoFocus required type="url" maxLength={2048} value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" /></label>

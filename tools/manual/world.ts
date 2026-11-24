@@ -41,7 +41,18 @@ type Json = Record<string, any>;
 function fakeCoach(initiative: () => string): CoachProvider {
   return {
     async suggest(_system: string, _context: string, validate: (value: unknown) => any) {
-      if (JSON.parse(_context).stage === "review") return validate({ review: "The goal supports the objective. Check the scope and feasibility before requesting review.", concern: "Confirm that the planned runbooks fit the time available." });
+      const { stage, context } = JSON.parse(_context);
+      if (stage === "clarify" && context.work === "I want to improve my Playwright testing skills.")
+        return validate({ question: "Kind is currently normal. I recommend personal-development. Which testing skills do you want to build?" });
+      if (context.objective === "Help engineers ship safely by making deployment failures quick to understand and fix.") {
+        if (stage === "objective") return validate({ question: "What would you like to make clearer?", ready: false });
+        if (stage === "review") return validate({ assessment: {
+          purpose: { status: "met", note: "Making deployment failures easier to fix is clear." },
+          people: { status: "needs_attention", note: "How will engineers benefit?" },
+          alignment: { status: "uncertain", note: "How does this connect to the mission?" },
+        } });
+      }
+      if (stage === "review") return validate({ review: "The goal supports the objective. Check the scope and feasibility before requesting review.", concern: "Confirm that the planned runbooks fit the time available." });
       return validate({
         ready: true,
         objective:
@@ -49,7 +60,7 @@ function fakeCoach(initiative: () => string): CoachProvider {
         actions: ["Review the last ten failed deployments with the team", "Publish runbooks for the three most common causes"],
         suggestedDate: "2027-04-30",
         goal: "By 30 April 2027, publish runbooks for the three most common deployment failures and walk the team through each one.",
-        ...(JSON.parse(_context).stage === "clarify" ? { assessment: {
+        ...(stage === "clarify" ? { assessment: {
           purpose: { status: "met", note: "The runbooks are the contribution." },
           people: { status: "needs_attention", note: "Which engineers will use the runbooks?" },
           alignment: { status: "met", note: "Helping the team supports its mission." },
@@ -103,7 +114,7 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     const address = server.address();
     assert.ok(address && typeof address !== "string");
     const origin = `http://127.0.0.1:${address.port}`;
-    const app = createApp(fixture.runtime, { origin, provider: signInOnly, flagOwnerEmail: people.lead.email, coach: fakeCoach(() => firstInitiative), features: resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on,sidebar-collapse=on,focus-progress=on,weekly-updates=on,team-updates=on,team-api=on" }, "production") });
+    const app = createApp(fixture.runtime, { origin, provider: signInOnly, flagOwnerEmail: people.lead.email, coach: fakeCoach(() => firstInitiative), features: resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on,sidebar-collapse=on,focus-progress=on,weekly-goal-copy=on,weekly-goal-privacy=on,weekly-focus-links=on,review-activity=on,team-api=on" }, "production") });
     app.use(express.static(resolve(clientDirectory)));
     server.on("request", app);
 

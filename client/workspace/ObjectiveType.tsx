@@ -56,7 +56,7 @@ export function ObjectiveTypeChoices({
   onChange,
   recommended,
 }: {
-  kind: ObjectiveKind;
+  kind?: ObjectiveKind;
   onChange: (kind: ObjectiveKind) => void;
   recommended?: ObjectiveKind;
 }) {

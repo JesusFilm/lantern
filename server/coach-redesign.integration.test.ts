@@ -3,6 +3,12 @@ import { test } from "node:test";
 import { coachingFixture, checkpoint } from "./coach-test-support.js";
 import { resolveFeatureConfig } from "./features.js";
 import type { CoachProvider } from "./coach-provider.js";
+import type { CoachCheckpoint } from "../shared/coach.js";
+
+// The live-date guard uses the server clock; keep goal fixtures valid as the calendar advances.
+const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+const activeCheckpoint = { ...checkpoint, start: day(-30), end: day(90), date: day(30) };
+const activeDate = new Intl.DateTimeFormat("en-GB", { timeZone: "UTC", day: "numeric", month: "long", year: "numeric" }).format(new Date(activeCheckpoint.date + "T12:00:00Z"));
 
 test("redesigned coaching can clarify a goal after three answers without inventing a commitment", async () => {
   const reply = { question: "How would Spanish help your work?", concern: "The professional connection is unclear.", goal: "", options: [] };
@@ -10,7 +16,7 @@ test("redesigned coaching can clarify a goal after three answers without inventi
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
     const response = await f.request("member", "/api/coach/suggest", "POST", {
-      stage: "goal", context: { ...checkpoint, action: "Learn Spanish", answers: Array.from({ length: 4 }, (_, i) => ({ question: `Question ${i}`, answer: "I am still unsure." })) },
+      stage: "goal", context: { ...activeCheckpoint, action: "Learn Spanish", answers: Array.from({ length: 4 }, (_, i) => ({ question: `Question ${i}`, answer: "I am still unsure." })) },
     });
     assert.equal(response.status, 200);
     assert.deepEqual(await response.json(), { question: reply.question, concern: reply.concern, options: [] });
@@ -39,17 +45,55 @@ test("redesigned review uses department context without example leakage and is h
 
 test("redesigned date validation rejects out-of-period goals before inference and preserves access isolation", async () => {
   let calls = 0;
-  const coach: CoachProvider = { async suggest(_s, _c, validate) { calls++; return validate({ goal: "By 30 November 2026, review failure reports." }); } };
+  const coach: CoachProvider = { async suggest(_s, _c, validate) { calls++; return validate({ goal: `By ${activeDate}, review failure reports.` }); } };
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
-    for (const date of ["2026-09-30", "2027-04-01", ""]) {
-      assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...checkpoint, date } })).status, 400);
+    for (const date of [day(-31), day(91), ""]) {
+      assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...activeCheckpoint, date } })).status, 400);
     }
     assert.equal(calls, 0);
     const focus = await (await f.request("member", "/api/focuses", "POST", { title: "Private", start: checkpoint.start, end: checkpoint.end, sections: [] })).json();
     assert.equal((await f.request("peer", "/api/coach/suggest", "POST", { stage: "review", context: checkpoint, focusId: focus.id, version: focus.version })).status, 404);
     assert.equal(calls, 0);
-    assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint })).status, 200);
+    assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: activeCheckpoint })).status, 200);
+  } finally { await f.close(); }
+});
+
+test("the goal HTTP interface rejects past dates inside the focus before calling the coach", async () => {
+  let calls = 0;
+  const coach: CoachProvider = { async suggest(_s, _c, validate) { calls++; return validate({ goal: "Review reports." }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  const day = (offset: number) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+  const input = { ...checkpoint, start: day(-10), end: day(30) };
+  try {
+    const past = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...input, date: day(-1) } });
+    assert.equal(past.status, 400);
+    assert.equal(calls, 0);
+    const today = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...input, date: day(0) } });
+    assert.equal(today.status, 200);
+    assert.equal(calls, 1);
+  } finally { await f.close(); }
+});
+
+test("goal date validation follows the member's time zone and rejects an invalid zone", async () => {
+  let calls = 0;
+  const coach: CoachProvider = { async suggest(_s, _c, validate) { calls++; return validate({ goal: "Review reports." }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    for (const timeZone of ["Pacific/Auckland", "America/Los_Angeles"]) {
+      const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+      const value = (name: string) => parts.find(part => part.type === name)!.value;
+      const today = `${value("year")}-${value("month")}-${value("day")}`;
+      const date = new Date(today + "T12:00:00Z");
+      const day = (offset: number) => new Date(date.getTime() + offset * 86400000).toISOString().slice(0, 10);
+      const context = { ...checkpoint, start: day(-10), end: day(30) };
+      assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...context, date: day(-1) }, timeZone })).status, 400);
+      assert.equal((await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...context, date: today }, timeZone })).status, 200);
+    }
+    assert.equal(calls, 2);
+    const invalid = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint, timeZone: "Invalid/Nowhere" });
+    assert.equal(invalid.status, 400);
+    assert.equal(calls, 2);
   } finally { await f.close(); }
 });
 
@@ -87,18 +131,18 @@ test("Lantern owns provisional and selected dates even when the coach supplies d
   } };
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
-    const actions = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context: checkpoint })).json();
-    assert.equal(actions.suggestedDate, checkpoint.end);
+    const actions = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context: activeCheckpoint })).json();
+    assert.equal(actions.suggestedDate, activeCheckpoint.end);
     for (const prefix of ["", "By 1 January 2027, ", "By January 1, 2027, ", "By 2027-01-01, ", "By 1st January 2027, ", "By January 1st, 2027, ",
       "By the end of March 2027, ", "By end of March 2027, ", "By March 2027, ", "By the end of Q1 2027, ", "By mid-January 2027, ",
       "By the end of 2027, ", "By mid-2027, ", "By early 2027, "]) {
       suppliedGoal = prefix + "review failure reports.";
-      const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint })).json();
-      assert.equal(goal.goal, "By 30 November 2026, review failure reports.");
+      const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: activeCheckpoint })).json();
+      assert.equal(goal.goal, `By ${activeDate}, review failure reports.`);
     }
     suppliedGoal = "By reviewing reports from January 2026, identify recurring failures.";
-    const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: checkpoint })).json();
-    assert.equal(goal.goal, "By 30 November 2026, " + suppliedGoal);
+    const goal = await (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: activeCheckpoint })).json();
+    assert.equal(goal.goal, `By ${activeDate}, ` + suppliedGoal);
   } finally { await f.close(); }
 });
 
@@ -275,6 +319,59 @@ test("an answered follow-up is drafted into the visible objective and checked as
   } finally { await f.close(); }
 });
 
+test("an answer to an existing objective question is used in a draft and the visible wording is checked", async () => {
+  const calls: Array<{ stage: string; context: CoachCheckpoint }> = [];
+  let allChecksMet = false;
+  let failedDraft = false;
+  const coach: CoachProvider = { async suggest(_s, raw, validate) {
+    const input = JSON.parse(raw); calls.push(input);
+    if (input.stage === "review") return validate({ assessment: {
+      purpose: { status: "met", note: "Testing is clear." },
+      people: { status: allChecksMet ? "met" : "needs_attention", note: "How do users benefit?" },
+      alignment: { status: allChecksMet ? "met" : "uncertain", note: "Connection is unclear." },
+    } });
+    if (input.context.question || failedDraft) return validate({ question: "What kind of testing?", concern: "What kind of testing?", ready: false });
+    return validate({ objective: "Test the app so users have fewer bugs." });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const input = { ...checkpoint, entry: "objective", objective: "stuff", kind: "normal", question: "Who benefits?", answer: "Users have fewer bugs when I test the app.", answers: [{ question: "Who benefits?", answer: "Users have fewer bugs when I test the app." }] };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: input });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.objective, "Test the app so users have fewer bugs.");
+    assert.equal(result.question, undefined);
+    assert.match(result.concern, /What kind of testing\?/);
+    assert.equal(result.assessment.people.status, "needs_attention");
+    assert.deepEqual(calls.map(c => c.stage), ["objective", "objective", "review"]);
+    assert.equal(calls[1]!.context.answers[0]!.answer, input.answer);
+    assert.equal(calls[2]!.context.objective, result.objective);
+    allChecksMet = true;
+    const ready = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: { ...input, kind: "personal-development" } });
+    assert.equal(ready.status, 200);
+    const readyResult = await ready.json();
+    assert.equal(readyResult.objective, "Test the app so users have fewer bugs.");
+    assert.equal(readyResult.assessment.purpose.status, "met");
+    assert.equal(readyResult.assessment.people.status, "met");
+    assert.equal(readyResult.assessment.alignment.status, "met");
+    assert.equal(readyResult.concern, undefined, "The coach stays quiet when every check is met.");
+    allChecksMet = false;
+    const repeated = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: {
+      ...input, answers: [{ question: "What kind of testing?", answer: "Functional testing." }, ...input.answers],
+    } });
+    assert.equal(repeated.status, 200);
+    assert.equal((await repeated.json()).concern, undefined, "A question already answered earlier is not repeated as feedback.");
+    failedDraft = true;
+    const noDraft = await f.request("member", "/api/coach/suggest", "POST", { stage: "objective", context: {
+      ...input, answers: [{ question: "What kind of testing?", answer: "Functional testing." }, ...input.answers],
+    } });
+    assert.equal(noDraft.status, 200);
+    const fallback = await noDraft.json();
+    assert.equal(fallback.objective, undefined);
+    assert.equal(fallback.concern, undefined, "An answered question is not repeated when the retry also fails.");
+  } finally { await f.close(); }
+});
+
 test("answering feedback never starts a question loop and unchanged wording is still checked", async () => {
   const calls: Array<{ stage: string; context: typeof checkpoint }> = [];
   let reviews = 0;
@@ -298,9 +395,10 @@ test("answering feedback never starts a question loop and unchanged wording is s
     assert.equal(result.question, undefined);
     assert.equal(result.objective, undefined);
     assert.match(result.concern, /What is your role\?/);
+    assert.equal(result.concern.match(/What is your role\?/g)?.length, 1, "Repeated provider questions appear only once in feedback.");
     assert.equal(result.assessment.people.status, "needs_attention");
-    assert.deepEqual(calls.map(c => c.stage), ["objective", "review", "review"]);
-    assert.equal(calls[2]!.context.objective, "asdf jkl");
+    assert.deepEqual(calls.map(c => c.stage), ["objective", "objective", "review", "review"]);
+    assert.equal(calls[3]!.context.objective, "asdf jkl");
   } finally { await f.close(); }
 });
 
@@ -337,13 +435,13 @@ test("after one answered goal question the coach drafts the goal from the member
   } };
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
-    const ask = async (answer: string) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...checkpoint, answer, question: answer ? "What evidence will you record?" : "", answers: answer ? [{ question: "What evidence will you record?", answer }] : [] } })).json();
+    const ask = async (answer: string) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...activeCheckpoint, answer, question: answer ? "What evidence will you record?" : "", answers: answer ? [{ question: "What evidence will you record?", answer }] : [] } })).json();
     assert.equal((await ask("")).question, "What evidence will you record?");
     const after = await ask("I'm not sure.");
     assert.equal(after.question, undefined);
     assert.match(after.concern, /how will you measure it/);
     // The member can't say how success will be shown; they still get an editable goal of their own action and date.
-    assert.equal(after.goal, "By 30 November 2026, Review logs");
+    assert.equal(after.goal, `By ${activeDate}, Review logs`);
   } finally { await f.close(); }
 });
 
@@ -352,11 +450,11 @@ test("a goal reply with only feedback still gives the member their action as a g
   const coach: CoachProvider = { async suggest(_s, _c, validate) { return validate(reply); } };
   const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
   try {
-    const ask = async (context = {}) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...checkpoint, ...context } })).json();
-    assert.deepEqual(await ask(), { concern: "Evidence is missing for this action.", goal: "By 30 November 2026, Review logs" });
+    const ask = async (context = {}) => (await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...activeCheckpoint, ...context } })).json();
+    assert.deepEqual(await ask(), { concern: "Evidence is missing for this action.", goal: `By ${activeDate}, Review logs` });
     // A coach-written goal is kept as written.
     reply = { goal: "Review logs and note recurring causes.", concern: "Consider who sees the notes." };
-    assert.equal((await ask()).goal, "By 30 November 2026, Review logs and note recurring causes.");
+    assert.equal((await ask()).goal, `By ${activeDate}, Review logs and note recurring causes.`);
     // An unanswered question is still asked; the member has not yet had the chance to answer.
     reply = { question: "How does reviewing logs support this objective?" };
     assert.equal((await ask()).goal, undefined);
@@ -438,5 +536,532 @@ test("a first draft whose beneficiary is not in the member's words becomes the c
     const answered = await ask({ answers: [{ question: "Who is it for?", answer: "Not sure yet." }] });
     assert.equal(answered.objective, "Build an app that generates gospel videos for seekers.");
     assert.equal(answered.question, undefined);
+  } finally { await f.close(); }
+});
+
+test("coach questions use member-facing objective type names without changing ordinary language", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({
+      question: "I recommend personal-development. Kind is currently 'normal'; what kind of tests do you run in normal working hours?",
+      options: ["personal-development", "normal objective type"],
+      recommendedKind: "personal-development",
+    });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, kind: "normal", answers: [] } });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.question, "I recommend Personal development. Objective type is currently 'Contribution'; what kind of tests do you run in normal working hours?");
+    assert.deepEqual(result.options, ["Personal development", "Contribution objective type"]);
+    assert.equal(result.recommendedKind, "personal-development");
+  } finally { await f.close(); }
+});
+
+test("coach feedback and checks do not expose type identifiers", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({
+      review: "The current type is normal; personal-development may fit.",
+      assessment: {
+        purpose: { status: "needs_attention", note: "Kind: normal; consider personal-development." },
+        people: { status: "met", note: "What kind of support is available during normal hours?" },
+        alignment: { status: "uncertain", note: "The normal objective type needs a clearer link." },
+      },
+    });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "review", context: { ...checkpoint, entry: "objective", kind: "personal-development" } });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.review, "The current type is Contribution; Personal development may fit.");
+    assert.equal(result.assessment.purpose.note, "Objective type: Contribution; consider Personal development.");
+    assert.equal(result.assessment.people.note, "What kind of support is available during normal hours?");
+    assert.equal(result.assessment.alignment.note, "The Contribution objective type needs a clearer link.");
+  } finally { await f.close(); }
+});
+
+test("the coach describes the selected type without the internal normal value", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ question: "I recommend personal-development; normal is currently selected. What would you like to learn?" });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).question, "I recommend Personal development; Contribution is currently selected. What would you like to learn?");
+  } finally { await f.close(); }
+});
+
+test("type-selection options use the same names shown in the editor", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ question: "Which objective type fits?", options: ["normal", "personal-development", "leadership"] });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).options, ["Contribution", "Personal development", "Leadership"]);
+  } finally { await f.close(); }
+});
+
+test("the coach does not rewrite the member's exact objective text when it contains an identifier", async () => {
+  const objective = "Maintain personal-development scripts for trainers.";
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ objective, assessment: {
+      purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Clear." },
+    } });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, work: objective, objective: "", answers: [], kind: "personal-development" } });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).objective, objective);
+  } finally { await f.close(); }
+});
+
+test("a dated goal preserves the member's action when it contains an identifier", async () => {
+  const action = "Maintain personal-development scripts for trainers.";
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ goal: action }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...activeCheckpoint, action } });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).goal, `By ${activeDate}, ${action}`);
+  } finally { await f.close(); }
+});
+
+test("the existing coach flow is unchanged when the redesign flag is off", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ ready: false, question: "Kind is normal; consider personal-development.", options: ["normal"] });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=off" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [] } });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.question, "Kind is normal; consider personal-development.");
+    assert.deepEqual(result.options, ["normal"]);
+  } finally { await f.close(); }
+});
+
+test("the coach uses Contribution when it names a normal objective", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ question: "The objective is normal. Would personal-development be a better type?" });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).question, "The objective is Contribution. Would Personal development be a better type?");
+  } finally { await f.close(); }
+});
+
+test("internal type choices are labelled even when the question omits objective type", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ question: "Which one fits?", options: ["normal", "personal-development", "leadership"] });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json()).options, ["Contribution", "Personal development", "Leadership"]);
+  } finally { await f.close(); }
+});
+
+test("quoted schema field names are not shown in coach questions", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ question: "Update `Kind` before continuing." });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).question, "Update `Objective type` before continuing.");
+  } finally { await f.close(); }
+});
+
+test("ordinary uses of kind are not mistaken for an objective type", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ question: "What kind is best for smoke testing?" });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).question, "What kind is best for smoke testing?");
+  } finally { await f.close(); }
+});
+
+test("rephrased coach drafts and actions preserve identifiers supplied by the member", async () => {
+  const coach: CoachProvider = { async suggest(_system, raw, validate) {
+    const { stage } = JSON.parse(raw);
+    if (stage === "actions") return validate({ actions: ["Document the personal-development scripts for trainers"] });
+    if (stage === "goal") return validate({ goal: "Document the personal-development scripts for trainers" });
+    return validate({ objective: "Maintain the personal-development scripts for trainers", assessment: {
+      purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Clear." },
+    } });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  const context = { ...activeCheckpoint, work: "I maintain personal-development scripts for trainers.", action: "Document personal-development scripts for trainers", kind: "personal-development" };
+  try {
+    const objective = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...context, answers: [] } });
+    assert.equal((await objective.json()).objective, "Maintain the personal-development scripts for trainers");
+    const actions = await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context });
+    assert.deepEqual((await actions.json()).actions, ["Document the personal-development scripts for trainers"]);
+    const goal = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context });
+    assert.equal((await goal.json()).goal, `By ${activeDate}, Document the personal-development scripts for trainers`);
+  } finally { await f.close(); }
+});
+
+test("mixed internal and displayed objective choices use member-facing labels", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ question: "You chose normal. Which one fits?", options: ["normal", "Personal development", "Leadership"] });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    const result = await response.json();
+    assert.equal(result.question, "You chose Contribution. Which one fits?");
+    assert.deepEqual(result.options, ["Contribution", "Personal development", "Leadership"]);
+  } finally { await f.close(); }
+});
+
+test("a sentence beginning with Kind can refer to ordinary language", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "Kind is the name of our test environment. How will you use it?" }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal((await response.json()).question, "Kind is the name of our test environment. How will you use it?");
+  } finally { await f.close(); }
+});
+
+test("ordinary descriptions of an objective stay unchanged", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "Your objective is normal for this stage. What would you like to achieve?" }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal((await response.json()).question, "Your objective is normal for this stage. What would you like to achieve?");
+  } finally { await f.close(); }
+});
+
+test("feedback explains where to change a suggested objective type", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "Your type is normal; change it in the editor if you prefer personal-development." }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal((await response.json()).question, "Your type is Contribution; change it on the Objective step if you prefer Personal development.");
+  } finally { await f.close(); }
+});
+
+test("an instruction to select normal for the objective type uses the Contribution label", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "Select normal for the objective type." }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal((await response.json()).question, "Select Contribution for the objective type.");
+  } finally { await f.close(); }
+});
+
+test("member terminology is preserved in questions, rewritten objectives and actions", async () => {
+  const coach: CoachProvider = { async suggest(_system, raw, validate) {
+    const { stage, context } = JSON.parse(raw);
+    if (stage === "actions") return validate({ actions: ["Document the normal type of deployment"] });
+    if (stage === "goal") return validate({ goal: "Document the normal type of deployment" });
+    if (context.answers.length) return validate({ objective: "Document the normal type of deployment for trainers", assessment: {
+      purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Clear." },
+    } });
+    return validate({ question: "How do you maintain the personal-development scripts?" });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  const context = { ...activeCheckpoint, work: "I document the normal type of deployment and maintain personal-development scripts.", action: "Document the normal type of deployment", kind: "personal-development" };
+  try {
+    const question = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...context, answers: [] } });
+    assert.equal((await question.json()).question, "How do you maintain the personal-development scripts?");
+    const objective = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...context, answers: [{ question: "Who?", answer: "trainers" }] } });
+    assert.equal((await objective.json()).objective, "Document the normal type of deployment for trainers");
+    const actions = await f.request("member", "/api/coach/suggest", "POST", { stage: "actions", context });
+    assert.deepEqual((await actions.json()).actions, ["Document the normal type of deployment"]);
+    const goal = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context });
+    assert.equal((await goal.json()).goal, `By ${activeDate}, Document the normal type of deployment`);
+  } finally { await f.close(); }
+});
+
+test("the coach translates a selected type in conversational recommendations", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ question: "You chose normal and I suggest personal-development. Which type fits?", options: ["normal", "leadership"] });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    const result = await response.json();
+    assert.equal(result.question, "You chose Contribution and I suggest Personal development. Which type fits?");
+    assert.deepEqual(result.options, ["Contribution", "Leadership"]);
+  } finally { await f.close(); }
+});
+
+test("follow-up answers retain identifiers in generated goals", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ goal: "Document personal-development scripts for trainers" }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context: { ...activeCheckpoint, answer: "They are named personal-development scripts.", answers: [] } });
+    assert.equal((await response.json()).goal, `By ${activeDate}, Document personal-development scripts for trainers`);
+  } finally { await f.close(); }
+});
+
+test("normal test modes remain ordinary language", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "Which test mode do you prefer? Choose normal." }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal((await response.json()).question, "Which test mode do you prefer? Choose normal.");
+  } finally { await f.close(); }
+});
+
+test("recommendations name the objective type and its editor step", async () => {
+  let reply = { question: "The kind should be personal-development.", recommendedKind: "personal-development" };
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate(reply); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const ask = () => f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal((await (await ask()).json()).question, "The objective type should be Personal development.");
+    reply = { question: "Would you like to change it in the editor?", recommendedKind: "personal-development" };
+    assert.equal((await (await ask()).json()).question, "Would you like to change it on the Objective step?");
+  } finally { await f.close(); }
+});
+
+test("kind and type in ordinary test-mode questions stay ordinary", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "What kind of testing do you prefer? Choose normal." }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context: { ...checkpoint, answers: [], kind: "normal" } });
+    assert.equal((await response.json()).question, "What kind of testing do you prefer? Choose normal.");
+  } finally { await f.close(); }
+});
+
+test("rephrased technical objectives preserve member-supplied kind and normal", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ objective: "Update API payloads by setting `kind` to normal for every client.", assessment: {
+      purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Clear." },
+    } });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, work: "Update API payloads to set `kind` to normal for all clients.", objective: "", answers: [], kind: "personal-development" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).objective, "Update API payloads by setting `kind` to normal for every client.");
+  } finally { await f.close(); }
+});
+
+test("rephrased goals preserve a member's normal deployment mode", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ goal: "Verify normal is selected for production deployments" }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...activeCheckpoint, action: "Check normal is selected for production deployments" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context });
+    assert.equal((await response.json()).goal, `By ${activeDate}, Verify normal is selected for production deployments`);
+  } finally { await f.close(); }
+});
+
+test("member-supplied unquoted API fields survive a rewritten objective", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ objective: "Preserve kind: normal in API payloads for all clients.", assessment: {
+      purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Clear." },
+    } });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, work: "Update API payloads that contain kind: normal.", objective: "", answers: [], kind: "personal-development" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).objective, "Preserve kind: normal in API payloads for all clients.");
+  } finally { await f.close(); }
+});
+
+test("rephrased technical kind and normal remain unchanged in a suggested objective", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) {
+    return validate({ objective: "Ensure kind is normal", assessment: {
+      purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Clear." },
+    } });
+  } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, work: "Ensure that the `kind` field is normal for API clients.", objective: "", answers: [], kind: "personal-development" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).objective, "Ensure kind is normal");
+  } finally { await f.close(); }
+});
+
+test("ordinary normal objectives and technical kinds keep their meaning", async () => {
+  let suggestion: Record<string, unknown> = { question: "Your objective is normal and clear." };
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate(suggestion); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    let context = { ...checkpoint, work: "Keep the test kind normal for deployments.", objective: "", answers: [] };
+    let response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Your objective is normal and clear.");
+    suggestion = { objective: "Ensure the test kind is normal before each deployment", assessment: {
+      purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Clear." },
+    } };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).objective, "Ensure the test kind is normal before each deployment");
+    context = { ...context, work: "Update the kind property in our API requests." };
+    suggestion = { ...suggestion, objective: "Update the `kind` property for API requests." };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).objective, "Update the `kind` property for API requests.");
+  } finally { await f.close(); }
+});
+
+test("a selected objective type is translated even when work mentions normal hours", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "normal is currently selected", recommendedKind: "personal-development" }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, work: "Learn Playwright during normal working hours.", answers: [], kind: "normal" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Contribution is currently selected");
+  } finally { await f.close(); }
+});
+
+test("technical kind and normal remain intact in coach questions and feedback", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "The test kind is normal; how do you verify it?", concern: "Ensure kind is normal" }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, work: "Maintain the normal test kind for deployments.", answers: [], kind: "normal" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    const result = await response.json();
+    assert.equal(result.question, "The test kind is normal; how do you verify it?");
+    assert.equal(result.concern, "Ensure kind is normal");
+  } finally { await f.close(); }
+});
+
+test("type recommendations preserve technical modes while naming objective types clearly", async () => {
+  let suggestion = { question: "Your objective type is the normal type.", recommendedKind: "personal-development" };
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate(suggestion); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    let context = { ...checkpoint, work: "What kind of tests run during normal working hours?", answers: [], kind: "normal" };
+    let response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Your objective type is Contribution.");
+    suggestion = { question: "Kind: normal; I recommend personal-development.", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Objective type: Contribution; I recommend Personal development.");
+    context = { ...context, work: "Maintain the normal test kind for deployments while learning Playwright." };
+    suggestion = { question: "The test kind is normal; how do you verify it?", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, suggestion.question);
+    context = { ...context, work: "Maintain the normal API kind while learning Playwright." };
+    suggestion = { question: "The API kind is normal; how do you verify it?", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, suggestion.question);
+    context = { ...context, work: "Maintain the normal test kind while learning Playwright." };
+    suggestion = { question: "The test kind is normal; your kind is normal. I recommend personal-development.", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "The test kind is normal; your objective type is Contribution. I recommend Personal development.");
+    context = { ...context, work: "Keep releases reliable." };
+    suggestion = { question: "The deployment kind is normal. Is normal selected for the deployment mode?", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, suggestion.question);
+    suggestion = { question: "The runtime kind is normal. Is normal selected for the service mode?", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, suggestion.question);
+    context = { ...context, work: "What kind of tests run during normal working hours?" };
+    const withoutRecommendation = { question: "Kind: normal. What would you like to improve?" };
+    const plainCoach: CoachProvider = { async suggest(_system, _context, validate) { return validate(withoutRecommendation); } };
+    const plain = await coachingFixture(plainCoach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+    try {
+      response = await plain.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+      assert.equal((await response.json()).question, "Objective type: Contribution. What would you like to improve?");
+    } finally { await plain.close(); }
+    suggestion = { question: "Your objective type is currently set to normal.", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Your objective type is currently set to Contribution.");
+    suggestion = { question: "Normal is selected for your objective.", recommendedKind: "personal-development" };
+    response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Contribution is selected for your objective.");
+  } finally { await f.close(); }
+});
+
+test("a selected objective type is translated without a recommendation when work mentions normal hours", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "normal is currently selected" }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, work: "I test applications during normal working hours.", answers: [], kind: "normal" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Contribution is currently selected");
+  } finally { await f.close(); }
+});
+
+test("the member's recommendedKind API field survives rephrasing", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ objective: "Update the recommendedKind field for every client.", assessment: {
+    purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Clear." },
+  } }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, work: "Update API payloads containing recommendedKind.", objective: "", answers: [], kind: "personal-development" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).objective, "Update the recommendedKind field for every client.");
+  } finally { await f.close(); }
+});
+
+test("a normal deployment type is not changed to an objective type", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ objective: "Ensure the deployment type is normal before releases.", assessment: {
+    purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Clear." },
+  } }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, work: "Keep deployment settings stable.", objective: "", answers: [], kind: "personal-development" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).objective, "Ensure the deployment type is normal before releases.");
+  } finally { await f.close(); }
+});
+
+test("the member's focus title protects its technical identifiers", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ objective: "Document the kind: normal payload for API clients.", assessment: {
+    purpose: { status: "met", note: "Clear." }, people: { status: "met", note: "Clear." }, alignment: { status: "met", note: "Clear." },
+  } }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, title: "Migrate kind: normal payloads", work: "Help API clients.", objective: "", answers: [], kind: "personal-development" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).objective, "Document the kind: normal payload for API clients.");
+  } finally { await f.close(); }
+});
+
+test("a technical normal mode does not hide the coach's explicit objective-type label", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "Kind is currently normal; I recommend personal-development.", recommendedKind: "personal-development" }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, work: "Check the normal mode of production deployments.", answers: [], kind: "normal" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Objective type is currently Contribution; I recommend Personal development.");
+  } finally { await f.close(); }
+});
+
+test("a member's technical identifier does not hide an explicit recommended type", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "Kind is currently normal; I recommend personal-development.", recommendedKind: "personal-development" }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, work: "Maintain personal-development scripts for trainers.", answers: [], kind: "normal" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "Objective type is currently Contribution; I recommend Personal development.");
+  } finally { await f.close(); }
+});
+
+test("a normal production mode remains intact in a rephrased goal", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ goal: "Ensure normal is selected for production deployments" }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...activeCheckpoint, action: "Use normal production mode for deployments" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "goal", context });
+    assert.equal((await response.json()).goal, `By ${activeDate}, Ensure normal is selected for production deployments`);
+  } finally { await f.close(); }
+});
+
+test("an explicit kind recommendation is translated even when the member names scripts", async () => {
+  const coach: CoachProvider = { async suggest(_system, _context, validate) { return validate({ question: "The kind should be personal-development." }); } };
+  const f = await coachingFixture(coach, resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on" }, "local"));
+  try {
+    const context = { ...checkpoint, work: "Maintain personal-development scripts.", answers: [], kind: "normal" };
+    const response = await f.request("member", "/api/coach/suggest", "POST", { stage: "clarify", context });
+    assert.equal((await response.json()).question, "The objective type should be Personal development.");
   } finally { await f.close(); }
 });

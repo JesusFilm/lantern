@@ -10,6 +10,76 @@ export const date = (value: unknown): value is string =>
   new Date(value).toISOString().slice(0, 10) === value;
 const object = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
+/** Translate schema terminology when it is used as an objective type label. */
+type MemberTerms = { development: boolean; kind: boolean; normal: boolean; recommendedKind: boolean };
+function memberFacingText(text: string, terms: MemberTerms, typeChoices = false, recommended = false, memberDraft = false): string {
+  const typeContext = typeChoices || /personal[-_ ]development|\brecommendedKind\b|\bobjective\s+(?:type|kind)\b|\b(?:your|current|selected|recommended)\s+(?:kind|type)\b|\bkind\s*(?:is|was|:|=|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:normal|Contribution|Personal development|Leadership)\b/i.test(text);
+  let result = terms.development
+    ? text.replace(/(\b(?:recommend|suggest|choose|select)\s+(?:the\s+)?["'`]*)(personal[-_]development)\b(?=["'`]*\s*(?:[.,;!?]|$|objective\b|type\b))/gi, "$1Personal development")
+    : text.replace(/\bpersonal[-_]development\b/gi, "Personal development");
+  if (terms.development) result = result.replace(/(\b(?:objective\s+type|kind|type)\s*(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*)(personal[-_]development)\b(?=["'`]*\s*(?:[.,;!?]|$))/gi, "$1Personal development");
+  if (!terms.recommendedKind) result = result.replace(/\brecommendedKind\b/g, "recommended objective type");
+  result = result.replace(/(\bobjective\s+type\s+(?:is|was)\s+)the\s+normal\s+type\b/gi, "$1Contribution");
+  if (typeContext) result = result.replace(/(\bobjective\s+(?:is|was)\s*["'`]*)(normal)\b(?!\s+(?:for|in|when|at|during|under|with)\b)/gi, "$1Contribution");
+  result = result.replace(/(\b(?:objective\s+type|kind|type)\s*(?:is|was|:|=|currently|set to)\s*(?:currently\s+)?(?:set to\s+)?["'`]*)(normal)\b(?!\s+(?:for|in|when|at|during|under|with)\b)/gi,
+    (match, prefix: string, _normal: string, offset: number, source: string) => {
+      const before = source.slice(0, offset);
+      const technicalKind = /\b(?:the|a|an|this|my)\s+(?!(?:current|selected|recommended|objective)\b)(?:[\w-]+\s+){1,3}$/i.test(before);
+      const explicitKind = /\b(?:your|current|selected|recommended)\s+$/i.test(before) || (recommended && /^kind\s*(?:[:=]|is\s+currently)/i.test(prefix));
+      if ((/^type\b/i.test(prefix) && !typeContext) || (/^kind\b/i.test(prefix) && (technicalKind || (terms.kind && terms.normal && (memberDraft || !explicitKind))))) return match;
+      return prefix + "Contribution";
+    });
+  result = result.replace(/(\b(?:you\s+)?(?:chose|choose|select(?:ed)?|pick(?:ed)?)\s*["'`]*)(normal)\b(?=\s*(?:[.,;!?]|$|for\s+(?:the\s+)?objective\s+(?:type|kind)|(?:and|but)\s+I\s+(?:suggest|recommend)))/gi,
+    (match, prefix: string) => typeContext ? prefix + "Contribution" : match);
+  result = result.replace(/\bnormal(?=\s+objective\s+(?:kind|type)\b|\s+(?:is\s+)?(?:currently\s+)?selected\b)/gi,
+    (match, offset: number, source: string) => /^(?:\s+is)?\s+(?:currently\s+)?selected\s+for\b(?!\s+(?:(?:the|your)\s+)?objective\b)/i.test(source.slice(offset + match.length)) ? match : typeContext || recommended || !memberDraft || !terms.normal ? "Contribution" : match);
+  if (!terms.kind) result = result.replace(/`kind`/gi, "`Objective type`");
+  result = result.replace(/\bkind(?=\s*(?:is|was|currently|set to|should be|could be|might be)\s*(?:(?:currently|set to)\s*)?["'`]*(?:Contribution|Personal development|Leadership)\b)/gi,
+    match => match[0] === "K" ? "Objective type" : "objective type");
+  result = result.replace(/\bkind(?=\s*[:=]\s*["'`]*Contribution\b)/gi, match => match[0] === "K" ? "Objective type" : "objective type");
+  if (!terms.kind) result = result.replace(/\bkind(?=\s*[:=])/gi, match => match[0] === "K" ? "Objective type" : "objective type");
+  return result.replace(/\bin the editor\b/gi, match => typeContext || (recommended && /\bchange\s+(?:it|the type|your type)\s+in the editor\b/i.test(text)) ? "on the Objective step" : match);
+}
+
+/** Keep the machine-readable type unchanged while using the member's labels in prose. */
+function memberFacingCoachText<T extends CoachSuggestion>(reply: T, context?: Partial<CoachCheckpoint>): T {
+  const memberText = [context?.work, context?.objective, context?.action, context?.goal, context?.answer, context?.title,
+    ...(context?.answers ?? []).map(answer => answer.answer), ...(context?.siblings ?? [])];
+  const terms: MemberTerms = {
+    development: memberText.some(own => /\bpersonal[-_]development\b/i.test(own ?? "")),
+    recommendedKind: memberText.some(own => /\brecommendedKind\b/i.test(own ?? "")),
+    kind: memberText.some(own => /(?:`kind`|["']kind["']|\bkind\s*[:=]|\bkind\s+(?:field|key|parameter|property|to)\b|\b(?!(?:what|which|your|the|a|this|that|any|some)\b)[\w-]+\s+kind\b)/i.test(own ?? "")),
+    normal: memberText.some(own => /\bnormal\b/i.test(own ?? "")),
+  };
+  const typeChoices = /\bobjective (?:type|kind)\b/i.test(reply.question ?? "") ||
+    (!!reply.options && reply.options.length > 1 && reply.options.some(value => /^(personal[-_ ]development|leadership)$/i.test(value.trim())) &&
+      reply.options.every(value => /^(normal|contribution|personal[-_ ]development|leadership)$/i.test(value.trim())));
+  const draft = (value: string) => memberText.some(own => own?.trim() && own.trim() === value.trim()) ? value : memberFacingText(value, terms, false, false, true);
+  const text = (value: string | undefined) => value === undefined ? undefined : memberFacingText(value, terms, typeChoices, !!reply.recommendedKind);
+  const option = (value: string) => {
+    if (typeChoices && value.trim().toLowerCase() === "normal") return "Contribution";
+    if (typeChoices && value.trim().toLowerCase() === "leadership") return "Leadership";
+    return typeChoices ? memberFacingText(value, { development: false, kind: false, normal: false, recommendedKind: false }) : draft(value);
+  };
+  const assessment = reply.assessment && {
+    purpose: { ...reply.assessment.purpose, note: text(reply.assessment.purpose.note)! },
+    people: { ...reply.assessment.people, note: text(reply.assessment.people.note)! },
+    alignment: { ...reply.assessment.alignment, note: text(reply.assessment.alignment.note)! },
+  };
+  return {
+    ...reply,
+    ...(reply.question !== undefined && { question: text(reply.question) }),
+    ...(reply.concern !== undefined && { concern: text(reply.concern) }),
+    ...(reply.objective !== undefined && { objective: draft(reply.objective) }),
+    ...(reply.goal !== undefined && { goal: draft(reply.goal) }),
+    ...(reply.title !== undefined && { title: draft(reply.title) }),
+    ...(reply.review !== undefined && { review: text(reply.review) }),
+    ...(reply.options && { options: reply.options.map(option) }),
+    ...(reply.actions && { actions: reply.actions.map(draft) }),
+    ...(assessment && { assessment }),
+  };
+}
+
 const text = (v: unknown, max = 4000): v is string =>
   typeof v === "string" && v.length <= max;
 const texts = (v: unknown, max = 6) =>
@@ -147,7 +217,7 @@ export function validateSuggestion(
   value: unknown,
   initiativeIds: string[],
   redesigned = false,
-  context?: Pick<CoachCheckpoint, "date" | "end">,
+  context?: Pick<CoachCheckpoint, "date" | "end"> & Partial<Pick<CoachCheckpoint, "work" | "objective" | "action" | "goal" | "answer" | "title" | "answers" | "siblings">>,
 ): ModelSuggestion {
   const fail = (): never => {
     throw new Error("Invalid coach response");
@@ -225,7 +295,7 @@ export function validateSuggestion(
       : stage === "goal" ? value.goal : stage === "review" ? value.review || value.assessment : value.objective;
     if (!output) return fail();
   }
-  const result = value as ModelSuggestion;
+  const result = redesigned ? memberFacingCoachText(value as ModelSuggestion, context) : value as ModelSuggestion;
   // A review assesses supplied wording; it never rewrites it.
   if (redesigned && stage === "review") delete result.objective;
   if (redesigned && context && result.goal && date(context.date)) {

@@ -63,7 +63,7 @@ for (const actor of ["member", "lead"] as const) {
       const confirmedNote = await reply("Read this with the confirmed focus");
       assert.equal((await f.request("lead", path + "/confirm", "POST", { version: focus.version })).status, 200);
       await page.reload();
-      if (actor === "lead") await open.click();
+      if (actor === "lead") await expect(open).toHaveCount(0);
       await expect(page.getByText(confirmedNote.body, { exact: true })).toBeVisible();
       await expect.poll(async () => (await record()).readIds).toContain(confirmedNote.id);
       await expect(page.getByRole("button", { name: /Add note|Delete note/ })).toHaveCount(0);
