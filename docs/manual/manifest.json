@@ -3,7 +3,7 @@
   "editionDate": "2026-11-24",
   "deck": "12d57a85feb3fe87d3e907de6bc01ebe495cc025acb87645ab2cef9936cff6e6",
   "sources": {
-    "fingerprint": "28e49f8a69893f5f705c3065f962c114f61b85221af2433d2bbb776473d74ad1",
+    "fingerprint": "b67a0e437e9a8ad84abdf9fad441617591a5fa16e19ef573624fb780357cbeb7",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -122,7 +122,7 @@
       "server/mission-image.ts": "63cb697089da48061b572f3fec05e710bcc2f46725bd60af283df13f758a129d",
       "server/operations.ts": "320b85cdc064af0f30c5e08ecf454c2a56b6edea6bb341f4a79aff04ce435930",
       "server/operator-target.ts": "5e991e5c5f1a97cb715f7fd974ffc5d09af5f252760808bd25d715c458993653",
-      "server/privilege-test-support.ts": "b7cf3608a7cd4599358d198305c201de15ce878f4cd83af555199c4b05f58c3b",
+      "server/privilege-test-support.ts": "05a6e7bef5a1d458ef415566ad8ba32e6f6c290d1acd7e47e199d7ca7ab83650",
       "server/progress-http.ts": "f8b73280f5a042c1e5c9009d529f62efa0f84617c2916cc3cb89c476a2d5e9e2",
       "server/progress.ts": "8f38ace6abce842d92fd94adc5f6dc412d7226dc93fa2ef822739a95f5f2a555",
       "server/review-activity-http.ts": "853f020da3f78374a825d9cb5cf37f25203918117f558b7bbdf8676bd17dd179",
@@ -268,7 +268,7 @@
   },
   "pdf": "b05c737b14da2b82573c78f73790199a4b38b008263b5429af9554cb9551caa6",
   "verification": {
-    "generatedAt": "2026-11-24T23:15:38.989Z",
+    "generatedAt": "2026-11-24T23:42:17.822Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -388,7 +388,7 @@
       "server/mission-image.ts": "63cb697089da48061b572f3fec05e710bcc2f46725bd60af283df13f758a129d",
       "server/operations.ts": "320b85cdc064af0f30c5e08ecf454c2a56b6edea6bb341f4a79aff04ce435930",
       "server/operator-target.ts": "5e991e5c5f1a97cb715f7fd974ffc5d09af5f252760808bd25d715c458993653",
-      "server/privilege-test-support.ts": "b7cf3608a7cd4599358d198305c201de15ce878f4cd83af555199c4b05f58c3b",
+      "server/privilege-test-support.ts": "05a6e7bef5a1d458ef415566ad8ba32e6f6c290d1acd7e47e199d7ca7ab83650",
       "server/progress-http.ts": "f8b73280f5a042c1e5c9009d529f62efa0f84617c2916cc3cb89c476a2d5e9e2",
       "server/progress.ts": "8f38ace6abce842d92fd94adc5f6dc412d7226dc93fa2ef822739a95f5f2a555",
       "server/review-activity-http.ts": "853f020da3f78374a825d9cb5cf37f25203918117f558b7bbdf8676bd17dd179",
