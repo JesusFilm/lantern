@@ -477,6 +477,7 @@ test("unsent coach details cannot be silently discarded by Next, Save or changin
     await expect(page.getByLabel("Objective", { exact: true })).toHaveValue("Build a video application for online seekers.");
     await expect(page.getByRole("button", { name: "Next", exact: true })).toBeEnabled();
     await page.getByRole("button", { name: "Save objective", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Add objective", exact: true })).toHaveCount(0);
     const saved = await (await f.request("member", "/api/focuses/" + f.focus.id)).json();
     assert.equal(saved.sections[0].objective, "Build a video application for online seekers.");
   } finally { await f.close(); }
