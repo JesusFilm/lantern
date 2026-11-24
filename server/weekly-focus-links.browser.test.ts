@@ -21,7 +21,16 @@ test('member links a weekly goal to a confirmed SMART goal and reviews a suggest
  const saved=await(await f.request('member','/api/weeks/2026-11-23')).json();
  await f.request('member','/api/weeks/2026-11-23/updates','POST',{date:'2026-11-23',body:'Finished',planVersion:saved.plans.at(-1).version,goalStatuses:[{goalId:saved.plans.at(-1).goals[0].id,status:'done'}]});
  await page.goto(f.origin+'/?focus='+focus.id);
- await expect(page.getByRole('region',{name:'Linked weekly work'})).toContainText('Run smoke tests');
+ const linkedWork=page.getByRole('region',{name:'Linked weekly work'});
+ await expect(linkedWork).toContainText('Run smoke tests');
+ // The panel should have the same breathing room and readable heading as nearby cards.
+ const layout=await linkedWork.evaluate(element=>{const panel=element.getBoundingClientRect(),heading=element.querySelector('h2')!;return {inset:heading.getBoundingClientRect().left-panel.left,headingSize:parseFloat(heading.ownerDocument.defaultView!.getComputedStyle(heading).fontSize)};});
+ assert.ok(layout.inset>=16,`Panel heading needs an inner inset; got ${layout.inset}px`);
+ assert.ok(layout.headingSize>=18,`Panel heading needs a section-sized font; got ${layout.headingSize}px`);
+ await page.setViewportSize({width:320,height:700});
+ await expect(linkedWork.getByRole('button',{name:'Review suggested progress'})).toBeVisible();
+ assert.ok(await linkedWork.evaluate(element=>element.scrollWidth<=element.clientWidth),'Linked work should fit a narrow screen');
+ await page.setViewportSize({width:1280,height:720});
  const progress=async()=>await(await f.request('member','/api/focuses/'+focus.id+'/progress')).json();
  assert.deepEqual((await progress()).statuses,[]);
  await page.getByRole('button',{name:'Review suggested progress',exact:true}).click();
