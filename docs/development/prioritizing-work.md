@@ -45,11 +45,11 @@ Keep High to about five issues, and High and Medium together close to the number
 
 Every two weeks:
 
-1. Run [engineering closure](qa-issue-workflow.md#engineering-closure) for issues at `qa: passed`. A follow-up issue created for a non-blocking note gets Low.
+1. Run [engineering closure](qa-issue-workflow.md#engineering-closure) for issues at `qa: passed`.
 2. The owner sets the sprint goal and decides how much of the sprint goes to roadmap work that is not tracked as issues.
 3. Triage every open issue that has neither a Priority nor the `question` label. Clear the Priority and add `question` on any issue now waiting on a decision.
-4. Decide whether each High issue still open from the last sprint stays High. Close or merge Low issues open for more than six weeks.
-5. Check the capacity limits.
+4. Ask why each High issue from the last sprint is still open, and decide whether it stays High. Close or merge Low issues without a `qa:` label that have stayed Low for three sprints.
+5. Check the capacity limits, and raise any level over its limit with the owner.
 
 Between triages, whoever triages a new issue, including an agent, sets its Priority with this guide and states the reason in their report. The owner reviews these calls at the next triage.
 
