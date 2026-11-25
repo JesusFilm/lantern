@@ -130,7 +130,7 @@ export function FocusWorkspace({
             onMetadata={reviewing ? undefined : () => begin({ type: "metadata" })}
             onConfirmed={canConfirm ? acceptConfirmed : undefined}
           />
-          {focus.status === "draft" && <p className="muted">Saved drafts, including personal-development objectives, are visible to you and your career lead. Request review sends the whole focus.</p>}
+          {focus.status === "draft" && <p className="muted">Saved drafts, including Personal development and Leadership objectives, are visible to you and your career lead. Request review sends the whole focus for agreement and confirmation.</p>}
           {!reviewing && focus.status === "draft" && <div className="focus-review-actions">
             {!reviewing && <button onClick={() => setReviewing(true)}>
               Review & discussion

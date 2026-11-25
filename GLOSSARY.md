@@ -69,7 +69,7 @@ An intended contribution or outcome that gives direction to a member's work or d
 An objective for the member’s contribution in their position. At least one Contribution objective with at least one SMART goal is required to request review or confirm; empty, partial and development-only drafts remain saveable. `normal` is the internal storage name, never a user-facing label. Earlier planning called this a critical mission objective.
 
 **Personal-development objective**:
-An optional objective for a capability or behavior the member wants to grow, paired with goals for applying it.
+An optional objective for the member's own growth through learning, practice and feedback. It may extend beyond immediate work tasks, but happens in work time and should support career development. Personal does not mean private: the career lead sees and agrees it with the rest of the focus. See [RC-16](docs/rules/review-and-confirmation.md#rc-16-development-objectives-are-shared-and-agreed-with-the-whole-focus).
 
 **Leadership objective**:
 An optional objective for developing leadership through a practical assignment, paired with goals for its outcomes.

@@ -279,6 +279,15 @@ export const chapters: Chapter[] = [
       },
       {
         kind: "feature",
+        title: "Personal development and Leadership",
+        roles: ["Member", "Career lead"],
+        summary: "Development objectives are optional. Personal means your own growth, not private goals. Growth in work time should support your career, even beyond immediate work tasks.",
+        tryIt: ["Edit an objective and open **About Personal development**.", "Read **About Leadership** and **Guide → Start here**."],
+        check: ["Your career lead sees saved drafts, including both development types.", "The lead provides input and agrees development goals.", "Request review sends the whole focus for agreement and confirmation."],
+        shots: [{ id: "objective-development-help", persona: "member", path: draft, act: click("Edit objective", "About Personal development", "About Leadership"), ready: role("button", "About Personal development"), mode: { kind: "element", target: ".objective-types", padding: 16 }, caption: "Development type help in the objective editor" }],
+      },
+      {
+        kind: "feature",
         title: "Quick SMART goal edits",
         roles: ["Member"],
         summary: "Each goal has its own **Edit** and **Remove** actions for small changes, shown with the objective for context.",
@@ -370,7 +379,7 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Ask your career lead for a review",
         roles: ["Member"],
-        summary: "Saved drafts, including personal development, are visible to your career lead. **Review & discussion** sends the whole focus; saving alone never requests review.",
+        summary: "Saved drafts, including Personal development and Leadership, are visible to your career lead. **Review & discussion** sends the whole focus; saving alone never requests review.",
         tryIt: ["Open a draft with a Contribution objective and at least one goal.", "Choose **Review & discussion**.", "Add an optional ① note and choose ② **Send request**."],
         check: [
           "The career lead sees the request under Review requests.",
@@ -629,9 +638,9 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Start here",
         roles: ["Member", "Career lead"],
-        summary: "The first topic shows the draft → request review → agreement → confirmation process and how to choose initiatives.",
+        summary: "The first topic explains the process, initiative choices, draft visibility and why the career lead agrees development goals pursued in work time.",
         tryIt: ["Open **Guide** in the sidebar.", "Read **Start here**.", "Move between topics with the topic buttons."],
-        check: ["Each topic opens without reloading the page.", "The first-focus prompt on Position focuses opens this topic.", "Text is readable at 200% browser zoom."],
+        check: ["Personal means your own growth, not private goals.", "Saved development drafts are visible; review sends the whole focus.", "The first-focus prompt opens this topic; text is readable at 200% zoom."],
         shots: [{ id: "guide-start", persona: "member", path: "/?page=guide", ready: heading("Your first position focus"), mode: longPage, caption: "Start here" }],
       },
       {

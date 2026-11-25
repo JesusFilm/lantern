@@ -85,10 +85,12 @@ test(
           ).toHaveAttribute("aria-pressed", "true");
           await expect(
             page.getByText(
-              "Saved drafts are visible to you and your career lead.",
+              "Saved drafts, including Personal development and Leadership objectives, are visible to you and your career lead so you can discuss work in progress.",
               { exact: false },
             ),
           ).toBeVisible();
+          await expect(page.getByText("Personal development means your own growth, not private goals. It can extend beyond immediate work tasks, but happens in work time and should support your career. Your career lead provides input and agrees these goals with you.", { exact: true })).toBeVisible();
+          await expect(page.getByText("Request review sends the whole focus, including Personal development and Leadership objectives, for agreement and confirmation.", { exact: true })).toBeVisible();
           await expect(
             page.getByText("the focus can’t be edited or unlocked.", {
               exact: false,

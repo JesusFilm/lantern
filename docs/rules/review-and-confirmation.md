@@ -121,6 +121,15 @@ Current behavior: if confirmation happens while the request form remains open, i
 
 Why: people need to understand how to become ready without losing their work. See the [PRD](../PRD.md#product-behavior) for presentation and recovery details.
 
+### RC-16 Development objectives are shared and agreed with the whole focus
+In effect · Owner decision, 25 Nov 2026 · [#206](https://github.com/JesusFilm/lantern/issues/206#issuecomment-7142997453)
+
+Saved drafts, including Personal development and Leadership objectives, are visible to the member and career lead so they can discuss work in progress. Request review sends the whole focus, including those objectives, for agreement and confirmation. These development types remain optional; they are not private or exempt from whole-focus agreement.
+
+Why: personal development means the member's own growth. It may extend beyond immediate work tasks, but is pursued in work time and should support career development, so the career lead's input and agreement are appropriate.
+
+Exceptions: this concerns saved focus content, not the private coaching checkpoints described in RC-10. Department membership and role boundaries still apply (RC-05).
+
 ## Open and deferred decisions
 
 ### RC-D1 Changing a confirmed focus mid-cycle

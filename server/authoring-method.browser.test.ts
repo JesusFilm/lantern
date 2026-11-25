@@ -28,6 +28,29 @@ async function browserFixture(coach?: Parameters<typeof coachingFixture>[0]) {
     },
   };
 }
+test("draft and objective help explain development visibility and career lead agreement", async () => {
+  const f = await browserFixture();
+  try {
+    const saved = await (await f.request("member", "/api/focuses", "POST", draft)).json();
+    await f.page.goto(f.origin + "/?focus=" + saved.id);
+    await expect(f.page.getByText("Saved drafts, including Personal development and Leadership objectives, are visible to you and your career lead. Request review sends the whole focus for agreement and confirmation.", { exact: true })).toBeVisible();
+    await f.page.getByRole("button", { name: "Edit objective", exact: true }).click();
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 320, height: 740 }]) {
+      await f.page.setViewportSize(viewport);
+      const personal = f.page.getByRole("button", { name: "About Personal development", exact: true });
+      await personal.focus();
+      await f.page.keyboard.press("Enter");
+      await expect(f.page.getByText("Your own growth through learning, practice and feedback, not private goals. It can extend beyond immediate work tasks, but happens in work time and should support your career. Your career lead sees and agrees these goals as part of the whole focus.", { exact: true })).toBeVisible();
+      await personal.click();
+      const leadership = f.page.getByRole("button", { name: "About Leadership", exact: true });
+      await leadership.click();
+      await expect(f.page.getByText("Develop leadership through a practical assignment. Use this for helping others succeed, such as facilitating or mentoring. Your career lead sees and agrees these goals as part of the whole focus.", { exact: true })).toBeVisible();
+      assert.ok(await f.page.evaluate("document.documentElement.scrollWidth <= innerWidth"));
+      await leadership.click();
+    }
+    assert.deepEqual(await (await f.request("member", "/api/focuses/" + saved.id)).json(), saved);
+  } finally { await f.close(); }
+});
 for (const choice of ["Other — none of these apply", "Build confidence"]) {
   test(`guided Objective Next requires alignment and clears the error on choosing ${choice}`, async () => {
     const f = await browserFixture({
