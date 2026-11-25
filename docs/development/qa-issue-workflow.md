@@ -44,6 +44,9 @@ automatic handoff checks staging availability; a production handoff
 can be made manually after a person verifies access. Do not assume it handles
 every PR.
 
+When several issues are ready, QA retests them in the order set by their
+[priority](prioritizing-work.md).
+
 ## Record QA's result
 
 Use one `qa:` status at a time; replace the previous status when changing it.
