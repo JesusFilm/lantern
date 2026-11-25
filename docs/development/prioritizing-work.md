@@ -48,7 +48,7 @@ The owner triages periodically, as the backlog grows. At each triage:
 1. Run [engineering closure](qa-issue-workflow.md#engineering-closure) for issues at `qa: passed`.
 2. The owner sets the triage goal and decides what share of the work until the next triage goes to roadmap work that is not tracked as issues.
 3. Triage every open issue that has neither a Priority nor the `question` label. Clear the Priority and add `question` on any issue now waiting on a decision.
-4. Ask why each open High issue is still open, and decide whether it stays High. Close or merge Low issues without a `qa:` label that have stayed Low through three triages.
+4. Ask why each High issue is still open, and decide whether it stays High. Close or merge Low issues without a `qa:` label that have stayed Low through three triages.
 5. Check the capacity limits, and raise any level over its limit with the owner.
 
 Between triages, whoever triages a new issue, including an agent, sets its Priority with this guide and states the reason in their report. The owner reviews these calls at the next triage.
