@@ -9,6 +9,7 @@ import type { Request, Response, NextFunction } from 'express';
 import type { Pool } from 'pg';
 import type { IdentityProvider } from './identity.js';
 import { focusRoutes } from './focus-http.js';
+import type {ProgressDiagnostic} from './progress-http.js';
 import { directionRoutes } from './direction-http.js';
 import { githubRoutes } from './github-http.js';
 import type { GitHubConnection } from './github.js';
@@ -28,7 +29,7 @@ const random = () => randomBytes(32).toString('base64url');
 function cookie(request: Request, name: string) {
   return request.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1);
 }
-export interface AccessConfig { origin: string; githubAvatars?: AvatarOptions; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean; coach?: CoachProvider; features?: FeatureConfig; flagOwnerEmail?: string; github?: { ownerId: string; source: GitHubConnection } }
+export interface AccessConfig { origin: string; progressLog?: (event:ProgressDiagnostic)=>void; githubAvatars?: AvatarOptions; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean; coach?: CoachProvider; features?: FeatureConfig; flagOwnerEmail?: string; github?: { ownerId: string; source: GitHubConnection } }
 export function accessRoutes(db: Pool, config: AccessConfig) {
   const router = Router();
   // Without explicit settings every registered feature is hidden, as production starts.
@@ -111,7 +112,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
   });
   router.use(reviewActivityRoutes(db, requireUser, features));
   router.use(coachRoutes(db, requireUser, config.coach, (user) => featureEnabled(features, 'coach', user.email), (user) => featureEnabled(features, 'coach-redesign', user.email)));
-  router.use(focusRoutes(db, requireUser, features));
+  router.use(focusRoutes(db, requireUser, features, config.progressLog));
   router.use(directionRoutes(db, requireUser));
   router.use(weeklyRoutes(db, requireUser, features));
   router.use(teamWeeklyRoutes(db, requireUser));
