@@ -3,7 +3,7 @@
   "editionDate": "2026-11-24",
   "deck": "12d57a85feb3fe87d3e907de6bc01ebe495cc025acb87645ab2cef9936cff6e6",
   "sources": {
-    "fingerprint": "b67a0e437e9a8ad84abdf9fad441617591a5fa16e19ef573624fb780357cbeb7",
+    "fingerprint": "44c3bc6ca236ab3f22e402de3909a2fc888f7c210f8b000b9da85b53627e57d8",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -76,7 +76,7 @@
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
       "docs/PRD.md": "51c5e0769805ffad0d958145efee18eb5afacd37b5279b0a10e235df1d8d8b20",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
-      "package-lock.json": "e2a5eb485624126d4a2a598e6b628687f6040514ae90ba275a35f9a10b1617ed",
+      "package-lock.json": "17bbc66aae8b9c264079da9f042d99e5ad31a6d24912824025344f70dd3426c7",
       "package.json": "cb6881cf4877db281d2ca56dda5d39a230ddf351cced000b845a3ccda745d47f",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/lantern.svg": "3525f31ec77634d4ed9bd979e916ca5b3639199c23cd25578089cb319b1b2d57",
@@ -268,7 +268,7 @@
   },
   "pdf": "b05c737b14da2b82573c78f73790199a4b38b008263b5429af9554cb9551caa6",
   "verification": {
-    "generatedAt": "2026-11-24T23:42:17.822Z",
+    "generatedAt": "2026-11-25T02:14:24.722Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -342,7 +342,7 @@
       "compose.yaml": "c4c83b4b02c64ae6620115ca2463ad19847b609f1e1cab08c531e13571c3d65b",
       "docs/PRD.md": "51c5e0769805ffad0d958145efee18eb5afacd37b5279b0a10e235df1d8d8b20",
       "index.html": "c6c084e3ea816b0266d98eaa3834e1500537d9b2be087d55656edae7dc226571",
-      "package-lock.json": "e7bca53cb305cd81dfaddc4e650a968859a0e023a25739e5491cc3ddfc7c0124",
+      "package-lock.json": "07a71d9115ed7e7ac74a05a1266465aa443468bbe3dbb1ecf307bc84ea776f2c",
       "package.json": "d1af14cbbd02eb6fe32e5ecefb62f7f5657f49cf5259f4480602343df3ee23c7",
       "public/appearance.js": "bab973833cf6924356e32d9818eb4142294bbcde7d587cc6bf263268f456b8d4",
       "public/lantern.svg": "3525f31ec77634d4ed9bd979e916ca5b3639199c23cd25578089cb319b1b2d57",
