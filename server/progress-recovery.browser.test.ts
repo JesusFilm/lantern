@@ -518,7 +518,12 @@ test('navigation away during a conflicting recovery does not discard the pending
   try {
    await page.getByRole('button',{name:'Save progress'}).click();await firstWrite;await page.goBack();
    assert.equal((await mc.request.put(`${origin}/api/focuses/${focus.id}/progress-entry`,{headers:{Origin:origin},data:{section:0,goal:null,status:'achieved',body:'The newer save',revision:null,noteRevision:null}})).status(),200);
-   await page.route('**/api/focuses/*/progress',async route=>{readSeen();await readGate;await route.fulfill({response:await route.fetch()});readDone()});
+   await page.route('**/api/focuses/*/progress',async route=>{
+    const response=await route.fetch();readSeen();await readGate;
+    try {await route.fulfill({response})}
+    catch(error) {assert.match(String(error),/Route is already handled!/)}
+    finally {readDone()}
+   },{times:1});
    await page.getByRole('link',{name:'Position focuses'}).click();await readStarted;
    await page.goBack();releaseRead();await readFinished;
    await page.unroute('**/api/focuses/*/progress');
