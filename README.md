@@ -2,13 +2,15 @@
 
 Lantern helps members write objectives and SMART goals, discuss their position focus with a career lead, and confirm the agreed document. Jesus Film sign-in, department membership and server-enforced ownership control access.
 
-[Product scope](docs/PRD.md) · [Roadmap](docs/ROADMAP.md) · [Prioritizing work](docs/development/prioritizing-work.md) · [Architecture decisions](docs/adrs/AGENTS.md)
+[Product scope](docs/PRD.md) · [Roadmap](docs/ROADMAP.md) · [Architecture decisions](docs/adrs/AGENTS.md)
 
 ## Development
 
 For test setup, focused/full commands, coverage and limits, read [Testing](docs/development/testing.md). Test fixtures use an isolated local owner connection; application setup below uses restricted runtime/migration/admin connections. Keep your private environment files, which hold settings. The local database is disposable and can be reset at any time.
 
 When linking issues or preparing a fix or feature for human testing, follow the [QA issue workflow](docs/development/qa-issue-workflow.md). It applies to all contributors and coding agents.
+
+To triage issues or choose the next issue to work on, follow [Prioritizing work](docs/development/prioritizing-work.md).
 
 For a fresh local application database:
 

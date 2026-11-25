@@ -1,6 +1,6 @@
 # Prioritizing work
 
-The Priority field on the [Lantern project](https://github.com/orgs/JesusFilm/projects/17) orders open issues for engineering work and QA retests. The [roadmap](../ROADMAP.md) sets product direction; this guide orders the issue backlog. The owner can still name the next task directly.
+The Priority field on the [Lantern project](https://github.com/orgs/JesusFilm/projects/17) orders open issues for engineering work and QA retests. Priority follows user impact; the sprint goal decides what rises within it.
 
 ## Priority levels
 
@@ -9,16 +9,16 @@ Judge each issue by its worst effect on a user and by who meets it now.
 | Priority | Use when |
 | --- | --- |
 | Urgent | Production users are losing data, seeing data they should not, or cannot sign in or save, with no workaround. Fix it the day it is found, ahead of triage. |
-| High | A released feature loses data or saves, shows or locks it wrongly, even with a workaround; or someone gets stuck on the cycle goal's path. |
-| Medium | Released behavior is confusing or wrong but has a workaround, or the change clearly helps the cycle goal. |
+| High | A released feature loses data or saves, shows or locks it wrongly, even with a workaround; or someone gets stuck on the sprint goal's path. |
+| Medium | Released behavior is confusing or wrong but has a workaround, or the change clearly helps the sprint goal. |
 | Low | Polish, layout, wording, consistency and nice-to-have features. |
 
 Then adjust by one level:
 
-- **Up** when the problem lets incorrect content be confirmed. Confirmed focuses cannot be edited or unlocked ([RC-08](../rules/review-and-confirmation.md#rc-08-confirmation-locks-the-agreement-and-discussion)); apply this while [RC-D1](../rules/review-and-confirmation.md#rc-d1-changing-a-confirmed-focus-mid-cycle) and [RC-D2](../rules/review-and-confirmation.md#rc-d2-recovering-from-an-accidental-confirmation) remain undecided.
-- **Down** when the behavior is reachable only behind a flag that is not released in production. A flag is released when it is `on` for everyone in production ([feature flags](feature-flags.md#release-a-flagged-feature)). Treat it as released when an issue for that flag carries `flag: released` or the owner confirms it.
+- **Up** when the problem lets incorrect content be confirmed, until confirmed focuses can be corrected. Confirmation currently locks a focus with no unlock or recovery ([RC-08](../rules/review-and-confirmation.md#rc-08-confirmation-locks-the-agreement-and-discussion)).
+- **Down** when the behavior is reachable only behind a flag that is `off` or `preview` in production, until the owner plans its release. The owner's [flag page](feature-flags.md#inspect-the-current-state) shows the production state, and `flag: released` on an issue for that flag shows it is on. Ask the owner when the state is unknown.
 
-A bundled issue takes the priority of its most severe item. Split it when the other items deserve a lower priority and are worth tracking separately.
+Split a bundled issue when one item outranks the rest; until it is split, it takes the priority of its most severe item.
 
 ## Unranked issues
 
@@ -29,31 +29,33 @@ Leave Priority empty for:
 
 An empty Priority without `question` means the issue still needs triage.
 
-Issues with a `qa:` label keep their priority, which sets QA's [retest order](qa-issue-workflow.md#hand-over-for-testing); a failed retest returns to engineering at the same priority. The project's **QA** tab lists these issues with their priority, and the **Backlog** tab groups the remaining open issues by priority.
+## Issues with QA
 
-## Cycle goal
+Issues with a `qa:` label keep their priority, which sets QA's [retest order](qa-issue-workflow.md#hand-over-for-testing). A failed retest returns to engineering at the same priority. The project's **QA** tab lists these issues with their priority, and the **Backlog** tab groups the remaining open issues by priority. QA may suggest a priority in an issue description; the project field is authoritative.
 
-Each two-week cycle has a one-sentence goal: what must be true by the next triage, for example "members can write, send and get their first focus confirmed without getting stuck." The owner records it in the Lantern project's README; read it with `gh project view 17 --owner JesusFilm --format json --jq .readme`. The goal decides the High and Medium criteria above that mention it. Ask the owner when no goal is recorded.
+## Sprint goal
+
+Each two-week sprint has a one-sentence goal: what must be true by the next triage, for example "members can write, send and get their first focus confirmed without getting stuck." The owner records it in the Lantern project's README; read it with `gh project view 17 --owner JesusFilm --format json --jq .readme`. The High and Medium criteria that mention the sprint goal depend on it, so ask the owner when none is recorded.
 
 ## Capacity
 
-Keep High to about five issues. Keep High and Medium together close to the number of issues closed in the previous two weeks. When a level is full, compare a new issue with those already there and lower the weaker one.
+Keep High to about five issues, and High and Medium together close to the number of issues closed in the previous sprint.
 
 ## Triage routine
 
 Every two weeks:
 
-1. Close issues that reached `qa: passed`, following [engineering closure](qa-issue-workflow.md#engineering-closure). Track non-blocking notes in a new issue and triage it.
-2. The owner sets the cycle goal and decides how much of the cycle goes to roadmap work that is not tracked as issues.
-3. Triage every open issue that has neither a Priority nor the `question` label.
-4. Review High issues still open from the last cycle and record why each remains. Close or merge Low issues passed over in three triages.
+1. Run [engineering closure](qa-issue-workflow.md#engineering-closure) for issues at `qa: passed`. A follow-up issue created for a non-blocking note gets Low.
+2. The owner sets the sprint goal and decides how much of the sprint goes to roadmap work that is not tracked as issues.
+3. Triage every open issue that has neither a Priority nor the `question` label. Clear the Priority and add `question` on any issue now waiting on a decision.
+4. Decide whether each High issue still open from the last sprint stays High. Close or merge Low issues open for more than six weeks.
 5. Check the capacity limits.
 
-Between triages, whoever triages a new issue, including an agent, sets its Priority with this guide and states the reason in the issue or their report. The owner reviews these calls at the next triage. QA may suggest a priority in an issue description; the project field is authoritative.
+Between triages, whoever triages a new issue, including an agent, sets its Priority with this guide and states the reason in their report. The owner reviews these calls at the next triage.
 
 ## Choosing the next issue
 
-Work High, then Medium, then Low, skipping issues waiting on QA or a decision. Within a level, prefer issues on the cycle goal's path. While working on an issue, also take cheap fixes on the same screen; the `area:` labels group issues by screen and feature.
+When the owner has not named the next task, work Urgent, then High, Medium and Low, skipping issues waiting on QA or a decision. Within a level, prefer issues on the sprint goal's path. While working on an issue, also take cheap fixes on the same screen; the `area:` labels group issues by screen and feature.
 
 ## Reading and setting Priority
 
