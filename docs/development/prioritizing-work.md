@@ -35,20 +35,20 @@ Issues with a `qa:` label keep their priority, which sets QA's [retest order](qa
 
 ## Triage goal
 
-At each triage, the owner sets a one-sentence goal: what must be true by the next triage, for example "members can write, send and get their first focus confirmed without getting stuck." The owner records it in the Lantern project's README; read it with `gh project view 17 --owner JesusFilm --format json --jq .readme`. The High and Medium criteria that mention the triage goal depend on it, so ask the owner when none is recorded.
+The triage goal is one sentence: what must be true by the next triage, for example "members can write, send and get their first focus confirmed without getting stuck." The owner records it in the Lantern project's README; read it with `gh project view 17 --owner JesusFilm --format json --jq .readme`. The High and Medium criteria that mention the triage goal depend on it, so ask the owner when none is recorded.
 
 ## Capacity
 
-Keep High to about five issues, and High and Medium together close to the number of issues closed between the last two triages.
+Keep High to about five issues, and High and Medium together close to the number of issues closed since the previous triage.
 
 ## Triage routine
 
 The owner triages periodically, as the backlog grows. At each triage:
 
 1. Run [engineering closure](qa-issue-workflow.md#engineering-closure) for issues at `qa: passed`.
-2. The owner sets the triage goal and decides how much time before the next triage goes to roadmap work that is not tracked as issues.
+2. The owner sets the triage goal and decides what share of the work until the next triage goes to roadmap work that is not tracked as issues.
 3. Triage every open issue that has neither a Priority nor the `question` label. Clear the Priority and add `question` on any issue now waiting on a decision.
-4. Ask why each High issue from the last triage is still open, and decide whether it stays High. Close or merge Low issues without a `qa:` label that have stayed Low through three triages.
+4. Ask why each open High issue is still open, and decide whether it stays High. Close or merge Low issues without a `qa:` label that have stayed Low through three triages.
 5. Check the capacity limits, and raise any level over its limit with the owner.
 
 Between triages, whoever triages a new issue, including an agent, sets its Priority with this guide and states the reason in their report. The owner reviews these calls at the next triage.
