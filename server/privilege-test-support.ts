@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import pg from 'pg';
 import { createDatabase } from './database.js';
 import { bootstrapDatabaseRoles } from './database-privileges.js';
 
@@ -20,9 +21,22 @@ export async function privilegeFixture(options: { deferBootstrap?: boolean; requ
   async function close() {
     await Promise.all(pools.map(pool => pool.end()));
     await bootstrap.end();
-    await owner.query(`DROP DATABASE ${databaseName} WITH (FORCE)`);
-    for (const role of Object.values(roles)) await owner.query(`DROP ROLE IF EXISTS ${role}`);
-    await owner.end();
+    const cleanup = new pg.Client({
+      connectionString: process.env.DATABASE_URL!,
+      connectionTimeoutMillis: 3000,
+      statement_timeout: 15000,
+      query_timeout: 16000,
+    });
+    try {
+      // Dropping a disposable database can wait for PostgreSQL's shared
+      // database locks. Keep the normal application query limits intact.
+      await cleanup.connect();
+      await cleanup.query(`DROP DATABASE ${databaseName} WITH (FORCE)`);
+      for (const role of Object.values(roles)) await cleanup.query(`DROP ROLE IF EXISTS ${role}`);
+    } finally {
+      await cleanup.end();
+      await owner.end();
+    }
   }
   try {
     await options.beforeBootstrap?.(bootstrap);
