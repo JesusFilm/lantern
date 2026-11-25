@@ -189,9 +189,12 @@ export function LearningGuide({ onFocuses }: { onFocuses: () => void }) {
                 </section>
                 <section className="explanation">
                   <h3>Good to know</h3>
+                  <p>Saved drafts, including Personal development and Leadership objectives, are visible to you and your career lead so you can discuss work in progress.</p>
+                  <p>Personal development means your own growth, not private goals. It can extend beyond immediate work tasks, but happens in work time and should support your career. Your career lead provides input and agrees these goals with you.</p>
+                  <p>Request review sends the whole focus, including Personal development and Leadership objectives, for agreement and confirmation.</p>
                   <p>Request review of the latest saved version before confirmation. If you save more changes, send them for review again.</p>
                   <p>Career leads request review of their own focus too. Review it again or discuss it with your senior or manager; you can confirm it yourself without another reviewer or a note.</p>
-                  <p>Saved drafts are visible to you and your career lead. Once your lead confirms, the focus can’t be edited or unlocked.</p>
+                  <p>Once your lead confirms, the focus can’t be edited or unlocked.</p>
                 </section>
                 <button className="guide-example-link" onClick={() => { setEngineering(true); choose("Example"); }}>See an engineering example →</button>
               </section>
