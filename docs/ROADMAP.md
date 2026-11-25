@@ -1,6 +1,6 @@
 # Lantern roadmap
 
-The owner sets the next task directly. This roadmap expresses priorities without a ticket or milestone backlog.
+The owner sets direction and can name the next task directly. This roadmap expresses product priorities; [Prioritizing work](development/prioritizing-work.md) orders the issue backlog.
 
 1. **Simplify project direction.** Keep the product scope in [PRD.md](PRD.md), concise architectural decisions in [adrs](adrs/AGENTS.md), and implementation details alongside code.
 2. **Maintain verified delivery.** Use the [release procedure](operations/releasing.md): main checks, staging acceptance, then gated automatic production promotion. Keep schema-changing releases manual.

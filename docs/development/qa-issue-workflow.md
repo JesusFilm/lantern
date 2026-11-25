@@ -44,6 +44,9 @@ automatic handoff checks staging availability; a production handoff
 can be made manually after a person verifies access. Do not assume it handles
 every PR.
 
+When several issues are ready, QA retests them in the order set by their
+[priority](prioritizing-work.md).
+
 ## Record QA's result
 
 Use one `qa:` status at a time; replace the previous status when changing it.
@@ -79,8 +82,9 @@ the issue open after recording the result, following the
    issue. An engineering agent handling the handoff should perform the closure;
    no separate confirmation from QA is needed.
 
-An informational note alone does not block closure. Preserve any non-blocking
-follow-up separately when needed. A merged fix or green automated checks alone
+An informational note alone does not block closure. Track any non-blocking
+follow-up that still needs work as a new issue with Low
+[priority](prioritizing-work.md). A merged fix or green automated checks alone
 do not replace manual QA sign-off for an issue awaiting QA.
 
 Closing an issue labelled `feature-flag` does not release its flag. Keep the
