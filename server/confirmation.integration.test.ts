@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {randomUUID} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {createServer} from 'node:http';
 import {test} from 'node:test';
 import {privilegeFixture} from './privilege-test-support.js';
@@ -13,7 +13,7 @@ import type {CoachRecord} from '../shared/coach.js';
 const draft = {title:'Agreed annual focus',start:'2026-01-01',end:'2026-12-31',sections:[
   {kind:'normal',objective:'Support onboarding',goals:['Publish a guide by June']},
 ]};
-async function fixture(feature = 'on') {
+async function fixture(feature = 'on', progressLog?: (event: unknown) => void) {
   const f = await privilegeFixture();
   const server = createServer();
   try {
@@ -30,7 +30,7 @@ async function fixture(feature = 'on') {
     await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));
     const address=server.address(); assert.ok(address && typeof address!=='string');
     const origin=`http://127.0.0.1:${address.port}`;
-    server.on('request',createApp(f.runtime,{origin,features:resolveFeatureConfig({LANTERN_FEATURES:`focus-progress=${feature}`,LANTERN_PREVIEW_EMAILS:feature==='preview'?`${member}@example.test`:undefined},'production')}));
+    server.on('request',createApp(f.runtime,{origin,progressLog,features:resolveFeatureConfig({LANTERN_FEATURES:`focus-progress=${feature}`,LANTERN_PREVIEW_EMAILS:feature==='preview'?`${member}@example.test`:undefined},'production')}));
     const request=(actor:string,path:string,method='GET',body?:unknown)=>fetch(origin+path,{method,headers:{Cookie:`lantern-session=${actor}`,Origin:origin,'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
     const create=async(actor=member,content=draft)=>{
       const response=await request(actor,'/api/focuses','POST',content); assert.equal(response.status,201);
@@ -54,6 +54,7 @@ test('hidden focus progress denies all progress routes while the confirmed focus
     assert.equal((await f.request(f.member,`/api/focuses/${focus.id}/progress`)).status,404);
     assert.equal((await f.request(f.lead,`/api/department/members/${f.member}/focuses/${focus.id}/progress`)).status,404);
     assert.equal((await f.request(f.member,`/api/focuses/${focus.id}/progress-entry`,'PUT',{section:0,goal:null,status:'achieved',body:'hello',revision:null,noteRevision:null})).status,404);
+    assert.equal((await f.request(f.member,'/api/progress-diagnostics','POST',{operationId:randomUUID(),phase:'response-received'})).status,404);
   } finally {await f.close();}
 });
 
@@ -437,5 +438,106 @@ test('a legacy confirmed focus without request history remains readable, locked 
     assert.deepEqual((await review.json() as CoachRecord).focus,own);
     assert.equal((await f.request(f.member,`/api/focuses/${id}`,'PUT',{...draft,title:'Cannot change baseline',version:own.version})).status,409);
     assert.deepEqual(await (await f.request(f.member,`/api/focuses/${id}`)).json(),own);
+  } finally {await f.close();}
+});
+
+
+test('progress diagnostics correlate server and client without recording note content',async()=>{
+  const events:unknown[]=[];const f=await fixture('on',event=>events.push(event));
+  try {
+    const focus=await f.requestReview(await f.create());assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    const id=randomUUID();
+    const save=await fetch(`${f.origin}/api/focuses/${focus.id}/progress-entry`,{method:'PUT',headers:{Cookie:`lantern-session=${f.member}`,Origin:f.origin,'Content-Type':'application/json','X-Lantern-Progress-Operation':id},body:JSON.stringify({section:0,goal:null,status:'in-progress',body:'private diagnostic test note',revision:null,noteRevision:null})});
+    assert.equal(save.status,200);
+    assert.equal((await f.request(f.member,'/api/progress-diagnostics','POST',{operationId:id,phase:'response-received'})).status,204);
+    const correlation=createHash('sha256').update(id).digest('hex');
+    assert.deepEqual(events,[{event:'progress-save',operationId:correlation,phase:'committed'},{event:'progress-save',operationId:correlation,phase:'response-received'}]);
+    const stale=await fetch(`${f.origin}/api/focuses/${focus.id}/progress-entry`,{method:'PUT',headers:{Cookie:`lantern-session=${f.member}`,Origin:f.origin,'Content-Type':'application/json','X-Lantern-Progress-Operation':id},body:JSON.stringify({section:0,goal:null,status:'in-progress',body:'private diagnostic test note',revision:null,noteRevision:null})});
+    assert.equal(stale.status,409);
+    assert.deepEqual(events[2],{event:'progress-save',operationId:correlation,phase:'rejected',httpStatus:409});
+    assert.equal(JSON.stringify(events).includes('private diagnostic test note'),false);
+    assert.equal((await f.request(f.member,'/api/progress-diagnostics','POST',{operationId:id,phase:'response-received',note:'private'})).status,400);
+    assert.equal((await f.request(f.member,'/api/progress-diagnostics','POST',{operationId:'invalid',phase:'response-received'})).status,400);
+    assert.equal((await f.request('', '/api/progress-diagnostics','POST',{operationId:id,phase:'response-received'})).status,401);
+    assert.equal((await f.request(f.member,'/api/progress-diagnostics','POST',{operationId:id,phase:'response-received',httpStatus:408})).status,400);
+    await f.admin.query('UPDATE memberships SET deleted_at=now() WHERE user_id=$1',[f.member]);
+    assert.equal((await f.request(f.member,'/api/progress-diagnostics','POST',{operationId:id,phase:'response-received'})).status,403);
+    assert.equal(events.length,3);
+  } finally {await f.close();}
+});
+
+test('a diagnostic logging failure cannot turn a committed progress save into a failed save',async()=>{
+  const f=await fixture('on',()=>{throw new Error('log sink unavailable')});
+  try {
+    const focus=await f.requestReview(await f.create());assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    const id=randomUUID();
+    const save=await fetch(`${f.origin}/api/focuses/${focus.id}/progress-entry`,{method:'PUT',headers:{Cookie:`lantern-session=${f.member}`,Origin:f.origin,'Content-Type':'application/json','X-Lantern-Progress-Operation':id},body:JSON.stringify({section:0,goal:null,status:'in-progress',body:'Persist even without logs',revision:null,noteRevision:null})});
+    assert.equal(save.status,200);
+    const saved=await (await f.request(f.member,`/api/focuses/${focus.id}/progress`)).json() as {notes:{body:string}[]};
+    assert.equal(saved.notes[0]!.body,'Persist even without logs');
+  } finally {await f.close();}
+});
+
+test('diagnostic logs do not record client-supplied identifiers verbatim',async()=>{
+  const events:unknown[]=[];const f=await fixture('on',event=>events.push(event));
+  try {
+    const focus=await f.requestReview(await f.create());assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    const save=await fetch(`${f.origin}/api/focuses/${focus.id}/progress-entry`,{method:'PUT',headers:{Cookie:`lantern-session=${f.member}`,Origin:f.origin,'Content-Type':'application/json','X-Lantern-Progress-Operation':focus.id},body:JSON.stringify({section:0,goal:null,status:'in-progress',body:'private',revision:null,noteRevision:null})});
+    assert.equal(save.status,200);
+    assert.equal((await f.request(f.member,'/api/progress-diagnostics','POST',{operationId:focus.id,phase:'response-received'})).status,204);
+    const values=events as Array<{operationId:string}>;
+    assert.equal(values.length,2);
+    assert.equal(values[0]?.operationId,values[1]?.operationId);
+    assert.equal(JSON.stringify(events).includes(focus.id),false);
+    assert.equal(JSON.stringify(events).includes('private'),false);
+  } finally {await f.close();}
+});
+
+test('cancelling an uncertain progress write fences its revision without changing saved content',async()=>{
+  const f=await fixture();
+  try {
+    const focus=await f.requestReview(await f.create());assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    const write=`/api/focuses/${focus.id}/progress-entry`,fence=`/api/focuses/${focus.id}/progress-fence`;
+    const target={section:0,goal:null,revision:null,noteRevision:null};
+    assert.equal((await f.request(f.peer,fence,'POST',target)).status,404);
+    assert.equal((await f.request(f.lead,fence,'POST',target)).status,404);
+    assert.equal((await f.request(f.member,fence,'POST',{...target,body:'not accepted'})).status,400);
+    const response=await f.request(f.member,fence,'POST',target);assert.equal(response.status,200);
+    const fenced=await response.json() as {revision:string};assert.match(fenced.revision,/^[0-9a-f-]{36}$/);
+    assert.equal((await f.request(f.member,write,'PUT',{...target,status:'in-progress',body:'Late write'})).status,409);
+    assert.equal((await f.request(f.member,fence,'POST',target)).status,409);
+    const read=await (await f.request(f.member,`/api/focuses/${focus.id}/progress`)).json() as {statuses:{status:string|null;revision:string}[];notes:unknown[]};
+    assert.equal(read.statuses[0]!.status,null);assert.equal(read.statuses[0]!.revision,fenced.revision);assert.deepEqual(read.notes,[]);
+  } finally {await f.close();}
+});
+
+test('cancelling an uncertain edit preserves the previously saved progress and note',async()=>{
+  const f=await fixture();
+  try {
+    const focus=await f.requestReview(await f.create());assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    const write=`/api/focuses/${focus.id}/progress-entry`,fence=`/api/focuses/${focus.id}/progress-fence`;
+    const first=await f.request(f.member,write,'PUT',{section:0,goal:null,status:'achieved',body:'Existing saved note',revision:null,noteRevision:null});assert.equal(first.status,200);
+    const entry=await first.json() as {status:{revision:string};note:{revision:string}};
+    const prior={section:0,goal:null,revision:entry.status.revision,noteRevision:entry.note.revision};
+    assert.equal((await f.request(f.member,fence,'POST',prior)).status,200);
+    assert.equal((await f.request(f.member,write,'PUT',{...prior,status:'in-progress',body:'Cancelled edit'})).status,409);
+    const saved=await (await f.request(f.member,`/api/focuses/${focus.id}/progress`)).json() as {statuses:{status:string|null}[];notes:{body:string}[]};
+    assert.equal(saved.statuses[0]!.status,'achieved');assert.equal(saved.notes[0]!.body,'Existing saved note');
+  } finally {await f.close();}
+});
+
+test('an uncertain progress save and its cancellation serialize without a partial result',async()=>{
+  const f=await fixture();
+  try {
+    const focus=await f.requestReview(await f.create());assert.equal((await f.confirm(focus.id,focus.version)).status,200);
+    const target={section:0,goal:null,revision:null,noteRevision:null};
+    const [write,fence]=await Promise.all([
+      f.request(f.member,`/api/focuses/${focus.id}/progress-entry`,'PUT',{...target,status:'in-progress',body:'Racing note'}),
+      f.request(f.member,`/api/focuses/${focus.id}/progress-fence`,'POST',target),
+    ]);
+    assert.deepEqual([write.status,fence.status].sort(),[200,409]);
+    const saved=await (await f.request(f.member,`/api/focuses/${focus.id}/progress`)).json() as {statuses:{status:string|null}[];notes:{body:string}[]};
+    if(write.status===200){assert.equal(saved.statuses[0]!.status,'in-progress');assert.equal(saved.notes[0]!.body,'Racing note')}
+    else {assert.equal(saved.statuses[0]!.status,null);assert.deepEqual(saved.notes,[])}
   } finally {await f.close();}
 });

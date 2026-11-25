@@ -26,6 +26,19 @@ export function progressStore(db:Pool) {
         return {notes:notes.rows,statuses:statuses.rows};
       });
     },
+    async fenceEntry(actor:string,id:string,section:number,goal:number|null,revision:string|null,noteRevision:string|null) {
+      return membershipWrite(db,async client=>{
+        const sections=await ownedFocus(client,actor,id);
+        if(!sections[section] || (goal!==null && !sections[section].goals[goal])) throw new AccessError(400,'Objective or goal not found.');
+        const current=await client.query('SELECT status,revision FROM focus_progress_statuses WHERE focus_id::text=$1 AND section_index=$2 AND goal_index=$3',[id,section,goal??-1]);
+        const note=await client.query('SELECT id FROM focus_progress_notes WHERE focus_id::text=$1 AND section_index=$2 AND goal_index IS NOT DISTINCT FROM $3 ORDER BY ordinal DESC LIMIT 1',[id,section,goal]);
+        if((current.rows[0]?.revision??null)!==revision || (note.rows[0]?.id??null)!==noteRevision) throw new AccessError(409,'Progress changed. Reload the focus before trying again.');
+        const next=randomUUID();
+        await client.query(`INSERT INTO focus_progress_statuses(focus_id,section_index,goal_index,status,revision) VALUES($1,$2,$3,$4,$5)
+          ON CONFLICT (focus_id,section_index,goal_index) DO UPDATE SET revision=excluded.revision`,[id,section,goal??-1,current.rows[0]?.status??null,next]);
+        return {revision:next};
+      });
+    },
     async saveEntry(actor:string,id:string,section:number,goal:number|null,status:string|null,body:string,revision:string|null,noteRevision:string|null) {
       return membershipWrite(db,async client=>{
         const sections=await ownedFocus(client,actor,id);

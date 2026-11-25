@@ -1,9 +1,10 @@
 import { useAppearance } from "./workspace/appearance.js";
 import {CoachWorkspace} from "./coach/CoachWorkspace.js";
-import { Fragment, StrictMode, useEffect, useRef, useState } from "react";
+import { StrictMode, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { SessionView } from "../shared/access.js";
 import { api } from "./workspace/api.js";
+import { ProgressPendingProvider } from "./workspace/ProgressPending.js";
 import { FocusWorkspace } from "./workspace/FocusWorkspace.js";
 import { LearningGuide } from "./workspace/LearningGuide.js";
 import { Sidebar } from "./workspace/Sidebar.js";
@@ -58,7 +59,8 @@ function App() {
   const { appearance, choose } = useAppearance();
   const [session, setSession] = useState<SessionView>(),
     [error, setError] = useState(""),
-    [page, setPage] = useState(currentPage);
+    [page, setPage] = useState(currentPage),
+    [sessionScope, setSessionScope] = useState("signed-out");
   const refreshVersion = useRef(0);
   const [accessRevision, setAccessRevision] = useState(0);
   async function refresh() {
@@ -66,6 +68,7 @@ function App() {
     try {
       const next = await api<SessionView>("/api/session");
       if (version !== refreshVersion.current) return;
+      setSessionScope(next.user ? `${next.user.id}:${next.department?.id ?? ""}:${next.department?.role ?? ""}` : "signed-out");
       if (!next.user && next.signInAvailable && !new URLSearchParams(location.search).has("signInError")) {
         setSession(undefined);
         setError("");
@@ -116,6 +119,7 @@ function App() {
       <Sidebar session={session} activePage={activePage} onNavigate={navigatePage} hrefForPage={pageHref} />
       <main className="main">
         <div className="workspace">
+          <ProgressPendingProvider key={sessionScope}>
           {error && (
             <p role="alert">
               {error}
@@ -145,9 +149,7 @@ function App() {
               )}
             </section>
           ) : (
-            <Fragment
-              key={`${session.user.id}:${session.department?.id ?? ""}:${session.department?.role ?? ""}`}
-            >
+            <>
               {!session.localAccess && page === "account" && (
                 <button
                   className="sign-out"
@@ -204,8 +206,9 @@ function App() {
               ) : (
                 <LearningGuide onFocuses={() => navigatePage("focuses")} />
               )}
-            </Fragment>
+            </>
           )}
+          </ProgressPendingProvider>
         </div>
       </main>
     </>

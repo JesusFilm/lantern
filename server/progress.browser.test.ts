@@ -79,7 +79,7 @@ test('member records status and goal note; lead reads progress after reload', {t
   await goal.getByRole('button',{name:'Edit progress'}).click();await page.getByLabel('Progress note').fill('My unsaved update');
   assert.equal((await mc.request.put(`${origin}/api/focuses/${focus.id}/progress-entry`,{headers:{Origin:origin},data:{section:0,goal:0,status:'needs-attention',body:'Another window update',revision:currentStatus.revision,noteRevision:currentNote.revision}})).status(),200);
   await page.getByRole('button',{name:'Save progress'}).click();
-  await expect(page.getByRole('alert')).toContainText('changed in another window');
+  await expect(page.getByRole('alert')).toContainText('Saved progress differs from your edit');
   await expect(page.getByLabel('Progress note')).toHaveValue('My unsaved update');
   await expect(page.getByText('Another window update')).toBeVisible();
   await page.getByRole('button',{name:'Use latest version'}).click();
@@ -100,14 +100,14 @@ test('member records status and goal note; lead reads progress after reload', {t
   const currentStatusForEdit=beforeStatusEdit.statuses.find((x:{goal:number|null})=>x.goal===0),currentNoteForEdit=beforeStatusEdit.notes.find((x:{goal:number|null})=>x.goal===0);
   await goal.getByRole('button',{name:'Edit progress'}).click();await page.getByLabel('Status',{exact:true}).selectOption('achieved');
   assert.equal((await mc.request.put(`${origin}/api/focuses/${focus.id}/progress-entry`,{headers:{Origin:origin},data:{section:0,goal:0,status:'needs-attention',body:'Latest remote note',revision:currentStatusForEdit.revision,noteRevision:currentNoteForEdit.revision}})).status(),200);
-  await page.getByRole('button',{name:'Save progress'}).click();await expect(page.getByRole('alert')).toContainText('changed in another window');
+  await page.getByRole('button',{name:'Save progress'}).click();await expect(page.getByRole('alert')).toContainText('Saved progress differs from your edit');
   await page.getByRole('button',{name:'Use latest version'}).click();await expect(page.getByLabel('Progress note')).toHaveValue('Latest remote note');await expect(page.getByLabel('Status',{exact:true})).toHaveValue('achieved');
   await page.getByRole('button',{name:'Save progress'}).click();await expect(goal.getByText('Latest remote note')).toBeVisible();
   const beforeCancel=await (await mc.request.get(`${origin}/api/focuses/${focus.id}/progress`)).json();
   const statusBeforeCancel=beforeCancel.statuses.find((x:{goal:number|null})=>x.goal===0),noteBeforeCancel=beforeCancel.notes.find((x:{goal:number|null})=>x.goal===0);
   await goal.getByRole('button',{name:'Edit progress'}).click();await page.getByLabel('Progress note').fill('Discard this edit');
   assert.equal((await mc.request.put(`${origin}/api/focuses/${focus.id}/progress-entry`,{headers:{Origin:origin},data:{section:0,goal:0,status:'in-progress',body:'Latest saved after cancel',revision:statusBeforeCancel.revision,noteRevision:noteBeforeCancel.revision}})).status(),200);
-  await page.getByRole('button',{name:'Save progress'}).click();await expect(page.getByRole('alert')).toContainText('changed in another window');
+  await page.getByRole('button',{name:'Save progress'}).click();await expect(page.getByRole('alert')).toContainText('Saved progress differs from your edit');
   await page.getByRole('button',{name:'Cancel'}).click();await expect(page.getByText('Latest saved after cancel')).toBeVisible();
   await goal.getByRole('button',{name:'Edit progress'}).click();await page.getByLabel('Status',{exact:true}).selectOption('');await page.getByLabel('Progress note').fill('');await page.getByRole('button',{name:'Save progress'}).click();
   await expect(goal.locator('.progress-pill')).toHaveCount(0);await expect(goal.getByRole('button',{name:'Add note'})).toBeVisible();

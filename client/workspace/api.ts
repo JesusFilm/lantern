@@ -7,13 +7,13 @@ export async function api<T>(
   method = "GET",
   body?: unknown,
   signal?: AbortSignal,
+  extraHeaders?: Record<string, string>,
 ): Promise<T> {
   const response = await fetch(path, {
     method,
     signal,
     cache: "no-store",
-    headers:
-      body === undefined ? undefined : { "Content-Type": "application/json" },
+    headers: { ...(body === undefined ? {} : { "Content-Type": "application/json" }), ...extraHeaders },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (!response.ok) {

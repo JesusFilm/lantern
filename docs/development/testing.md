@@ -115,3 +115,26 @@ recovery, retained department/focus access, sign-out, cancellation and retry at
 desktop and phone widths using a fixture identity provider. They do not establish
 real JFP identity continuity or certify a physical phone; follow the
 [identity cutover procedure](../operations/identity-cutover.md) for hosted checks.
+
+## Progress-save diagnostics
+
+Progress writes carry a random per-attempt operation ID. The server logs `progress-save`
+with its SHA-256 hash and a `committed`, `fenced`, `rejected`, or `failed` phase; a rejection includes its HTTP status. The browser reports
+`response-received`, `response-error` (with HTTP status), `fetch-failed`,
+`fetch-timeout`, `response-invalid`, `client-error`, `view-gone`, `state-update-scheduled`, or `recovery-checked`
+with the same hashed ID. Client phases are untrusted reports, not proof of server
+actions; the ID hash is a pseudonym, not a secret. The report endpoint requires
+an authenticated active member, the feature and a valid bounded payload. These
+structured logs contain no note text, raw account or focus ID, cookie, URL or
+exception text. A diagnostic sink failure cannot change
+the save result.
+
+Correlate phases by operation ID and timestamp; repeated writes with the same ID
+are retries or a cancellation fence using the same original revisions. The
+fence preserves saved status and note content while invalidating a still-delayed
+write; a 409 means another save has already advanced those revisions. `state-update-scheduled` means the
+browser scheduled an update, not that rendering or a user observing it is proven.
+Browser reports use a bounded in-memory queue retried on reconnection. They are
+best effort: an offline or closed browser may not send them, so a missing phase
+is not proof of a specific network or UI failure. Historical
+requests made before instrumentation cannot be retroactively correlated.

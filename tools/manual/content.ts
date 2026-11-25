@@ -502,9 +502,9 @@ export const chapters: Chapter[] = [
         kind: "feature",
         title: "Record progress on a confirmed focus",
         roles: ["Member", "Career lead"],
-        summary: "Members track statuses and notes for objectives and goals. Career leads can read them. Flag: focus-progress; hidden in production until released.",
+        summary: "Members track statuses and notes for objectives and goals. Career leads can read them. Flag: focus-progress.",
         tryIt: ["Open a confirmed focus and select **Progress & notes**.", "Select **Add note** or **Edit progress** for an item.", "Choose a status, write a note, then save.", "Return to **Focus** to read the agreed wording."],
-        check: ["Notes stay with their objective or goal.", "Status and note save or clear together.", "Leads read, not edit. Failed edits keep text.", "Phones can page or swipe objectives."],
+        check: ["Status and note save or clear together.", "Lost replies retry safely and reload progress.", "Cancel does not send an unsent edit.", "Conflicts keep edits; leads read only; phones page or swipe."],
         shots: [
           {id:"progress-activity",persona:"member",path:confirmed,act:click("Progress & notes"),ready:role("button","Progress & notes"),mode:longPage,caption:"Progress grouped by objective"},
           {id:"progress-edit",persona:"member",path:confirmed,act:click("Progress & notes","Edit progress"),ready:(p)=>p.getByRole("dialog"),mode:{kind:"viewport",...dialog},caption:"Edit status and note together"},
