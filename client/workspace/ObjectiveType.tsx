@@ -12,12 +12,12 @@ export const objectiveTypes: Record<
   "personal-development": {
     label: "Personal development",
     description:
-      "A capability or behaviour you want to develop. Use this for learning, practice and feedback.",
+      "Your own growth through learning, practice and feedback, not private goals. It can extend beyond immediate work tasks, but happens in work time and should support your career. Your career lead sees and agrees these goals as part of the whole focus.",
   },
   leadership: {
     label: "Leadership",
     description:
-      "Develop leadership through a practical assignment. Use this for helping others succeed, such as facilitating or mentoring.",
+      "Develop leadership through a practical assignment. Use this for helping others succeed, such as facilitating or mentoring. Your career lead sees and agrees these goals as part of the whole focus.",
   },
 };
 export function TypeInfo({ kind }: { kind: ObjectiveKind }) {
