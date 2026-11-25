@@ -37,6 +37,7 @@ export function FocusProgress({focus,memberId,enabled,weeklyLinksEnabled=false,c
   setTab(next);
  }
  const [editing,setEditing]=useState<ProgressTarget>(),[conflict,setConflict]=useState<ProgressRecord>();
+ const uncertainSave=useRef(false);
  const [editStatus,setEditStatus]=useState(''),[editBody,setEditBody]=useState('');
  const path=memberId?`/api/department/members/${encodeURIComponent(memberId)}/focuses/${encodeURIComponent(focus.id)}/progress`:`/api/focuses/${encodeURIComponent(focus.id)}/progress`;
  useEffect(()=>{if(!enabled)return;let active=true;setData(undefined);setError('');void api<ProgressRecord>(path).then(result=>{if(active)setData(result)}).catch((e:Error)=>{if(active)setError(e.message)});return()=>{active=false}},[path,attempt,enabled]);
@@ -45,20 +46,44 @@ export function FocusProgress({focus,memberId,enabled,weeklyLinksEnabled=false,c
   if(!editing)return;
   const {section,goal}=editing, target={section,goal};
   const value=String(form.get('status')||'') as ProgressStatus|'';
+  const body=String(form.get('body')||'').trim();
+  const changedMessage='Saved progress differs from your edit. Review the latest version before retrying.';
+  if(conflict)throw new Error(changedMessage);
+  let base=data;
+  async function reconcile() {
+   let latest:ProgressRecord;
+   try { latest=await api<ProgressRecord>(path); }
+   catch {
+    uncertainSave.current=true;
+    throw new Error("We couldn't check whether your progress was saved. Your edit is still here. Try saving again to check, or Cancel to reload progress.");
+   }
+   uncertainSave.current=false;
+   const savedStatus=latest.statuses.find(item=>same(item,target)),savedNote=latest.notes.find(item=>same(item,target));
+   if((savedStatus?.status??null)===(value||null) && (savedNote?.body??'')===body) {
+    setData(latest);setConflict(undefined);setEditing(undefined);return;
+   }
+   if((savedStatus?.revision??null)!==(base?.statuses.find(item=>same(item,target))?.revision??null) ||
+      (savedNote?.revision??null)!==(base?.notes.find(item=>same(item,target))?.revision??null)) {
+    setConflict(latest);throw new Error(changedMessage);
+   }
+   setData(latest);return latest;
+  }
+  if(uncertainSave.current) {
+   const latest=await reconcile();if(!latest)return;
+   base=latest;
+  }
   let result: {status:ProgressRecord['statuses'][number];note:ProgressRecord['notes'][number]|null};
   try {
    result=await api(`/api/focuses/${encodeURIComponent(focus.id)}/progress-entry`,'PUT',{
-    section,goal,status:value||null,body:String(form.get('body')||''),
-    revision:data?.statuses.find(item=>same(item,target))?.revision??null,
-    noteRevision:data?.notes.find(item=>same(item,target))?.revision??null,
+    section,goal,status:value||null,body,
+    revision:base?.statuses.find(item=>same(item,target))?.revision??null,
+    noteRevision:base?.notes.find(item=>same(item,target))?.revision??null,
    });
   } catch(error) {
-   if(error instanceof ApiError && error.status===409) {
-    try { setConflict(await api<ProgressRecord>(path)); }
-    catch { throw new Error('Progress changed in another window. Your edit is still here; try saving again to reload the latest version.'); }
-    throw new Error('Progress changed in another window. Review the latest version before retrying.');
-   }
-   throw error;
+   if(error instanceof ApiError && error.status<500 && error.status!==409)throw error;
+   uncertainSave.current=true;
+   if(!await reconcile())return;
+   throw new Error("We couldn't save your progress. Your edit is still here. Please try again.");
   }
   setData(previous=>previous?{...previous,statuses:[...previous.statuses.filter(item=>!same(item,target)),result.status],notes:[...previous.notes.filter(item=>!same(item,target)),...(result.note?[result.note]:[])]}:previous);
   setConflict(undefined);setEditing(undefined);
@@ -78,7 +103,7 @@ export function FocusProgress({focus,memberId,enabled,weeklyLinksEnabled=false,c
   {error&&<p role="alert">{error} <button onClick={()=>setAttempt(x=>x+1)}>Try again</button></p>}
   {tab==='focus'?<ProgressContext.Provider value={data}>{children}</ProgressContext.Provider>:error?null:!data?<p role="status">Loading progress…</p>:<ProgressActivity focus={focus} data={data} row={row}/>}
   {weeklyWork}
-  {editing&&<Dialog title={`Progress · Objective ${editing.section+1}`+(editing.goal===null?'':` · SMART goal ${editing.goal+1}`)} onClose={()=>{if(conflict)setData(conflict);setConflict(undefined);setEditing(undefined)}} onSave={save} saveLabel="Save progress">
+  {editing&&<Dialog title={`Progress · Objective ${editing.section+1}`+(editing.goal===null?'':` · SMART goal ${editing.goal+1}`)} onClose={()=>{if(conflict)setData(conflict);if(uncertainSave.current){uncertainSave.current=false;setData(undefined);setAttempt(x=>x+1)}setConflict(undefined);setEditing(undefined)}} onSave={save} saveLabel="Save progress">
     {conflict&&<div className="progress-conflict"><p>Your edit is still below. Review the latest version, then use it as the base before saving your edit.</p><p>Latest saved status: {conflict.statuses.find(item=>same(item,editing))?.status ? labels[conflict.statuses.find(item=>same(item,editing))!.status!] : 'No status set'}</p><p>Latest saved note: {conflict.notes.find(item=>same(item,editing))?.body || 'No note'}</p><button type="button" onClick={()=>{if(editStatus===(status(editing)||''))setEditStatus(conflict.statuses.find(item=>same(item,editing))?.status||'');if(editBody===(data?.notes.find(item=>same(item,editing))?.body||''))setEditBody(conflict.notes.find(item=>same(item,editing))?.body||'');setData(conflict);setConflict(undefined)}}>Use latest version</button></div>}
     <label htmlFor="progress-status">Status</label><select id="progress-status" name="status" value={editStatus} onChange={event=>setEditStatus(event.target.value)}><option value="">No status set</option>{Object.entries(labels).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select>
     <label htmlFor="progress-note">Progress note</label><textarea id="progress-note" name="body" maxLength={4000} value={editBody} onChange={event=>setEditBody(event.target.value)}/><p className="muted">Visible to you and your career lead. Leave the note blank if you only want to set a status.</p>
