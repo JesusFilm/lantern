@@ -1,9 +1,9 @@
 {
-  "edition": 79,
+  "edition": 80,
   "editionDate": "2026-11-26",
-  "deck": "29e1ec43539da233d561626d02b4c9c183b865a06de7613f4fb734a6812287b2",
+  "deck": "03c7427d24fb3d76e3f88ad93c9fc427308a110b32164f1b6507b281a45a63b2",
   "sources": {
-    "fingerprint": "914533655c433142658a26c2b7380c5209fc37fdcc1bb0b2467340b7030f255e",
+    "fingerprint": "39b3e74db92654f824444acdf807f61e6db2afb5ca23a6f7acf94a7932d08d3d",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -86,7 +86,7 @@
       "server/access.ts": "bd0fb73053a5229e4a683f418097a818312cfad459539ed817c1b08c0beec264",
       "server/accounts.ts": "f45cc93913adc488ad2bc66c0b3e307b067734bec542e566bb76ee440b224c51",
       "server/admission.ts": "66f8ed1c7ec91ac98b6f6ebf66d87912985ee180d354eda36a2b1846f86bf316",
-      "server/app.ts": "c08768c79b711f772ade1d3b156ea087ffd49c0f46bd29e70217a5b195e40768",
+      "server/app.ts": "5ad2de9ad5f346a86389ce85a063283747f6cc5fa3269db34ab769a8e664794a",
       "server/auth-link.ts": "378284c38d3cad72c80fb889cf09b75fded6c6ac291dcf8c5056a3522dd4edf0",
       "server/auth-recovery.ts": "91b16ccb58d61de3331ed03cc769080ab03cc96e093a446c7ddfead184d660ee",
       "server/bootstrap-database.ts": "98068f7b5aecec50064fd7be1019adf1e55bb63a14b38b30f8e16a51c945ba86",
@@ -114,7 +114,7 @@
       "server/github.ts": "abceff434525a0031ee2b2bd032b36196df2f23ad15964b89e3e3da0a8ad858d",
       "server/guide-content.ts": "e04f17eaed7b31121d245bd3d85e8986e340c4d47c1442c417800e54b69de6ed",
       "server/identity.ts": "430b0777493056640911c18c8f41798b5408827565c76d90b49b2248126d7ba0",
-      "server/index.ts": "83919a41735b4c26efbb39cb35439d379034a0ef9b67272c96f4a93bc10bd8be",
+      "server/index.ts": "eb98b4c96078a4656efc629c38dabf0ee95db848351ad4419f02e5c742377cc1",
       "server/jesusfilm.ts": "2c85ef39ad8dd846421b44b374f874b6c4a4aee1c453b5a71cedc3e67c4dc308",
       "server/local-access.ts": "7112f42f4327d1eab25a3d6d039cc8f20db6cea63da7783732e65384cef5db19",
       "server/local-initiatives.ts": "25ff431e97df3df78e95b93135afd18fd888d06512aab5fca3452a281047dd4d",
@@ -156,7 +156,7 @@
       "shared/weekly.ts": "9ea1c7b7ba86cb0a0aba8cca19c13bcb05f61a755fede011e172884750034a2b",
       "tools/manual/capture.ts": "873830b455b7e1ae42732f265b4540a899a4ddd3873f10e753f71fd4e17eeb88",
       "tools/manual/check.ts": "c55570e91934a21ba6b71afffb3ad81182524e766f476379ef9c2a249cc04331",
-      "tools/manual/content.ts": "1e8afaec7bfb9b5016169467133e3cfea923ce5a584635a3a270fc0b47da669d",
+      "tools/manual/content.ts": "8e1e90c87e508b40342b3740cf019b2ea4814348ed7aa2bccd58165e3596cab5",
       "tools/manual/finalize.ts": "36517029e491fc3b2d158dd5c64d9cacd1083e092d181ecc9bdbb78a66218c42",
       "tools/manual/freshness.ts": "b65e196bc27ffba22e5e5cc8b0f5363f8d019f7e7a75a97fc44b4ddf99d77131",
       "tools/manual/generate.ts": "e1931f572e544afdac9eafb710c7459d61b4436e1b26a0b277e06a3023b774ad",
@@ -272,9 +272,9 @@
       }
     }
   },
-  "pdf": "ce1de5f7e87dfaf7b8cb74dce6b56c5a1aaa6a1c7b17a15fb5a769430cabb305",
+  "pdf": "ae8c199aefddaeb1c299ae9fdcbe8401aff69a9bed3856ec5190975dc36e5a50",
   "verification": {
-    "generatedAt": "2026-11-26T05:02:00.338Z",
+    "generatedAt": "2026-11-26T10:04:51.270Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -358,7 +358,7 @@
       "server/access.ts": "bd0fb73053a5229e4a683f418097a818312cfad459539ed817c1b08c0beec264",
       "server/accounts.ts": "f45cc93913adc488ad2bc66c0b3e307b067734bec542e566bb76ee440b224c51",
       "server/admission.ts": "66f8ed1c7ec91ac98b6f6ebf66d87912985ee180d354eda36a2b1846f86bf316",
-      "server/app.ts": "c08768c79b711f772ade1d3b156ea087ffd49c0f46bd29e70217a5b195e40768",
+      "server/app.ts": "5ad2de9ad5f346a86389ce85a063283747f6cc5fa3269db34ab769a8e664794a",
       "server/auth-link.ts": "378284c38d3cad72c80fb889cf09b75fded6c6ac291dcf8c5056a3522dd4edf0",
       "server/auth-recovery.ts": "91b16ccb58d61de3331ed03cc769080ab03cc96e093a446c7ddfead184d660ee",
       "server/bootstrap-database.ts": "98068f7b5aecec50064fd7be1019adf1e55bb63a14b38b30f8e16a51c945ba86",
@@ -386,7 +386,7 @@
       "server/github.ts": "abceff434525a0031ee2b2bd032b36196df2f23ad15964b89e3e3da0a8ad858d",
       "server/guide-content.ts": "e04f17eaed7b31121d245bd3d85e8986e340c4d47c1442c417800e54b69de6ed",
       "server/identity.ts": "430b0777493056640911c18c8f41798b5408827565c76d90b49b2248126d7ba0",
-      "server/index.ts": "83919a41735b4c26efbb39cb35439d379034a0ef9b67272c96f4a93bc10bd8be",
+      "server/index.ts": "eb98b4c96078a4656efc629c38dabf0ee95db848351ad4419f02e5c742377cc1",
       "server/jesusfilm.ts": "2c85ef39ad8dd846421b44b374f874b6c4a4aee1c453b5a71cedc3e67c4dc308",
       "server/local-access.ts": "7112f42f4327d1eab25a3d6d039cc8f20db6cea63da7783732e65384cef5db19",
       "server/local-initiatives.ts": "25ff431e97df3df78e95b93135afd18fd888d06512aab5fca3452a281047dd4d",
@@ -428,7 +428,7 @@
       "shared/weekly.ts": "9ea1c7b7ba86cb0a0aba8cca19c13bcb05f61a755fede011e172884750034a2b",
       "tools/manual/capture.ts": "873830b455b7e1ae42732f265b4540a899a4ddd3873f10e753f71fd4e17eeb88",
       "tools/manual/check.ts": "c55570e91934a21ba6b71afffb3ad81182524e766f476379ef9c2a249cc04331",
-      "tools/manual/content.ts": "1e8afaec7bfb9b5016169467133e3cfea923ce5a584635a3a270fc0b47da669d",
+      "tools/manual/content.ts": "8e1e90c87e508b40342b3740cf019b2ea4814348ed7aa2bccd58165e3596cab5",
       "tools/manual/finalize.ts": "36517029e491fc3b2d158dd5c64d9cacd1083e092d181ecc9bdbb78a66218c42",
       "tools/manual/freshness.ts": "b65e196bc27ffba22e5e5cc8b0f5363f8d019f7e7a75a97fc44b4ddf99d77131",
       "tools/manual/generate.ts": "e1931f572e544afdac9eafb710c7459d61b4436e1b26a0b277e06a3023b774ad",

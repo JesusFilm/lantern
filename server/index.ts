@@ -35,7 +35,7 @@ catch (error) { await database.end(); throw error; }
 let revision: string | undefined;
 try { revision = JSON.parse(readFileSync('release.json', 'utf8')).sha; } catch { /* Local builds need no release stamp. */ }
 const github = localUserId ? { ownerId: localUserId, source: localGitHubApp(localUserId, origin, resolve(homedir(), '.local/state/lantern', 'github-' + createHash('sha256').update(process.cwd()).digest('hex').slice(0, 16) + '.json')) } : undefined;
-const app = createApp(database, { github, flagOwnerEmail, coach:coach ? createCoachProvider(coach):undefined, features, origin, hostingOnly, localUserId, provider: clientId ? jesusFilmProvider(clientId, origin) : undefined }, hosted ? { revision, deployment: process.env.RAILWAY_DEPLOYMENT_ID } : undefined);
+const app = createApp(database, { github, flagOwnerEmail, coach:coach ? createCoachProvider(coach):undefined, features, origin, hostingOnly, localUserId, provider: clientId ? jesusFilmProvider(clientId, origin) : undefined }, hosted ? { revision, deployment: process.env.RAILWAY_DEPLOYMENT_ID, canonicalRedirect: environment === 'production' } : undefined);
 const server = createServer(app);
 const production = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 let closeFrontend: (() => Promise<void>) | undefined;

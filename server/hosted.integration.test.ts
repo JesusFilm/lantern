@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
 import { once } from 'node:events';
+import { request } from 'node:http';
 import { mkdtemp, cp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -19,6 +20,21 @@ test('production-only package migrates, starts without dotenv, serves assets and
  const env = { ...process.env, DATABASE_URL: url.href, NODE_ENV: 'production', LANTERN_ENV: 'stage', LOCAL_ACCESS: '0', HOST: '127.0.0.1', PORT: String(address.port), APP_ORIGIN: 'https://stage.example.test', AUTH_CLIENT_ID: 'synthetic' };
  const commandEnv = { ...env, MIGRATION_DATABASE_URL:migration.options.connectionString!, ADMIN_DATABASE_URL:admin.options.connectionString!,
    LANTERN_DB_EXPECTED_ENDPOINT:url.host, LANTERN_DB_NAME:fixture.databaseName, LANTERN_DB_SCHEMA:'lantern', LANTERN_DB_RUNTIME_ROLE:roles.runtime, LANTERN_DB_MIGRATION_ROLE:roles.migration, LANTERN_DB_ADMIN_ROLE:roles.admin };
+ // Send the public Host through the real HTTP interface, as Railway does.
+ const fetchHosted = (input: string, init: RequestInit = {}) => new Promise<Response>((resolve, reject) => {
+   const headers = new Headers(init.headers);
+   headers.set('Host', new URL(env.APP_ORIGIN).host);
+   const req = request(input, { method: init.method, headers: Object.fromEntries(headers) }, response => {
+     const chunks: Buffer[] = [];
+     response.on('data', chunk => chunks.push(Buffer.from(chunk)));
+     response.on('error', reject);
+     response.on('end', () => resolve(new Response(Buffer.concat(chunks), {
+       status: response.statusCode!, headers: response.headers as Record<string, string>,
+     })));
+   });
+   req.on('error', reject);
+   req.end(init.body);
+ });
  let child: ReturnType<typeof spawn> | undefined;
  async function stop() { if (child && child.exitCode === null) { const exited = once(child, 'exit'); child.kill(); await exited; } child = undefined; }
  try {
@@ -51,43 +67,43 @@ test('production-only package migrates, starts without dotenv, serves assets and
      child = spawn(process.execPath, ['dist/server/index.js'], { cwd: dir, env: { ...env, LANTERN_ENV: n === 0 ? 'stage' : 'production' }, stdio: ['ignore','pipe','pipe'] });
      await new Promise<void>((resolve,reject) => { child!.once('exit', () => reject(new Error('Startup failed'))); child!.stdout!.on('data', b => { if (String(b).includes('Lantern:')) resolve(); }); });
      const origin: string = `http://127.0.0.1:${address.port}`;
-     const health = await fetch(origin+'/health');
+     const health = await fetchHosted(origin+'/health');
      assert.equal(health.status, 200);
      assert.equal(health.headers.get('x-lantern-schema'), '18');
-     const session = await (await fetch(origin+'/api/session', { headers: { Cookie: `__Host-lantern-session=${personalToken}` } })).json() as { user: { id: string } | null };
+     const session = await (await fetchHosted(origin+'/api/session', { headers: { Cookie: `__Host-lantern-session=${personalToken}` } })).json() as { user: { id: string } | null };
      assert.equal(session.user?.id ?? null, personalId);
      if (n === 0) {
        await stop();
        child = spawn(process.execPath, ['dist/server/index.js'], { cwd: dir, env: { ...env, LANTERN_HOSTING_ONLY:'1', AUTH_CLIENT_ID:'' }, stdio: ['ignore','pipe','pipe'] });
        await new Promise<void>((resolve,reject) => { child!.once('exit', () => reject(new Error('Hosting-only startup failed'))); child!.stdout!.on('data', b => { if (String(b).includes('Lantern:')) resolve(); }); });
        const headers = { Cookie: `__Host-lantern-session=${personalToken}`, Origin: env.APP_ORIGIN };
-       const locked = await (await fetch(origin+'/api/session', {headers})).json() as {user:unknown;signInAvailable:boolean;localAccess:boolean};
+       const locked = await (await fetchHosted(origin+'/api/session', {headers})).json() as {user:unknown;signInAvailable:boolean;localAccess:boolean};
        assert.equal(locked.user, null, 'hosting-only must reject previously valid sessions');
        assert.equal(locked.signInAvailable, false);
        assert.equal(locked.localAccess, false);
-       for (const path of ['/api/focuses', '/api/department', '/api/guide']) assert.equal((await fetch(origin+path,{headers})).status,401);
-       assert.equal((await fetch(origin+'/api/focuses',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({title:'Forbidden',start:'2026-01-01',end:'2026-12-31',sections:[]})})).status,401);
-       assert.equal((await fetch(origin+'/auth/jesusfilm',{redirect:'manual'})).status,503);
-       assert.equal((await fetch(origin+'/health')).status,200);
+       for (const path of ['/api/focuses', '/api/department', '/api/guide']) assert.equal((await fetchHosted(origin+path,{headers})).status,401);
+       assert.equal((await fetchHosted(origin+'/api/focuses',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify({title:'Forbidden',start:'2026-01-01',end:'2026-12-31',sections:[]})})).status,401);
+       assert.equal((await fetchHosted(origin+'/auth/jesusfilm',{redirect:'manual'})).status,503);
+       assert.equal((await fetchHosted(origin+'/health')).status,200);
        await stop();
        child = spawn(process.execPath, ['dist/server/index.js'], { cwd:dir, env, stdio:['ignore','pipe','pipe'] });
        await new Promise<void>((resolve,reject) => { child!.once('exit', () => reject(new Error('Startup failed'))); child!.stdout!.on('data', b => { if (String(b).includes('Lantern:')) resolve(); }); });
-       assert.equal(((await (await fetch(origin+'/api/session', {headers})).json()) as {user:{id:string}}).user.id, personalId);
+       assert.equal(((await (await fetchHosted(origin+'/api/session', {headers})).json()) as {user:{id:string}}).user.id, personalId);
        execFileSync(process.execPath, ['dist/server/operations.js', 'remove-approved-email', 'personal@gmail.com'], { cwd: dir, env: commandEnv, stdio: 'pipe' });
-       const revoked = await (await fetch(origin+'/api/session', { headers: { Cookie: `__Host-lantern-session=${personalToken}` } })).json() as { user: unknown };
+       const revoked = await (await fetchHosted(origin+'/api/session', { headers: { Cookie: `__Host-lantern-session=${personalToken}` } })).json() as { user: unknown };
        assert.equal(revoked.user, null);
      }
      assert.equal(health.headers.get('x-lantern-revision'), 'a'.repeat(40));
-     const entry = await fetch(origin,{redirect:'manual'});
+     const entry = await fetchHosted(origin,{redirect:'manual'});
      assert.equal(entry.status,302);
      assert.equal(entry.headers.get('location'),'/auth/jesusfilm');
-     assert.match(await (await fetch(origin+'/?signInError=1')).text(), /assets\//);
-     assert.equal((await fetch(origin+'/api/focuses')).status, 401);
+     assert.match(await (await fetchHosted(origin+'/?signInError=1')).text(), /assets\//);
+     assert.equal((await fetchHosted(origin+'/api/focuses')).status, 401);
      if (n === 1) {
        const scoped = migration;
        try { await scoped.query('ALTER TABLE users RENAME TO unavailable_users'); }
        finally { /* Fixture owns this pool. */ }
-       assert.equal((await fetch(origin+'/health')).status,503);
+       assert.equal((await fetchHosted(origin+'/health')).status,503);
      }
      await stop();
    }
