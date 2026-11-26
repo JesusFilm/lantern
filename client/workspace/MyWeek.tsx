@@ -125,9 +125,9 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
   const [savedUpdate, setSavedUpdate] = useState(''), [updateError, setUpdateError] = useState('');
   const [retainedUpdates, setRetainedUpdates] = useState<RetainedUpdate[]>([]);
   const generation = useRef(0);
-  const statusEdits = useRef<Record<string, number>>({});
+  const editedDailyStatuses = useRef(new Set<string>());
   function changeStatus(id: string, status: GoalStatus) {
-    statusEdits.current[id] = (statusEdits.current[id] ?? 0) + 1;
+    editedDailyStatuses.current.add(id);
     setStatuses(values => ({ ...values, [id]: status })); setUpdateError('');
   }
   const latest = record?.plans.at(-1);
@@ -149,6 +149,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
     const previous = saved.updates.find(update => update.date === date);
     const carried = latestGoalStatuses(saved, date);
     const flags = Object.fromEntries((plan?.goals ?? []).filter(goal => carried[goal.id]).map(goal => [goal.id, carried[goal.id]]));
+    editedDailyStatuses.current.clear();
     setBody(previous?.body ?? ''); setStatuses(flags); setDailyDate(date); setUpdateError('');
     setSavedUpdate(JSON.stringify(dailyDraft(plan, date, previous?.body ?? '', flags)));
   }
@@ -205,6 +206,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
             sent.forEach((goal, index) => {
               if (!goal.id && values[goal.key]) {
                 next[savedGoals[index]!.id] = values[goal.key]; delete next[goal.key];
+                if (editedDailyStatuses.current.delete(goal.key)) editedDailyStatuses.current.add(savedGoals[index]!.id);
               }
             });
             return next;
@@ -271,7 +273,6 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
     const payload = { ...original, planVersion: latest.version, goalStatuses: original.goalStatuses.filter(flag => ids.has(flag.goalId)) };
     const current = generation.current;
     const previous = latestGoalStatuses(record, today);
-    const editsAtStart = { ...statusEdits.current };
     setBusy(true);
     try {
       const saved = await api<WeekRecord>(`/api/weeks/${week}/updates`, 'POST', payload);
@@ -284,7 +285,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
       if (day() === today && dailyDate === today) setStatuses(values => {
         const next = { ...values };
         for (const goal of saved.plans.at(-1)?.goals ?? []) {
-          if (values[goal.id] === previous[goal.id] && statusEdits.current[goal.id] === editsAtStart[goal.id]) next[goal.id] = carried[goal.id];
+          if (values[goal.id] === previous[goal.id] && !editedDailyStatuses.current.has(goal.id)) next[goal.id] = carried[goal.id];
         }
         return next;
       });

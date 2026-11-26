@@ -351,7 +351,7 @@ test('a new goal’s debounced status remains recoverable under its original dat
   } finally {await browser.close();await vite.close();await f.close();}
 });
 
-for (const view of ['Updates','Goals']) test(`retained retry preserves a status explicitly reselected in ${view} while saving`, async () => {
+for (const view of ['Updates','Goals']) for (const timing of ['before','during']) test(`retained retry preserves a status explicitly reselected in ${view} ${timing} saving`, async () => {
   const f=await coachingFixture(),path='/api/weeks/2026-11-16';
   const saved=await(await f.request('member',path+'/plans','POST',{version:0,goals:[{text:'Keep working',links:[]}]})).json();
   const goalId=saved.plans[0].goals[0].id;
@@ -369,10 +369,11 @@ for (const view of ['Updates','Goals']) test(`retained retry preserves a status 
     await page.getByRole('tab',{name:view,exact:true}).click();
     let started!:()=>void;const pending=new Promise<void>(resolve=>{started=resolve;});
     await page.route('**/api/weeks/*/updates',async route=>{started();await held;await route.continue();});
-    await retained.getByRole('button',{name:'Retry saving update for Thursday, 19 Nov',exact:true}).click();await pending;
     const status=page.getByRole('group',{name:'Status for Keep working',exact:true});
+    if(timing==='during') {await retained.getByRole('button',{name:'Retry saving update for Thursday, 19 Nov',exact:true}).click();await pending;}
     await status.getByRole('radio',{name:'At risk',exact:true}).check();
     await status.getByRole('radio',{name:'On track',exact:true}).check();
+    if(timing==='before') {await retained.getByRole('button',{name:'Retry saving update for Thursday, 19 Nov',exact:true}).click();await pending;}
     release();await expect(retained).toHaveCount(0);
     await expect(status.getByRole('radio',{name:'On track',exact:true})).toBeChecked();
     await context.clock.fastForward(1000);
