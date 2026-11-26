@@ -113,6 +113,17 @@ Agent access is the planned per-person setting described in the [API and MCP gui
 | WK-6 | Read the department's team updates for a date | R | Active member; integration | UI, Integration | `GET /api/team-updates`; `GET /api/v1/team-updates` | v1 | wanted | The public route takes a team API token. MCP will use the member's own JFP One sign-in. |
 | WK-7 | Read a teammate's GitHub picture | R | Active member; integration | UI, Integration | `GET /api/github-avatars/:username`; `GET /api/v1/github-avatars/:username` | v1 | — | Cached on Lantern's disk. |
 
+## Department changelog
+
+The `changelog` flag guards all four internal routes.
+
+| ID | Operation | Op | Who | Path today | Route or command | API | MCP | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| CHG-1 | Read a week of entries and the product catalogue | R | Active department member | UI | `GET /api/changelog` | — | — | Team includes former members’ entries. Mine selects the reader’s entries. |
+| CHG-2 | Add a department product | C | Active department member | UI | `POST /api/changelog/products` | — | — | Shared within the department. |
+| CHG-3 | Publish an entry | C | Active department member | UI | `POST /api/changelog/entries` | — | — | Requires verified default-branch merges. |
+| CHG-4 | Edit an entry | U | Author with active membership in the original department | UI | `PUT /api/changelog/entries/:id` | — | — | Rechecks each PR before saving. |
+
 ## Team API tokens
 
 | ID | Operation | Op | Who | Path today | Route or command | API | MCP | Notes |

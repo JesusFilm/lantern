@@ -6,10 +6,7 @@ import type { DailyGoalStatus, WeeklyGoalDraft, WeeklyGoalLinkDraft } from '../s
 import { dailyGoalStatuses, maxWeeklyGoalDescriptionLength } from '../shared/weekly.js';
 import { weeklyStore } from './weekly.js';
 
-function date(value: unknown): value is string {
-  return typeof value === 'string' && /^[1-9]\d{3}-\d{2}-\d{2}$/.test(value)
-    && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
-}
+import {date,weekOf} from './week-date.js';
 function object(value: unknown, keys: string[]): asserts value is Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !keys.includes(key)))
     throw new AccessError(400, 'Supply only the weekly plan or update fields.');
@@ -63,8 +60,7 @@ export function weeklyRoutes(db: Pool, requireUser: (request: Request) => Promis
   const router = Router(), store = weeklyStore(db);
   async function owner(req: Request) {
     const user = await requireUser(req);
-    const week = String(req.params.week);
-    if (!date(week) || new Date(week).getUTCDay() !== 1) throw new AccessError(400, 'Choose a week starting on Monday.');
+    const week = weekOf(req.params.week);
     return { id: user.id, week };
   }
   router.get('/api/focuses/:id/weekly-work',async(req,res)=>{

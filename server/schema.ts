@@ -246,6 +246,24 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
       );
       INSERT INTO schema_migrations(version) VALUES(18);`);
     }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=19')).rowCount) {
+      await client.query(`CREATE TABLE changelog_products (
+        id uuid PRIMARY KEY, department_id uuid NOT NULL REFERENCES departments(id),
+        name text NOT NULL CHECK(length(btrim(name)) BETWEEN 1 AND 100),
+        UNIQUE(department_id,id)
+      );
+      CREATE UNIQUE INDEX changelog_product_name ON changelog_products(department_id,lower(name));
+      CREATE TABLE changelog_entries (
+        id uuid PRIMARY KEY, department_id uuid NOT NULL REFERENCES departments(id),
+        author_id uuid NOT NULL REFERENCES users(id), product_id uuid NOT NULL,
+        week date NOT NULL CHECK(extract(isodow FROM week)=1), title text NOT NULL,
+        changed text NOT NULL, benefit text NOT NULL, links jsonb NOT NULL CHECK(jsonb_typeof(links)='array' AND jsonb_array_length(links)>0),
+        created_at timestamptz NOT NULL DEFAULT now(),
+        FOREIGN KEY(department_id,product_id) REFERENCES changelog_products(department_id,id)
+      );
+      CREATE INDEX changelog_department_week ON changelog_entries(department_id,week);
+      INSERT INTO schema_migrations(version) VALUES(19);`);
+    }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
@@ -255,8 +273,8 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18)');
-  if (result.rowCount !== 18) throw new Error('Required migration is missing.');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19)');
+  if (result.rowCount !== 19) throw new Error('Required migration is missing.');
   const reviewGuard = await database.query(`SELECT 1 FROM pg_trigger WHERE tgrelid='position_focuses'::regclass
     AND tgname='guard_focus_review' AND tgenabled='O' AND tgfoid='guard_focus_review()'::regprocedure`);
   if (!reviewGuard.rowCount) throw new Error('Focus review guard is missing.');
@@ -265,6 +283,7 @@ export async function assertSchemaReady(database: Pool | PoolClient) {
   if (!identityGuard.rowCount) throw new Error('Membership identity guard is missing.');
   await database.query('SELECT subject,email,verified_at FROM auth_identity_candidates LIMIT 0');
   await database.query('SELECT token_hash,revoked_at,expires_at FROM team_api_tokens LIMIT 0');
+  await database.query('SELECT e.links,p.name FROM changelog_entries e,changelog_products p LIMIT 0');
   await database.query('SELECT request_id,user_id FROM focus_request_reads LIMIT 0');
   await database.query('SELECT github_username FROM users LIMIT 0');
   await database.query('SELECT p.goals,u.body,u.goal_statuses FROM weekly_plans p,daily_updates u LIMIT 0');

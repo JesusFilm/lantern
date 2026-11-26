@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Menu, X, BookOpen, Building2, CalendarDays, UsersRound, ClipboardCheck, FileText, PanelLeftClose, PanelLeftOpen, UserRound, type LucideIcon } from "lucide-react";
+import { NotebookText, Menu, X, BookOpen, Building2, CalendarDays, UsersRound, ClipboardCheck, FileText, PanelLeftClose, PanelLeftOpen, UserRound, type LucideIcon } from "lucide-react";
 import type { SessionView } from "../../shared/access.js";
 import "./sidebar.css";
 import { usePhoneLayout } from "./usePhoneLayout.js";
@@ -51,6 +51,7 @@ export function Sidebar({ session, activePage, onNavigate, hrefForPage }: {
       { id: "focuses", label: "Position focuses", icon: FileText },
       ...(session.department ? [{ id: "week", label: "My week", icon: CalendarDays }] : []),
       ...(session.department ? [{ id: "team", label: "My team", icon: UsersRound }] : []),
+      ...(session.department && session.features?.includes("changelog") ? [{ id: "changelog", label: "Changelog", icon: NotebookText }] : []),
       ...(session.department?.role === "career-lead" ? [{ id: "reviews", label: "Review requests", icon: ClipboardCheck }] : []),
       { id: "guide", label: "Guide", icon: BookOpen },
       { id: "account", label: "Account", icon: UserRound },
