@@ -20,6 +20,9 @@ The person supporting members' development who can read their focuses and confir
 **Approved account**:
 A verified Jesus Film account whose exact normalized email is approved in the environment’s database. All environments admit approved personal and work accounts without a domain restriction. Approval permits eligible sign-in; membership and career-lead authority are separate grants. Jesus Film sign-in creates the account; approval alone creates neither an account nor a membership.
 
+**GitHub username**:
+A **Member**'s self-entered GitHub account name, used to find potentially related work and contributions. It is not verified proof of account ownership and grants no access.
+
 **Department**:
 The team boundary within which membership and position focuses belong. An account has at most one department membership. Setup currently supports one department; transfer and rejoining workflows are unsupported. Ending membership preserves its history and department-scoped focuses.
 
@@ -120,6 +123,11 @@ Optional context attached to a weekly goal: a saved position focus, project, rep
 
 **Daily update**:
 A dated record of progress, changed expectations or requests for help within a planned week. It refers to the plan version current when saved. Corrections retain internal revisions, while the UI shows one latest update per date. The author edits their own week; the flagged My team view lets active department members read their active teammates’ dated snapshots.
+
+**Changelog entry**:
+A planned, member-reviewed record of one member's product or work change and why it helps. A published entry identifies a product. It links to at least one related pull request merged into its repository's default branch and can group related pull requests. A default-branch merge does not necessarily mean the change is live.
+
+An entry can be matched to a **Weekly goal**. Team-visible goals may inform its description; non-team-visible goals are used only to suggest links, which are shown only to the goal's owner. Linking does not widen the goal's visibility. The entry remains part of the **Department**'s history after the member leaves.
 
 ## Guidance and context
 
