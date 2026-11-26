@@ -1,7 +1,7 @@
 # Gradual API-first access through shared operations
 
 Date: 2026-11-26
-Status: Accepted by the repository owner; foundation design open in [#252](https://github.com/JesusFilm/lantern/issues/252)
+Status: Accepted by the repository owner. Agent access details and the foundation design are proposed in [#252](https://github.com/JesusFilm/lantern/issues/252).
 
 ## Decision
 
@@ -42,7 +42,6 @@ Lantern's authority model.
 
 ## Consequences
 
-- Changes that add or change a data operation update the inventory in the same change.
 - Routes that query the database inside the HTTP handler, such as the department
   and account routes in [access.ts](../../server/access.ts), move into domain
   modules before they gain API or MCP paths.
@@ -51,12 +50,13 @@ Lantern's authority model.
 - Forge must register Lantern's API resource and scopes before JFP One access
   tokens work. Forge Admin resolves a token's subject to its own account; Lantern
   can resolve it to the account linked at sign-in.
-- Every MCP connection needs a person to sign in. Unattended callers, such as the
-  office TV, need their own credential decision; the team API token is the current one.
-- Per-person agent access, stored and managed in Lantern, gates every request made
-  with a JFP One access token. JFP One scopes record what a client asked for and
-  the person approved; they are not per-person permissions. This needs additive
-  schema, designed in [#252](https://github.com/JesusFilm/lantern/issues/252).
+- Every MCP connection needs a person to sign in. Unattended callers without a
+  person, such as the office TV, use integration credentials like the team API token.
+- Lantern owns per-person agent access for members' delegated requests; JFP One
+  scopes record what a client asked for and the person approved, not per-person
+  permissions. Owner administration keeps ADR 0018's owner list and admin scope.
+  Agent access capabilities, their additive schema, and whether administration
+  also needs a grant are proposed in [#252](https://github.com/JesusFilm/lantern/issues/252).
 - Layering, error model, observability, fault tolerance, rate limiting, audit and
   OpenAPI generation need a foundation design before broad exposure, tracked in
   [#252](https://github.com/JesusFilm/lantern/issues/252).

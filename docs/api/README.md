@@ -22,7 +22,8 @@ Lantern moves toward API-first access gradually. In time, everything a person ca
 | A person's agent | `/mcp` | JFP One access token | Planned |
 
 - **JFP One proves identity; Lantern grants authority.** JFP One establishes who is calling, through which client, and which Lantern scopes the person approved. Lantern's approvals, active membership, roles and owner list decide what that person may do. A credential never adds to that authority.
-- **Agent access decides what each person's agents may do.** Every request made with a JFP One access token, through MCP or `/api/v1`, needs the token's `lantern:*` scope, the person's agent access for that capability, and the person's own authority over the record. Agent access belongs to the Lantern account: it defaults to none, an owner grants and revokes it, and only owners can hold administration. So two members with the same web role can have different agent access. The inventory lists its operations as AGT-1 to AGT-4.
+- **Scopes say what a client asked for.** Lantern's scopes are registered in JFP One, and a person approves them when an agent or app signs in. The first is `lantern:admin` for owner administration ([ADR 0018](../adrs/0018-owner-administration-api.md)); scopes for members' own work and team data are designed in [#252](https://github.com/JesusFilm/lantern/issues/252).
+- **Agent access decides what each member's agents may do.** This is planned, with its design in [#252](https://github.com/JesusFilm/lantern/issues/252). A request for a member's own work or team data made with a JFP One access token needs the token's scope, the person's agent access and the person's own authority over the record. Agent access belongs to the Lantern account: it defaults to none, and an owner grants and revokes it, so two members with the same web role can have different agent access. Owner administration is authorized by the owner list and `lantern:admin`, as ADR 0018 decides. #252 settles whether it also needs an agent access grant.
 - **Each credential has its own routes.** Session cookies work on internal routes, where Lantern rejects bearer tokens. Team API tokens work only on the read-only team routes. JFP One access tokens must be issued for Lantern's API and carry the scope an operation requires.
 - **MCP acts for one person.** Every MCP connection signs a person in through JFP One, so the agent works within that person's Lantern authority and approved scopes. Forge Admin and Changelog already work this way; Lantern needs its own API resource and `lantern:*` scopes registered in Forge.
 - **Internal routes serve the browser app only.** They are unversioned and change with the interface. Other callers use `/api/v1`, whose versioning rules come with the foundation design.
@@ -37,7 +38,7 @@ The team API token stays as Lantern's integration credential for unattended serv
 
 The owner's current goals, reflected in the inventory's MCP column:
 
-1. **Owner administration.** Manage departments, career leads, members and sign-in approvals through an agent, with validation and audit, instead of changing the database directly. The [owner administration plan](../plans/owner-administration-api.md) approves the first scope.
+1. **Owner administration.** Manage departments, career leads, members and sign-in approvals through an agent, with validation and audit, instead of changing the database directly, and use agent skills to avoid mistakes such as typos. The [owner administration plan](../plans/owner-administration-api.md) approves the first scope.
 2. **Members' own work.** Members read and update their own position focuses and weekly goals from a terminal or IDE, and their own agents use Lantern context to give guidance.
 3. **Team updates.** Members read their department's team updates through MCP.
 
@@ -45,4 +46,3 @@ The owner's current goals, reflected in the inventory's MCP column:
 
 - When a change adds, removes or changes a route, `access:ops` command, operator script or other data operation, update its inventory row in the same change.
 - To add an API or MCP path, check that the inventory marks it as wanted, put its logic in a shared domain operation, keep the adapter thin, and test it like other HTTP interfaces: isolated real PostgreSQL schemas, access isolation and failure paths. Update the inventory and the relevant contract document.
-- Until the foundation in [#252](https://github.com/JesusFilm/lantern/issues/252) is agreed, public paths beyond the approved owner administration plan need the owner's agreement.

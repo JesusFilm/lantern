@@ -1,19 +1,19 @@
 # Operation inventory
 
-Every create, read, update and delete operation Lantern performs on its data, how each is reached today, and whether it has or should get an API or MCP path. This is the record of where API-first stands; the [API and MCP guide](README.md) explains the direction. Update the affected row in the same change as any route, `access:ops` command, operator script or data operation. Checked against `main` on 26 November 2026.
+Every create, read, update and delete operation Lantern performs on its data, how each is reached today, and whether it has or should get an API or MCP path. This is the record of where API-first stands; the [API and MCP guide](README.md) explains the direction and [when to update this file](README.md#changing-this-area). Checked against `main` on 26 November 2026.
 
 ## Priorities
 
-1. **Owner administration**: DEP-1, DEP-2, DEP-4 to DEP-8, APR-1 and APR-2. Approved in the [owner administration plan](../plans/owner-administration-api.md); waits on the foundation design in [#252](https://github.com/JesusFilm/lantern/issues/252) and Lantern's registration in Forge.
-2. **Members' own work through MCP**: FOC-1 to FOC-4, WK-1 to WK-4 and WK-6. Wanted by the owner; not yet planned.
+1. **Owner administration**: DEP-1, DEP-2, DEP-4 to DEP-8, APR-1 and APR-2. Approved in the [owner administration plan](../plans/owner-administration-api.md) and authorized by the owner list; waits on the foundation design in [#252](https://github.com/JesusFilm/lantern/issues/252) and Lantern's registration in Forge.
+2. **Members' own work and team updates through MCP**: agent access first (AGT-1 to AGT-3), then FOC-1 to FOC-4, WK-1 to WK-4 and WK-6. Wanted by the owner; not yet planned.
 
-Both depend on agent access (AGT-1 to AGT-3), which gates every request made with a JFP One access token. Other operations wait for a need. The owner sets this order; record changes here.
+Other operations wait for a need. The owner sets this order; record changes here.
 
 ## Reading the tables
 
 - **Op**: C create, R read, U update, D delete.
 - **Path today**: `UI` is the browser app through an internal route. `CLI` is an `npm run access:ops` command using the admin database connection. `SQL` is a manual operator script or direct database change. `Config` is an environment setting. `Integration` is a public API caller. `Not built` is agreed but has no implementation yet.
-- **API**: `v1` is available under `/api/v1`. `planned` is in an approved plan. `—` means none yet.
+- **API**: `v1` is available under `/api/v1`. `planned` is in an approved plan. `wanted` means the owner has asked for it but it is not yet planned. `—` means none yet.
 - **MCP**: `wanted` means the owner has asked for it. `candidate` fits a stated owner goal and awaits the owner's confirmation. `—` is undecided. `n/a` is a browser or deployment mechanism rather than an operation for agents.
 - IDs are stable. When an operation is removed, mark the row removed instead of reusing its ID.
 
@@ -33,13 +33,13 @@ Both depend on agent access (AGT-1 to AGT-3), which gates every request made wit
 
 ## Agent access
 
-Agent access is each person's owner-granted setting for which actions their agents and apps may take with a JFP One access token, through MCP or `/api/v1`. It defaults to none and never exceeds the person's own Lantern authority. Its design, including the new schema it needs, is part of [#252](https://github.com/JesusFilm/lantern/issues/252).
+Agent access is the planned per-person setting described in the [API and MCP guide](README.md#ways-in). Its design, including the new schema it needs, is part of [#252](https://github.com/JesusFilm/lantern/issues/252).
 
 | ID | Operation | Op | Who | Path today | Route or command | API | MCP | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| AGT-1 | List people's agent access | R | Owner | Not built | — | — | wanted | Owner administration. |
-| AGT-2 | Grant agent access to a person | C | Owner | Not built | — | — | wanted | Administration can be granted only to owners. Records who granted it and when. |
-| AGT-3 | Revoke a person's agent access | U | Owner | Not built | — | — | wanted | Applies from the next request, even while the agent's token is still valid; keeps history. |
+| AGT-1 | List people's agent access | R | Owner | Not built | — | wanted | wanted | Owner administration. |
+| AGT-2 | Grant agent access to a person | C | Owner | Not built | — | wanted | wanted | Records who granted it and when. |
+| AGT-3 | Revoke a person's agent access | U | Owner | Not built | — | wanted | wanted | Applies from the next request, even while the agent's token is still valid; keeps history. |
 | AGT-4 | Read own agent access | R | Signed-in person | Not built | — | — | candidate | Lets a person, or their agent, see what it may do. |
 
 ## Sign-in approval
@@ -48,21 +48,21 @@ Agent access is each person's owner-granted setting for which actions their agen
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | APR-1 | List approved emails | R | Operator | CLI | `list-approved-emails` | planned | wanted | Owner administration. |
 | APR-2 | Approve an email for sign-in | C | Operator | CLI | `approve-email` | planned | wanted | Owner administration. Approval can precede the first sign-in. |
-| APR-3 | Revoke an email approval | D | Operator | CLI | `remove-approved-email` | — | candidate | Outside the first administration increment. |
+| APR-3 | Revoke an email approval | D | Operator | CLI | `remove-approved-email` | wanted | wanted | Owner administration outside the first increment. |
 
 ## Departments and membership
 
 | ID | Operation | Op | Who | Path today | Route or command | API | MCP | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| DEP-1 | Create a department with its first career lead | C | Operator | CLI | `setup DEPARTMENT LEAD_EMAIL` | planned | wanted | The planned API creates the department and assigns its lead separately (DEP-7). |
+| DEP-1 | Create a department | C | Operator | CLI for the first department, otherwise SQL | `setup DEPARTMENT LEAD_EMAIL` | planned | wanted | `setup` creates the first department with its career lead and refuses once any department exists. The planned API creates departments without a lead; DEP-7 assigns one. |
 | DEP-2 | List departments and view one | R | Operator | SQL | — | planned | wanted | |
-| DEP-3 | Rename or delete a department | U D | Operator | SQL | — | — | candidate | Outside the first administration increment. |
-| DEP-4 | List a department's members | R | Career lead, own department | UI | `GET /api/department` | planned | wanted | The planned API lets owners list any department. |
-| DEP-5 | Find registered accounts and their membership status | R | Career lead | UI | `GET /api/department/registered-users` | planned | wanted | The planned API lets owners search by email. |
-| DEP-6 | Add a registered account as a member | C | Career lead, own department | UI | `POST /api/department/members` | planned | wanted | |
-| DEP-7 | Assign or replace the career lead | C U | Operator | CLI at setup, otherwise SQL | `setup` | planned | wanted | Replacement keeps the former lead as a member. |
+| DEP-3 | Rename or delete a department | U D | Operator | SQL | — | wanted | wanted | Owner administration outside the first increment; needs a product decision. |
+| DEP-4 | List a department's members | R | Career lead, own department | UI | `GET /api/department` | planned | wanted | Planned for owners across departments; career leads keep the UI. |
+| DEP-5 | Find registered accounts and their membership status | R | Career lead | UI | `GET /api/department/registered-users` | planned | wanted | Planned for owners, searching by email; career leads keep the UI. |
+| DEP-6 | Add a registered account as a member | C | Career lead, own department | UI | `POST /api/department/members` | planned | wanted | Planned for owners across departments; career leads keep the UI. |
+| DEP-7 | Assign or replace the career lead | C U | Operator | CLI at first setup, otherwise SQL | `setup` | planned | wanted | Only SQL can replace a lead today. The planned API replaces atomically and keeps the former lead as a member. |
 | DEP-8 | Demote the career lead to member | U | Operator | SQL | — | planned | wanted | |
-| DEP-9 | End a membership | U | Operator | CLI | `remove-member USER_UUID` | — | candidate | Sets `deleted_at` and keeps history; refuses the career lead. Outside the first administration increment. |
+| DEP-9 | End a membership | U | Operator | CLI | `remove-member USER_UUID` | wanted | wanted | Sets `deleted_at` and keeps history; refuses the career lead. Owner administration outside the first increment. |
 | DEP-10 | Read department direction: mission, artwork and initiatives | R | Member | UI | `GET /api/department/direction` | — | candidate | Context for members' agents giving guidance. |
 | DEP-11 | Change department direction | U | Career lead | UI | `PUT /api/department/direction` | — | — | |
 | DEP-12 | Seed initiatives or update their descriptions | C U | Operator | SQL | `tools/database/seed-initiative-appearance.sql`, `tools/database/update-initiative-descriptions.sql` | — | — | Manual scripts described in the README. |
@@ -97,9 +97,9 @@ Agent access is each person's owner-granted setting for which actions their agen
 | ID | Operation | Op | Who | Path today | Route or command | API | MCP | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | PRG-1 | Read own focus progress | R | Member, `focus-progress` flag | UI | `GET /api/focuses/:id/progress` | — | candidate | Part of members' own focus work. |
-| PRG-2 | Read a member's focus progress | R | Career lead | UI | `GET /api/department/members/:memberId/focuses/:id/progress` | — | — | |
-| PRG-3 | Save a progress status or note | C U | Member | UI | `PUT /api/focuses/:id/progress-entry`, `POST /api/focuses/:id/progress-fence` | — | candidate | The fence settles an uncertain save; see [#242](https://github.com/JesusFilm/lantern/issues/242). |
-| PRG-4 | Report a progress-save diagnostic | C | Member's browser | UI | `POST /api/progress-diagnostics` | — | n/a | Writes a privacy-preserving log event; stores no data. |
+| PRG-2 | Read a member's focus progress | R | Career lead, `focus-progress` flag | UI | `GET /api/department/members/:memberId/focuses/:id/progress` | — | — | |
+| PRG-3 | Save a progress status or note | C U | Member, `focus-progress` flag | UI | `PUT /api/focuses/:id/progress-entry`, `POST /api/focuses/:id/progress-fence` | — | candidate | The fence settles an uncertain save; see [#242](https://github.com/JesusFilm/lantern/issues/242). |
+| PRG-4 | Report a progress-save diagnostic | C | Member's browser, `focus-progress` flag and active membership | UI | `POST /api/progress-diagnostics` | — | n/a | Writes a privacy-preserving log event; stores no data. |
 
 ## Weekly work
 
