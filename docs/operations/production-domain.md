@@ -13,7 +13,9 @@ all hosts for Railway readiness. Staging and local access do not redirect hosts.
 1. Register the custom domain on the existing production Railway application.
    Add Railway's requested CNAME and ownership TXT records in Cloudflare,
    and wait for verified ownership and an active TLS certificate. Cloudflare
-   proxying is supported; retain the intended proxy setting. A proxied CNAME
+   proxying is supported; retain the intended proxy setting. With Railway's
+   valid certificate, use Cloudflare's Full (strict) SSL/TLS mode; Flexible
+   connects to the origin over HTTP and can cause HTTPS redirect loops. A proxied CNAME
    resolves publicly to Cloudflare addresses, so Railway may still display a
    CNAME mismatch after ownership and TLS are valid. Verify the public HTTPS
    health response reaches the expected Lantern deployment. If ownership is
