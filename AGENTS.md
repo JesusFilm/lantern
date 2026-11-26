@@ -1,5 +1,7 @@
 # Lantern agent guide
 
+Implement changes on a feature branch. Open a draft pull request targeting `main` with your verification results, then hand it to a maintainer for review and merge.
+
 Use TDD for application changes: choose public behavior, write and run a failing test, implement the smallest complete change, then verify it passes before the next slice. Test browser workflows and HTTP interfaces against isolated real PostgreSQL schemas. Cover persistence, validation, access isolation and failure paths. Preserve existing regressions; update assertions only when an approved behavior changes.
 
 Keep responsibilities separate: React presents data and captures intent; HTTP modules resolve identity and validate requests; domain/storage modules enforce ownership and persistence. Use explicit typed contracts, parameterized SQL, dependency injection at external interfaces, and cohesive modules with small public surfaces. Prefer composition and straightforward code over speculative abstractions. Follow SOLID principles where they reduce coupling and clarify ownership.

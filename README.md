@@ -8,6 +8,8 @@ Lantern helps members write objectives and SMART goals, discuss their position f
 
 ## Development
 
+Work on a feature branch and submit changes to `main` only through a pull request. Coding agents open a draft PR, include their verification results, and hand it to a maintainer for review and merge. See the [change-review policy](docs/operations/review-gate.md).
+
 For test setup, focused/full commands, coverage and limits, read [Testing](docs/development/testing.md). Test fixtures use an isolated local owner connection; application setup below uses restricted runtime/migration/admin connections. Keep your private environment files, which hold settings. The local database is disposable and can be reset at any time.
 
 When linking issues or preparing a fix or feature for human testing, follow the [QA issue workflow](docs/development/qa-issue-workflow.md). It applies to all contributors and coding agents.
