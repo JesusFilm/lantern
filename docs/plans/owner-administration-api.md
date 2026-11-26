@@ -62,6 +62,8 @@ token to an audience for which it was not issued.
    manually release schema changes. Include applicable QA manual updates and
    staging acceptance evidence; local fixtures do not prove hosted sign-in.
 
-Future focus APIs, observer views, broad API-first conversion, full CLI and an
+Later API and MCP paths, including members' own focuses and weekly goals, follow
+[ADR 0021](../adrs/0021-gradual-api-first-access.md) and are prioritized in the
+[operation inventory](../api/inventory.md). Observer views, a full CLI and an
 interactive API page require a separate product decision. Remove this plan when
 its work is completed and the lasting instructions are in the relevant guides.

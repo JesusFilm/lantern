@@ -7,8 +7,9 @@ Language for the member position-focus workflow. This glossary distinguishes the
 **Owner**:
 A person entrusted to oversee Lantern in an environment. The current configured
 owner can inspect feature-flag states. The planned administration API extends this
-to a list of owners who can set up departments; owner authority alone does not
-grant access to position focuses. An owner may separately be a career lead.
+to a list of owners who can set up departments and grant agent access; owner
+authority alone does not grant access to position focuses. An owner may separately
+be a career lead.
 
 **Member**:
 An approved participant with active membership of the team who prepares and manages their own position focuses.
@@ -26,8 +27,31 @@ The team boundary within which membership and position focuses belong. An accoun
 A person or group whose needs a member's contribution serves, including colleagues within the team.
 _Avoid_: User when it could be confused with an application account.
 
+## API access
+
+See [API and MCP](docs/api/README.md) for the direction and the [operation inventory](docs/api/inventory.md) for current status.
+
+**API-first**:
+The direction that each data operation is built once and, in time, becomes reachable through the public API as well as the interface, so Lantern can be managed headlessly. Operations gain API or MCP paths gradually, as needs arise.
+
+**Internal route**:
+An unversioned `/api/...` route that serves only Lantern's browser app through the signed-in session.
+
+**Public API**:
+Lantern's versioned `/api/v1` routes for callers other than its browser app. Each route accepts a specific credential.
+_Avoid_: Calling internal routes the API.
+
+**JFP One access token**:
+A planned credential that JFP One issues to an app or agent acting for a signed-in person, valid only for Lantern's API and the scopes the person approved. It proves identity and consent; Lantern decides the person's authority.
+
+**MCP access**:
+Planned access to selected operations through Lantern's MCP server. Each connection acts for one signed-in person through a JFP One access token, within that person's Lantern authority and agent access.
+
+**Agent access**:
+A planned per-person setting, granted and revoked by an owner, for which of a member's own-work and team actions their agents and apps may take with a JFP One access token. It defaults to none and never exceeds the person's own Lantern authority. Owner administration is authorized by the owner list.
+
 **Team API token**:
-A named, expiring and revocable bearer credential for reading one department’s team updates and cached profile pictures. It belongs to its creator and original department, depends on active approved membership, and grants no editing or account-management authority.
+Lantern's integration credential for an unattended server, such as the office TV: a named, expiring and revocable bearer token for reading one department’s team updates and cached profile pictures. It belongs to its creator and original department, depends on active approved membership, and grants no editing or account-management authority.
 
 ## Position focuses
 

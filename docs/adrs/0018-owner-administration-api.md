@@ -3,12 +3,16 @@
 Date: 2026-11-16
 Status: Accepted by the repository owner; implementation planned.
 
+Superseded in part: 2026-11-26 — the deferral of broader browser-operation migration
+is replaced by [ADR 0021](0021-gradual-api-first-access.md).
+
 ## Decision
 
 Introduce versioned administration HTTP resources and an MCP interface using
 shared, permission-checked administration services. The [PRD](../PRD.md#planned-owner-administration-api)
 defines the operations and product behavior. Publish an OpenAPI description;
-defer an interactive API page and the broader migration of browser operations.
+defer an interactive API page. [ADR 0021](0021-gradual-api-first-access.md) sets
+how further browser operations gain API and MCP paths.
 Preserve existing browser routes, authorization and account-linking behavior.
 
 JFP One issues resource-bound tokens for active, verified human identities. Lantern
