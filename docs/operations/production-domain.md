@@ -12,8 +12,13 @@ all hosts for Railway readiness. Staging and local access do not redirect hosts.
 
 1. Register the custom domain on the existing production Railway application.
    Add Railway's requested CNAME and ownership TXT records in Cloudflare,
-   with proxying disabled, and wait for verified ownership and an active TLS
-   certificate. Keep the old Railway domain attached.
+   and wait for verified ownership and an active TLS certificate. Cloudflare
+   proxying is supported; retain the intended proxy setting. A proxied CNAME
+   resolves publicly to Cloudflare addresses, so Railway may still display a
+   CNAME mismatch after ownership and TLS are valid. Verify the public HTTPS
+   health response reaches the expected Lantern deployment. If ownership is
+   still pending after the TXT record becomes publicly visible, request a fresh
+   Railway certificate/ownership check. Keep the old Railway domain attached.
 2. Release Forge's additive `jfp_lantern_production` registration through its
    normal PR/main pipeline. Both the old and new exact callbacks must be
    registered during the transition; no scopes or client ID change.
