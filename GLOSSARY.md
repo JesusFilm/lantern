@@ -44,7 +44,10 @@ _Avoid_: Calling internal routes the API.
 A planned credential that JFP One issues to an app or agent acting for a signed-in person, valid only for Lantern's API and the scopes the person approved. It proves identity and consent; Lantern decides the person's authority.
 
 **MCP access**:
-Planned agent access to selected operations through Lantern's MCP server. Each connection acts for one signed-in person through a JFP One access token, within that person's Lantern authority.
+Planned access to selected operations through Lantern's MCP server. Each connection acts for one signed-in person through a JFP One access token, within that person's Lantern authority and agent access.
+
+**Agent access**:
+A planned per-person setting, granted and revoked by an owner, for which actions a person's agents and apps may take with a JFP One access token. It defaults to none and never exceeds the person's own Lantern authority; administration can be granted only to owners.
 
 **Team API token**:
 Lantern's integration credential for an unattended server, such as the office TV: a named, expiring and revocable bearer token for reading one department’s team updates and cached profile pictures. It belongs to its creator and original department, depends on active approved membership, and grants no editing or account-management authority.

@@ -7,12 +7,12 @@ Every create, read, update and delete operation Lantern performs on its data, ho
 1. **Owner administration**: DEP-1, DEP-2, DEP-4 to DEP-8, APR-1 and APR-2. Approved in the [owner administration plan](../plans/owner-administration-api.md); waits on the foundation design in [#252](https://github.com/JesusFilm/lantern/issues/252) and Lantern's registration in Forge.
 2. **Members' own work through MCP**: FOC-1 to FOC-4, WK-1 to WK-4 and WK-6. Wanted by the owner; not yet planned.
 
-Other operations wait for a need. The owner sets this order; record changes here.
+Both depend on agent access (AGT-1 to AGT-3), which gates every request made with a JFP One access token. Other operations wait for a need. The owner sets this order; record changes here.
 
 ## Reading the tables
 
 - **Op**: C create, R read, U update, D delete.
-- **Path today**: `UI` is the browser app through an internal route. `CLI` is an `npm run access:ops` command using the admin database connection. `SQL` is a manual operator script or direct database change. `Config` is an environment setting. `Integration` is a public API caller.
+- **Path today**: `UI` is the browser app through an internal route. `CLI` is an `npm run access:ops` command using the admin database connection. `SQL` is a manual operator script or direct database change. `Config` is an environment setting. `Integration` is a public API caller. `Not built` is agreed but has no implementation yet.
 - **API**: `v1` is available under `/api/v1`. `planned` is in an approved plan. `—` means none yet.
 - **MCP**: `wanted` means the owner has asked for it. `candidate` fits a stated owner goal and awaits the owner's confirmation. `—` is undecided. `n/a` is a browser or deployment mechanism rather than an operation for agents.
 - IDs are stable. When an operation is removed, mark the row removed instead of reusing its ID.
@@ -30,6 +30,17 @@ Other operations wait for a need. The owner sets this order; record changes here
 | ACC-7 | Plan and apply recovery of a duplicate sign-in | R U D | Operator | CLI | `plan-auth-recovery-by-email`, `plan-auth-recovery`, `apply-auth-recovery` | — | — | Removes only a verified empty duplicate. |
 | ACC-8 | Plan and apply a session cutover | D | Operator | CLI | `plan-auth-session-cutover`, `apply-auth-session-cutover` | — | n/a | Ends existing sessions during an identity cutover. |
 | ACC-9 | Prepare the synthetic local account | C | Developer | CLI | `local-account` | — | n/a | Local loopback database only. |
+
+## Agent access
+
+Agent access is each person's owner-granted setting for which actions their agents and apps may take with a JFP One access token, through MCP or `/api/v1`. It defaults to none and never exceeds the person's own Lantern authority. Its design, including the new schema it needs, is part of [#252](https://github.com/JesusFilm/lantern/issues/252).
+
+| ID | Operation | Op | Who | Path today | Route or command | API | MCP | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| AGT-1 | List people's agent access | R | Owner | Not built | — | — | wanted | Owner administration. |
+| AGT-2 | Grant agent access to a person | C | Owner | Not built | — | — | wanted | Administration can be granted only to owners. Records who granted it and when. |
+| AGT-3 | Revoke a person's agent access | U | Owner | Not built | — | — | wanted | Applies from the next request, even while the agent's token is still valid; keeps history. |
+| AGT-4 | Read own agent access | R | Signed-in person | Not built | — | — | candidate | Lets a person, or their agent, see what it may do. |
 
 ## Sign-in approval
 

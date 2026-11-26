@@ -53,6 +53,10 @@ Lantern's authority model.
   can resolve it to the account linked at sign-in.
 - Every MCP connection needs a person to sign in. Unattended callers, such as the
   office TV, need their own credential decision; the team API token is the current one.
+- Per-person agent access, stored and managed in Lantern, gates every request made
+  with a JFP One access token. JFP One scopes record what a client asked for and
+  the person approved; they are not per-person permissions. This needs additive
+  schema, designed in [#252](https://github.com/JesusFilm/lantern/issues/252).
 - Layering, error model, observability, fault tolerance, rate limiting, audit and
   OpenAPI generation need a foundation design before broad exposure, tracked in
   [#252](https://github.com/JesusFilm/lantern/issues/252).
