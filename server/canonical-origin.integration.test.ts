@@ -29,6 +29,7 @@ test('production aliases redirect before authentication and parsing while health
     for (const path of ['/?page=week', '/auth/jesusfilm', '/lantern.svg', '/api/session', '//other.example/path?x=%2F']) {
       const response = await send(path, 'lantern-production-0bd8.up.railway.app');
       assert.equal(response.status, 308);
+      assert.equal(response.headers['cache-control'], 'no-store');
       assert.equal(response.headers.location, 'https://ds-lantern.jesusfilm.org' + path);
       assert.equal(response.headers['set-cookie'], undefined);
     }

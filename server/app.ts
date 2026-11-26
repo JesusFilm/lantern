@@ -34,6 +34,7 @@ export function createApp(database: Pool, config: AccessConfig = { origin: 'http
     const canonicalHost = new URL(config.origin).host;
     app.use((request, response, next) => {
       if (request.headers.host?.toLowerCase() === canonicalHost) return next();
+      response.set('Cache-Control', 'no-store');
       response.redirect(308, config.origin + request.originalUrl);
     });
   }

@@ -3,7 +3,7 @@
   "editionDate": "2026-11-26",
   "deck": "03c7427d24fb3d76e3f88ad93c9fc427308a110b32164f1b6507b281a45a63b2",
   "sources": {
-    "fingerprint": "63eb61d698cc93c400134f8a2c6266144b0af1f11d6ef1a052028f0e488b8277",
+    "fingerprint": "39b3e74db92654f824444acdf807f61e6db2afb5ca23a6f7acf94a7932d08d3d",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -86,7 +86,7 @@
       "server/access.ts": "bd0fb73053a5229e4a683f418097a818312cfad459539ed817c1b08c0beec264",
       "server/accounts.ts": "f45cc93913adc488ad2bc66c0b3e307b067734bec542e566bb76ee440b224c51",
       "server/admission.ts": "66f8ed1c7ec91ac98b6f6ebf66d87912985ee180d354eda36a2b1846f86bf316",
-      "server/app.ts": "3a5f2433016b16d71a1e6eb1556c14c73c0810a44025a3afc127e01186a75d74",
+      "server/app.ts": "5ad2de9ad5f346a86389ce85a063283747f6cc5fa3269db34ab769a8e664794a",
       "server/auth-link.ts": "378284c38d3cad72c80fb889cf09b75fded6c6ac291dcf8c5056a3522dd4edf0",
       "server/auth-recovery.ts": "91b16ccb58d61de3331ed03cc769080ab03cc96e093a446c7ddfead184d660ee",
       "server/bootstrap-database.ts": "98068f7b5aecec50064fd7be1019adf1e55bb63a14b38b30f8e16a51c945ba86",
@@ -274,7 +274,7 @@
   },
   "pdf": "ae8c199aefddaeb1c299ae9fdcbe8401aff69a9bed3856ec5190975dc36e5a50",
   "verification": {
-    "generatedAt": "2026-11-26T09:50:56.467Z",
+    "generatedAt": "2026-11-26T10:04:51.270Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -358,7 +358,7 @@
       "server/access.ts": "bd0fb73053a5229e4a683f418097a818312cfad459539ed817c1b08c0beec264",
       "server/accounts.ts": "f45cc93913adc488ad2bc66c0b3e307b067734bec542e566bb76ee440b224c51",
       "server/admission.ts": "66f8ed1c7ec91ac98b6f6ebf66d87912985ee180d354eda36a2b1846f86bf316",
-      "server/app.ts": "3a5f2433016b16d71a1e6eb1556c14c73c0810a44025a3afc127e01186a75d74",
+      "server/app.ts": "5ad2de9ad5f346a86389ce85a063283747f6cc5fa3269db34ab769a8e664794a",
       "server/auth-link.ts": "378284c38d3cad72c80fb889cf09b75fded6c6ac291dcf8c5056a3522dd4edf0",
       "server/auth-recovery.ts": "91b16ccb58d61de3331ed03cc769080ab03cc96e093a446c7ddfead184d660ee",
       "server/bootstrap-database.ts": "98068f7b5aecec50064fd7be1019adf1e55bb63a14b38b30f8e16a51c945ba86",

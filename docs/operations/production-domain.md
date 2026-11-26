@@ -4,7 +4,8 @@ Production's canonical origin is `https://ds-lantern.jesusfilm.org`.
 The prior Railway hostname remains attached so existing links can redirect.
 Production redirects noncanonical hosts with HTTP 308 before authentication,
 static assets or request bodies are handled. Paths and query strings are retained;
-HTTP methods are retained by the redirect. `/health` remains directly available on
+HTTP methods are retained by the redirect. Redirects send `Cache-Control: no-store`
+so clients do not retain a redirect across an origin rollback. `/health` remains directly available on
 all hosts for Railway readiness. Staging and local access do not redirect hosts.
 
 ## Coordinated rollout
@@ -42,6 +43,8 @@ produce HTTP redirects.
 Before reverting `APP_ORIGIN`, verify the old Auth callback is still registered.
 Restore the same previous origin in GitHub and Railway, redeploy the accepted
 revision and recheck health and sign-in. Keep both domains and DNS records in
-place while investigating. A 308 can be cached by clients, so some old links may
-continue visiting the new domain after rollback. No database migration or data
+place while investigating. If a client already cached a redirect from an earlier configuration, clear its
+site cache or use a fresh browser profile before verifying the old origin;
+otherwise an old-to-new cached redirect can loop with the new-to-old rollback
+redirect. Keep the new domain attached while recovering these clients. No database migration or data
 copy is part of this domain change.
