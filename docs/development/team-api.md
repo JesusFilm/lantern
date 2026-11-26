@@ -15,7 +15,7 @@ data and images to its own browser. Browser sessions are not API tokens; no
 cross-origin cookie sharing or CORS configuration is needed for this arrangement.
 The token grants no editing, account or token-management access.
 
-Production origin: `https://lantern-production-0bd8.up.railway.app`.
+Production origin: `https://ds-lantern.jesusfilm.org`.
 Use HTTPS for hosted deployments. The TV controller stores its token privately and
 proxies the API; the TV needs access only to its local controller.
 

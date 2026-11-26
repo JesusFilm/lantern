@@ -21,7 +21,7 @@ Other operations wait for a need. The owner sets this order; record changes here
 
 | ID | Operation | Op | Who | Path today | Route or command | API | MCP | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| ACC-1 | Sign in with JFP One, creating or matching the account, and start a session | C R U | Approved person | UI | `GET /auth/jesusfilm`, `GET /auth/jesusfilm/callback` | — | n/a | API and MCP callers use JFP One access tokens instead. |
+| ACC-1 | Sign in with JFP One, creating or matching the account, and start a session | C R U | Approved person | UI | `GET /auth/jesusfilm`, `GET /auth/jesusfilm/callback` | — | n/a | Production aliases redirect with HTTP 308 to `APP_ORIGIN` before sign-in; paths and query strings are retained. API and MCP callers use JFP One access tokens instead. |
 | ACC-2 | Read own session: account, department, role and enabled features | R | Signed-in person | UI | `GET /api/session` | — | candidate | An agent needs this to know whose account and department it acts for. |
 | ACC-3 | Sign out | D | Signed-in person | UI | `POST /api/sign-out` | — | n/a | Deletes the session. |
 | ACC-4 | Change own display name | U | Signed-in person | UI | `PATCH /api/account` | — | — | |

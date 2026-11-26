@@ -6,7 +6,7 @@ import type { Pool } from 'pg';
 import { assertSchemaReady } from './schema.js';
 import type { HealthResponse } from '../shared/health.js';
 
-export function createApp(database: Pool, config: AccessConfig = { origin: 'http://127.0.0.1:4391' }, runtime?: { revision?: string; deployment?: string }) {
+export function createApp(database: Pool, config: AccessConfig = { origin: 'http://127.0.0.1:4391' }, runtime?: { revision?: string; deployment?: string; canonicalRedirect?: boolean }) {
   const app = express();
   app.disable('x-powered-by');
   app.disable('etag');
@@ -27,6 +27,16 @@ export function createApp(database: Pool, config: AccessConfig = { origin: 'http
       } satisfies HealthResponse);
     }
   });
+
+  // Railway probes health on its internal host. All other production requests
+  // use the configured origin before cookies, authentication or bodies are read.
+  if (runtime?.canonicalRedirect) {
+    const canonicalHost = new URL(config.origin).host;
+    app.use((request, response, next) => {
+      if (request.headers.host?.toLowerCase() === canonicalHost) return next();
+      response.redirect(308, config.origin + request.originalUrl);
+    });
+  }
 
   app.use(express.json({ limit: '1mb' }));
   app.use(accessRoutes(database, config));
