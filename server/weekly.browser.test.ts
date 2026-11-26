@@ -26,19 +26,20 @@ test('a member plans a week and records daily updates with persistent history an
     await expect(page.getByText('Other weeks', { exact: true })).toHaveCount(0);
     await expect(page.getByText('This week', { exact: true })).toHaveCount(0);
     await expect(page.getByText(/Only you can view these goals/)).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Weekly goals', exact: true })).toBeVisible();
-    await expect(page.getByRole('textbox', { name: 'Daily update', exact: true })).toBeVisible();
     await expect(page.getByLabel('Week starting')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Save weekly goals', exact: true })).toHaveCount(0);
     await page.getByRole('textbox', { name: 'Weekly goal 1', exact: true }).fill('Test sign-in with three people');
     await page.getByRole('button', { name: 'Add goal', exact: true }).click();
     await page.getByRole('textbox', { name: 'Weekly goal 2', exact: true }).fill('Investigate upload delays');
     await expect(page.getByRole('textbox', { name: 'Weekly goal 1', exact: true })).toHaveValue('Test sign-in with three people');
+    await page.getByRole('tab', { name: 'Updates', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Daily update', exact: true })).toBeVisible();
     await expect(page.getByLabel('Update date', { exact: true })).toHaveCount(0);
     await page.route('**/api/weeks/*/updates', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Temporarily unavailable. Try again.' }) }));
     await page.getByRole('textbox', { name: 'Daily update', exact: true }).fill('Two sessions done. Could use help with the upload trace.');
-    for (const group of await page.locator('.week-goal-statuses').all()) await group.getByRole('radio', { name: 'On track', exact: true }).check();
+    for (const group of await page.getByRole('group', { name: /^Status for / }).all()) await group.getByRole('radio', {name:'On track',exact:true}).check();
     await expect(page.getByRole('alert')).toContainText('Temporarily unavailable');
     await expect(page.getByRole('textbox', { name: 'Daily update', exact: true })).toHaveValue('Two sessions done. Could use help with the upload trace.');
     await page.unroute('**/api/weeks/*/updates');
@@ -48,6 +49,7 @@ test('a member plans a week and records daily updates with persistent history an
     const savedUpdate = await (await f.request('member', '/api/weeks/2026-11-16')).json();
     assert.equal(savedUpdate.updates[0].body, 'Two sessions done. Could use help with the upload trace.');
     assert.equal(savedUpdate.updates[0].date, '2026-11-17');
+    await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Weekly goal 1', exact: true })).toHaveValue('Test sign-in with three people');
     await page.getByRole('textbox', { name: 'Weekly goal 1', exact: true }).fill('Finish the third session');
     await expect.poll(async () => (await (await f.request('member', '/api/weeks/2026-11-16')).json()).plans.at(-1)?.goals[0].text).toBe('Finish the third session');
@@ -58,11 +60,14 @@ test('a member plans a week and records daily updates with persistent history an
     await expect.poll(async () => (await (await f.request('member', '/api/weeks/2026-11-16')).json()).updates.at(-1).planVersion).toBe(savedPlans.plans.at(-1).version);
     await expect(page.getByText(/plan version|version \d/i)).toHaveCount(0);
     await expect(page.getByText(/plan version|version \d/i)).toHaveCount(0);
-    await page.goto(f.origin + '/?page=week&week=2026-11-23');
+    await page.getByRole('tab', { name: 'Updates', exact: true }).click();
+    await page.goto(f.origin + '/?page=week&week=2026-11-23');await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Weekly goal 1', exact: true })).toHaveValue('');
     await page.goto(f.origin + '/?page=week&week=2026-11-16');
     await expect(page.getByRole('textbox', { name: 'Daily update', exact: true })).toBeVisible();
+    await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Weekly goal 1', exact: true })).toHaveValue('Finish the third session');
+    await page.getByRole('tab', { name: 'Updates', exact: true }).click();
     for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await expect(page.getByRole('textbox', { name: 'Daily update', exact: true })).toBeVisible();
@@ -86,8 +91,11 @@ test('weekly goals and daily updates can be edited together without replacing ei
     await page.goto(f.origin + '/?page=week&week=2026-11-16');
     await page.getByRole('textbox', { name: 'Daily update', exact: true }).fill('My unfinished daily update');
     await expect(page.getByRole('textbox', { name: 'Daily update', exact: true })).toBeVisible();
+    await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await page.getByRole('textbox', { name: 'Weekly goal 1', exact: true }).fill('My unfinished weekly goal');
+    await page.getByRole('tab', { name: 'Updates', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Daily update', exact: true })).toHaveValue('My unfinished daily update');
+    await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Weekly goal 1', exact: true })).toHaveValue('My unfinished weekly goal');
   } finally { await browser.close(); await vite.close(); await f.close(); }
 });
@@ -118,6 +126,7 @@ test('leaving a weekly draft through browser history asks before discarding it',
     const page = await context.newPage(); page.setDefaultTimeout(5000);
     await page.goto(f.origin);
     await page.getByRole('link', { name: 'My week', exact: true }).click();
+    await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await page.getByRole('textbox', { name: 'Weekly goal 1', exact: true }).fill('Keep this unsaved goal');
     let prompted = false;
     page.on('dialog', async dialog => { prompted = true; await dialog.dismiss(); });
@@ -146,6 +155,7 @@ test('a member links a weekly goal to their focus and an issue and retains the l
     const page = await context.newPage(); page.setDefaultTimeout(5000);
     await page.route('**/api/focuses', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Focus choices unavailable.' }) }));
     await page.goto(f.origin + '/?page=week&week=2026-11-16');
+    await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await page.getByRole('textbox', { name: 'Weekly goal 1', exact: true }).fill('Ship the sign-in fix');
     await page.getByRole('button', { name: 'Actions for goal 1', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Add link', exact: true }).click();
@@ -170,7 +180,7 @@ test('a member links a weekly goal to their focus and an issue and retains the l
     await page.getByRole('button', { name: 'Add link', exact: true }).click();
     await expect.poll(async () => (await (await f.request('member', '/api/weeks/2026-11-16')).json()).plans.at(-1)?.goals[0].links.length).toBe(2);
     await expect(page.getByRole('button', { name: 'Edit work link 2 for goal 1', exact: true })).toContainText('Sign-in issue');
-    await page.reload();
+    await page.reload();await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await page.getByRole('button', { name: 'Edit work link 2 for goal 1', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'URL', exact: true })).toHaveValue('https://github.com/example/lantern/issues/42');
     await page.getByRole('button', { name: 'Close link picker', exact: true }).click();

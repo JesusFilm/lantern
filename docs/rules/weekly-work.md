@@ -5,6 +5,8 @@ Owner decisions: Sharon follow-up conversation, 23 November 2026; tracked in
 [#204](https://github.com/JesusFilm/lantern/issues/204),
 [#206](https://github.com/JesusFilm/lantern/issues/206) and
 [#212](https://github.com/JesusFilm/lantern/issues/212).
+Further owner decisions in the 26 November 2026 UI iteration approve manual weekly entry, status carry-over and hiding earlier completions from Today’s update.
+
 These rules describe approved behavior delivered behind flags; they do not
 establish production availability.
 
@@ -12,7 +14,7 @@ establish production availability.
 
 Status: agreed; available to every active member. Goals are due at the end of the selected
 week. No per-goal date picker is required. Tasks are acceptable when the intended
-result is clear. Recurring work is copied explicitly, never carried automatically.
+result is clear. Members enter recurring work by hand for each week; there is no copy-from-last-week control. Updates and Goals tabs sit beside the date navigation. Updates contains today’s statuses and previous updates; Goals contains goal management and the same four daily status choices for the current week, synchronized with Updates. Switching tabs retains drafts while autosave continues. Each goal carries its latest saved status forward within its week; new goals remain unselected until a status is chosen. Daily messages start empty on a new day, including when the tab stays open overnight. Completed goals cannot be reordered and remain last under Completed in Goals. Today’s update shows goals completed today, while goals already Done before today stay hidden from its list. Saved daily snapshots retain carried statuses. Their original history is preserved. Changing Done to another status in Goals returns the goal to Today’s update.
 
 ## WW-02 — Goal visibility and public daily updates
 
@@ -21,7 +23,7 @@ and my career lead, or Only me for each weekly goal. This covers text, details,
 links and statuses. TV always gets only team goals. Historical snapshots satisfy
 both original and latest saved visibility, including removed goals. Hidden controls
 never widen saved access. Daily update bodies are always shared with the team and
-TV, with a clear notice. Sharing a team goal shares its linked focus title and
+TV. The daily composer does not show a sharing notice. Sharing a team goal shares its linked focus title and
 target wording, without sharing the focus document.
 
 ## WW-03 — Stable targets and member-confirmed progress

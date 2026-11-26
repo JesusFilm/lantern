@@ -114,7 +114,7 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
     const address = server.address();
     assert.ok(address && typeof address !== "string");
     const origin = `http://127.0.0.1:${address.port}`;
-    const app = createApp(fixture.runtime, { origin, provider: signInOnly, flagOwnerEmail: people.lead.email, coach: fakeCoach(() => firstInitiative), features: resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on,sidebar-collapse=on,focus-progress=on,weekly-goal-copy=on,weekly-goal-privacy=on,weekly-focus-links=on,review-activity=on,team-api=on" }, "production") });
+    const app = createApp(fixture.runtime, { origin, provider: signInOnly, flagOwnerEmail: people.lead.email, coach: fakeCoach(() => firstInitiative), features: resolveFeatureConfig({ LANTERN_FEATURES: "coach=on,coach-redesign=on,sidebar-collapse=on,focus-progress=on,weekly-goal-privacy=on,weekly-focus-links=on,review-activity=on,team-api=on" }, "production") });
     app.use(express.static(resolve(clientDirectory)));
     server.on("request", app);
 
@@ -134,7 +134,7 @@ export async function startWorld(clientDirectory: string): Promise<ManualWorld> 
       { text: "Verify the offline search fix", links: [] },
     ] });
     await call("member", "/api/weeks/2026-11-02/updates", "POST", { date: "2026-11-02", body: "The recovery guide is ready for feedback.", planVersion: 1,
-      goalStatuses: [{goalId: weekly.plans[0].goals[0].id, status: "on-track"}] });
+      goalStatuses: [{goalId: weekly.plans[0].goals[0].id, status: "on-track"}, {goalId: weekly.plans[0].goals[1].id, status: "done"}] });
 
     const direction = (await call("lead", "/api/department/direction", "PUT", {
       mission,

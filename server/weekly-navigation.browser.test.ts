@@ -25,7 +25,7 @@ test('week navigation supports planning ahead and returns one week at a time', a
   try {
     const context=await browser.newContext({timezoneId:'Pacific/Auckland'});await context.clock.setFixedTime(new Date('2026-11-19T10:00:00+13:00'));
     await context.addCookies([{name:'lantern-session',value:'member',url:f.origin}]);const page=await context.newPage();page.setDefaultTimeout(5000);
-    await page.goto(f.origin+'/?page=week');
+    await page.goto(f.origin+'/?page=week');await page.getByRole('tab',{name:'Goals',exact:true}).click();
     const previous=page.getByRole('button',{name:'Previous week',exact:true}), next=page.getByRole('button',{name:'Next week',exact:true});
     await expect(previous).toBeEnabled();await expect(next).toBeEnabled();
     const range=page.getByText('Mon, 16 Nov – Fri, 20 Nov',{exact:true});await expect(range).toBeVisible();
@@ -39,10 +39,11 @@ test('week navigation supports planning ahead and returns one week at a time', a
     await next.click();
     await expect(page.getByRole('textbox',{name:'Weekly goal 1',exact:true})).toHaveValue('');
     await expect(page.getByRole('textbox',{name:'Daily update',exact:true})).toHaveCount(0);
-    for (const status of await page.getByRole('radio').all()) await expect(status).toBeDisabled();
+    await expect(page.getByRole('group', { name: /^Status for / })).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await page.getByRole('textbox',{name:'Weekly goal 1',exact:true}).fill('Run the release smoke test');
     await expect.poll(async () => (await (await f.request('member','/api/weeks/2026-11-23')).json()).plans.at(-1)?.goals[0].text).toBe('Run the release smoke test');
-    await page.reload();
+    await page.reload();await page.getByRole('tab',{name:'Goals',exact:true}).click();
     await expect(page.getByRole('textbox',{name:'Weekly goal 1',exact:true})).toHaveValue('Run the release smoke test');
     await next.click();
     await expect(page.getByRole('textbox',{name:'Weekly goal 1',exact:true})).toHaveValue('');
@@ -50,6 +51,7 @@ test('week navigation supports planning ahead and returns one week at a time', a
     await expect(page.getByRole('textbox',{name:'Weekly goal 1',exact:true})).toHaveValue('Run the release smoke test');
     await previous.click();
     await expect(page.getByRole('textbox',{name:'Weekly goal 1',exact:true})).toHaveValue('This week goal');
+    await page.getByRole('tab',{name:'Updates',exact:true}).click();
     await page.getByRole('textbox',{name:'Daily update',exact:true}).fill('Uncommitted update');
     page.once('dialog',dialog=>dialog.dismiss());await previous.click();await expect(page.getByRole('textbox',{name:'Daily update',exact:true})).toHaveValue('Uncommitted update');
     for(const width of [390,320]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate('document.documentElement.scrollWidth <= innerWidth'));}

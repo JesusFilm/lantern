@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight, CircleHelp, Plus } from 'lucide-react';
 import type { DailyUpdateDraft, GoalStatus, WeekRecord, WeeklyGoalDraft, WeeklyPlan, WeeklyRange } from '../../shared/weekly.js';
-import { goalStatusLabels } from '../../shared/weekly.js';
+import { GoalStatusFooter } from './GoalStatusFooter.js';
 import type { PositionFocus } from '../../shared/focus.js';
 import { WeeklyGoalEditor, emptyWeeklyGoal, weeklyGoalDraft } from './WeeklyGoalEditor.js';
 import { api } from './api.js';
 import { DailyEntries } from './DailyEntries.js';
+import { WeekTabs, type WeekView } from './WeekTabs.js';
 import { GoalOrder } from './GoalOrder.js';
 import { workspaceHistoryIndex } from './useDraftFocusWorkflow.js';
 import './weekly.css';
@@ -31,6 +32,13 @@ const labelDate = (value: string) => {
     ...(date.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' as const } : {}) });
 };
 
+function compactRange(week: string) {
+  const end = shift(week, 4);
+  const startLabel = new Date(week + 'T12:00:00').toLocaleDateString('en-NZ', { day: 'numeric', ...(week.slice(0, 7) !== end.slice(0, 7) ? { month: 'short' as const } : {}) });
+  const endLabel = new Date(end + 'T12:00:00').toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', ...(new Date(end).getFullYear() !== new Date().getFullYear() ? { year: 'numeric' as const } : {}) });
+  return startLabel + '–' + endLabel;
+}
+
 type EditableGoal = WeeklyGoalDraft & { key: string };
 const editableGoal = (goal: WeeklyGoalDraft): EditableGoal => ({ ...goal, key: crypto.randomUUID() });
 const planGoals = (goals: WeeklyGoalDraft[]) => goals.map(goal => ({
@@ -39,14 +47,69 @@ const planGoals = (goals: WeeklyGoalDraft[]) => goals.map(goal => ({
     : { kind: link.kind, label: link.label, url: link.url }),
 }));
 
-function dailyDraft(plan: WeeklyPlan | undefined, date: string, body: string, statuses: Partial<Record<string, GoalStatus>>): DailyUpdateDraft {
-  return { date, body, planVersion: plan?.version ?? 0,
-    goalStatuses: plan?.goals.filter(goal => statuses[goal.id]).map(goal => ({ goalId: goal.id, status: statuses[goal.id]! })) ?? [] };
+function latestGoalStatuses(record: WeekRecord | undefined, date: string): Partial<Record<string, GoalStatus>> {
+  const statuses: Partial<Record<string, GoalStatus>> = {};
+  for (const update of [...(record?.updates ?? [])].filter(update => update.date <= date).sort((a, b) => a.date.localeCompare(b.date))) {
+    for (const flag of update.goalStatuses) statuses[flag.goalId] = flag.status;
+  }
+  return statuses;
 }
 
-export function MyWeek({ copyEnabled = false, privacyEnabled = false, targetEnabled = false }: { copyEnabled?: boolean; privacyEnabled?: boolean; targetEnabled?: boolean }) {
+function dailyDraft(plan: WeeklyPlan | undefined, date: string, body: string, statuses: Partial<Record<string, GoalStatus>>): DailyUpdateDraft {
+  return { date, body, planVersion: plan?.version ?? 0,
+    goalStatuses: plan?.goals.filter(goal => statuses[goal.id])
+      .map(goal => ({ goalId: goal.id, status: statuses[goal.id]! })) ?? [] };
+}
+
+function WeeklyHelp({ title, children }: { title: string; children: ReactNode }) {
+  const id = useId();
+  const trigger = useRef<HTMLButtonElement>(null), popover = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0, maxHeight: 320 });
+  const cancelClose = () => { clearTimeout(closeTimer.current); };
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
+  function show() {
+    cancelClose();
+    const bounds = trigger.current!.getBoundingClientRect();
+    const width = Math.min(400, window.innerWidth - 24);
+    const below = window.innerHeight - bounds.bottom - 20;
+    const above = bounds.top - 20;
+    const placeBelow = below >= 320 || below >= above;
+    const maxHeight = Math.max(0, Math.min(320, placeBelow ? below : above));
+    setPosition({ left: Math.max(12, Math.min(bounds.left, window.innerWidth - width - 12)), top: placeBelow ? bounds.bottom + 8 : bounds.top - maxHeight - 8, maxHeight });
+    popover.current?.showPopover();
+  }
+  function leave() {
+    cancelClose();
+    closeTimer.current = setTimeout(() => {
+      if (!popover.current?.contains(document.activeElement)) popover.current?.hidePopover();
+    }, 200);
+  }
+  return <>
+    <button ref={trigger} type="button" className="week-help-trigger" aria-label={title} aria-haspopup="dialog" aria-expanded={open} popoverTarget={id}
+      onPointerEnter={event => { if (event.pointerType === 'mouse') show(); }}
+      onPointerLeave={event => { if (event.pointerType === 'mouse') leave(); }}
+      onClick={event => {
+        event.preventDefault();
+        if (window.matchMedia('(hover: hover) and (pointer: fine)').matches || !popover.current?.matches(':popover-open')) show();
+        else popover.current.hidePopover();
+      }}><CircleHelp size={18} aria-hidden="true" /></button>
+    <div ref={popover} id={id} popover="auto" role="dialog" aria-label={title} className="week-help-popover" style={position}
+      onPointerEnter={cancelClose} onPointerLeave={event => { if (event.pointerType === 'mouse') leave(); }}
+      onToggle={event => setOpen(event.currentTarget.matches(':popover-open'))}>
+      <h3>{title}</h3>
+      {children}
+    </div>
+  </>;
+}
+
+export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { privacyEnabled?: boolean; targetEnabled?: boolean }) {
+  const [view, setView] = useState<WeekView>('updates');
+  const tabsId = useId();
   const [week, setWeek] = useState(initialWeek), [reload, setReload] = useState(0);
   const [record, setRecord] = useState<WeekRecord>();
+  const [today, setToday] = useState(day), [dailyDate, setDailyDate] = useState<string>();
   const [firstWeek, setFirstWeek] = useState<string | null>(null);
   const [goals, setGoals] = useState<EditableGoal[]>([editableGoal(emptyWeeklyGoal())]), [body, setBody] = useState('');
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
@@ -56,38 +119,54 @@ export function MyWeek({ copyEnabled = false, privacyEnabled = false, targetEnab
   const [statuses, setStatuses] = useState<Partial<Record<string, GoalStatus>>>({});
   const [savedUpdate, setSavedUpdate] = useState(''), [updateError, setUpdateError] = useState('');
   const generation = useRef(0);
-  const currentGoals = useRef(goals); currentGoals.current = goals;
-  const currentStatuses = useRef(statuses); currentStatuses.current = statuses;
-  const [copyError, setCopyError] = useState(''), [copyMessage, setCopyMessage] = useState('');
   const latest = record?.plans.at(-1);
   const goalDirty = !!record && JSON.stringify(planGoals(goals)) !== JSON.stringify(planGoals(latest?.goals.map(weeklyGoalDraft) ?? [emptyWeeklyGoal()]));
   const completeGoals = goals.every(goal => goal.text.trim().length > 0);
-  const today = day();
   const currentWeek = monday(today);
   const oldestWeek = firstWeek && firstWeek < currentWeek ? firstWeek : currentWeek;
   const todayInWeek = today >= week && today <= shift(week, 6);
+  const previousStatuses = latestGoalStatuses(record, shift(today, -1));
   const updatePayload = dailyDraft(latest, today, body, statuses);
   const updateSignature = JSON.stringify(updatePayload);
-  const updateDirty = !!record && todayInWeek && updateSignature !== savedUpdate && (!!body || Object.keys(statuses).length > 0 || record.updates.some(update => update.date === today));
+  const updateDirty = !!record && dailyDate === today && todayInWeek && updateSignature !== savedUpdate && (!!body || Object.keys(statuses).length > 0 || record.updates.some(update => update.date === today));
   const dirty = goalDirty || updateDirty;
   function changeGoals(change: (values: EditableGoal[]) => EditableGoal[]) {
     setPlanError(''); setUpdateError(''); setGoals(change);
   }
+  function restoreDaily(saved: WeekRecord, date: string) {
+    const plan = saved.plans.at(-1);
+    const previous = saved.updates.find(update => update.date === date);
+    const carried = latestGoalStatuses(saved, date);
+    const flags = Object.fromEntries((plan?.goals ?? []).filter(goal => carried[goal.id]).map(goal => [goal.id, carried[goal.id]]));
+    setBody(previous?.body ?? ''); setStatuses(flags); setDailyDate(date); setUpdateError('');
+    setSavedUpdate(JSON.stringify(dailyDraft(plan, date, previous?.body ?? '', flags)));
+  }
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    function refresh() {
+      clearTimeout(timer);
+      setToday(day());
+      const midnight = new Date(); midnight.setHours(24, 0, 0, 0);
+      timer = setTimeout(refresh, midnight.getTime() - Date.now() + 25);
+    }
+    refresh();
+    window.addEventListener('focus', refresh); document.addEventListener('visibilitychange', refresh);
+    return () => { clearTimeout(timer); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
+  }, []);
+  useEffect(() => {
+    if (record && dailyDate && dailyDate !== today && !busy && !planSaving) restoreDaily(record, today);
+  }, [today, dailyDate, record, busy, planSaving]);
   useEffect(() => {
     const controller = new AbortController();
     const current = ++generation.current;
-    setCopyError(''); setCopyMessage('');
     setRecord(undefined); setError(''); setUpdateError(''); setPlanError(''); setPlanSaving(false);
     void Promise.all([api<WeekRecord>('/api/weeks/' + week, 'GET', undefined, controller.signal), api<WeeklyRange>('/api/weeks', 'GET', undefined, controller.signal)]).then(([saved, range]) => {
       if (controller.signal.aborted || generation.current !== current) return;
       setFirstWeek(range.firstWeek);
       const plan = saved.plans.at(-1), date = day();
-      const previous = saved.updates.filter(update => update.date === date).at(-1);
-      const flags = Object.fromEntries((previous?.goalStatuses ?? []).filter(flag => plan?.goals.some(goal => goal.id === flag.goalId)).map(flag => [flag.goalId, flag.status]));
       const drafts = (plan?.goals.map(weeklyGoalDraft) ?? [emptyWeeklyGoal()]).map(editableGoal);
-      setRecord(saved); setGoals(drafts);
-      setBody(previous?.body ?? ''); setStatuses(flags);
-      setSavedUpdate(JSON.stringify(previous ? { date, body: previous.body, planVersion: previous.planVersion, goalStatuses: previous.goalStatuses } : dailyDraft(plan, date, '', {})));
+      setRecord(saved); setGoals(drafts); setToday(date);
+      restoreDaily(saved, date);
     }).catch(e => { if (!controller.signal.aborted) setError((e as Error).message); });
     return () => { controller.abort(); generation.current++; };
   }, [week, reload]);
@@ -122,21 +201,24 @@ export function MyWeek({ copyEnabled = false, privacyEnabled = false, targetEnab
   }, [record, goals, week, latest?.version, goalDirty, completeGoals, busy, planSaving, planError]);
 
   useEffect(() => {
+    if (day() !== today) { setToday(day()); return; }
     if (!record || !latest || !updateDirty || goalDirty || busy || planSaving || updateError) return;
     const timer = window.setTimeout(() => {
       const current = generation.current;
       const payload: DailyUpdateDraft = JSON.parse(updateSignature);
+      if (day() !== payload.date) { setToday(day()); return; }
       setBusy(true);
       void api<WeekRecord>(`/api/weeks/${week}/updates`, 'POST', payload)
         .then(saved => {
           if (generation.current !== current) return;
-          setRecord(saved); setSavedUpdate(updateSignature);
+          setRecord(saved);
+          if (day() === payload.date) setSavedUpdate(updateSignature);
         })
         .catch(e => { if (generation.current === current) setUpdateError((e as Error).message); })
         .finally(() => { if (generation.current === current) setBusy(false); });
     }, 600);
     return () => window.clearTimeout(timer);
-  }, [record, latest, updateDirty, updateSignature, goalDirty, busy, planSaving, updateError, week]);
+  }, [record, latest, updateDirty, updateSignature, goalDirty, busy, planSaving, updateError, week, today]);
 
   useEffect(() => {
     const before = (event: BeforeUnloadEvent) => { if (dirty || busy || planSaving) { event.preventDefault(); event.returnValue = ''; } };
@@ -168,37 +250,6 @@ export function MyWeek({ copyEnabled = false, privacyEnabled = false, targetEnab
     const goal = editableGoal(emptyWeeklyGoal());
     changeGoals(values => [...values, goal]);
   }
-  async function copyLastWeek() {
-    if (!copyEnabled || !record || busy || planSaving) return;
-    const current = generation.current;
-    setBusy(true); setCopyError(''); setCopyMessage('');
-    try {
-      const previous = await api<WeekRecord>('/api/weeks/' + shift(week, -7));
-      if (generation.current !== current) return;
-      const source = previous.plans.at(-1)?.goals ?? [];
-      if (!source.length) { setCopyMessage('No goals to copy from last week.'); return; }
-      if (!privacyEnabled && source.some(goal => goal.visibility && goal.visibility !== 'team')) {
-        setCopyError('These goals have sharing choices that cannot currently be copied. Your current week has not changed.'); return;
-      }
-      if (!targetEnabled && source.some(goal => goal.links.some(link => link.kind === 'focus' && link.target))) {
-        setCopyError('These goals have specific focus links that cannot currently be copied. Your current week has not changed.'); return;
-      }
-      const existing = currentGoals.current.filter(goal => goal.id || currentStatuses.current[goal.key] || goal.text.trim() || goal.description?.trim() || goal.links.length);
-      if (existing.length + source.length > 10) {
-        setCopyError('Copying would exceed the limit of 10 goals. Remove some goals before trying again.'); return;
-      }
-      const copies = source.map(goal => {
-        const { id: _id, ...draft } = weeklyGoalDraft(goal);
-        return editableGoal({ ...draft, completed: false });
-      });
-      changeGoals(() => [...existing, ...copies]);
-      setCopyMessage('Last week’s goals copied. Edit them for this week.');
-    } catch (e) {
-      if (generation.current === current) setCopyError((e as Error).message);
-    } finally {
-      if (generation.current === current) setBusy(false);
-    }
-  }
   function chooseWeek(next: string) {
     if (busy || planSaving || !next || !Number.isFinite(Date.parse(next))) return;
     next = monday(next);
@@ -206,64 +257,97 @@ export function MyWeek({ copyEnabled = false, privacyEnabled = false, targetEnab
     const url = new URL(location.href); url.searchParams.set('week', next); history.replaceState(history.state, '', url);
     setWeek(next);
   }
+  const updateFeedback = updateError && <p role="alert">{updateError} <button type="button" onClick={() => setUpdateError('')}>Retry saving update</button></p>;
+  const isCompleted = (goal: EditableGoal) => {
+    const status = todayInWeek ? statuses[goal.id ?? goal.key] : record?.updates.at(-1)?.goalStatuses.find(flag => flag.goalId === goal.id)?.status;
+    return status ? status === 'done' : !!goal.completed;
+  };
+  const activeGoals = goals.filter(goal => !isCompleted(goal)), completedGoals = goals.filter(isCompleted);
+  const completedToday = completedGoals.filter(goal => previousStatuses[goal.id ?? goal.key] !== 'done' && !goal.completed);
+  function renderDailyGoals(items: EditableGoal[], label: string) {
+    return <ul className="week-today-goals" aria-label={label}>{items.map(goal => {
+            const index = goals.indexOf(goal);
+            const status = statuses[goal.id ?? goal.key];
+            return <li key={goal.key}><span className={`week-today-goal-title${status === 'done' ? ' is-done' : ''}`}>{goal.text || `Goal ${index + 1}`}</span>
+              <GoalStatusFooter name={goal.id ?? goal.key} title={goal.text || `goal ${index + 1}`} status={status}
+                onChange={next => { setStatuses(values => ({ ...values, [goal.id ?? goal.key]: next })); setUpdateError(''); }} />
+            </li>;
+          })}</ul>;
+  }
+  function renderGoalEditors(items: EditableGoal[], reorderable = true) {
+    return <GoalOrder items={items} onReorder={reorderable ? (key, index) => changeGoals(values => {
+      const next = [...items], from = next.findIndex(goal => goal.key === key);
+      const [goal] = next.splice(from, 1); next.splice(index, 0, goal!);
+      const keys = new Set(items.map(item => item.key)); let position = 0;
+      return values.map(value => keys.has(value.key) ? next[position++]! : value);
+    }) : undefined}>{goal => <WeeklyGoalEditor goal={goal} privacyEnabled={privacyEnabled} targetEnabled={targetEnabled} number={goals.indexOf(goal) + 1} removable={goals.length > 1}
+              onChange={next => changeGoals(values => values.map(value => value.key === goal.key ? { ...next, key: goal.key } : value))}
+              onRemove={() => changeGoals(values => values.filter(value => value.key !== goal.key))}
+              status={todayInWeek ? statuses[goal.id ?? goal.key] : undefined}
+              onStatusChange={todayInWeek ? next => { setStatuses(values => ({ ...values, [goal.id ?? goal.key]: next })); setUpdateError(''); } : undefined}
+              focuses={focuses} focusError={focusError} retryFocuses={() => setFocusReload(value => value + 1)}
+              saveError={planError} onRetrySave={() => setPlanError('')} />}</GoalOrder>;
+  }
   return <div className="my-week is-daily">
     <header className="week-header"><h1>My week</h1>
       <div className="week-heading-controls">
       <div className="week-navigation" role="group" aria-label="Week navigation">
         <button type="button" aria-label="Previous week" disabled={!record || busy || planSaving || week <= oldestWeek} onClick={() => chooseWeek(shift(week, -7))}><ChevronLeft size={18} /></button>
-        <button type="button" className="week-navigation-current" aria-label="Go to this week" title="Go to this week" disabled={!record || busy || planSaving} onClick={() => chooseWeek(currentWeek)}><span aria-live="polite">{labelDate(week)} – {labelDate(shift(week, 4))}</span></button>
+        <button type="button" className="week-navigation-current" aria-label="Go to this week" title="Go to this week" disabled={!record || busy || planSaving} onClick={() => chooseWeek(currentWeek)}><span aria-live="polite"><span className="week-range-full">{labelDate(week)} – {labelDate(shift(week, 4))}</span><span className="week-range-short">{compactRange(week)}</span></span></button>
         <button type="button" aria-label="Next week" disabled={!record || busy || planSaving} onClick={() => chooseWeek(week < oldestWeek ? oldestWeek : shift(week, 7))}><ChevronRight size={18} /></button>
       </div>
-      <div className="week-header-actions">{record && copyEnabled && <button type="button" className="week-add" disabled={busy || planSaving || goals.filter(goal => goal.text.trim()).length >= 10} onClick={() => void copyLastWeek()}>Copy last week’s goals</button>}{record && <button type="button" className="week-add" disabled={goals.length >= 10} onClick={addGoal}><Plus size={16} /> Add goal</button>}
-      </div>
+      <WeekTabs value={view} onChange={setView} id={tabsId} />
       </div>
     </header>
-    {copyMessage && <p role="status">{copyMessage}</p>}
-    {copyError && <p role="alert">{copyError}</p>}
     {error && <p role="alert">{error} <button disabled={busy || planSaving} onClick={() => { if (!dirty || window.confirm('Reload the saved week and discard your unsaved changes?')) setReload(value => value + 1); }}>Reload saved week</button></p>}
     {!record ? (!error && <p role="status">Loading your week…</p>) : <>
-      <div className="week-daily-layout">
+      {view === 'updates' && <div role="tabpanel" id={`${tabsId}-updates-panel`} aria-labelledby={`${tabsId}-updates-tab`} tabIndex={0}><div className="week-daily-layout">
+        {todayInWeek && <section className="week-today-section" aria-label="Daily update">
+          <div className="week-update-heading"><div className="week-heading-title"><h2>Today’s update</h2>          <WeeklyHelp title="What makes a useful daily update?">
+            <p>A few specific sentences are enough to help your teammates understand your day.</p>
+            <ul>
+              <li><strong>Progress:</strong> What changed or moved forward? Mention a result, decision or something you learned.</li>
+              <li><strong>Next:</strong> What will you work on next?</li>
+              <li><strong>Help:</strong> What is blocking you, and what support do you need?</li>
+            </ul>
+            <p className="week-update-example">The sign-in fix is ready for review. Next I’ll test it on mobile. I need a teammate to review the access checks.</p>
+          </WeeklyHelp>
+</div><span className="muted">{new Date(today + 'T12:00:00').toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'short' })}</span></div>
+          <div className="week-day-entry week-daily-composer"><div className="week-day-content">
+          <p id="daily-update-prompt" className="week-update-prompt">What moved forward today? Anything blocking you?</p>
+          <div className="week-update-notes">
+            <textarea aria-label="Daily update" aria-describedby="daily-update-prompt" maxLength={4000} rows={2} value={body} onChange={e => { setBody(e.target.value); setUpdateError(''); }} placeholder="Write your daily update…" />
+          </div>
+          {renderDailyGoals(activeGoals, "Today's goal statuses")}
+          {completedToday.length > 0 && <><h3 className="week-completed-heading">Completed</h3>{renderDailyGoals(completedToday, "Today's completed goals")}</>}
+          {updateFeedback}
+          </div></div>
+        </section>}
+        {record.updates.some(update => update.date !== today) && <section className="week-day-entries" aria-label="Previous updates">
+          <h2 className="week-history-heading">Previous updates</h2>
+          <DailyEntries updates={record.updates.filter(update => update.date !== today)} plans={record.plans} />
+        </section>}
+        {!todayInWeek && record.updates.length === 0 && <p className="muted">No updates for this week yet. Open Goals to plan your week.</p>}
+        {planError && <p role="alert">{planError} <button type="button" onClick={() => setView('goals')}>Open Goals to retry</button></p>}
+      </div></div>}
+      {view === 'goals' && <div role="tabpanel" id={`${tabsId}-goals-panel`} aria-labelledby={`${tabsId}-goals-tab`} tabIndex={0}>
         <section className="week-card week-goals-panel" aria-label="Weekly goals">
-          <p className="muted">Goals are due at the end of this week.</p>
-          <details className="week-goal-guidance"><summary>What makes a useful weekly goal?</summary>
+          <div className="week-goals-heading">
+            <div className="week-heading-title"><h2>Weekly goals</h2><WeeklyHelp title="What makes a useful weekly goal?">
             <p>Tasks are fine. Make the intended result clear, for example: “Run the pre-release smoke test and record the results.”</p>
-            <p>Goals stay in their own week and do not repeat automatically.{copyEnabled ? ' Use “Copy last week’s goals” to reuse them, then edit them for this week.' : ' Add recurring work again for each week.'}</p>
-          </details>
+            <p>Goals stay in their own week and do not repeat automatically. Add recurring work again for each week.</p>
+          </WeeklyHelp></div>
+
+            <div className="week-header-actions"><button type="button" className="week-add" disabled={goals.length >= 10} onClick={addGoal}><Plus size={16} /> Add goal</button></div>
+          </div>
           <form onSubmit={e => e.preventDefault()}>
-            <GoalOrder items={goals} onReorder={(key, index) => changeGoals(values => {
-              const next = [...values], from = next.findIndex(goal => goal.key === key);
-              if (from < 0 || from === index) return values;
-              const [goal] = next.splice(from, 1);
-              next.splice(index, 0, goal!);
-              return next;
-            })}>{(goal, index) => <WeeklyGoalEditor goal={goal} privacyEnabled={privacyEnabled} targetEnabled={targetEnabled} number={index + 1} removable={goals.length > 1}
-              onChange={next => changeGoals(values => values.map(value => value.key === goal.key ? { ...next, key: goal.key } : value))}
-              onRemove={() => changeGoals(values => values.filter(value => value.key !== goal.key))}
-              statusDisabled={!todayInWeek} status={statuses[goal.id ?? goal.key]} statusKey={goal.id ?? goal.key}
-              onStatusChange={status => { if (!todayInWeek) return; setStatuses(values => ({ ...values, [goal.id ?? goal.key]: status })); setUpdateError(''); }}
-              focuses={focuses} focusError={focusError} retryFocuses={() => setFocusReload(value => value + 1)}
-              saveError={planError} onRetrySave={() => setPlanError('')} />}</GoalOrder>
+            {renderGoalEditors(activeGoals)}
+            {completedGoals.length > 0 && <><h3 className="week-completed-heading">Completed</h3>{renderGoalEditors(completedGoals, false)}</>}
+            {updateFeedback}
             {planError && <p role="alert">{planError} <button type="button" onClick={() => setPlanError('')}>Retry saving goals</button><button type="button" disabled={busy || planSaving} onClick={() => { if (window.confirm('Reload the saved week and discard your unsaved changes?')) setReload(value => value + 1); }}>Reload saved week</button></p>}
           </form>
         </section>
-        <section className="week-day-entries" aria-label="Daily updates">
-        {todayInWeek && <section className="week-day-entry week-daily-composer" aria-label="Daily update">
-          <h2 className="week-day-heading">{new Date(today + 'T12:00:00').toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'short' })}</h2>
-          <div className="week-day-content">
-          <ul className="week-today-goals" aria-label="Today's goal statuses">{goals.filter(goal => goal.text.trim()).map(goal => {
-            const status = statuses[goal.id ?? goal.key];
-            return <li key={goal.key}><span className={`week-today-goal-title${status === 'done' ? ' is-done' : ''}`}>{goal.text}</span><span className={`week-today-status${status ? ` flag-${status}` : ''}`}>{status ? goalStatusLabels[status] : '—'}</span></li>;
-          })}</ul>
-          <p className="muted">Daily updates are visible to your department and on the team TV.</p>
-          <div className="week-update-notes">
-            <textarea aria-label="Daily update" maxLength={4000} rows={1} value={body} onChange={e => { setBody(e.target.value); setUpdateError(''); }} placeholder="A short update is plenty…" />
-          </div>
-          {updateError && <p role="alert">{updateError} <button type="button" onClick={() => setUpdateError('')}>Retry saving update</button></p>}
-          </div>
-        </section>}
-        <DailyEntries updates={record.updates.filter(update => update.date !== today)} plans={record.plans} />
-        </section>
-      </div>
+      </div>}
     </>}
   </div>;
 }
