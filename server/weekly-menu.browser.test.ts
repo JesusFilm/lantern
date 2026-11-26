@@ -15,7 +15,7 @@ test('goal actions open from a dismissible menu and deletion still requires conf
     const context = await browser.newContext();
     await context.addCookies([{ name: 'lantern-session', value: 'member', url: f.origin }]);
     const page = await context.newPage(); page.setDefaultTimeout(5000);
-    await page.goto(f.origin + '/?page=week&week=2026-11-16');
+    await page.goto(f.origin + '/?page=week&week=2026-11-16');await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     const actions = page.getByRole('button', { name: 'Actions for goal 1', exact: true });
     await expect(actions).toBeVisible();
     await expect(page.locator('.week-goal-footer')).toHaveCount(0);
@@ -37,7 +37,7 @@ test('goal actions open from a dismissible menu and deletion still requires conf
     await page.getByRole('textbox', { name: 'Markdown description for goal 1', exact: true }).fill('Saved supporting notes');
     await editor.getByRole('button', { name: 'Save details', exact: true }).click();
     await expect.poll(async () => (await (await f.request('member', path)).json()).plans.at(-1)?.goals[0]?.description).toBe('Saved supporting notes');
-    await page.reload();
+    await page.reload();await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Weekly goal 1', exact: true })).toHaveValue('First');
     await actions.click(); await menu.getByRole('menuitem', { name: 'Delete', exact: true }).click();
     const confirmation = page.getByRole('dialog', { name: 'Delete this goal?', exact: true });

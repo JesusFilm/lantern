@@ -27,7 +27,7 @@ test('GitHub connection management belongs in career-lead department settings, n
       const context = await browser.newContext();
       await context.addCookies([{ name: 'lantern-session', value: actor, url: f.origin }]);
       const page = await context.newPage(); page.setDefaultTimeout(5000);
-      await page.goto(f.origin + '/?page=week&week=2026-11-16');
+      await page.goto(f.origin + '/?page=week&week=2026-11-16');await page.getByRole('tab',{name:'Goals',exact:true}).click();
       await page.getByRole('button', { name: 'Actions for goal 1', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Add link', exact: true }).click();
       await page.getByRole('button', { name: 'Repositories', exact: true }).click();
@@ -81,7 +81,7 @@ test('department GitHub settings recover status failures and report blocked conn
     await expect(page.getByText('GitHub is not connected.', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Connect GitHub', exact: true }).click();
     await expect(page.getByRole('alert')).toContainText('Allow a pop-up window');
-    await page.goto(f.origin + '/?page=week&week=2026-11-16');
+    await page.goto(f.origin + '/?page=week&week=2026-11-16');await page.getByRole('tab',{name:'Goals',exact:true}).click();
     await page.getByRole('button', { name: 'Actions for goal 1', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Add link', exact: true }).click();
     await page.getByRole('button', { name: 'Repositories', exact: true }).click();

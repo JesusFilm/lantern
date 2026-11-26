@@ -15,7 +15,7 @@ type Drag = {
 
 export function GoalOrder<T extends GoalItem>({ items, onReorder, children }: {
   items: T[];
-  onReorder: (key: string, index: number) => void;
+  onReorder?: (key: string, index: number) => void;
   children: (item: T, index: number) => ReactNode;
 }) {
   const list = useRef<HTMLDivElement>(null);
@@ -78,7 +78,7 @@ export function GoalOrder<T extends GoalItem>({ items, onReorder, children }: {
     active.current = null;
     setDrag(null);
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    if (save) onReorder(current.key, current.target);
+    if (save) onReorder?.(current.key, current.target);
   }
 
   const source = drag ? items.findIndex(item => item.key === drag.key) : -1;
@@ -90,7 +90,7 @@ export function GoalOrder<T extends GoalItem>({ items, onReorder, children }: {
         : drag && index < source && index >= drag.target ? distance : 0;
       return <div key={item.key} data-goal-key={item.key} className={`week-goal-row${moving ? ' is-dragging' : ''}`}
         style={{ transform: `translateY(${offset}px)` }}>
-        <button type="button" className="week-goal-grip" disabled={items.length < 2}
+        {onReorder && <button type="button" className="week-goal-grip" disabled={items.length < 2}
           aria-label={`Reorder goal ${index + 1}`} title="Drag to reorder · Arrow keys to move"
           onPointerDown={event => start(event, item.key)} onPointerMove={move}
           onPointerUp={event => finish(event, true)} onPointerCancel={event => finish(event, false)}
@@ -101,7 +101,7 @@ export function GoalOrder<T extends GoalItem>({ items, onReorder, children }: {
               event.preventDefault();
               onReorder(item.key, Math.max(0, Math.min(items.length - 1, index + (event.key === 'ArrowUp' ? -1 : 1))));
             }
-          }}><GripVertical size={18} /></button>
+          }}><GripVertical size={18} /></button>}
         {children(item, index)}
       </div>;
     })}

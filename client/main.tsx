@@ -191,7 +191,7 @@ function App() {
               ) : page === "team" ? (
                 <MyTeam />
               ) : page === "week" ? (
-                <MyWeek targetEnabled={session.features.includes("weekly-focus-links")} privacyEnabled={session.features.includes("weekly-goal-privacy")} copyEnabled={session.features.includes("weekly-goal-copy")} />
+                <MyWeek targetEnabled={session.features.includes("weekly-focus-links")} privacyEnabled={session.features.includes("weekly-goal-privacy")} />
               ) : page === "focuses" ||
                 (page === "department" &&
                   session.department.role !== "career-lead") ? (

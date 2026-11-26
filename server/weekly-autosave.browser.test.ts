@@ -17,8 +17,8 @@ test('weekly goals autosave without replacing newer typing, retain failed edits 
     const context = await browser.newContext();
     await context.addCookies([{ name: 'lantern-session', value: 'member', url: f.origin }]);
     const page = await context.newPage(); page.setDefaultTimeout(5000);
-    await page.goto(f.origin + '/?page=week&week=2026-11-16');
-    await expect(page.getByRole('region', { name: 'Weekly goals', exact: true })).toBeVisible();
+    await page.goto(f.origin + '/?page=week&week=2026-11-16');await page.getByRole('tab', { name: 'Goals', exact: true }).click();
+    await expect(page.getByRole('tabpanel', { name: 'Goals', exact: true }).getByRole('region', { name: 'Weekly goals', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Save weekly goals', exact: true })).toHaveCount(0);
     let arrived = () => {};
     const waiting = new Promise<void>(resolve => { arrived = resolve; });
@@ -34,7 +34,7 @@ test('weekly goals autosave without replacing newer typing, retain failed edits 
     await expect.poll(async () => (await (await f.request('member', path)).json()).plans.at(-1)?.goals[0].text).toBe('Newer wording while saving');
     await expect(goal).toBeFocused();
     await expect(goal).toHaveValue('Newer wording while saving');
-    await expect(page.getByRole('region', { name: 'Weekly goals', exact: true })).toBeVisible();
+    await expect(page.getByRole('tabpanel', { name: 'Goals', exact: true }).getByRole('region', { name: 'Weekly goals', exact: true })).toBeVisible();
     const saved = await (await f.request('member', path)).json();
     assert.equal(saved.plans[0].goals[0].id, saved.plans.at(-1).goals[0].id);
     await page.unroute('**/api/weeks/*/plans');
@@ -45,7 +45,7 @@ test('weekly goals autosave without replacing newer typing, retain failed edits 
     await page.unroute('**/api/weeks/*/plans');
     await page.getByRole('button', { name: 'Retry saving goals', exact: true }).click();
     await expect.poll(async () => (await (await f.request('member', path)).json()).plans.at(-1)?.goals[0].text).toBe('Keep this unsaved change');
-    await page.reload();
+    await page.reload();await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await expect(goal).toHaveValue('Keep this unsaved change');
   } finally { release(); await browser.close(); await vite.close(); await f.close(); }
 });
@@ -60,7 +60,7 @@ test('removing a weekly goal requires modal confirmation and autosaves the confi
     const context = await browser.newContext();
     await context.addCookies([{ name: 'lantern-session', value: 'member', url: f.origin }]);
     const page = await context.newPage(); page.setDefaultTimeout(5000);
-    await page.goto(f.origin + '/?page=week&week=2026-11-16');
+    await page.goto(f.origin + '/?page=week&week=2026-11-16');await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await page.getByRole('button', { name: 'Actions for goal 2', exact: true }).click();
     await page.getByRole('menuitem', { name: 'Delete', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Delete this goal?', exact: true });
@@ -92,7 +92,7 @@ test('Link has horizontal padding and its picker stays fullscreen across GitHub 
     const context = await browser.newContext();
     await context.addCookies([{ name: 'lantern-session', value: 'member', url: f.origin }]);
     const page = await context.newPage(); page.setDefaultTimeout(5000);
-    await page.goto(f.origin + '/?page=week&week=2026-11-16');
+    await page.goto(f.origin + '/?page=week&week=2026-11-16');await page.getByRole('tab', { name: 'Goals', exact: true }).click();
     await page.getByRole('button', { name: 'Actions for goal 1', exact: true }).click();
     const link = page.getByRole('menuitem', { name: 'Add link', exact: true });
     await expect(link).toHaveText('Add link');

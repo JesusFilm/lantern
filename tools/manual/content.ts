@@ -158,25 +158,57 @@ export const chapters: Chapter[] = [
     title: "Weekly goals and team updates",
     summary: "Plan weekly work, record a daily update and read the team's dated snapshots. My week and My team are available to every active member. Optional controls have separate flags.",
     slides: [
-      {kind:"feature",title:"My week",roles:["Member"],summary:"Weekly goals and today's update save automatically. Available to every active member.",
-        tryIt:["Open **My week** and edit a goal.","Edit details; Save applies, Cancel discards.","Choose a goal status and write today's update.","Pause for autosave, then reload."],
-        check:["Goals, order, details and updates survive reload.","New and empty goals have no selected status.","Goals are due at week end; failed saves retain input."],
+      {kind:"feature",title:"My week",roles:["Member"],summary:"Updates opens first. Today’s update heading sits above the message card. Updates and weekly goals save automatically. Available to every active member.",
+        tryIt:["Hover or tap the help icon beside **Today’s update**.","Set each goal’s status in **Today’s update**.","Open **Goals** beside the date to manage goals.","Pause for autosave, then reload."],
+        check:["Goals, order, details and updates survive reload.","Update box starts at two lines and grows as you type.","Goals are due at week end; failed saves retain input."],
         shots:[{id:"weekly-plan",persona:"member",path:"/?page=week&week=2026-11-02",ready:(p)=>p.getByText("Publish the release recovery guide",{exact:true}).first(),mode:{kind:"viewport",crop:".workspace"},caption:"Weekly goals and daily update"}]},
-      {kind:"feature",title:"Plan ahead and reuse goals",roles:["Member"],summary:"Reuse weekly work. Flag: weekly-goal-copy; hidden in production until released.",
-        tryIt:["Use Next week to add goals in advance.","Copy last week’s goals, then edit.","Read the goal guidance; tasks are fine.","Pause, then reload to check autosave."],
-        check:["Copies append; details, privacy and links persist.","Statuses and updates are not copied.","Unavailable sharing/target choices refuse copying safely.","Future weeks disable daily status editing."],
-        shots:[{id:"weekly-copy",persona:"member",path:"/?page=week&week=2026-11-09",mutates:true,
-          act:async(p)=>{await p.getByRole("button",{name:"Copy last week’s goals",exact:true}).click();await p.getByText("What makes a useful weekly goal?",{exact:true}).click();},
-          ready:(p)=>p.getByText("Last week’s goals copied. Edit them for this week.",{exact:true}),mode:{kind:"viewport",crop:".workspace"},caption:"Copy recurring work into a future week"},
-          {id:"weekly-empty-phone",persona:"member",device:"phone",path:"/?page=week&week=2026-11-09",ready:role("textbox","Weekly goal 1"),caption:"Plan ahead with unselected statuses"}]},
+      {kind:"feature",title:"Start a new daily update",roles:["Member"],summary:"Each goal keeps its latest status within the week. Each new day starts with a fresh message, including when the tab stays open overnight.",
+        tryIt:["Mark one goal Done and another On track.","Open My week on the following day.","Use Goals to reopen a completed goal if needed."],
+        check:["All four statuses carry forward until changed.","Earlier Done goals stay out of Today’s update.","Completed goals remain in Goals and original history.","Yesterday’s message is not copied into today."],
+        shots:[{id:"weekly-next-day",persona:"member",path:"/?page=week&week=2026-11-02",act:async(p)=>{await p.clock.setFixedTime(new Date("2026-11-03T10:00:00+13:00"));await p.reload();},ready:(p)=>p.getByRole("region",{name:"Daily update",exact:true}).getByText("Tuesday, 3 Nov",{exact:true}),mode:{kind:"viewport",crop:".workspace"},caption:"A fresh message, carried status and no earlier completed goals"}]},
+      {kind:"feature",title:"Recover an unfinished daily update",roles:["Member"],summary:"Midnight starts a fresh message while retaining any unfinished or failed update under its original date.",
+        tryIt:["Leave an edit unsaved as the day changes.","Find **Unsaved previous updates** below the view.","Retry saving the original date’s update."],
+        check:["The retained message and statuses stay readable.","A failed retry retains the draft and its error.","Retry saves the original day, preserving today’s text.","Leaving warns before discarding retained edits."],
+        shots:[{id:"weekly-retained-update",persona:"member",path:"/?page=week&week=2026-11-02",act:async(p)=>{
+          await p.clock.pauseAt(new Date("2026-11-02T23:59:59.700+13:00"));
+          await p.getByRole("textbox",{name:"Daily update",exact:true}).fill("Final notes from Monday: the recovery guide is ready for review.");
+          await p.getByRole("group",{name:"Status for Publish the release recovery guide",exact:true}).getByRole("radio",{name:"Blocked",exact:true}).check();
+          await p.clock.setFixedTime(new Date("2026-11-03T10:00:00+13:00"));
+          await p.evaluate(() => window.dispatchEvent(new Event("focus")));
+          await p.getByRole("region",{name:"Unsaved previous updates",exact:true}).waitFor({state:"visible"});
+          await p.clock.resume();
+        },ready:(p)=>p.getByRole("region",{name:"Unsaved previous updates",exact:true}),mode:{kind:"element",target:'role=region[name="Unsaved previous updates"]',padding:8},caption:"Recover an unfinished update under its original date"}]},
+      {kind:"feature",title:"Manage weekly goals",roles:["Member"],summary:"Updates and Goals sit beside the date. Use Goals to manage weekly work; switching tabs retains drafts and background saving continues.",
+        tryIt:["Select **Goals** beside the date.","Add or rename goals; drag active goals to reorder.","Use the three dots for links, details and deletion.","Change a status here; compare it in **Updates**."],
+        check:["Completed goals appear last and cannot be reordered.","Arrow keys switch tabs; drafts stay intact.","Titles and statuses retain failed edits for retry.","Save details applies; Cancel discards detail edits."],
+        shots:[{id:"weekly-goal-management",persona:"member",path:"/?page=week&week=2026-11-02",act:async(p)=>{await p.getByRole("tab",{name:"Goals",exact:true}).click();},ready:(p)=>p.getByRole("tabpanel",{name:"Goals",exact:true}),caption:"Manage work on the Goals tab"}]},
+      {kind:"feature",title:"Read previous daily updates",roles:["Member"],summary:"Previous updates sits below today’s entry in Updates. Open a date to read its saved message and goal-status snapshot.",
+        tryIt:["Open a week with saved daily updates.","Scroll to **Previous updates**.","Open and close a dated entry."],
+        check:["Newest days come first.","Past messages and goal snapshots stay unchanged.","Today’s message remains editable at the top."],
+        shots:[{id:"weekly-history",persona:"member",path:"/?page=week&week=2026-10-26",mutates:true,
+          act:async(p)=>{
+            const origin=new URL(p.url()).origin, path="/api/weeks/2026-10-26";
+            const response=await p.request.post(origin+path+"/plans",{headers:{Origin:origin},data:{version:0,goals:[{text:"Prepare the team demo",links:[]}]}});
+            if(!response.ok()) throw new Error("Could not seed weekly history plan");
+            const record=await response.json(),plan=record.plans.at(-1);
+            for(const [date,body,status] of [["2026-10-29","Outlined the demo and agreed what feedback we need. Next I’ll prepare the walkthrough.","on-track"],["2026-10-30","The walkthrough is ready for review. I need a teammate to check the mobile flow.","done"]]){
+              const saved=await p.request.post(origin+path+"/updates",{headers:{Origin:origin},data:{date,body,planVersion:plan.version,goalStatuses:[{goalId:plan.goals[0].id,status}]}});
+              if(!saved.ok()) throw new Error("Could not seed daily history update");
+            }
+            await p.reload();await p.locator("details.week-day-entry").first().locator("summary").click();
+          },ready:(p)=>p.getByRole("heading",{name:"Previous updates",exact:true}),mode:{kind:"viewport",crop:".workspace"},caption:"Read the last two saved daily updates"}]},
+      {kind:"feature",title:"Plan ahead",roles:["Member"],summary:"Enter each week’s goals by hand, including recurring work. Goals do not repeat automatically.",
+        tryIt:["Use Next week to plan ahead.","Open **Goals** and enter a goal.","Open the help icon beside **Weekly goals**.","Pause, then reload to check autosave."],
+        check:["New weeks start empty; there is no copy control.","Goals persist in their own week.","Future weeks have no daily status editing."],
+        shots:[{id:"weekly-empty-phone",persona:"member",device:"phone",path:"/?page=week&week=2026-11-09",act:async(p)=>{await p.getByRole("tab",{name:"Goals",exact:true}).click();},ready:role("textbox","Weekly goal 1"),caption:"Plan ahead with unselected statuses"}]},
       {kind:"feature",title:"Choose weekly goal visibility",roles:["Member","Career lead"],summary:"Flag: weekly-goal-privacy. Team is the default; daily updates always go to the team and TV.",
-        tryIt:["Choose Team, Me and my career lead, or Only me.","Reload; compare My team as a peer and lead.","Keep private details out of daily update text."],
+        tryIt:["Open **Goals**; click the visibility icon.","Choose Team, Me and my career lead, or Only me.","Reload; compare My team as a peer and lead.","Keep private details out of daily update text."],
         check:["Private titles, details, links and statuses stay hidden.","TV shows only team goals, even with a lead's token.","Historical snapshots respect later restrictions."],
-        shots:[{id:"weekly-privacy",persona:"member",path:"/?page=week&week=2026-11-02",ready:(p)=>p.getByLabel("Who can see goal 1",{exact:true}),caption:"Choose who can read a weekly goal"}]},
+        shots:[{id:"weekly-privacy",persona:"member",path:"/?page=week&week=2026-11-02",act:async(p)=>{await p.getByRole("tab",{name:"Goals",exact:true}).click();await p.getByRole("button",{name:"Visibility for goal 1: Team",exact:true}).click();},ready:(p)=>p.getByRole("menu",{name:"Visibility for goal 1",exact:true}),caption:"Choose who can read a weekly goal"}]},
       {kind:"feature",title:"Link weekly work to focus progress",roles:["Member"],summary:"Flag: weekly-focus-links. Confirmed objectives and SMART goals can be targets; drafts link to the whole focus.",
-        tryIt:["Add link → Position focus; choose a confirmed target.","Open the focus and read Linked weekly work.","Review suggested progress; Cancel, then Save."],
+        tryIt:["Goals → Add link → Position focus; pick a target.","Open the focus and read Linked weekly work.","Review suggested progress; Cancel, then Save."],
         check:["On track → In progress; At risk/Blocked → Needs attention.","Done suggests Achieved; only Save changes progress.","Whole-focus links show work without a target suggestion."],
-        shots:[{id:"weekly-link-target",persona:"member",path:"/?page=week&week=2026-11-02",act:async(p)=>{await p.getByRole("button",{name:"Actions for goal 1",exact:true}).click();await p.getByRole("menuitem",{name:"Add link",exact:true}).click();await p.getByRole("button",{name:/Second half 2026/}).click();await p.getByLabel("Link to",{exact:true}).selectOption("goal:0:0");},ready:(p)=>p.getByLabel("Link to",{exact:true}),caption:"Choose a confirmed objective or SMART goal"},
+        shots:[{id:"weekly-link-target",persona:"member",path:"/?page=week&week=2026-11-02",act:async(p)=>{await p.getByRole("tab",{name:"Goals",exact:true}).click();await p.getByRole("button",{name:"Actions for goal 1",exact:true}).click();await p.getByRole("menuitem",{name:"Add link",exact:true}).click();await p.getByRole("button",{name:/Second half 2026/}).click();await p.getByLabel("Link to",{exact:true}).selectOption("goal:0:0");},ready:(p)=>p.getByLabel("Link to",{exact:true}),caption:"Choose a confirmed objective or SMART goal"},
           {id:"weekly-linked-work",persona:"member",path:confirmed,mutates:true,act:async(p,ids)=>{
             const call=async(path:string,method="GET",body?:unknown)=>{const response=await p.request.fetch(new URL(path,p.url()).href,{method,headers:{Origin:new URL(p.url()).origin},data:body});if(!response.ok())throw new Error(`Linked work fixture failed: ${response.status()}`);return response.json();};
             const focus=await call(`/api/focuses/${ids.confirmedFocus}`);
