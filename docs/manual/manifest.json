@@ -3,7 +3,7 @@
   "editionDate": "2026-11-26",
   "deck": "29e1ec43539da233d561626d02b4c9c183b865a06de7613f4fb734a6812287b2",
   "sources": {
-    "fingerprint": "780c42cfbf7b2680ed3ec08a43203d9175d3c8b8e258c71faa81ebfd270977e8",
+    "fingerprint": "c2ce7127340a9ab3ff824ae0ad542c60aca643d74b246d67d8b1a034ab3091ad",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -156,7 +156,7 @@
       "shared/weekly.ts": "9ea1c7b7ba86cb0a0aba8cca19c13bcb05f61a755fede011e172884750034a2b",
       "tools/manual/capture.ts": "873830b455b7e1ae42732f265b4540a899a4ddd3873f10e753f71fd4e17eeb88",
       "tools/manual/check.ts": "c55570e91934a21ba6b71afffb3ad81182524e766f476379ef9c2a249cc04331",
-      "tools/manual/content.ts": "748ae63327d98ae6a84e76e46955b9f9632ccc299868392cd16da66226a1eba1",
+      "tools/manual/content.ts": "1e8afaec7bfb9b5016169467133e3cfea923ce5a584635a3a270fc0b47da669d",
       "tools/manual/finalize.ts": "36517029e491fc3b2d158dd5c64d9cacd1083e092d181ecc9bdbb78a66218c42",
       "tools/manual/freshness.ts": "b65e196bc27ffba22e5e5cc8b0f5363f8d019f7e7a75a97fc44b4ddf99d77131",
       "tools/manual/generate.ts": "e1931f572e544afdac9eafb710c7459d61b4436e1b26a0b277e06a3023b774ad",
@@ -274,7 +274,7 @@
   },
   "pdf": "ce1de5f7e87dfaf7b8cb74dce6b56c5a1aaa6a1c7b17a15fb5a769430cabb305",
   "verification": {
-    "generatedAt": "2026-11-26T04:22:19.227Z",
+    "generatedAt": "2026-11-26T04:42:46.130Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -428,7 +428,7 @@
       "shared/weekly.ts": "9ea1c7b7ba86cb0a0aba8cca19c13bcb05f61a755fede011e172884750034a2b",
       "tools/manual/capture.ts": "873830b455b7e1ae42732f265b4540a899a4ddd3873f10e753f71fd4e17eeb88",
       "tools/manual/check.ts": "c55570e91934a21ba6b71afffb3ad81182524e766f476379ef9c2a249cc04331",
-      "tools/manual/content.ts": "748ae63327d98ae6a84e76e46955b9f9632ccc299868392cd16da66226a1eba1",
+      "tools/manual/content.ts": "1e8afaec7bfb9b5016169467133e3cfea923ce5a584635a3a270fc0b47da669d",
       "tools/manual/finalize.ts": "36517029e491fc3b2d158dd5c64d9cacd1083e092d181ecc9bdbb78a66218c42",
       "tools/manual/freshness.ts": "b65e196bc27ffba22e5e5cc8b0f5363f8d019f7e7a75a97fc44b4ddf99d77131",
       "tools/manual/generate.ts": "e1931f572e544afdac9eafb710c7459d61b4436e1b26a0b277e06a3023b774ad",
