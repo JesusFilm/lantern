@@ -5,7 +5,7 @@ Owner decisions: Sharon follow-up conversation, 23 November 2026; tracked in
 [#204](https://github.com/JesusFilm/lantern/issues/204),
 [#206](https://github.com/JesusFilm/lantern/issues/206) and
 [#212](https://github.com/JesusFilm/lantern/issues/212).
-Further owner decisions in the 26 November 2026 UI iteration approve manual weekly entry, status carry-over and hiding earlier completions from Today’s update.
+Further owner decisions in the [26 November 2026 UI iteration](https://github.com/JesusFilm/lantern/pull/257) approve manual weekly entry, status carry-over, hiding earlier completions from Today’s update, and removing the autosave/sharing helper sentence from the daily composer (WW-01, WW-02).
 
 These rules describe approved behavior delivered behind flags; they do not
 establish production availability.

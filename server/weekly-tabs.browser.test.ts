@@ -350,3 +350,32 @@ test('a new goal’s debounced status remains recoverable under its original dat
     await page.getByRole('tab',{name:'Updates',exact:true}).click();await expect(page.getByRole('textbox',{name:'Daily update',exact:true})).toHaveValue('');
   } finally {await browser.close();await vite.close();await f.close();}
 });
+
+for (const view of ['Updates','Goals']) test(`retained retry preserves a status explicitly reselected in ${view} while saving`, async () => {
+  const f=await coachingFixture(),path='/api/weeks/2026-11-16';
+  const saved=await(await f.request('member',path+'/plans','POST',{version:0,goals:[{text:'Keep working',links:[]}]})).json();
+  const goalId=saved.plans[0].goals[0].id;
+  await f.request('member',path+'/updates','POST',{date:'2026-11-19',body:'Saved note',planVersion:1,goalStatuses:[{goalId,status:'on-track'}]});
+  const vite=await createServer({server:{middlewareMode:{server:f.server},hmr:{server:f.server}},appType:'spa'});f.app.use(vite.middlewares);
+  const browser=await chromium.launch();
+  let release!:()=>void;const held=new Promise<void>(resolve=>{release=resolve;});
+  try {
+    const context=await browser.newContext({timezoneId:'Pacific/Auckland'});await context.clock.install({time:new Date('2026-11-19T23:59:00+13:00')});
+    await context.addCookies([{name:'lantern-session',value:'member',url:f.origin}]);const page=await context.newPage();page.setDefaultTimeout(5000);await page.goto(f.origin+'/?page=week');
+    await context.clock.pauseAt(new Date('2026-11-19T23:59:59.700+13:00'));
+    await page.getByRole('group',{name:'Status for Keep working',exact:true}).getByRole('radio',{name:'Blocked',exact:true}).check();
+    await context.clock.fastForward(400);
+    const retained=page.getByRole('region',{name:'Unsaved previous updates',exact:true});await expect(retained).toContainText('Keep working: Blocked');
+    await page.getByRole('tab',{name:view,exact:true}).click();
+    let started!:()=>void;const pending=new Promise<void>(resolve=>{started=resolve;});
+    await page.route('**/api/weeks/*/updates',async route=>{started();await held;await route.continue();});
+    await retained.getByRole('button',{name:'Retry saving update for Thursday, 19 Nov',exact:true}).click();await pending;
+    const status=page.getByRole('group',{name:'Status for Keep working',exact:true});
+    await status.getByRole('radio',{name:'At risk',exact:true}).check();
+    await status.getByRole('radio',{name:'On track',exact:true}).check();
+    release();await expect(retained).toHaveCount(0);
+    await expect(status.getByRole('radio',{name:'On track',exact:true})).toBeChecked();
+    await context.clock.fastForward(1000);
+    await expect.poll(async()=>(await(await f.request('member',path)).json()).updates.find((update:{date:string})=>update.date==='2026-11-20')?.goalStatuses[0]?.status).toBe('on-track');
+  } finally {release();await browser.close();await vite.close();await f.close();}
+});

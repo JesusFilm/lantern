@@ -35,7 +35,9 @@ const labelDate = (value: string) => {
 
 function compactRange(week: string) {
   const end = shift(week, 4);
-  const startLabel = new Date(week + 'T12:00:00').toLocaleDateString('en-NZ', { day: 'numeric', ...(week.slice(0, 7) !== end.slice(0, 7) ? { month: 'short' as const } : {}) });
+  const start = new Date(week + 'T12:00:00');
+  const outsideCurrentYear = start.getFullYear() !== new Date().getFullYear();
+  const startLabel = start.toLocaleDateString('en-NZ', { day: 'numeric', ...(week.slice(0, 7) !== end.slice(0, 7) || outsideCurrentYear ? { month: 'short' as const } : {}), ...(outsideCurrentYear ? { year: 'numeric' as const } : {}) });
   const endLabel = new Date(end + 'T12:00:00').toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', ...(new Date(end).getFullYear() !== new Date().getFullYear() ? { year: 'numeric' as const } : {}) });
   return startLabel + '–' + endLabel;
 }
@@ -123,6 +125,11 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
   const [savedUpdate, setSavedUpdate] = useState(''), [updateError, setUpdateError] = useState('');
   const [retainedUpdates, setRetainedUpdates] = useState<RetainedUpdate[]>([]);
   const generation = useRef(0);
+  const statusEdits = useRef<Record<string, number>>({});
+  function changeStatus(id: string, status: GoalStatus) {
+    statusEdits.current[id] = (statusEdits.current[id] ?? 0) + 1;
+    setStatuses(values => ({ ...values, [id]: status })); setUpdateError('');
+  }
   const latest = record?.plans.at(-1);
   const goalDirty = !!record && JSON.stringify(planGoals(goals)) !== JSON.stringify(planGoals(latest?.goals.map(weeklyGoalDraft) ?? [emptyWeeklyGoal()]));
   const completeGoals = goals.every(goal => goal.text.trim().length > 0);
@@ -264,6 +271,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
     const payload = { ...original, planVersion: latest.version, goalStatuses: original.goalStatuses.filter(flag => ids.has(flag.goalId)) };
     const current = generation.current;
     const previous = latestGoalStatuses(record, today);
+    const editsAtStart = { ...statusEdits.current };
     setBusy(true);
     try {
       const saved = await api<WeekRecord>(`/api/weeks/${week}/updates`, 'POST', payload);
@@ -271,10 +279,12 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
       setRecord(saved);
       setRetainedUpdates(values => values.filter(value => value.payload.date !== payload.date));
       const carried = latestGoalStatuses(saved, today);
+      const savedBody = saved.updates.find(update => update.date === today)?.body ?? '';
+      setSavedUpdate(JSON.stringify(dailyDraft(saved.plans.at(-1), today, savedBody, carried)));
       if (day() === today && dailyDate === today) setStatuses(values => {
         const next = { ...values };
         for (const goal of saved.plans.at(-1)?.goals ?? []) {
-          if (values[goal.id] === previous[goal.id]) next[goal.id] = carried[goal.id];
+          if (values[goal.id] === previous[goal.id] && statusEdits.current[goal.id] === editsAtStart[goal.id]) next[goal.id] = carried[goal.id];
         }
         return next;
       });
@@ -309,7 +319,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
             const status = statuses[goal.id ?? goal.key];
             return <li key={goal.key}><span className={`week-today-goal-title${status === 'done' ? ' is-done' : ''}`}>{goal.text || `Goal ${index + 1}`}</span>
               <GoalStatusFooter disabled={dailyDate !== today} name={goal.id ?? goal.key} title={goal.text || `goal ${index + 1}`} status={status}
-                onChange={next => { setStatuses(values => ({ ...values, [goal.id ?? goal.key]: next })); setUpdateError(''); }} />
+                onChange={next => changeStatus(goal.id ?? goal.key, next)} />
             </li>;
           })}</ul>;
   }
@@ -323,7 +333,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
               onChange={next => changeGoals(values => values.map(value => value.key === goal.key ? { ...next, key: goal.key } : value))}
               onRemove={() => changeGoals(values => values.filter(value => value.key !== goal.key))}
               status={todayInWeek ? statuses[goal.id ?? goal.key] : undefined}
-              onStatusChange={todayInWeek && dailyDate === today ? next => { setStatuses(values => ({ ...values, [goal.id ?? goal.key]: next })); setUpdateError(''); } : undefined}
+              onStatusChange={todayInWeek && dailyDate === today ? next => changeStatus(goal.id ?? goal.key, next) : undefined}
               focuses={focuses} focusError={focusError} retryFocuses={() => setFocusReload(value => value + 1)}
               saveError={planError} onRetrySave={() => setPlanError('')} />}</GoalOrder>;
   }
