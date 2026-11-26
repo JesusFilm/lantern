@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { allShots, isSupplied, type Chapter, type Shot, type Supplied } from "./manual.js";
 
 /**
@@ -166,6 +166,18 @@ export const chapters: Chapter[] = [
         tryIt:["Mark one goal Done and another On track.","Open My week on the following day.","Use Goals to reopen a completed goal if needed."],
         check:["All four statuses carry forward until changed.","Earlier Done goals stay out of Today’s update.","Completed goals remain in Goals and original history.","Yesterday’s message is not copied into today."],
         shots:[{id:"weekly-next-day",persona:"member",path:"/?page=week&week=2026-11-02",act:async(p)=>{await p.clock.setFixedTime(new Date("2026-11-03T10:00:00+13:00"));await p.reload();},ready:(p)=>p.getByRole("region",{name:"Daily update",exact:true}).getByText("Tuesday, 3 Nov",{exact:true}),mode:{kind:"viewport",crop:".workspace"},caption:"A fresh message, carried status and no earlier completed goals"}]},
+      {kind:"feature",title:"Recover an unfinished daily update",roles:["Member"],summary:"Midnight starts a fresh message while retaining any unfinished or failed update under its original date.",
+        tryIt:["Leave an edit unsaved as the day changes.","Find **Unsaved previous updates** below the view.","Retry saving the original date’s update."],
+        check:["The retained message and statuses stay readable.","A failed retry retains the draft and its error.","Retry saves the original day, preserving today’s text.","Leaving warns before discarding retained edits."],
+        shots:[{id:"weekly-retained-update",persona:"member",path:"/?page=week&week=2026-11-02",act:async(p)=>{
+          await p.clock.pauseAt(new Date("2026-11-02T23:59:59.700+13:00"));
+          await p.getByRole("textbox",{name:"Daily update",exact:true}).fill("Final notes from Monday: the recovery guide is ready for review.");
+          await p.getByRole("group",{name:"Status for Publish the release recovery guide",exact:true}).getByRole("radio",{name:"Blocked",exact:true}).check();
+          await p.clock.setFixedTime(new Date("2026-11-03T10:00:00+13:00"));
+          await p.evaluate(() => window.dispatchEvent(new Event("focus")));
+          await expect(p.getByRole("region",{name:"Unsaved previous updates",exact:true})).toBeVisible();
+          await p.clock.resume();
+        },ready:(p)=>p.getByRole("region",{name:"Unsaved previous updates",exact:true}),mode:{kind:"element",target:'role=region[name="Unsaved previous updates"]',padding:8},caption:"Recover an unfinished update under its original date"}]},
       {kind:"feature",title:"Manage weekly goals",roles:["Member"],summary:"Updates and Goals sit beside the date. Use Goals to manage weekly work; switching tabs retains drafts and background saving continues.",
         tryIt:["Select **Goals** beside the date.","Add or rename goals; drag active goals to reorder.","Use the three dots for links, details and deletion.","Change a status here; compare it in **Updates**."],
         check:["Completed goals appear last and cannot be reordered.","Arrow keys switch tabs; drafts stay intact.","Titles and statuses retain failed edits for retry.","Save details applies; Cancel discards detail edits."],

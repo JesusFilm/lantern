@@ -7,6 +7,7 @@ import { WeeklyGoalEditor, emptyWeeklyGoal, weeklyGoalDraft } from './WeeklyGoal
 import { api } from './api.js';
 import { DailyEntries } from './DailyEntries.js';
 import { WeekTabs, type WeekView } from './WeekTabs.js';
+import { goalStatusLabels } from '../../shared/weekly.js';
 import { GoalOrder } from './GoalOrder.js';
 import { workspaceHistoryIndex } from './useDraftFocusWorkflow.js';
 import './weekly.css';
@@ -40,6 +41,8 @@ function compactRange(week: string) {
 }
 
 type EditableGoal = WeeklyGoalDraft & { key: string };
+type RetainedUpdate = { payload: DailyUpdateDraft; error: string };
+const dailyDateLabel = (date: string) => new Date(date + 'T12:00:00').toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'short' });
 const editableGoal = (goal: WeeklyGoalDraft): EditableGoal => ({ ...goal, key: crypto.randomUUID() });
 const planGoals = (goals: WeeklyGoalDraft[]) => goals.map(goal => ({
   ...(goal.id ? { id: goal.id } : {}), text: goal.text.trim(), ...(goal.visibility ? { visibility: goal.visibility } : {}), description: goal.description ?? '', completed: goal.completed ?? false,
@@ -118,6 +121,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
   const [planSaving, setPlanSaving] = useState(false), [planError, setPlanError] = useState('');
   const [statuses, setStatuses] = useState<Partial<Record<string, GoalStatus>>>({});
   const [savedUpdate, setSavedUpdate] = useState(''), [updateError, setUpdateError] = useState('');
+  const [retainedUpdates, setRetainedUpdates] = useState<RetainedUpdate[]>([]);
   const generation = useRef(0);
   const latest = record?.plans.at(-1);
   const goalDirty = !!record && JSON.stringify(planGoals(goals)) !== JSON.stringify(planGoals(latest?.goals.map(weeklyGoalDraft) ?? [emptyWeeklyGoal()]));
@@ -129,7 +133,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
   const updatePayload = dailyDraft(latest, today, body, statuses);
   const updateSignature = JSON.stringify(updatePayload);
   const updateDirty = !!record && dailyDate === today && todayInWeek && updateSignature !== savedUpdate && (!!body || Object.keys(statuses).length > 0 || record.updates.some(update => update.date === today));
-  const dirty = goalDirty || updateDirty;
+  const dirty = goalDirty || updateDirty || retainedUpdates.length > 0;
   function changeGoals(change: (values: EditableGoal[]) => EditableGoal[]) {
     setPlanError(''); setUpdateError(''); setGoals(change);
   }
@@ -154,12 +158,17 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
     return () => { clearTimeout(timer); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
   }, []);
   useEffect(() => {
-    if (record && dailyDate && dailyDate !== today && !busy && !planSaving) restoreDaily(record, today);
-  }, [today, dailyDate, record, busy, planSaving]);
+    if (!record || !dailyDate || dailyDate === today || busy || planSaving) return;
+    const payload = dailyDraft(latest, dailyDate, body, statuses);
+    if (JSON.stringify(payload) !== savedUpdate) {
+      setRetainedUpdates(values => [...values.filter(value => value.payload.date !== dailyDate), { payload, error: updateError || 'This update did not finish saving before the day changed.' }]);
+    }
+    restoreDaily(record, today);
+  }, [today, dailyDate, record, busy, planSaving, latest, body, statuses, savedUpdate, updateError]);
   useEffect(() => {
     const controller = new AbortController();
     const current = ++generation.current;
-    setRecord(undefined); setError(''); setUpdateError(''); setPlanError(''); setPlanSaving(false);
+    setRecord(undefined); setError(''); setUpdateError(''); setPlanError(''); setPlanSaving(false); setRetainedUpdates([]);
     void Promise.all([api<WeekRecord>('/api/weeks/' + week, 'GET', undefined, controller.signal), api<WeeklyRange>('/api/weeks', 'GET', undefined, controller.signal)]).then(([saved, range]) => {
       if (controller.signal.aborted || generation.current !== current) return;
       setFirstWeek(range.firstWeek);
@@ -212,7 +221,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
         .then(saved => {
           if (generation.current !== current) return;
           setRecord(saved);
-          if (day() === payload.date) setSavedUpdate(updateSignature);
+          setSavedUpdate(updateSignature);
         })
         .catch(e => { if (generation.current === current) setUpdateError((e as Error).message); })
         .finally(() => { if (generation.current === current) setBusy(false); });
@@ -246,6 +255,30 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
       .then(setFocuses).catch(e => { if (!controller.signal.aborted) setFocusError((e as Error).message); });
     return () => controller.abort();
   }, [focusReload]);
+  async function retryRetainedUpdate(payload: DailyUpdateDraft) {
+    if (busy || planSaving) return;
+    const current = generation.current;
+    const previous = latestGoalStatuses(record, today);
+    setBusy(true);
+    try {
+      const saved = await api<WeekRecord>(`/api/weeks/${week}/updates`, 'POST', payload);
+      if (generation.current !== current) return;
+      setRecord(saved);
+      setRetainedUpdates(values => values.filter(value => value.payload.date !== payload.date));
+      const carried = latestGoalStatuses(saved, today);
+      if (day() === today && dailyDate === today) setStatuses(values => {
+        const next = { ...values };
+        for (const goal of saved.plans.at(-1)?.goals ?? []) {
+          if (values[goal.id] === previous[goal.id]) next[goal.id] = carried[goal.id];
+        }
+        return next;
+      });
+    } catch (error) {
+      if (generation.current === current) setRetainedUpdates(values => values.map(value => value.payload.date === payload.date ? { ...value, error: (error as Error).message } : value));
+    } finally {
+      if (generation.current === current) setBusy(false);
+    }
+  }
   function addGoal() {
     const goal = editableGoal(emptyWeeklyGoal());
     changeGoals(values => [...values, goal]);
@@ -258,8 +291,9 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
     setWeek(next);
   }
   const updateFeedback = updateError && <p role="alert">{updateError} <button type="button" onClick={() => setUpdateError('')}>Retry saving update</button></p>;
+  const savedStatuses = latestGoalStatuses(record, shift(week, 6));
   const isCompleted = (goal: EditableGoal) => {
-    const status = todayInWeek ? statuses[goal.id ?? goal.key] : record?.updates.at(-1)?.goalStatuses.find(flag => flag.goalId === goal.id)?.status;
+    const status = todayInWeek ? statuses[goal.id ?? goal.key] : savedStatuses[goal.id ?? goal.key];
     return status ? status === 'done' : !!goal.completed;
   };
   const activeGoals = goals.filter(goal => !isCompleted(goal)), completedGoals = goals.filter(isCompleted);
@@ -269,7 +303,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
             const index = goals.indexOf(goal);
             const status = statuses[goal.id ?? goal.key];
             return <li key={goal.key}><span className={`week-today-goal-title${status === 'done' ? ' is-done' : ''}`}>{goal.text || `Goal ${index + 1}`}</span>
-              <GoalStatusFooter name={goal.id ?? goal.key} title={goal.text || `goal ${index + 1}`} status={status}
+              <GoalStatusFooter disabled={dailyDate !== today} name={goal.id ?? goal.key} title={goal.text || `goal ${index + 1}`} status={status}
                 onChange={next => { setStatuses(values => ({ ...values, [goal.id ?? goal.key]: next })); setUpdateError(''); }} />
             </li>;
           })}</ul>;
@@ -284,7 +318,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
               onChange={next => changeGoals(values => values.map(value => value.key === goal.key ? { ...next, key: goal.key } : value))}
               onRemove={() => changeGoals(values => values.filter(value => value.key !== goal.key))}
               status={todayInWeek ? statuses[goal.id ?? goal.key] : undefined}
-              onStatusChange={todayInWeek ? next => { setStatuses(values => ({ ...values, [goal.id ?? goal.key]: next })); setUpdateError(''); } : undefined}
+              onStatusChange={todayInWeek && dailyDate === today ? next => { setStatuses(values => ({ ...values, [goal.id ?? goal.key]: next })); setUpdateError(''); } : undefined}
               focuses={focuses} focusError={focusError} retryFocuses={() => setFocusReload(value => value + 1)}
               saveError={planError} onRetrySave={() => setPlanError('')} />}</GoalOrder>;
   }
@@ -316,7 +350,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
           <div className="week-day-entry week-daily-composer"><div className="week-day-content">
           <p id="daily-update-prompt" className="week-update-prompt">What moved forward today? Anything blocking you?</p>
           <div className="week-update-notes">
-            <textarea aria-label="Daily update" aria-describedby="daily-update-prompt" maxLength={4000} rows={2} value={body} onChange={e => { setBody(e.target.value); setUpdateError(''); }} placeholder="Write your daily update…" />
+            <textarea disabled={dailyDate !== today} aria-label="Daily update" aria-describedby="daily-update-prompt" maxLength={4000} rows={2} value={body} onChange={e => { setBody(e.target.value); setUpdateError(''); }} placeholder="Write your daily update…" />
           </div>
           {renderDailyGoals(activeGoals, "Today's goal statuses")}
           {completedToday.length > 0 && <><h3 className="week-completed-heading">Completed</h3>{renderDailyGoals(completedToday, "Today's completed goals")}</>}
@@ -348,6 +382,18 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
           </form>
         </section>
       </div>}
+      {retainedUpdates.length > 0 && <section className="week-day-entries" aria-label="Unsaved previous updates">
+        <h2 className="week-history-heading">Unsaved previous updates</h2>
+        {retainedUpdates.map(({ payload, error }) => <article className="week-card" key={payload.date}>
+          <h3>{dailyDateLabel(payload.date)}</h3>
+          {payload.body && <p className="week-day-body">{payload.body}</p>}
+          {payload.goalStatuses.length > 0 && <ul>{payload.goalStatuses.map(flag => <li key={flag.goalId}>
+            {record.plans.find(plan => plan.version === payload.planVersion)?.goals.find(goal => goal.id === flag.goalId)?.text}: {goalStatusLabels[flag.status]}
+          </li>)}</ul>}
+          <p role="alert">{error}</p>
+          <button type="button" disabled={busy || planSaving} aria-label={`Retry saving update for ${dailyDateLabel(payload.date)}`} onClick={() => void retryRetainedUpdate(payload)}>Retry saving update</button>
+        </article>)}
+      </section>}
     </>}
   </div>;
 }
