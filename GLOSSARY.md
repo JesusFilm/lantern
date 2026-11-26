@@ -26,8 +26,28 @@ The team boundary within which membership and position focuses belong. An accoun
 A person or group whose needs a member's contribution serves, including colleagues within the team.
 _Avoid_: User when it could be confused with an application account.
 
+## API access
+
+See [API and MCP](docs/api/README.md) for the direction and the [operation inventory](docs/api/inventory.md) for current status.
+
+**API-first**:
+The direction that each data operation is built once and, in time, becomes reachable through the public API as well as the interface, so Lantern can be managed headlessly. Operations gain API or MCP paths gradually, as needs arise.
+
+**Internal route**:
+An unversioned `/api/...` route that serves only Lantern's browser app through the signed-in session.
+
+**Public API**:
+Lantern's versioned `/api/v1` routes for callers other than its browser app. Each route accepts a specific credential.
+_Avoid_: Calling internal routes the API.
+
+**JFP One access token**:
+A planned credential that JFP One issues to an app or agent acting for a signed-in person, valid only for Lantern's API and the scopes the person approved. It proves identity and consent; Lantern decides the person's authority.
+
+**MCP access**:
+Planned agent access to selected operations through Lantern's MCP server. Each connection acts for one signed-in person through a JFP One access token, within that person's Lantern authority.
+
 **Team API token**:
-A named, expiring and revocable bearer credential for reading one department’s team updates and cached profile pictures. It belongs to its creator and original department, depends on active approved membership, and grants no editing or account-management authority.
+Lantern's integration credential for an unattended server, such as the office TV: a named, expiring and revocable bearer token for reading one department’s team updates and cached profile pictures. It belongs to its creator and original department, depends on active approved membership, and grants no editing or account-management authority.
 
 ## Position focuses
 

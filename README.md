@@ -2,7 +2,7 @@
 
 Lantern helps members write objectives and SMART goals, discuss their position focus with a career lead, and confirm the agreed document. Jesus Film sign-in, department membership and server-enforced ownership control access.
 
-[Product scope](docs/PRD.md) · [Roadmap](docs/ROADMAP.md) · [Architecture decisions](docs/adrs/AGENTS.md)
+[Product scope](docs/PRD.md) · [Roadmap](docs/ROADMAP.md) · [Architecture decisions](docs/adrs/AGENTS.md) · [API and MCP](docs/api/README.md)
 
 ## Development
 

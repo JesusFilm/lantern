@@ -1,5 +1,8 @@
 # Team API for a separate TV app
 
+This is Lantern's first public API. For how it relates to API-first access and
+MCP, see [API and MCP](../api/README.md).
+
 Create a token in **Account → Team API access**. The full token is shown once.
 Tokens last 90 days and can be revoked there. Each token reads the issuing
 member’s department only. Account approval and active membership are checked

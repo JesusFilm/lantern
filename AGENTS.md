@@ -24,6 +24,7 @@ Load the relevant guide when its task applies; follow its source links only for 
 | Review a change or modify workflows, release tooling or agent instructions | [Change review](docs/operations/review-gate.md): independent inspection, protected changes and owner authority |
 | Find, document or change intended product behavior | [Business rules](docs/rules/README.md), [PRD](docs/PRD.md), [domain terms](GLOSSARY.md), [product priorities](docs/ROADMAP.md) |
 | Add behavior users would notice, or release or remove a flagged feature | [Feature flags](docs/development/feature-flags.md): when to flag, guarding routes, testing both states, release and removal |
+| Add or change a route, data operation, API credential or MCP tool | [API and MCP](docs/api/README.md): direction, credentials and the operation inventory row to update in the same change |
 | Change product source or prepare a QA hand-off | [QA manual](docs/development/manual.md): check coverage and wording, update affected slides and screenshots, then regenerate |
 | Choose/change an architectural approach or record a decision | [ADR instructions](docs/adrs/AGENTS.md) |
 
