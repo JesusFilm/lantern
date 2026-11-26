@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { allShots, isSupplied, type Chapter, type Shot, type Supplied } from "./manual.js";
 
 /**
@@ -175,7 +175,7 @@ export const chapters: Chapter[] = [
           await p.getByRole("group",{name:"Status for Publish the release recovery guide",exact:true}).getByRole("radio",{name:"Blocked",exact:true}).check();
           await p.clock.setFixedTime(new Date("2026-11-03T10:00:00+13:00"));
           await p.evaluate(() => window.dispatchEvent(new Event("focus")));
-          await expect(p.getByRole("region",{name:"Unsaved previous updates",exact:true})).toBeVisible();
+          await p.getByRole("region",{name:"Unsaved previous updates",exact:true}).waitFor({state:"visible"});
           await p.clock.resume();
         },ready:(p)=>p.getByRole("region",{name:"Unsaved previous updates",exact:true}),mode:{kind:"element",target:'role=region[name="Unsaved previous updates"]',padding:8},caption:"Recover an unfinished update under its original date"}]},
       {kind:"feature",title:"Manage weekly goals",roles:["Member"],summary:"Updates and Goals sit beside the date. Use Goals to manage weekly work; switching tabs retains drafts and background saving continues.",
