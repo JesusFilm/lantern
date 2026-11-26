@@ -158,13 +158,16 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
     return () => { clearTimeout(timer); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
   }, []);
   useEffect(() => {
-    if (!record || !dailyDate || dailyDate === today || busy || planSaving) return;
+    if (!record || !dailyDate || dailyDate === today || busy || planSaving || goalDirty) return;
     const payload = dailyDraft(latest, dailyDate, body, statuses);
-    if (JSON.stringify(payload) !== savedUpdate) {
+    const baseline: DailyUpdateDraft = JSON.parse(savedUpdate);
+    const baselineStatuses = Object.fromEntries(baseline.goalStatuses.map(flag => [flag.goalId, flag.status]));
+    const before = dailyDraft(latest, dailyDate, baseline.body, baselineStatuses);
+    if (dailyDate >= week && dailyDate <= shift(week, 6) && JSON.stringify(payload) !== JSON.stringify(before)) {
       setRetainedUpdates(values => [...values.filter(value => value.payload.date !== dailyDate), { payload, error: updateError || 'This update did not finish saving before the day changed.' }]);
     }
     restoreDaily(record, today);
-  }, [today, dailyDate, record, busy, planSaving, latest, body, statuses, savedUpdate, updateError]);
+  }, [today, dailyDate, record, busy, planSaving, latest, body, statuses, savedUpdate, updateError, goalDirty, week]);
   useEffect(() => {
     const controller = new AbortController();
     const current = ++generation.current;
@@ -255,8 +258,10 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
       .then(setFocuses).catch(e => { if (!controller.signal.aborted) setFocusError((e as Error).message); });
     return () => controller.abort();
   }, [focusReload]);
-  async function retryRetainedUpdate(payload: DailyUpdateDraft) {
-    if (busy || planSaving) return;
+  async function retryRetainedUpdate(original: DailyUpdateDraft) {
+    if (busy || planSaving || goalDirty || !latest) return;
+    const ids = new Set(latest.goals.map(goal => goal.id));
+    const payload = { ...original, planVersion: latest.version, goalStatuses: original.goalStatuses.filter(flag => ids.has(flag.goalId)) };
     const current = generation.current;
     const previous = latestGoalStatuses(record, today);
     setBusy(true);
@@ -348,6 +353,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
           </WeeklyHelp>
 </div><span className="muted">{new Date(today + 'T12:00:00').toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'short' })}</span></div>
           <div className="week-day-entry week-daily-composer"><div className="week-day-content">
+          {dailyDate !== today && <p role="status">Finish saving your goals and previous update to start today’s update.</p>}
           <p id="daily-update-prompt" className="week-update-prompt">What moved forward today? Anything blocking you?</p>
           <div className="week-update-notes">
             <textarea disabled={dailyDate !== today} aria-label="Daily update" aria-describedby="daily-update-prompt" maxLength={4000} rows={2} value={body} onChange={e => { setBody(e.target.value); setUpdateError(''); }} placeholder="Write your daily update…" />
@@ -391,7 +397,7 @@ export function MyWeek({ privacyEnabled = false, targetEnabled = false }: { priv
             {record.plans.find(plan => plan.version === payload.planVersion)?.goals.find(goal => goal.id === flag.goalId)?.text}: {goalStatusLabels[flag.status]}
           </li>)}</ul>}
           <p role="alert">{error}</p>
-          <button type="button" disabled={busy || planSaving} aria-label={`Retry saving update for ${dailyDateLabel(payload.date)}`} onClick={() => void retryRetainedUpdate(payload)}>Retry saving update</button>
+          <button type="button" disabled={busy || planSaving || goalDirty} aria-label={`Retry saving update for ${dailyDateLabel(payload.date)}`} onClick={() => void retryRetainedUpdate(payload)}>Retry saving update</button>
         </article>)}
       </section>}
     </>}

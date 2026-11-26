@@ -284,10 +284,17 @@ for (const failed of [false,true]) test(`midnight retains a ${failed?'failed':'d
       await expect(retained).toContainText('Retain Thursday’s final edit');
     }
     await text.fill('Friday’s own draft');
+    if(failed) {
+      await page.getByRole('tab',{name:'Goals',exact:true}).click();
+      await page.getByRole('textbox',{name:'Weekly goal 1',exact:true}).fill('Keep working, renamed');
+      await context.clock.fastForward(1000);
+      await expect.poll(async()=>(await(await f.request('member',path)).json()).plans.at(-1)?.version).toBe(2);
+      await page.getByRole('tab',{name:'Updates',exact:true}).click();
+    }
     await page.unroute('**/api/weeks/*/updates');await retained.getByRole('button',{name:'Retry saving update for Thursday, 19 Nov',exact:true}).click();
     await expect.poll(async()=>(await(await f.request('member',path)).json()).updates.find((update:{date:string})=>update.date==='2026-11-19')?.body).toBe('Retain Thursday’s final edit');
     await expect(retained).toHaveCount(0);await expect(text).toHaveValue('Friday’s own draft');
-    await expect(today.getByRole('group',{name:'Status for Keep working',exact:true}).getByRole('radio',{name:'Blocked',exact:true})).toBeChecked();
+    await expect(today.getByRole('group',{name:failed?'Status for Keep working, renamed':'Status for Keep working',exact:true}).getByRole('radio',{name:'Blocked',exact:true})).toBeChecked();
     const record=(await(await f.request('member',path)).json());assert.equal(record.updates.find((update:{date:string})=>update.date==='2026-11-19').goalStatuses[0].status,'blocked');
   } finally {await browser.close();await vite.close();await f.close();}
 });
@@ -306,5 +313,40 @@ test('historical completed goals remain completed and nonreorderable after parti
     await expect(goals.getByRole('heading',{name:'Completed',exact:true})).toBeVisible();
     assert.deepEqual(await goals.getByRole('textbox',{name:/Weekly goal/}).evaluateAll(elements=>elements.map(element=>element.getAttribute('value'))),['Ongoing work','Finished earlier']);
     await expect(goals.locator('.week-goal-row').filter({has:page.locator('input[value="Finished earlier"]')}).getByRole('button',{name:/Reorder goal/})).toHaveCount(0);
+  } finally {await browser.close();await vite.close();await f.close();}
+});
+
+test('future planning does not create a retained daily update when the day changes', async () => {
+  const f=await coachingFixture(),path='/api/weeks/2026-11-23';
+  const vite=await createServer({server:{middlewareMode:{server:f.server},hmr:{server:f.server}},appType:'spa'});f.app.use(vite.middlewares);
+  const browser=await chromium.launch();
+  try {
+    const context=await browser.newContext({timezoneId:'Pacific/Auckland'});await context.clock.install({time:new Date('2026-11-19T23:58:00+13:00')});
+    await context.addCookies([{name:'lantern-session',value:'member',url:f.origin}]);const page=await context.newPage();page.setDefaultTimeout(5000);await page.goto(f.origin+'/?page=week&week=2026-11-23');
+    await page.getByRole('tab',{name:'Goals',exact:true}).click();await page.getByRole('textbox',{name:'Weekly goal 1',exact:true}).fill('Future planning only');
+    await context.clock.fastForward(1000);await expect.poll(async()=>(await(await f.request('member',path)).json()).plans.at(-1)?.version).toBe(1);
+    await context.clock.fastForward(180_000);
+    await expect(page.getByRole('region',{name:'Unsaved previous updates',exact:true})).toHaveCount(0);
+    assert.deepEqual((await(await f.request('member',path)).json()).updates,[]);
+  } finally {await browser.close();await vite.close();await f.close();}
+});
+
+test('a new goal’s debounced status remains recoverable under its original date at midnight', async () => {
+  const f=await coachingFixture(),path='/api/weeks/2026-11-16';
+  await f.request('member',path+'/plans','POST',{version:0,goals:[{text:'Existing goal',links:[]}]});
+  const vite=await createServer({server:{middlewareMode:{server:f.server},hmr:{server:f.server}},appType:'spa'});f.app.use(vite.middlewares);
+  const browser=await chromium.launch();
+  try {
+    const context=await browser.newContext({timezoneId:'Pacific/Auckland'});await context.clock.install({time:new Date('2026-11-19T23:59:00+13:00')});
+    await context.addCookies([{name:'lantern-session',value:'member',url:f.origin}]);const page=await context.newPage();page.setDefaultTimeout(5000);await page.goto(f.origin+'/?page=week');
+    await context.clock.pauseAt(new Date('2026-11-19T23:59:59.700+13:00'));
+    await page.getByRole('tab',{name:'Goals',exact:true}).click();await page.getByRole('button',{name:'Add goal',exact:true}).click();await page.getByRole('textbox',{name:'Weekly goal 2',exact:true}).fill('Newly added goal');
+    await page.getByRole('group',{name:'Status for Newly added goal',exact:true}).getByRole('radio',{name:'Blocked',exact:true}).check();
+    await context.clock.fastForward(400);await context.clock.fastForward(1000);
+    await expect.poll(async()=>(await(await f.request('member',path)).json()).plans.at(-1)?.goals.length).toBe(2);
+    const retained=page.getByRole('region',{name:'Unsaved previous updates',exact:true});await expect(retained).toContainText('Newly added goal: Blocked');
+    await retained.getByRole('button',{name:'Retry saving update for Thursday, 19 Nov',exact:true}).click();
+    await expect.poll(async()=>{const record=(await(await f.request('member',path)).json()),id=record.plans.at(-1)?.goals[1].id;return record.updates.find((update:{date:string})=>update.date==='2026-11-19')?.goalStatuses.find((flag:{goalId:string})=>flag.goalId===id)?.status;}).toBe('blocked');
+    await page.getByRole('tab',{name:'Updates',exact:true}).click();await expect(page.getByRole('textbox',{name:'Daily update',exact:true})).toHaveValue('');
   } finally {await browser.close();await vite.close();await f.close();}
 });
