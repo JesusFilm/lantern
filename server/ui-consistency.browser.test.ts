@@ -4,7 +4,7 @@ import { chromium, expect } from '@playwright/test';
 import { createServer } from 'vite';
 import { coachingFixture } from './coach-test-support.js';
 
-test('weekly and daily navigation use accessible consistent action sizes', async t => {
+test('My week and My team navigation use accessible consistent action sizes', async t => {
   const f = await coachingFixture(); t.after(() => f.close());
   const vite = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'spa' });
   t.after(() => vite.close()); f.app.use(vite.middlewares);
@@ -24,7 +24,7 @@ test('weekly and daily navigation use accessible consistent action sizes', async
     const addBounds=await page.getByRole('button',{name:'Add goal',exact:true}).boundingBox();assert.ok(addBounds && addBounds.height>=44);
     assert.ok(await page.evaluate('document.documentElement.scrollWidth <= innerWidth'));
     await page.goto(f.origin + '/?page=team');
-    const previous = page.getByRole('button', { name: 'Previous day', exact: true });
+    const previous = page.getByRole('button', { name: 'Previous week', exact: true });
     await expect(previous).toBeVisible(); const bounds = await previous.boundingBox();
     assert.ok(bounds && bounds.height >= 44);
   }

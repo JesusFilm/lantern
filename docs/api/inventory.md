@@ -110,7 +110,7 @@ Agent access is the planned per-person setting described in the [API and MCP gui
 | WK-3 | Save weekly goals with links and visibility | C | Member | UI | `POST /api/weeks/:week/plans` | — | wanted | Each save adds a plan version. Focus targets and visibility have flags: `weekly-focus-links`, `weekly-goal-privacy`. |
 | WK-4 | Save today's update and goal statuses | C U | Member | UI | `POST /api/weeks/:week/updates` | — | wanted | Keeps one displayed entry per day. |
 | WK-5 | Read weekly work linked to a focus | R | Member or career lead, `weekly-focus-links` flag | UI | `GET /api/focuses/:id/weekly-work` | — | candidate | |
-| WK-6 | Read the department's team updates for a date | R | Active member; integration | UI, Integration | `GET /api/team-updates`; `GET /api/v1/team-updates` | v1 | wanted | The public route takes a team API token. MCP will use the member's own JFP One sign-in. |
+| WK-6 | Read the department's latest updates for a week or dated TV snapshots | R | Active member; integration | UI, Integration | `GET /api/team-updates`; `GET /api/v1/team-updates` | v1 | wanted | The session route accepts a Monday `week` and shows each member’s latest update within that week, sorted by latest save; the public route retains exact-date `date` snapshots and takes a team API token. MCP will use the member's own JFP One sign-in. |
 | WK-7 | Read a teammate's GitHub picture | R | Active member; integration | UI, Integration | `GET /api/github-avatars/:username`; `GET /api/v1/github-avatars/:username` | v1 | — | Cached on Lantern's disk. |
 
 ## Department changelog

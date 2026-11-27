@@ -52,3 +52,9 @@ export interface TeamDay {
 }
 
 export interface FocusWeeklyWork {items: Array<{week:string;goal:WeeklyGoal;target?:SavedFocusWorkTarget;status?:GoalStatus}>}
+
+export interface TeamWeek {
+  week: string;
+  firstWeek: string | null;
+  members: TeamDayMember[];
+}
