@@ -264,6 +264,14 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
       CREATE INDEX changelog_department_week ON changelog_entries(department_id,week);
       INSERT INTO schema_migrations(version) VALUES(19);`);
     }
+    if (!(await client.query('SELECT version FROM schema_migrations WHERE version=20')).rowCount) {
+      await client.query(`ALTER TABLE changelog_entries
+        ADD COLUMN revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
+        ADD COLUMN publication_key uuid,
+        ADD COLUMN publication_hash text,
+        ADD UNIQUE (department_id, author_id, publication_key);
+        INSERT INTO schema_migrations(version) VALUES(20);`);
+    }
     if (roles) await grantApplicationPrivileges(client, roles);
     await client.query('COMMIT');
   } catch (error) {
@@ -273,8 +281,8 @@ export async function migrate(database: Pool, roles?: DatabaseRoles) {
 }
 
 export async function assertSchemaReady(database: Pool | PoolClient) {
-  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19)');
-  if (result.rowCount !== 19) throw new Error('Required migration is missing.');
+  const result = await database.query('SELECT version FROM schema_migrations WHERE version IN (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20)');
+  if (result.rowCount !== 20) throw new Error('Required migration is missing.');
   const reviewGuard = await database.query(`SELECT 1 FROM pg_trigger WHERE tgrelid='position_focuses'::regclass
     AND tgname='guard_focus_review' AND tgenabled='O' AND tgfoid='guard_focus_review()'::regprocedure`);
   if (!reviewGuard.rowCount) throw new Error('Focus review guard is missing.');
@@ -283,7 +291,7 @@ export async function assertSchemaReady(database: Pool | PoolClient) {
   if (!identityGuard.rowCount) throw new Error('Membership identity guard is missing.');
   await database.query('SELECT subject,email,verified_at FROM auth_identity_candidates LIMIT 0');
   await database.query('SELECT token_hash,revoked_at,expires_at FROM team_api_tokens LIMIT 0');
-  await database.query('SELECT e.links,p.name FROM changelog_entries e,changelog_products p LIMIT 0');
+  await database.query('SELECT e.links,e.revision,e.publication_key,e.publication_hash,p.name FROM changelog_entries e,changelog_products p LIMIT 0');
   await database.query('SELECT request_id,user_id FROM focus_request_reads LIMIT 0');
   await database.query('SELECT github_username FROM users LIMIT 0');
   await database.query('SELECT p.goals,u.body,u.goal_statuses FROM weekly_plans p,daily_updates u LIMIT 0');

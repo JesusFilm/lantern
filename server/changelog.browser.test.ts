@@ -75,7 +75,18 @@ test('member prepares an entry, retries verification and reads the published ent
   await f.migration.query(
     'ALTER TABLE changelog_entries DROP CONSTRAINT simulate_save_failure',
   );
+  const entriesPath = '**/api/changelog/entries';
+  await page.route(entriesPath, async (route) => {
+    const committed = await route.fetch();
+    assert.equal(committed.status(), 201);
+    await route.abort('failed');
+  }, { times: 1 });
   await publish.click();
+  await expect(page.getByRole('alert')).toBeVisible();
+  available = false;
+  await publish.click();
+  await expect(page.getByRole('heading', { name: 'Changelog' })).toBeVisible();
+  assert.equal((await (await f.request('peer', '/api/changelog?week=' + week)).json()).entries.length, 1);
   await expect(
     page.getByRole('link', { name: 'Improve captions' }),
   ).toBeVisible();
@@ -90,6 +101,20 @@ test('member prepares an entry, retries verification and reads the published ent
   await page.getByRole('button', { name: 'Next week' }).click();
   await page.getByRole('button', { name: 'Edit entry' }).click();
   await expect(page.getByLabel('Why it helps')).toHaveValue('Easier reading');
+  available = true;
+  const other = await context.newPage();
+  await other.goto(page.url());
+  await other.getByRole('button', { name: 'Edit entry' }).click();
+  await other.getByLabel('Title', { exact: true }).fill('Revised captions');
+  await other.getByRole('button', { name: 'Save changes' }).click();
+  await expect(other.getByRole('heading', { name: 'Revised captions' })).toBeVisible();
+  await page.getByLabel('Why it helps').fill('Benefit from the second tab');
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByRole('alert')).toContainText('newer version');
+  await expect(page.getByLabel('Why it helps')).toHaveValue('Benefit from the second tab');
+  await other.reload();
+  await expect(other.getByRole('heading', { name: 'Revised captions' })).toBeVisible();
+  await expect(other.getByText('Easier reading', { exact: true })).toBeVisible();
   available = false;
   await context.addCookies([
     { name: 'lantern-session', value: 'peer', url: f.origin },

@@ -81,6 +81,7 @@ function Editor({
   onSaved: (week: string) => void;
   onClose: () => void;
 }) {
+  const [publicationKey] = useState(() => entry ? undefined : crypto.randomUUID());
   const [fields, setFields] = useState({
     week: entry?.week ?? week,
     productId: entry?.productId ?? '',
@@ -103,7 +104,11 @@ function Editor({
       await api(
         path + '/entries' + (entry ? '/' + entry.id : ''),
         entry ? 'PUT' : 'POST',
-        { ...fields, links: fields.links.split(/\s+/).filter(Boolean) },
+        {
+          ...fields,
+          ...(entry ? { revision: entry.revision } : { publicationKey }),
+          links: fields.links.split(/\s+/).filter(Boolean),
+        },
       );
       onSaved(fields.week);
     } catch (e) {

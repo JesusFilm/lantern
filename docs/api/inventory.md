@@ -119,10 +119,10 @@ The `changelog` flag guards all four internal routes.
 
 | ID | Operation | Op | Who | Path today | Route or command | API | MCP | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| CHG-1 | Read a week of entries and the product catalogue | R | Active department member | UI | `GET /api/changelog` | — | — | Team includes former members’ entries. Mine selects the reader’s entries. |
+| CHG-1 | Read a week of entries and the product catalogue | R | Active department member | UI | `GET /api/changelog` | — | — | Team includes former members’ entries. Mine selects the reader’s entries. Each entry includes its edit revision. |
 | CHG-2 | Add a department product | C | Active department member | UI | `POST /api/changelog/products` | — | — | Shared within the department. |
-| CHG-3 | Publish an entry | C | Active department member | UI | `POST /api/changelog/entries` | — | — | Requires verified default-branch merges. |
-| CHG-4 | Edit an entry | U | Author with active membership in the original department | UI | `PUT /api/changelog/entries/:id` | — | — | Rechecks each PR before saving. |
+| CHG-3 | Publish an entry | C | Active department member | UI | `POST /api/changelog/entries` | — | — | Requires verified default-branch merges. Retry with the same UUID publicationKey and draft to receive the original ID. A new key publishes a separate entry. |
+| CHG-4 | Edit an entry | U | Author with active membership in the original department | UI | `PUT /api/changelog/entries/:id` | — | — | Supply the revision read. Rechecks each PR before saving. A stale revision returns 409 and leaves the newer entry intact. |
 
 ## Team API tokens
 

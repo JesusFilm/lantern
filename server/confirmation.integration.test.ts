@@ -192,7 +192,7 @@ test('migration upgrades existing drafts without data loss and confirmed state s
     try {
       assert.equal((await fetch(health)).status,503);
       await migrate(f.migration,f.roles);
-      const ready=await fetch(health);assert.equal(ready.status,200);assert.equal(ready.headers.get('x-lantern-schema'),'19');
+      const ready=await fetch(health);assert.equal(ready.status,200);assert.equal(ready.headers.get('x-lantern-schema'),'20');
     } finally {healthServer.closeAllConnections();await new Promise<void>(r=>healthServer.close(()=>r()));}
     assert.deepEqual(await (await f.request(f.member,`/api/focuses/${existing.id}`)).json(),existing);
     await f.requestReview(existing);
@@ -399,14 +399,14 @@ test('confirmation still validates Contribution content in a previously requeste
   } finally {await f.close();}
 });
 
-test('readiness advertises schema 19 and refuses a missing review migration or disabled guard', async () => {
+test('readiness advertises schema 20 and refuses a missing review migration or disabled guard', async () => {
   const f=await fixture();
   try {
     f.server.removeAllListeners('request');
     f.server.on('request',createApp(f.runtime,{origin:f.origin},{revision:'test'}));
     const ready=await fetch(f.origin+'/health');
     assert.equal(ready.status,200);
-    assert.equal(ready.headers.get('x-lantern-schema'),'19');
+    assert.equal(ready.headers.get('x-lantern-schema'),'20');
     await f.migration.query('DELETE FROM schema_migrations WHERE version=12');
     assert.equal((await fetch(f.origin+'/health')).status,503);
     await migrate(f.migration,f.roles);

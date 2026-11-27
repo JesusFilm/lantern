@@ -4,7 +4,28 @@ import { requireFeature, type FeatureConfig } from './features.js';
 import { AccessError } from './membership.js';
 import { addProduct, readChangelog, saveEntry } from './changelog.js';
 
+import type { EntryOperation } from './changelog.js';
 import type { PullRequestLookup } from './changelog-pr.js';
+
+function uuid(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    /^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value)
+  );
+}
+
+function entryOperation(id: unknown, body: Record<string, unknown>): EntryOperation {
+  if (id === undefined) {
+    if (!uuid(body.publicationKey))
+      throw new AccessError(400, 'Supply a valid publication key.');
+    return { publicationKey: body.publicationKey };
+  }
+  if (!uuid(id)) throw new AccessError(404, 'Entry not found.');
+  const revision = body.revision;
+  if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 1)
+    throw new AccessError(400, 'Supply the entry revision you read.');
+  return { id, revision };
+}
 
 export function changelogRoutes(
   db: Pool,
@@ -40,6 +61,7 @@ export function changelogRoutes(
       Object.keys(body).some(
         (key) =>
           ![
+            req.method === 'POST' ? 'publicationKey' : 'revision',
             'week',
             'productId',
             'title',
@@ -50,12 +72,10 @@ export function changelogRoutes(
       )
     )
       throw new AccessError(400, 'Supply only entry fields.');
-    const id = req.params.id;
-    if (id !== undefined && typeof id !== 'string')
-      throw new AccessError(404, 'Entry not found.');
-    res
-      .status(id ? 200 : 201)
-      .json(await saveEntry(db, user, body, lookup, id));
+    if (!uuid(body.productId)) throw new AccessError(400, 'Choose a department product.');
+    const operation = entryOperation(req.params.id, body);
+    const saved = await saveEntry(db, user, body, operation, lookup);
+    res.status('id' in operation ? 200 : 201).json(saved);
   }
   router.post('/api/changelog/entries', save);
   router.put('/api/changelog/entries/:id', save);

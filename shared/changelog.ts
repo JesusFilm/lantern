@@ -16,6 +16,7 @@ export interface EntryDraft {
 }
 export interface ChangelogEntry extends Omit<EntryDraft, 'links'> {
   id: string;
+  revision: number;
   authorId: string;
   author: string;
   product: string;
