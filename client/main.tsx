@@ -9,6 +9,7 @@ import { FocusWorkspace } from "./workspace/FocusWorkspace.js";
 import { LearningGuide } from "./workspace/LearningGuide.js";
 import { Sidebar } from "./workspace/Sidebar.js";
 import { Account } from "./workspace/Account.js";
+import { Changelog } from "./workspace/Changelog.js";
 import { MyTeam } from "./workspace/MyTeam.js";
 import { MyWeek } from "./workspace/MyWeek.js";
 import { Department } from "./workspace/Department.js";
@@ -21,7 +22,7 @@ history.replaceState(
 );
 function currentPage(): keyof typeof pageTitles {
   const page = new URLSearchParams(location.search).get("page");
-  return page === "department" || page === "guide" || page === "account" || page === "reviews" || page === "week" || page === "team"
+  return page === "changelog" || page === "department" || page === "guide" || page === "account" || page === "reviews" || page === "week" || page === "team"
     ? page
     : "focuses";
 }
@@ -29,6 +30,7 @@ const pageTitles = {
   focuses: "Position focuses",
   week: "My week",
   team: "My team",
+  changelog: "Changelog",
   guide: "Guide",
   account: "Account",
   department: "Department",
@@ -59,7 +61,7 @@ function App() {
   const { appearance, choose } = useAppearance();
   const [session, setSession] = useState<SessionView>(),
     [error, setError] = useState(""),
-    [page, setPage] = useState(currentPage),
+    [requestedPage, setPage] = useState(currentPage),
     [sessionScope, setSessionScope] = useState("signed-out");
   const refreshVersion = useRef(0);
   const [accessRevision, setAccessRevision] = useState(0);
@@ -111,6 +113,7 @@ function App() {
       window.removeEventListener("popstate", pop);
     };
   }, []);
+  const page = requestedPage === "changelog" && !session?.features?.includes("changelog") ? "focuses" : requestedPage;
   const activePage = session?.user ? page : "";
   const pageTitle = !session?.user ? "Lantern" : `${pageTitles[page]} — Lantern`;
   useEffect(() => { document.title = pageTitle; }, [pageTitle]);
@@ -188,6 +191,8 @@ function App() {
                   </p>
                   <button onClick={() => void refresh()}>Check access</button>
                 </section>
+              ) : page === "changelog" ? (
+                <Changelog userId={session.user.id} />
               ) : page === "team" ? (
                 <MyTeam />
               ) : page === "week" ? (

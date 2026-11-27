@@ -103,3 +103,15 @@ to an application that lacks visibility filtering: older readers expose all
 weekly goals. Turn the choices off to stop new privacy changes while keeping
 saved visibility enforced, or fix forward. `weekly-focus-links` and
 `review-activity` also remain hidden in production until explicitly released.
+
+### Schemas 19–20 and the department changelog
+
+Schema 19 adds the department product catalogue and published changelog entries.
+Schema 20 adds a revision (existing entries start at 1) and nullable publication
+keys and request hashes. The unique key is scoped to the department and author.
+Applications built for schemas 18 and 19 can keep serving during migration.
+Use the manual schema-release procedure, verify schema 20 in health, and retain
+the tables and columns on rollback. Retry and stale-edit protection require the
+schema-20 app. The `changelog` flag controls visibility. Publication requires an
+owner-approved hosted read-only GitHub connection. Until that connection is
+available, members can prepare entries and add products.
