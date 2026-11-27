@@ -44,6 +44,8 @@ structured content and JSON text. MCP uses stateless Streamable HTTP with JSON
 responses and supports protocol versions `2025-11-25` and `2025-06-18`.
 `initialize` and `tools/list` require the same owner credential as a tool call.
 
+### OAuth discovery
+
 JFP One must issue the token for the canonical `APP_ORIGIN/mcp` resource.
 Better Auth may also include JFP One's exact `/oauth2/userinfo` endpoint at the
 trusted issuer when OAuth includes `openid`. That is the sole allowed extra

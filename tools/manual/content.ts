@@ -773,7 +773,7 @@ export const chapters: Chapter[] = [
       {
         kind: "checklist",
         title: "Owner department list from Codex on Mac",
-        lead: "On staging, ask Lantern for the active department list using two linked JFP One accounts. The owner-api flag must be on. Production activation is separate.",
+        lead: "On staging, ask Lantern for the active department list using two linked JFP One accounts. The owner-api flag must be on. The feature is hidden in production until release.",
         items: [
           { title: "Prepare staging", text: "Check the Lantern and Forge revisions. Link both accounts with the approved Lantern browser sign-in. The environment owner lists only the test owner." },
           { title: "Owner reads departments", text: "On the Mac, sign in to the Lantern MCP server and consent. Ask Codex to call departments.list. Check that it returns active IDs and names only." },

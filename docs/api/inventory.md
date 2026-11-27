@@ -55,7 +55,7 @@ Agent access is the planned per-person setting described in the [API and MCP gui
 | ID | Operation | Op | Who | Path today | Route or command | API | MCP | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | DEP-1 | Create a department | C | Operator | CLI for the first department, otherwise SQL | `setup DEPARTMENT LEAD_EMAIL` | planned | wanted | `setup` creates the first department with its career lead and refuses once any department exists. The planned API creates departments without a lead; DEP-7 assigns one. |
-| DEP-2 | List active department IDs and names | R | Linked owner | API and MCP | `GET /api/v1/departments`, `POST /mcp` | v1 | `departments.list` | Staging behind `owner-api`. Department detail remains planned. |
+| DEP-2 | List active department IDs and names | R | Linked owner | API and MCP | `GET /api/v1/departments`, `POST /mcp` | v1 | `departments.list` | Staging behind `owner-api`. See [OAuth discovery](README.md#oauth-discovery). Department detail remains planned. |
 | DEP-3 | Rename or delete a department | U D | Operator | SQL | — | wanted | wanted | Owner administration outside the first increment; needs a product decision. |
 | DEP-4 | List a department's members | R | Career lead, own department | UI | `GET /api/department` | planned | wanted | Planned for owners across departments; career leads keep the UI. |
 | DEP-5 | Find registered accounts and their membership status | R | Career lead | UI | `GET /api/department/registered-users` | planned | wanted | Planned for owners, searching by email; career leads keep the UI. |
