@@ -100,7 +100,8 @@ actions on the owner's behalf without an additional confirmation for each write.
   separate single-email setting, signed-in approved account and active membership.
 - JFP One issues the scoped token for this Lantern environment. Lantern resolves
   the signed subject to the account linked by a verified JFP One browser sign-in
-  and checks the owner list. Initial account linking requires ordinary sign-in
+  and checks the owner list. A duplicate normalized email or pending identity
+  collision blocks owner access. Initial account linking requires ordinary sign-in
   approval. Once linked, an owner may use the API without continuing approval or
   department membership. There is one owner
   role, with no separate administrative or audit policies. Owner status alone

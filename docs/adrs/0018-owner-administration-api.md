@@ -19,12 +19,14 @@ OpenAPI belongs to the later increment.
 A dedicated JFP One registration issues delegated tokens for the environment's
 `APP_ORIGIN/mcp` resource. The owner routes check the signature against JFP One's
 published keys and verify the issuer, resource audience, expiry, app and
-environment claims and the `lantern:admin` scope. Lantern resolves the signed
-subject to its existing `jesusfilm:<subject>` account. The verified human
+environment claims and the `lantern:admin` scope. The fixed issuer's exact
+UserInfo endpoint is the only permitted extra audience. Lantern resolves the
+signed subject to its existing `jesusfilm:<subject>` account. The verified human
 browser sign-in supplies that link. Lantern checks the linked account's email
-against the dedicated `LANTERN_ADMIN_API_OWNER_EMAILS` list. Keeping the account
-linked is sufficient for that identity check after initial sign-in. The owner
-read requires neither continuing email approval nor active department membership.
+against the dedicated `LANTERN_ADMIN_API_OWNER_EMAILS` list. A duplicate normalized
+email or an unexpired recovery receipt for a competing verified subject blocks
+owner access. The owner read requires neither continuing email approval nor
+active department membership.
 
 The feature-flag report keeps the single-email setting and session requirements
 in [ADR 0017](0017-owner-flag-reporting.md). Browser sessions retain

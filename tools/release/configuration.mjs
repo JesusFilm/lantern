@@ -46,11 +46,18 @@ export function verifyConfiguration(env){
  const features=typeof v.LANTERN_FEATURES==='string' && v.LANTERN_FEATURES.trim() ? v.LANTERN_FEATURES.split(',').map(entry=>entry.trim()) : [];
  requireSetting(features.every(entry=>/^[a-z][a-z0-9-]*=(off|preview|on)$/.test(entry)),'LANTERN_FEATURES');
  requireSetting(new Set(features.map(entry=>entry.split('=')[0])).size===features.length,'LANTERN_FEATURES must not list the same feature more than once');
+ const exactEmail=/^[^\s@*]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/;
  const owner=v.LANTERN_FLAG_OWNER_EMAIL;
- requireSetting(owner===undefined || owner==='' || (typeof owner==='string' && /^[a-z0-9!#$%&'+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'+\/=?^_`{|}~-]+)*@/.test(owner.trim().toLowerCase()) && /^[^\s@*]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(owner.trim().toLowerCase())),'LANTERN_FLAG_OWNER_EMAIL');
+ requireSetting(owner===undefined || owner==='' || (typeof owner==='string' && /^[a-z0-9!#$%&'+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'+\/=?^_`{|}~-]+)*@/.test(owner.trim().toLowerCase()) && exactEmail.test(owner.trim().toLowerCase())),'LANTERN_FLAG_OWNER_EMAIL');
  const previewEmails=typeof v.LANTERN_PREVIEW_EMAILS==='string' && v.LANTERN_PREVIEW_EMAILS.trim() ? v.LANTERN_PREVIEW_EMAILS.split(',').map(entry=>entry.trim().toLowerCase()) : [];
- requireSetting(!previewEmails.length || previewEmails.every(email=>/^[^\s@*]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/.test(email)),'LANTERN_PREVIEW_EMAILS must list exact email addresses');
+ requireSetting(!previewEmails.length || previewEmails.every(email=>exactEmail.test(email)),'LANTERN_PREVIEW_EMAILS must list exact email addresses');
  requireSetting(!features.some(entry=>entry.endsWith('=preview')) || previewEmails.length>0,'LANTERN_PREVIEW_EMAILS');
+ if(target==='stage' && features.some(entry=>entry==='owner-api=on' || entry==='owner-api=preview')) {
+  const list=v.LANTERN_ADMIN_API_OWNER_EMAILS;
+  requireSetting(list===undefined || (typeof list==='string' && (!list.trim() ||
+   list.split(',').every(entry=>exactEmail.test(entry.trim().toLowerCase())))),
+   'LANTERN_ADMIN_API_OWNER_EMAILS must list exact email addresses');
+ }
  const coach=features.find(entry=>entry.startsWith('coach='))?.slice('coach='.length);
  // COACH_ENABLED is retired. While it is still set, require its replacement, so a release cannot silently change who is offered coaching.
  requireSetting(!('COACH_ENABLED' in v) || coach!==undefined,'COACH_ENABLED is retired; set coach in LANTERN_FEATURES');

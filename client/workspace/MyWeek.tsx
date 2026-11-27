@@ -12,16 +12,7 @@ import { GoalOrder } from './GoalOrder.js';
 import { workspaceHistoryIndex } from './useDraftFocusWorkflow.js';
 import './weekly.css';
 
-function day(value = new Date()) {
-  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-}
-function shift(value: string, days: number) {
-  const date = new Date(value + 'T12:00:00'); date.setDate(date.getDate() + days); return day(date);
-}
-function monday(value: string) {
-  const date = new Date(value + 'T12:00:00');
-  return shift(value, -((date.getDay() + 6) % 7));
-}
+import {day,monday,shift} from './week-dates.js';
 function initialWeek() {
   const value = new URLSearchParams(location.search).get('week');
   return value && /^[1-9]\d{3}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value))

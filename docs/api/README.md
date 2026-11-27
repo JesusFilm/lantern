@@ -41,15 +41,18 @@ return the same collection of active departments in name order.
 
 An empty collection returns `{"departments":[]}`. The tool returns the result as
 structured content and JSON text. MCP uses stateless Streamable HTTP with JSON
-responses. `initialize` and `tools/list` require the same owner credential as a
-tool call.
+responses and supports protocol versions `2025-11-25` and `2025-06-18`.
+`initialize` and `tools/list` require the same owner credential as a tool call.
 
-The resource and token audience are the canonical `APP_ORIGIN/mcp`. The
-`401` response advertises `GET /.well-known/oauth-protected-resource`, which
-names JFP One and the `lantern:admin` scope. Invalid or missing credentials yield
-`401`; insufficient scope or owner authority yields `403`; the flag-off
-endpoints yield `404` before token validation. Discovery is public when enabled
-and describes only the OAuth resource.
+JFP One must issue the token for the canonical `APP_ORIGIN/mcp` resource.
+Better Auth may also include JFP One's exact `/oauth2/userinfo` endpoint at the
+trusted issuer when OAuth includes `openid`. That is the sole allowed extra
+audience. The `401` response advertises `GET /.well-known/oauth-protected-resource`,
+which names JFP One and the `lantern:admin` scope. Invalid or missing credentials
+yield `401`. Insufficient scope, an ambiguous linked email or insufficient
+owner authority yields `403`. With the flag off the canonical endpoints yield
+`404` before token validation. Production aliases redirect to the canonical
+origin first. Discovery is public when enabled and describes only the OAuth resource.
 
 The [foundation design in #252](https://github.com/JesusFilm/lantern/issues/252)
 can build on three seams this read exercised: route-specific verifiers allow two

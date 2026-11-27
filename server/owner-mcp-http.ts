@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import type { OwnerPrincipal } from './owner-administration.js';
 
-const protocolVersions = ['2025-11-25', '2025-06-18', '2025-03-26'];
+const protocolVersions = ['2025-11-25', '2025-06-18'] as const;
 const listDepartmentsTool = {
   name: 'departments.list',
   description: 'List the IDs and names of active Lantern departments.',
@@ -15,7 +15,7 @@ function object(value: unknown): value is Record<string, unknown> {
 
 export async function handleOwnerMcp(req: Request, res: Response, owner: OwnerPrincipal) {
   const version = req.get('MCP-Protocol-Version');
-  if (version !== undefined && !protocolVersions.includes(version)) {
+  if (version !== undefined && !protocolVersions.some(supported => supported === version)) {
     res.status(400).json({ error: 'Unsupported MCP protocol version.' });
     return;
   }
@@ -34,7 +34,7 @@ export async function handleOwnerMcp(req: Request, res: Response, owner: OwnerPr
   switch (body.method) {
     case 'initialize': {
       const requested = object(body.params) && body.params.protocolVersion;
-      const protocolVersion = typeof requested === 'string' && protocolVersions.includes(requested) ? requested : protocolVersions[0];
+      const protocolVersion = typeof requested === 'string' && protocolVersions.some(supported => supported === requested) ? requested : protocolVersions[0];
       res.json({ ...reply, result: {
         protocolVersion, capabilities: { tools: {} }, serverInfo: { name: 'lantern', version: '0.1.0' },
       } });

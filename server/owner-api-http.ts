@@ -14,6 +14,7 @@ export interface OwnerApiConfig {
 }
 
 const scope = 'lantern:admin';
+const userInfoAudience = jesusFilmIssuer + '/oauth2/userinfo';
 const metadataPath = '/.well-known/oauth-protected-resource';
 const departmentsPath = '/api/v1/departments';
 const mcpPath = '/mcp';
@@ -48,7 +49,11 @@ export function ownerApiRoutes(db: Pool, origin: string, features: FeatureConfig
       } catch { /* Authentication failures share the same response. */ }
     }
     const audience = payload?.aud;
-    if (!payload?.sub || (Array.isArray(audience) && audience.length !== 1) ||
+    // jose already requires the Lantern resource. Better Auth can add its own
+    // UserInfo endpoint as an implicit audience for OpenID requests.
+    const unexpectedAudiences = Array.isArray(audience) && audience.length > 1 &&
+      (audience.length !== 2 || !audience.includes(userInfoAudience));
+    if (typeof payload?.sub !== 'string' || !payload.sub.trim() || unexpectedAudiences ||
         payload['https://jesusfilm.org/claims/environment'] !== config.environment ||
         payload['https://jesusfilm.org/claims/app'] !== 'lantern-mcp') {
       res.set('WWW-Authenticate', challenge).status(401).json({ error: 'A valid JFP One access token is required.' });
@@ -87,10 +92,13 @@ export function ownerApiRoutes(db: Pool, origin: string, features: FeatureConfig
     }
   }, json({ limit: '64kb', strict: false }), (req: Request, res: McpResponse) => handleOwnerMcp(req, res, res.locals.owner),
   (error: unknown, _req: Request, res: Response, next: NextFunction) => {
+    const status = error && typeof error === 'object' && 'status' in error ? error.status : undefined;
     if (error instanceof SyntaxError) {
       res.status(400).json({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error.' } });
-    } else if (error && typeof error === 'object' && 'status' in error && error.status === 413) {
+    } else if (status === 413) {
       res.status(413).json({ error: 'MCP request is too large.' });
+    } else if (status === 415) {
+      res.status(415).json({ error: 'Unsupported MCP request encoding or charset.' });
     } else next(error);
   });
   router.all(mcpPath, (_req, res) => { res.set('Allow', 'POST').sendStatus(405); });

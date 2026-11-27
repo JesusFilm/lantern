@@ -30,7 +30,7 @@ async function fixture(environment: 'stage' | 'production', settings: NodeJS.Pro
       "INSERT INTO departments(id,name,deleted_at) VALUES ($1,'Synthetic Engineering',NULL),($2,'Archived Design',now())",
       [departmentId, archivedId],
     );
-    for (const person of ['owner', 'member']) await approveEmail(db.admin, person + '@example.test');
+    for (const person of ['owner', 'member', 'other']) await approveEmail(db.admin, person + '@example.test');
     const provider: IdentityProvider = {
       authorizationUrl: state => '/auth/jesusfilm/callback?' + new URLSearchParams({ state, code: nextAccount }),
       exchange: async code => ({ sub: 'jesusfilm:' + code, name: code, email: code + '@example.test' }),
@@ -89,7 +89,7 @@ async function fixture(environment: 'stage' | 'production', settings: NodeJS.Pro
         sent.end(init.body);
       });
     }
-    async function signIn(who: 'owner' | 'member') {
+    async function signIn(who: 'owner' | 'member' | 'other') {
       nextAccount = who;
       const start = await request('/auth/jesusfilm');
       assert.equal(start.status, 302);
@@ -101,10 +101,10 @@ async function fixture(environment: 'stage' | 'production', settings: NodeJS.Pro
       assert.ok(session);
       return session;
     }
-    function sign(claims: JWTPayload = {}, key = privateKey) {
+    function sign(claims: Record<string, unknown> = {}, key = privateKey) {
       return new SignJWT({
         iss: issuer,
-        aud: appOrigin + '/mcp',
+        aud: [appOrigin + '/mcp', issuer + '/oauth2/userinfo'],
         sub: 'owner',
         exp: Math.floor(Date.now() / 1000) + 300,
         scope: 'openid lantern:admin',
@@ -202,6 +202,38 @@ test('MCP guides a signed-out client to JFP One and exposes the shared read to t
   assert.equal(f.jwksRequests(), 1, 'the published key set is reused between requests');
 });
 
+test('both owner adapters accept the Lantern resource alone or paired only with JFP One UserInfo', async t => {
+  const f = await fixture('stage', ownerSettings);
+  t.after(f.close);
+  await f.signIn('owner');
+  const resource = f.appOrigin + '/mcp';
+  const userInfo = issuer + '/oauth2/userinfo';
+  for (const aud of [resource, [resource], [resource, userInfo], [userInfo, resource]]) {
+    const headers = bearer(await f.sign({ aud }));
+    const rest = await f.request('/api/v1/departments', { headers });
+    const mcp = await f.request('/mcp', mcpRequest(rpc('tools/call', { name: 'departments.list' }), headers));
+    assert.equal(rest.status, 200);
+    assert.deepEqual(await rest.json(), { departments });
+    assert.equal(mcp.status, 200);
+    const result = await mcp.json() as { result: { structuredContent: unknown } };
+    assert.deepEqual(result.result.structuredContent, { departments });
+  }
+  for (const aud of [
+    userInfo, [userInfo, 'https://other.example.test/mcp'],
+    [resource, resource], [resource, userInfo, 'https://other.example.test/mcp'],
+    [resource, userInfo + '/'], [resource, 'https://other.example.test/api/auth/oauth2/userinfo'],
+  ]) {
+    const headers = bearer(await f.sign({ aud }));
+    for (const result of [
+      await f.request('/api/v1/departments', { headers }),
+      await f.request('/mcp', mcpRequest(rpc('tools/list'), headers)),
+    ]) {
+      assert.equal(result.status, 401);
+      assert.deepEqual(await result.json(), { error: 'A valid JFP One access token is required.' });
+    }
+  }
+});
+
 test('owner endpoints refuse invalid tokens and accounts without exposing departments', async t => {
   const f = await fixture('stage', ownerSettings);
   t.after(f.close);
@@ -237,6 +269,23 @@ test('owner endpoints refuse invalid tokens and accounts without exposing depart
       assert.ok(body && typeof body === 'object', label);
       assert.deepEqual(Object.keys(body), ['error'], label);
       if (status === 401) assert.match(response.headers.get('www-authenticate') ?? '', /resource_metadata=/, label);
+    }
+  }
+});
+
+test('signed malformed subjects are rejected before querying linked accounts', async t => {
+  const f = await fixture('stage', ownerSettings);
+  t.after(f.close);
+  // A lookup would fail with 503 while the account table is unavailable.
+  await f.db.migration.query('ALTER TABLE users RENAME TO unavailable_users');
+  for (const sub of [42, true, ['owner'], { id: 'owner' }, '', '  ']) {
+    const headers = bearer(await f.sign({ sub }));
+    const rest = await f.request('/api/v1/departments', { headers });
+    const mcp = await f.request('/mcp', mcpRequest(rpc('tools/list'), headers));
+    for (const result of [rest, mcp]) {
+      assert.equal(result.status, 401);
+      assert.match(result.headers.get('www-authenticate') ?? '', /resource_metadata=/);
+      assert.deepEqual(await result.json(), { error: 'A valid JFP One access token is required.' });
     }
   }
 });
@@ -281,7 +330,7 @@ test('the MCP endpoint validates origins, protocol versions and tool requests', 
   }
 });
 
-test('flag-off requests return 404 before JWKS, origin checks or body parsing, including production without owner settings', async t => {
+test('flag-off requests on the canonical host return 404 before JWKS, origin checks or body parsing', async t => {
   for (const environment of ['production', 'stage'] as const) {
     const f = await fixture(environment, environment === 'stage'
       ? { LANTERN_FEATURES: 'owner-api=off', LANTERN_ADMIN_API_OWNER_EMAILS: 'owner@example.test' }
@@ -290,7 +339,7 @@ test('flag-off requests return 404 before JWKS, origin checks or body parsing, i
       check.after(f.close);
       const health = await f.request('/health');
       assert.equal(health.status, 200);
-      assert.equal(health.headers.get('x-lantern-schema'), '18');
+      assert.equal(health.headers.get('x-lantern-schema'), '20');
       for (const headers of [{}, bearer(await f.sign())]) {
         const attempts = [
           await f.request('/api/v1/departments', { headers }),
@@ -302,6 +351,16 @@ test('flag-off requests return 404 before JWKS, origin checks or body parsing, i
           assert.equal(response.status, 404);
           assert.equal(response.headers.get('www-authenticate'), null);
           assert.deepEqual(await response.json(), { error: 'Not found.' });
+        }
+      }
+      if (environment === 'production') {
+        const alias = { Host: 'alternate.example.test' };
+        for (const path of ['/api/v1/departments', '/mcp', '/.well-known/oauth-protected-resource']) {
+          const response = await f.request(path + '?probe=1', path === '/mcp'
+            ? { ...mcpRequest({}, alias), body: '{' }
+            : { headers: alias });
+          assert.equal(response.status, 308);
+          assert.equal(response.headers.get('location'), f.appOrigin + path + '?probe=1');
         }
       }
       assert.equal(f.jwksRequests(), 0);
@@ -374,4 +433,97 @@ test('browser admission and origin checks, feature-report ownership and team bea
       assert.equal(f.jwksRequests(), 0, 'the legacy routes and opaque team token never contact JFP One JWKS');
     });
   }
+});
+
+test('MCP returns a sanitized 415 for unsupported encoding or charset', async t => {
+  const f = await fixture('stage', ownerSettings);
+  t.after(f.close);
+  await f.signIn('owner');
+  const token = bearer(await f.sign());
+  for (const headers of [
+    { ...token, 'Content-Encoding': 'x-private-encoding' },
+    { ...token, 'Content-Type': 'application/json; charset=x-private-charset' },
+  ]) {
+    const result = await f.request('/mcp', mcpRequest(rpc('tools/list'), headers));
+    assert.equal(result.status, 415);
+    assert.equal(result.headers.get('cache-control'), 'no-store');
+    assert.deepEqual(await result.json(), { error: 'Unsupported MCP request encoding or charset.' });
+  }
+});
+
+test('both owner adapters refuse an ambiguous normalized email while identity recovery is pending', async t => {
+  const f = await fixture('stage', ownerSettings);
+  t.after(f.close);
+  await f.signIn('owner');
+  const headers = bearer(await f.sign());
+  const browse = () => Promise.all([
+    f.request('/api/v1/departments', { headers }),
+    f.request('/mcp', mcpRequest(rpc('tools/call', { name: 'departments.list' }), headers)),
+  ]);
+  const expectDenied = async () => {
+    for (const result of await browse()) {
+      assert.equal(result.status, 403);
+      assert.deepEqual(await result.json(), { error: 'Lantern owner access is required.' });
+    }
+  };
+
+  await f.db.admin.query(`INSERT INTO auth_identity_candidates(subject,email,verified_at)
+    VALUES ('jesusfilm:owner','owner@example.test',now()),
+           ('jesusfilm:other-subject','owner@example.test',now()-interval '2 days')`);
+  for (const result of await browse()) assert.equal(result.status, 200);
+  await f.db.admin.query("UPDATE auth_identity_candidates SET verified_at=now() WHERE subject='jesusfilm:other-subject'");
+  await expectDenied();
+  await f.db.admin.query("DELETE FROM auth_identity_candidates WHERE subject='jesusfilm:other-subject'");
+
+  await f.db.admin.query(`INSERT INTO users(id,google_sub,email,name)
+    VALUES(gen_random_uuid(),'jesusfilm:duplicate',' OWNER@Example.test ','Synthetic duplicate')`);
+  await expectDenied();
+});
+
+test('owner API preview requires both owner and preview allowlists across REST and MCP', async t => {
+  const f = await fixture('stage', {
+    LANTERN_FEATURES: 'owner-api=preview',
+    LANTERN_ADMIN_API_OWNER_EMAILS: 'owner@example.test, other@example.test',
+    LANTERN_PREVIEW_EMAILS: ' OWNER@Example.test, member@example.test ',
+  });
+  t.after(f.close);
+  for (const account of ['owner', 'other', 'member'] as const) await f.signIn(account);
+  assert.equal((await f.request('/.well-known/oauth-protected-resource')).status, 200);
+  for (const [sub, status] of [['owner', 200], ['other', 404], ['member', 403]] as const) {
+    const headers = bearer(await f.sign({ sub }));
+    const rest = await f.request('/api/v1/departments', { headers });
+    const mcp = await f.request('/mcp', mcpRequest(rpc('tools/call', { name: 'departments.list' }), headers));
+    assert.equal(rest.status, status);
+    assert.equal(mcp.status, status);
+    if (status === 200) {
+      assert.deepEqual(await rest.json(), { departments });
+      const body = await mcp.json() as { result: { structuredContent: unknown } };
+      assert.deepEqual(body.result.structuredContent, { departments });
+    } else {
+      const error = status === 404 ? 'Not found.' : 'Lantern owner access is required.';
+      for (const response of [rest, mcp]) assert.deepEqual(await response.json(), { error });
+    }
+  }
+});
+
+test('MCP negotiates only supported versions and refuses the legacy batching version header', async t => {
+  const f = await fixture('stage', ownerSettings);
+  t.after(f.close);
+  await f.signIn('owner');
+  const token = bearer(await f.sign());
+  for (const [requested, selected] of [
+    ['2025-03-26', '2025-11-25'],
+    ['2025-06-18', '2025-06-18'],
+    ['2025-11-25', '2025-11-25'],
+  ] as const) {
+    const response = await f.request('/mcp', mcpRequest(rpc('initialize', { protocolVersion: requested }), token));
+    assert.equal(response.status, 200);
+    const body = await response.json() as { result: { protocolVersion: string } };
+    assert.equal(body.result.protocolVersion, selected);
+    const listing = await f.request('/mcp', mcpRequest(rpc('tools/list'), { ...token, 'MCP-Protocol-Version': selected }));
+    assert.equal(listing.status, 200);
+  }
+  const legacy = await f.request('/mcp', mcpRequest(rpc('tools/list'), { ...token, 'MCP-Protocol-Version': '2025-03-26' }));
+  assert.equal(legacy.status, 400);
+  assert.deepEqual(await legacy.json(), { error: 'Unsupported MCP protocol version.' });
 });

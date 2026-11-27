@@ -15,7 +15,8 @@ consent. Production activation is tracked in [#270](https://github.com/JesusFilm
    webapp's `LANTERN_FEATURES`, keeping its other entries. Set
    `LANTERN_ADMIN_API_OWNER_EMAILS` privately to the exact verified email
    addresses of its owners, comma-separated. Lantern trims and lowercases each
-   entry. An empty list grants nobody access. Leave
+   entry. Deployment preflight checks the list when the staging flag is enabled.
+   An empty list grants nobody access. Leave
    `LANTERN_FLAG_OWNER_EMAIL` for the separate browser flag report.
 3. Link both test accounts in Lantern. If an account is new, approve its exact
    email in staging using the normal `access:ops approve-email` operator
@@ -69,4 +70,4 @@ header to `GET /api/v1/departments`. See the [response contract](README.md#owner
 | `401` with a `WWW-Authenticate` challenge | Sign in again. Verify JFP One is serving the Forge registration and that the OAuth request targets the exact Lantern MCP URL for this environment. |
 | Consent never opens or JFP One refuses the request | Check the Forge deployment and dynamic client registration. Confirm Codex is running on the Mac and launching authorization in a browser there. |
 | `403` for insufficient scope | Reconnect and consent to `lantern:admin`. |
-| `403` for owner access after consent | Confirm the browser sign-in linked the same JFP One subject, then check the exact account email against this environment's owner list. If browser sign-in reports an identity collision, follow the [identity recovery procedure](../operations/identity-cutover.md). |
+| `403` for owner access after consent | Confirm the browser sign-in linked the same JFP One subject, then check the exact account email against this environment's owner list. If another account shares the normalized email, or an active recovery receipt records a competing verified subject for it, follow the [identity recovery procedure](../operations/identity-cutover.md). |
