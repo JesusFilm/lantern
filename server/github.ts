@@ -19,6 +19,13 @@ export interface GitHubConnection {
   search(department: string, kind: GitHubWorkKind, query: string, repository: string, cursor: string, includeClosed: boolean, username?: string): Promise<GitHubWorkResults>;
 }
 
+export async function signGitHubAppToken(saved: { privateKey: string; appId: number | string }) {
+  const pem = createPrivateKey(saved.privateKey).export({ type: 'pkcs8', format: 'pem' }).toString();
+  const key = await importPKCS8(pem, 'RS256');
+  return new SignJWT({}).setProtectedHeader({ alg: 'RS256' }).setIssuer(String(saved.appId))
+    .setIssuedAt(Math.floor(Date.now() / 1000) - 60).setExpirationTime('9m').sign(key);
+}
+
 /** Development's explicitly configured local member owns this installation.
  * Private keys stay in an owner-only file outside the checkout; installation
  * tokens stay in memory and never cross the HTTP interface. */
@@ -59,17 +66,11 @@ export function localGitHubApp(ownerId: string, origin: string, file: string, tr
     }
     return response.json() as Promise<T>;
   }
-  async function appToken(saved: Credentials) {
-    const pem = createPrivateKey(saved.privateKey).export({ type: 'pkcs8', format: 'pem' }).toString();
-    const key = await importPKCS8(pem, 'RS256');
-    return new SignJWT({}).setProtectedHeader({ alg: 'RS256' }).setIssuer(String(saved.appId))
-      .setIssuedAt(Math.floor(Date.now() / 1000) - 60).setExpirationTime('9m').sign(key);
-  }
   async function installed(department: string) {
     const saved = await load(department);
     if (!saved?.installationId) throw new AccessError(409, 'Connect GitHub to browse your work.');
     if (!token || token.expires < Date.now() + 60000) {
-      const issued = await request<{ token: string; expires_at: string }>(`/app/installations/${saved.installationId}/access_tokens`, await appToken(saved), {});
+      const issued = await request<{ token: string; expires_at: string }>(`/app/installations/${saved.installationId}/access_tokens`, await signGitHubAppToken(saved), {});
       token = { value: issued.token, expires: Date.parse(issued.expires_at) };
     }
     return { saved, authorization: token.value };
@@ -190,7 +191,7 @@ export function localGitHubApp(ownerId: string, origin: string, file: string, tr
     async install(department, id) {
       const saved = await load(department);
       if (!saved) throw new AccessError(409, 'Create the GitHub App before connecting it.');
-      const installation = await request<{ account: { login: string; type: string }; permissions: Record<string, string> }>(`/app/installations/${id}`, await appToken(saved));
+      const installation = await request<{ account: { login: string; type: string }; permissions: Record<string, string> }>(`/app/installations/${id}`, await signGitHubAppToken(saved));
       if (installation.permissions.issues !== 'read' && installation.permissions.issues !== 'write') throw new AccessError(409, 'Allow the GitHub App to read issues before connecting it.');
       await persist({ ...saved, installationId: id, account: installation.account.login, accountType: installation.account.type, connectedAt: Date.now() });
     },

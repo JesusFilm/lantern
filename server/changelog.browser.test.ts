@@ -7,16 +7,23 @@ import { resolveFeatureConfig } from './features.js';
 
 test('member prepares an entry, retries verification and reads the published entry after reload', async (t) => {
   let available = false;
+  let searches = 0, searchAvailable = false;
+  const pickedURL = 'https://github.com/JesusFilm/library/pull/11';
   const flags = resolveFeatureConfig({}, 'local'),
     states = new Map(flags.states);
   const f = await coachingFixture(
     undefined,
     { ...flags, states },
     {
-      pullRequest: async () => {
+      discoverPullRequests: async () => {
+        searches++;
+        if (!searchAvailable) throw new Error('GitHub offline');
+        return { status: 'partial', links: [{ title: 'Update captions', url: pickedURL }] };
+      },
+      pullRequest: async (_repository, number) => {
         if (!available) throw Error('unavailable');
         return {
-          title: 'Improve captions',
+          title: number === '11' ? 'Update captions' : 'Improve captions',
           merged: true,
           base: 'main',
           defaultBranch: 'main',
@@ -37,11 +44,22 @@ test('member prepares an entry, retries verification and reads the published ent
   await context.addCookies([
     { name: 'lantern-session', value: 'member', url: f.origin },
   ]);
+  await f.request('member', '/api/integrations/github/profile', 'PATCH', { username: 'caption-editor' });
   const page = await context.newPage();
   page.setDefaultTimeout(4000);
   await page.goto(f.origin);
   await page.getByRole('link', { name: 'Changelog', exact: true }).click();
+  await expect(page.getByText('No entries for this week.')).toBeVisible();
+  assert.equal(searches, 0);
   await page.getByRole('button', { name: 'Write an entry' }).click();
+  await expect(page.getByText(/PR search is unavailable/)).toBeVisible();
+  await page.getByLabel('Pull request links').fill('https://github.com/JesusFilm/library/pull/12');
+  searchAvailable = true;
+  await page.getByRole('button', { name: 'Retry PR search' }).click();
+  await expect(page.getByText(/Some pull requests could not be checked/)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Update captions' })).toHaveAttribute('href', pickedURL);
+  await page.getByRole('button', { name: 'Add Update captions' }).click();
+  await expect(page.getByLabel('Pull request links')).toHaveValue('https://github.com/JesusFilm/library/pull/12\n' + pickedURL);
   await page.getByRole('button', { name: 'Add product' }).click();
   await page.getByLabel('Product name').fill('Film library');
   await page.getByRole('dialog').getByRole('button', { name: 'Add' }).click();
@@ -49,9 +67,6 @@ test('member prepares an entry, retries verification and reads the published ent
   await page.getByLabel('Title', { exact: true }).fill('Clearer captions');
   await page.getByLabel('What changed').fill('Larger caption text');
   await page.getByLabel('Why it helps').fill('Easier reading');
-  await page
-    .getByLabel('Pull request links')
-    .fill('https://github.com/JesusFilm/library/pull/12');
   const publish = page.getByRole('button', { name: 'Publish' });
   await publish.click();
   await expect(page.getByRole('alert')).toContainText(
@@ -91,6 +106,7 @@ test('member prepares an entry, retries verification and reads the published ent
     page.getByRole('link', { name: 'Improve captions' }),
   ).toBeVisible();
   await page.reload();
+  await expect(page.getByRole('link', { name: 'Update captions' })).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'Clearer captions' }),
   ).toBeVisible();

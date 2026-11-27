@@ -50,3 +50,13 @@ test('feature operations owner is optional, normalized and validated', () => {
     assert.throws(() => resolveRuntime({ ...hosted, LANTERN_FLAG_OWNER_EMAIL: value }));
   }
 });
+
+test('hosted changelog credentials must be complete and parseable', async () => {
+  const { generateKeyPairSync } = await import('node:crypto');
+  const key = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.export({ type: 'pkcs1', format: 'pem' }).toString();
+  const settings = { CHANGELOG_GITHUB_APP_ID: '12', CHANGELOG_GITHUB_INSTALLATION_ID: '34', CHANGELOG_GITHUB_PRIVATE_KEY: key };
+  assert.throws(() => resolveRuntime({ ...hosted, CHANGELOG_GITHUB_APP_ID: '12' }), /changelog/i);
+  assert.throws(() => resolveRuntime({ ...hosted, ...settings, CHANGELOG_GITHUB_PRIVATE_KEY: 'invalid' }), /changelog/i);
+  assert.equal(resolveRuntime(hosted).changelogApp, undefined);
+  assert.equal(resolveRuntime({ ...hosted, ...settings }).changelogApp?.installationId, '34');
+});

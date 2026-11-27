@@ -130,6 +130,7 @@ test('hidden routes return 404 and a missing hosted verifier prevents publicatio
   for (const [suffix, method, body] of [
     ['?week=' + week, 'GET', undefined],
     ['/products', 'POST', { name: 'Hidden' }],
+    ['/pull-requests?week=' + week, 'GET', undefined],
     ['/entries', 'POST', draft],
     ['/entries/' + product.id, 'PUT', draft],
   ] as const)
@@ -290,4 +291,23 @@ test('schema 20 preserves existing publications and lets their authors edit from
   const edited = (await entries()).find((entry: {id: string}) => entry.id === oldId);
   assert.equal(edited.title, 'Edited after migration');
   assert.equal(edited.revision, 2);
+});
+
+test('PR discovery uses the session member preference and active membership', async t => {
+  const f = await coachingFixture(undefined, undefined, {
+    discoverPullRequests: async (username, selectedWeek) => {
+      assert.equal(username, 'lantern-member');
+      assert.equal(selectedWeek, week);
+      return { status: 'partial', links: [{ title: 'Improve captions', url }] };
+    },
+  });
+  t.after(() => f.close());
+  const endpoint = path + '/pull-requests?week=' + week;
+  assert.equal((await f.request('anonymous', endpoint)).status, 401);
+  assert.deepEqual(await (await f.request('member', endpoint)).json(), { status: 'missing-username', links: [] });
+  await f.admin.query('UPDATE users SET github_username=$2 WHERE id=$1', [f.ids.member, 'lantern-member']);
+  assert.deepEqual(await (await f.request('member', endpoint)).json(), { status: 'partial', links: [{ title: 'Improve captions', url }] });
+  assert.equal((await f.request('member', endpoint + '&username=someone')).status, 400);
+  await f.admin.query('UPDATE memberships SET deleted_at=now() WHERE user_id=$1', [f.ids.member]);
+  assert.equal((await f.request('member', endpoint)).status, 403);
 });

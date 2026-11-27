@@ -1,6 +1,7 @@
 import { weekOf } from './week-date.js';
-import type { ChangelogView, EntryDraft } from '../shared/changelog.js';
-import { verifyPullRequests, type PullRequestLookup } from './changelog-pr.js';
+import type { ChangelogView, DiscoveryResults, EntryDraft } from '../shared/changelog.js';
+import { githubProfileStore } from './github-profile.js';
+import { verifyPullRequests, type DiscoverPullRequests, type PullRequestLookup } from './changelog-pr.js';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { membership, membershipWrite, AccessError } from './membership.js';
@@ -15,6 +16,20 @@ async function department(db: Pool | PoolClient, user: string) {
   if (!current)
     throw new AccessError(403, 'Active department membership required.');
   return current.id;
+}
+
+export async function discoverMemberPRs(db: Pool, user: string, week: unknown, zone: unknown = 'UTC', discover?: DiscoverPullRequests): Promise<DiscoveryResults> {
+  if (typeof zone !== 'string') throw new AccessError(400, 'Choose a valid time zone.');
+  try { new Intl.DateTimeFormat('en', { timeZone: zone }); }
+  catch { throw new AccessError(400, 'Choose a valid time zone.'); }
+  const selectedWeek = weekOf(week);
+  const scope = await department(db, user);
+  const { username } = await githubProfileStore(db).get(user);
+  if (!username) return { status: 'missing-username', links: [] };
+  const unavailable: DiscoveryResults = { status: 'unavailable', links: [] };
+  const result = discover ? await discover(username, selectedWeek, zone).catch(() => unavailable) : unavailable;
+  if (await department(db, user) !== scope) throw new AccessError(403, 'Department membership changed.');
+  return result;
 }
 
 export function addProduct(db: Pool, user: string, name: unknown) {

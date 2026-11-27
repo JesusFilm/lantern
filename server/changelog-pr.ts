@@ -1,5 +1,7 @@
 import { AccessError } from './membership.js';
 
+export type DiscoverPullRequests = (username: string, week: string, timeZone: string) => Promise<import('../shared/changelog.js').DiscoveryResults>;
+
 export type PullRequestLookup = (
   repository: string,
   number: string,

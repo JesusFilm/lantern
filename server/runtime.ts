@@ -1,3 +1,4 @@
+import { createPrivateKey } from 'node:crypto';
 import {resolveCoachConfig} from './coach-provider.js';
 import {resolveFeatureConfig} from './features.js';
 import {normalizeEmail} from './admission.js';
@@ -6,6 +7,17 @@ export function lanternEnvironment(environment: string | undefined): LanternEnvi
   if (environment === undefined) return 'production';
   if (environment === 'local' || environment === 'stage' || environment === 'production') return environment;
   throw new Error('LANTERN_ENV must be local, stage or production.');
+}
+
+function changelogCredentials(env: NodeJS.ProcessEnv) {
+  const { CHANGELOG_GITHUB_APP_ID: appId, CHANGELOG_GITHUB_INSTALLATION_ID: installationId,
+    CHANGELOG_GITHUB_PRIVATE_KEY: privateKey } = env;
+  if ([appId, installationId, privateKey].every(value => value === undefined)) return undefined;
+  try {
+    if (!appId || !installationId || !privateKey || ![appId, installationId].every(id => /^[1-9]\d*$/.test(id))
+      || createPrivateKey(privateKey).asymmetricKeyType !== 'rsa') throw new Error();
+  } catch { throw new Error('Invalid changelog GitHub App credentials. Configure both IDs and an RSA private key.'); }
+  return { appId, installationId, privateKey };
 }
 
 export function resolveRuntime(env: NodeJS.ProcessEnv = process.env) {
@@ -40,5 +52,5 @@ export function resolveRuntime(env: NodeJS.ProcessEnv = process.env) {
     }
     catch { throw new Error('LANTERN_FLAG_OWNER_EMAIL must be one valid email address.'); }
   }
-  return { coach, features, flagOwnerEmail, environment, hosted, connectionString, port, host, localAccess, origin, clientId, hostingOnly };
+  return { changelogApp: changelogCredentials(env), coach, features, flagOwnerEmail, environment, hosted, connectionString, port, host, localAccess, origin, clientId, hostingOnly };
 }

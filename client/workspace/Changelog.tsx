@@ -4,6 +4,7 @@ import type {
   ChangelogEntry,
   Product,
 } from '../../shared/changelog.js';
+import { ChangelogPicker } from './ChangelogPicker.js';
 import { api } from './api.js';
 import { day, monday, shift } from './week-dates.js';
 import './changelog.css';
@@ -179,6 +180,8 @@ function Editor({
               onChange={(e) => field('benefit', e.target.value)}
             />
           </label>
+          <ChangelogPicker key={fields.week} week={fields.week} links={fields.links}
+            onAdd={url => setFields(previous => ({ ...previous, links: [previous.links.trim(), url].filter(Boolean).join('\n') }))} />
           <label>
             Pull request links
             <textarea
