@@ -1,12 +1,13 @@
 import express from 'express';
 import type {Request,Response,NextFunction} from 'express';
 import { accessRoutes } from './access.js';
+import { ownerApiRoutes, type OwnerApiConfig } from './owner-api-http.js';
 import type { AccessConfig } from './access.js';
 import type { Pool } from 'pg';
 import { assertSchemaReady } from './schema.js';
 import type { HealthResponse } from '../shared/health.js';
 
-export function createApp(database: Pool, config: AccessConfig = { origin: 'http://127.0.0.1:4391' }, runtime?: { revision?: string; deployment?: string; canonicalRedirect?: boolean }) {
+export function createApp(database: Pool, config: AccessConfig & { ownerApi?: OwnerApiConfig } = { origin: 'http://127.0.0.1:4391' }, runtime?: { revision?: string; deployment?: string; canonicalRedirect?: boolean }) {
   const app = express();
   app.disable('x-powered-by');
   app.disable('etag');
@@ -39,6 +40,7 @@ export function createApp(database: Pool, config: AccessConfig = { origin: 'http
     });
   }
 
+  app.use(ownerApiRoutes(database, config.origin, config.features, config.ownerApi));
   app.use(express.json({ limit: '1mb' }));
   app.use(accessRoutes(database, config));
   app.use('/api', (_request, response) => { response.status(404).json({ error: 'Not found.' }); });

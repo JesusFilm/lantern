@@ -86,22 +86,24 @@ Current work prioritizes reliable delivery and a usable hosted product. New prod
 
 ## Planned owner administration API
 
-This section is agreed product scope, not delivered behavior. The first API-first
-increment lets an owner set up departments and career leads through a versioned
-HTTP API and an MCP server. It publishes an OpenAPI description; an interactive
-API page, a full CLI, and member-facing focus operations are deferred. An agent
-may perform the requested administrative actions on the owner's behalf without
-an additional confirmation for each write.
+The first slice lists active department IDs and names through a versioned HTTP
+API and MCP, behind `owner-api` on staging. The remaining increment covers
+department and career-lead setup, auditing, rate limiting and an OpenAPI
+description. An interactive API page, a full CLI, and member-facing focus
+operations are deferred. An agent may perform the requested administrative
+actions on the owner's behalf without an additional confirmation for each write.
 
 ### Owners and access
 
-- `LANTERN_FLAG_OWNER_EMAIL` will accept a comma-separated list of exact,
-  normalized email addresses; an existing single-email value continues to work.
-  The same list controls owner API access and the existing feature-flag page.
-  That page retains its approved, signed-in account and active-membership checks.
-- An active, verified human JFP One identity and a Lantern owner-list match authorize all
-  administrative API operations. An owner needs neither ordinary Lantern email
-  approval nor department membership to administer Lantern. There is one owner
+- `LANTERN_ADMIN_API_OWNER_EMAILS` lists exact normalized account emails for REST
+  and MCP. An empty list grants nobody access. The feature-flag page keeps its
+  separate single-email setting, signed-in approved account and active membership.
+- JFP One issues the scoped token for this Lantern environment. Lantern resolves
+  the signed subject to the account linked by a verified JFP One browser sign-in
+  and checks the owner list. A duplicate normalized email or pending identity
+  collision blocks owner access. Initial account linking requires ordinary sign-in
+  approval. Once linked, an owner may use the API without continuing approval or
+  department membership. There is one owner
   role, with no separate administrative or audit policies. Owner status alone
   does not grant focus, review-note or coaching-data access.
 - An owner can assign themselves as career lead; that separate role grants the
@@ -136,8 +138,7 @@ Record successful administrative reads and writes and denied attempts in Postgre
 actor, action, target, outcome, time and calling client when available, without
 bearer tokens or request secrets. A successful mutation and its audit record commit
 together; record denials where possible. Retain records for 90 days using existing
-trusted database access. Apply configurable rate limits before enabling the API.
-New behavior follows the feature-flag and release procedures.
+trusted database access. Audit and configurable rate limits are required for the later increment. The read-only staging list precedes them under the [slice 1 release decision](operations/releasing.md#owner-api-slice-1).
 
 The agreed routes, technical boundaries, phases and verification requirements are
 in [owner administration API plan](plans/owner-administration-api.md).

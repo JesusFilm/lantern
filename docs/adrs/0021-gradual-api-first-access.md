@@ -54,9 +54,9 @@ Lantern's authority model.
   person, such as the office TV, use integration credentials like the team API token.
 - Lantern owns per-person agent access for members' delegated requests; JFP One
   scopes record what a client asked for and the person approved, not per-person
-  permissions. Owner administration keeps ADR 0018's owner list and admin scope.
-  Agent access capabilities, their additive schema, and whether administration
-  also needs a grant are proposed in [#252](https://github.com/JesusFilm/lantern/issues/252).
+  permissions. The first owner read uses ADR 0018's owner list and admin scope.
+  Agent access capabilities, their additive schema, and grants for later owner
+  operations are design work in [#252](https://github.com/JesusFilm/lantern/issues/252).
 - Layering, error model, observability, fault tolerance, rate limiting, audit and
   OpenAPI generation need a foundation design before broad exposure, tracked in
   [#252](https://github.com/JesusFilm/lantern/issues/252).

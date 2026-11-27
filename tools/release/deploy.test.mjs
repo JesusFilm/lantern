@@ -111,3 +111,39 @@ test('the optional flag-owner email is validated before deployment without loggi
   assert.equal(result.status,0,result.stderr);
  }
 });
+
+test('owner API preflight validates the stage owner list only when enabled and redacts invalid entries', () => {
+ const invalid = 'private-owner@example.test,PRIVATE_INVALID_OWNER';
+ for (const feature of ['on', 'preview']) {
+  const flags = { LANTERN_FEATURES: 'team-api=on, owner-api=' + feature, LANTERN_PREVIEW_EMAILS: 'preview@example.test' };
+  for (const list of [invalid, '*@example.test', 'owner@example.test,,second@example.test', null]) {
+   const result = run(settings, { ...variables, ...flags, LANTERN_ADMIN_API_OWNER_EMAILS: list });
+   assert.equal(result.status, 1);
+   assert.ok(!result.calls.some(call => call[0] === 'up'));
+   assert.doesNotMatch(result.stdout + result.stderr, /private-owner|PRIVATE_INVALID_OWNER|second@example\.test|do-not-print/);
+  }
+  for (const list of [undefined, '', '  ', ' First.Last+api@Example.test, SECOND@example.test ']) {
+   const result = run(settings, { ...variables, ...flags, LANTERN_ADMIN_API_OWNER_EMAILS: list }, {}, 'configuration.mjs');
+   assert.equal(result.status, 0, result.stderr);
+   assert.ok(!result.calls.some(call => call[0] === 'up'));
+   assert.doesNotMatch(result.stdout + result.stderr, /first\.last|second@example\.test/i);
+  }
+ }
+ for (const feature of [undefined, 'owner-api=off']) {
+  const result = run(settings, { ...variables, LANTERN_FEATURES: feature, LANTERN_ADMIN_API_OWNER_EMAILS: invalid }, {}, 'configuration.mjs');
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stdout + result.stderr, /private-owner|PRIVATE_INVALID_OWNER/);
+ }
+ const prod = structuredClone(settings);
+ prod.data.environment.name = 'production';
+ const prodVariables = {
+  ...variables, LANTERN_ENV: 'production', APP_ORIGIN: 'https://production.example.com',
+  DATABASE_URL: 'postgresql://lantern_production_runtime:do-not-print-secret@postgres.railway.internal:5432/railway',
+  LANTERN_FEATURES: 'owner-api=on', LANTERN_ADMIN_API_OWNER_EMAILS: invalid,
+ };
+ const result = run(prod, prodVariables, {
+  RELEASE_TARGET: 'production', APP_ORIGIN: prodVariables.APP_ORIGIN, LANTERN_DB_RUNTIME_ROLE: 'lantern_production_runtime',
+ }, 'configuration.mjs');
+ assert.equal(result.status, 0, result.stderr);
+ assert.doesNotMatch(result.stdout + result.stderr, /private-owner|PRIVATE_INVALID_OWNER/);
+});

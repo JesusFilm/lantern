@@ -1,52 +1,50 @@
 # Owner administration API and MCP
 
 Date: 2026-11-16
-Status: Accepted by the repository owner; implementation planned.
+Status: Accepted by the repository owner. The read-only staging slice was approved in [#255](https://github.com/JesusFilm/lantern/issues/255) on 27 November 2026.
 
 Superseded in part: 2026-11-26 — the deferral of broader browser-operation migration
 is replaced by [ADR 0021](0021-gradual-api-first-access.md).
 
 ## Decision
 
-Introduce versioned administration HTTP resources and an MCP interface using
-shared, permission-checked administration services. The [PRD](../PRD.md#planned-owner-administration-api)
-defines the operations and product behavior. Publish an OpenAPI description;
-defer an interactive API page. [ADR 0021](0021-gradual-api-first-access.md) sets
-how further browser operations gain API and MCP paths.
-Preserve existing browser routes, authorization and account-linking behavior.
+Use versioned REST resources and MCP adapters over shared, permission-checked
+administration operations. The first operation lists active department IDs and
+names on staging. Enable it with `owner-api`, which defaults off in all
+environments. Production activation has a separate decision in
+[#270](https://github.com/JesusFilm/lantern/issues/270).
+The [PRD](../PRD.md#planned-owner-administration-api) defines product behavior.
+OpenAPI belongs to the later increment.
 
-JFP One issues resource-bound tokens for active, verified human identities. Lantern
-validates the token, its intended audience, expiry, scope and verified identity,
-then matches the identity against `LANTERN_FLAG_OWNER_EMAIL`, extended to a
-comma-separated list. One Lantern admin scope and one owner role cover this
-increment; the scope alone does not grant owner authority. Owner administration
-does not require ordinary Lantern admission or department membership. A client
-must not supply its own owner or role grant. Forge must provide a tested contract
-for verified identity claims or an equivalent trusted identity resolution; its
-current access-token claims cannot be assumed to include verified email.
+A dedicated JFP One registration issues delegated tokens for the environment's
+`APP_ORIGIN/mcp` resource. The owner routes check the signature against JFP One's
+published keys and verify the issuer, resource audience, expiry, app and
+environment claims and the `lantern:admin` scope. The fixed issuer's exact
+UserInfo endpoint is the only permitted extra audience. Lantern resolves the
+signed subject to its existing `jesusfilm:<subject>` account. The verified human
+browser sign-in supplies that link. Lantern checks the linked account's email
+against the dedicated `LANTERN_ADMIN_API_OWNER_EMAILS` list. A duplicate normalized
+email or an unexpired recovery receipt for a competing verified subject blocks
+owner access. The owner read requires neither continuing email approval nor
+active department membership.
 
-The existing flag-reporting behavior in [ADR 0017](0017-owner-flag-reporting.md)
-remains in force until the list change is released. The list then replaces its
-single configured email while retaining the report's session, admission and
-membership checks. Existing browser tokens remain server-side under
-[ADR 0015](0015-jesus-film-identity.md); resource access tokens have their own
-audience and are not browser session cookies or ID tokens.
+The feature-flag report keeps the single-email setting and session requirements
+in [ADR 0017](0017-owner-flag-reporting.md). Browser sessions retain
+[ADR 0015](0015-jesus-film-identity.md)'s boundary. Existing team API routes keep
+their integration token verifier. Dispatch by route so each public credential
+is only accepted for its operation.
 
 ## Rationale and consequences
 
-An owner-configured list and delegated JFP One identity fit the existing
-environment configuration and avoid a separate admin grant database or policy
-per operation. Owner removal takes effect after the configuration redeploy;
-upstream session revocation may take until an issued token expires. MCP clients
-perform an authorized sign-in and use the same checks and audit trail as HTTP.
-An owner may separately grant themselves a career-lead role, whose normal
-department-scoped focus access applies; owner status itself exposes no focus data.
+Linking by subject establishes continuity with Lantern's verified sign-in and
+lets Forge keep email out of its token contract. Resource scope records what the
+person consented to. Owner configuration grants the operation without a new
+schema or database grant. Owner removal takes effect when the new configuration
+is serving. An access token may remain valid until expiry after upstream
+sign-out. An owner who also holds a career-lead role has the usual access
+through that role.
 
-The admin path requires narrowly scoped database write privileges, transactional
-audit records, rate limits, and coordinated Forge resource registration. Browser
-and bearer authentication must retain their respective protections. Agree and
-verify the API/MCP token audiences and the browser-to-VM sign-in flow during
-implementation; do not assume the existing JFP One client issues a Lantern API
-token. Schema changes require a compatible migration and manual production
-release. The [plan](../plans/owner-administration-api.md) records the phases and
-the proposed VM governance change; it does not itself grant production access.
+The [plan](../plans/owner-administration-api.md) covers writes, transactional
+audit and rate limits. Use a compatible migration and manual release for schema
+changes. Follow the [scoped release decision](../operations/releasing.md#owner-api-slice-1)
+for shipping the read-only code with production disabled.

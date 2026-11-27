@@ -45,10 +45,10 @@ Lantern's versioned `/api/v1` routes for callers other than its browser app. Eac
 _Avoid_: Calling internal routes the API.
 
 **JFP One access token**:
-A planned credential that JFP One issues to an app or agent acting for a signed-in person, valid only for Lantern's API and the scopes the person approved. It proves identity and consent; Lantern decides the person's authority.
+A credential that JFP One issues to an app or agent acting for a signed-in person, valid only for Lantern's API and the scopes the person approved. It proves identity and consent; Lantern decides the person's authority.
 
 **MCP access**:
-Planned access to selected operations through Lantern's MCP server. Each connection acts for one signed-in person through a JFP One access token, within that person's Lantern authority and agent access.
+Access to selected operations through Lantern's MCP server. Each connection acts for one signed-in person through a JFP One access token. The first operation is the staging department list for linked owners. Future member operations also require per-account agent access.
 
 **Agent access**:
 A planned per-person setting, granted and revoked by an owner, for which of a member's own-work and team actions their agents and apps may take with a JFP One access token. It defaults to none and never exceeds the person's own Lantern authority. Owner administration is authorized by the owner list.

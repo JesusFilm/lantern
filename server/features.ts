@@ -28,7 +28,7 @@ export function resolveFeatureConfig(env: NodeJS.ProcessEnv, environment: Lanter
     catch { throw new Error('LANTERN_PREVIEW_EMAILS must list exact email addresses, separated by commas.'); }
   }));
   const fallback: FeatureState = environment === 'production' ? 'off' : 'on';
-  const states = new Map(names.map(name => [name, settings.get(name) ?? fallback] as const));
+  const states = new Map(names.map(name => [name, settings.get(name) ?? (name === 'owner-api' ? 'off' : fallback)] as const));
   if ([...states.values()].includes('preview') && !previewEmails.size) throw new Error('LANTERN_PREVIEW_EMAILS is required while a feature is in preview.');
   return { states, previewEmails, unknown: [...settings.keys()].filter(name => !names.includes(name)) };
 }

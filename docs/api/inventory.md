@@ -1,10 +1,10 @@
 # Operation inventory
 
-Every create, read, update and delete operation Lantern performs on its data, how each is reached today, and whether it has or should get an API or MCP path. This is the record of where API-first stands; the [API and MCP guide](README.md) explains the direction and [when to update this file](README.md#changing-this-area). Checked against `main` on 26 November 2026.
+Every create, read, update and delete operation Lantern performs on its data, how each is reached today, and whether it has or should get an API or MCP path. This is the record of where API-first stands; the [API and MCP guide](README.md) explains the direction and [when to update this file](README.md#changing-this-area). Updated for the owner department-list slice on 27 November 2026.
 
 ## Priorities
 
-1. **Owner administration**: DEP-1, DEP-2, DEP-4 to DEP-8, APR-1 and APR-2. Approved in the [owner administration plan](../plans/owner-administration-api.md) and authorized by the owner list; waits on the foundation design in [#252](https://github.com/JesusFilm/lantern/issues/252) and Lantern's registration in Forge.
+1. **Owner administration**: DEP-1, DEP-2, DEP-4 to DEP-8, APR-1 and APR-2. DEP-2 ships first on staging with the [Forge registration](https://github.com/JesusFilm/forge/pull/3345). The [owner administration plan](../plans/owner-administration-api.md) and [foundation design](https://github.com/JesusFilm/lantern/issues/252) cover the later operations.
 2. **Members' own work and team updates through MCP**: agent access first (AGT-1 to AGT-3), then FOC-1 to FOC-4, WK-1 to WK-4 and WK-6. Wanted by the owner; not yet planned.
 
 Other operations wait for a need. The owner sets this order; record changes here.
@@ -14,7 +14,7 @@ Other operations wait for a need. The owner sets this order; record changes here
 - **Op**: C create, R read, U update, D delete.
 - **Path today**: `UI` is the browser app through an internal route. `CLI` is an `npm run access:ops` command using the admin database connection. `SQL` is a manual operator script or direct database change. `Config` is an environment setting. `Integration` is a public API caller. `Not built` is agreed but has no implementation yet.
 - **API**: `v1` is available under `/api/v1`. `planned` is in an approved plan. `wanted` means the owner has asked for it but it is not yet planned. `—` means none yet.
-- **MCP**: `wanted` means the owner has asked for it. `candidate` fits a stated owner goal and awaits the owner's confirmation. `—` is undecided. `n/a` is a browser or deployment mechanism rather than an operation for agents.
+- **MCP**: A tool name identifies an implemented operation. `wanted` means the owner has asked for it. `candidate` fits a stated owner goal and awaits the owner's confirmation. `—` is undecided. `n/a` is a browser or deployment mechanism rather than an operation for agents.
 - IDs are stable. When an operation is removed, mark the row removed instead of reusing its ID.
 
 ## Accounts and sign-in
@@ -55,7 +55,7 @@ Agent access is the planned per-person setting described in the [API and MCP gui
 | ID | Operation | Op | Who | Path today | Route or command | API | MCP | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | DEP-1 | Create a department | C | Operator | CLI for the first department, otherwise SQL | `setup DEPARTMENT LEAD_EMAIL` | planned | wanted | `setup` creates the first department with its career lead and refuses once any department exists. The planned API creates departments without a lead; DEP-7 assigns one. |
-| DEP-2 | List departments and view one | R | Operator | SQL | — | planned | wanted | |
+| DEP-2 | List active department IDs and names | R | Linked owner | API and MCP | `GET /api/v1/departments`, `POST /mcp` | v1 | `departments.list` | Staging behind `owner-api`. See [OAuth discovery](README.md#oauth-discovery). Department detail remains planned. |
 | DEP-3 | Rename or delete a department | U D | Operator | SQL | — | wanted | wanted | Owner administration outside the first increment; needs a product decision. |
 | DEP-4 | List a department's members | R | Career lead, own department | UI | `GET /api/department` | planned | wanted | Planned for owners across departments; career leads keep the UI. |
 | DEP-5 | Find registered accounts and their membership status | R | Career lead | UI | `GET /api/department/registered-users` | planned | wanted | Planned for owners, searching by email; career leads keep the UI. |
