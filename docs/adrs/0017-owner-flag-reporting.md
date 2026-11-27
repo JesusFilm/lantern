@@ -3,10 +3,8 @@
 Date: 2026-11-11
 Status: Accepted by Jaco.
 
-Planned partial replacement: [ADR 0018](0018-owner-administration-api.md) extends
-the one-email setting to an owner list. This record describes the deployed
-behavior until that change is released; the flag-page admission and membership
-checks remain in force.
+[ADR 0018](0018-owner-administration-api.md) uses separate owner configuration for
+REST and MCP. This record governs the browser report.
 
 ## Decision
 

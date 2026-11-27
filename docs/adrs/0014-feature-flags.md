@@ -15,7 +15,7 @@ Two webapp variables set the state per environment:
 - `LANTERN_FEATURES`: comma-separated `name=off`, `name=preview` or `name=on`.
 - `LANTERN_PREVIEW_EMAILS`: comma-separated exact email addresses.
 
-`off` hides the feature from everyone. `preview` shows it only to signed-in accounts whose server-resolved email is listed. `on` shows it to everyone. A registered feature with no setting is off in production and on in stage and local environments.
+`off` hides the feature from everyone. `preview` shows it only to signed-in accounts whose server-resolved email is listed. `on` shows it to everyone. A registered feature with no setting is off in production and on in stage and local environments by default. The owner API requires explicit opt-in in staging and locally ([ADR 0018](0018-owner-administration-api.md)).
 
 The application checks both variables at startup and refuses to start on an invalid entry, or on a preview with no listed accounts. A setting for a name this release does not have is ignored and logged, so a leftover setting cannot break the release that removes a flag.
 

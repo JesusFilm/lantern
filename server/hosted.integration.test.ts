@@ -64,7 +64,8 @@ test('production-only package migrates, starts without dotenv, serves assets and
          await scoped.query("INSERT INTO sessions VALUES($1,$2,now()+interval '1 hour')", [createHash('sha256').update(personalToken).digest('hex'), personalId]);
        } finally { /* Fixture owns this pool. */ }
      }
-     child = spawn(process.execPath, ['dist/server/index.js'], { cwd: dir, env: { ...env, LANTERN_ENV: n === 0 ? 'stage' : 'production' }, stdio: ['ignore','pipe','pipe'] });
+     child = spawn(process.execPath, ['dist/server/index.js'], { cwd: dir, env: n === 0 ? env : { ...env, LANTERN_ENV: 'production',
+       LANTERN_FEATURES: 'owner-api=off', LANTERN_ADMIN_API_OWNER_EMAILS: undefined }, stdio: ['ignore','pipe','pipe'] });
      await new Promise<void>((resolve,reject) => { child!.once('exit', () => reject(new Error('Startup failed'))); child!.stdout!.on('data', b => { if (String(b).includes('Lantern:')) resolve(); }); });
      const origin: string = `http://127.0.0.1:${address.port}`;
      const health = await fetchHosted(origin+'/health');
@@ -100,6 +101,16 @@ test('production-only package migrates, starts without dotenv, serves assets and
      assert.match(await (await fetchHosted(origin+'/?signInError=1')).text(), /assets\//);
      assert.equal((await fetchHosted(origin+'/api/focuses')).status, 401);
      if (n === 1) {
+       const hidden = [
+         await fetchHosted(origin+'/api/v1/departments'),
+         await fetchHosted(origin+'/mcp', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{' }),
+         await fetchHosted(origin+'/.well-known/oauth-protected-resource'),
+       ];
+       for (const response of hidden) {
+         assert.equal(response.status, 404);
+         assert.equal(response.headers.get('www-authenticate'), null);
+         assert.deepEqual(await response.json(), { error:'Not found.' });
+       }
        const scoped = migration;
        try { await scoped.query('ALTER TABLE users RENAME TO unavailable_users'); }
        finally { /* Fixture owns this pool. */ }

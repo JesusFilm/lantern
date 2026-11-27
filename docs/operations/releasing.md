@@ -54,6 +54,23 @@ For auth/OAuth/admission-policy changes, disable automatic promotion before the 
 Schema 9 adds coaching checkpoints and review records. Follow [coaching provider setup and rollout](coaching.md) before enabling inference. Schema 12 strengthens the database guard for the current-version review-request requirement ([RC-01](../rules/review-and-confirmation.md#rc-01-confirmation-needs-a-request-for-the-current-saved-version) and [RC-02](../rules/review-and-confirmation.md#rc-02-saving-after-a-request-needs-a-new-request)): every draft-to-confirmed transition requires a review request for the current saved version, including the career lead's own focus. It preserves existing confirmed focuses without creating historical requests. After migration, while a schema-11 application is still serving or after an application rollback, attempting confirmation without a review request returns a generic HTTP 503: the old HTTP handler does not translate the database guard error. The transaction rolls back; the focus remains a draft and its private working notes remain intact. The new application returns HTTP 409 with instructions to send the latest saved version for review. Outdated requests remain conflicts in both application versions. This temporary response difference does not require a compatibility release because the database prevents confirmation in either case. Apply this migration through a manual schema release. Keep the guard on rollback; disabling model calls does not remove saved review data or permit bypassing review.
 
 
+## Owner API slice 1
+
+[#255](https://github.com/JesusFilm/lantern/issues/255) can use normal automatic
+delivery if PR CI proves isolation. With the production flag off and owner
+configuration absent, the app must start and the new REST, MCP and protected
+resource discovery endpoints must return 404 before verification or JFP One
+contact. Check browser sign-in, origin validation, internal routes and team API
+credentials. If authentication on a live route changes, apply the usual
+auth/OAuth/admission-policy release hold.
+
+The real two-account Mac journey on staging requires the Lantern revision and
+[Forge #3345](https://github.com/JesusFilm/forge/pull/3345), authorized staging
+configuration, and the [owner onboarding checks](../api/owner-onboarding.md).
+Production activation is a separate operation-level approval in
+[#270](https://github.com/JesusFilm/lantern/issues/270). Keep the production flag
+off and leave the production owner list unset.
+
 ## Jesus Film Auth cutover
 
 Hold automatic promotion for this authentication change. Deploy Forge's reviewed

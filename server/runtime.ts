@@ -1,6 +1,7 @@
 import {resolveCoachConfig} from './coach-provider.js';
 import {resolveFeatureConfig} from './features.js';
 import {normalizeEmail} from './admission.js';
+import type { OwnerApiConfig } from './owner-api-http.js';
 export type LanternEnvironment = 'local' | 'stage' | 'production';
 export function lanternEnvironment(environment: string | undefined): LanternEnvironment {
   if (environment === undefined) return 'production';
@@ -40,5 +41,15 @@ export function resolveRuntime(env: NodeJS.ProcessEnv = process.env) {
     }
     catch { throw new Error('LANTERN_FLAG_OWNER_EMAIL must be one valid email address.'); }
   }
-  return { coach, features, flagOwnerEmail, environment, hosted, connectionString, port, host, localAccess, origin, clientId, hostingOnly };
+  let ownerApi: OwnerApiConfig | undefined;
+  if (environment !== 'production' && !hostingOnly && features.states.get('owner-api') !== 'off') {
+    const setting = env.LANTERN_ADMIN_API_OWNER_EMAILS?.trim();
+    try {
+      ownerApi = {
+        environment: environment === 'stage' ? 'staging' : 'local',
+        ownerEmails: new Set(setting ? setting.split(',').map(normalizeEmail) : []),
+      };
+    } catch { throw new Error('LANTERN_ADMIN_API_OWNER_EMAILS must list exact email addresses, separated by commas.'); }
+  }
+  return { coach, features, flagOwnerEmail, ownerApi, environment, hosted, connectionString, port, host, localAccess, origin, clientId, hostingOnly };
 }

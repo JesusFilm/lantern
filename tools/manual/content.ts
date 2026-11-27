@@ -768,6 +768,17 @@ export const chapters: Chapter[] = [
       },
       {
         kind: "checklist",
+        title: "Owner department list from Codex on Mac",
+        lead: "On staging, ask Lantern for the active department list using two linked JFP One accounts. The owner-api flag must be on. Production activation is separate.",
+        items: [
+          { title: "Prepare staging", text: "Check the Lantern and Forge revisions. Link both accounts with the approved Lantern browser sign-in. The environment owner lists only the test owner." },
+          { title: "Owner reads departments", text: "On the Mac, sign in to the Lantern MCP server and consent. Ask Codex to call departments.list. Check that it returns active IDs and names only." },
+          { title: "Second account is denied", text: "Disconnect the owner and consent as the second linked account. Check that Lantern refuses access and returns no department data." },
+          { title: "Record the result", text: "Record both revisions, Mac and browser details and the two outcomes. Omit account details, actual department data, tokens and callback URLs." },
+        ],
+      },
+      {
+        kind: "checklist",
         title: "Reporting a problem",
         lead: "Open an issue at github.com/JesusFilm/lantern/issues with enough detail for someone else to repeat it.",
         items: [

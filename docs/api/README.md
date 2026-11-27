@@ -18,15 +18,45 @@ Lantern moves toward API-first access gradually. In time, everything a person ca
 | --- | --- | --- | --- |
 | Lantern's browser app | Internal `/api/...` | Session cookie from JFP One sign-in | Live |
 | Unattended integration, such as the office TV | Team routes under `/api/v1` | Team API token | Live, behind the `team-api` flag |
-| A person's app or agent | `/api/v1` | JFP One access token | Planned |
-| A person's agent | `/mcp` | JFP One access token | Planned |
+| An owner's app or agent | `GET /api/v1/departments` | JFP One access token | Staging behind `owner-api` |
+| An owner's agent | `POST /mcp` | JFP One access token | Staging behind `owner-api` |
 
 - **JFP One proves identity; Lantern grants authority.** JFP One establishes who is calling, through which client, and which Lantern scopes the person approved. Lantern's approvals, active membership, roles and owner list decide what that person may do. A credential never adds to that authority.
 - **Scopes say what a client asked for.** Lantern's scopes are registered in JFP One, and a person approves them when an agent or app signs in. The first is `lantern:admin` for owner administration ([ADR 0018](../adrs/0018-owner-administration-api.md)); scopes for members' own work and team data are designed in [#252](https://github.com/JesusFilm/lantern/issues/252).
-- **Agent access decides what each member's agents may do.** This is planned, with its design in [#252](https://github.com/JesusFilm/lantern/issues/252). A request for a member's own work or team data made with a JFP One access token needs the token's scope, the person's agent access and the person's own authority over the record. Agent access belongs to the Lantern account: it defaults to none, and an owner grants and revokes it, so two members with the same web role can have different agent access. Owner administration is authorized by the owner list and `lantern:admin`, as ADR 0018 decides. #252 settles whether it also needs an agent access grant.
+- **Agent access decides what each member's agents may do.** This is planned, with its design in [#252](https://github.com/JesusFilm/lantern/issues/252). A request for a member's own work or team data made with a JFP One access token needs the token's scope, the person's agent access and the person's own authority over the record. Agent access belongs to the Lantern account: it defaults to none, and an owner grants and revokes it, so two members with the same web role can have different agent access. The first owner read uses the owner list and `lantern:admin`, as [ADR 0018](../adrs/0018-owner-administration-api.md) decides. Future owner capabilities remain a foundation design question.
 - **Each credential has its own routes.** Session cookies work on internal routes, where Lantern rejects bearer tokens. Team API tokens work only on the read-only team routes. JFP One access tokens must be issued for Lantern's API and carry the scope an operation requires.
-- **MCP acts for one person.** Every MCP connection signs a person in through JFP One, so the agent works within that person's Lantern authority and approved scopes. Forge Admin and Changelog already work this way; Lantern needs its own API resource and `lantern:*` scopes registered in Forge.
+- **MCP acts for one person.** Every MCP connection signs a person in through JFP One, so the agent works within that person's Lantern authority and approved scopes. Lantern uses a separate consented resource registration in [Forge](https://github.com/JesusFilm/forge/pull/3345).
 - **Internal routes serve the browser app only.** They are unversioned and change with the interface. Other callers use `/api/v1`, whose versioning rules come with the foundation design.
+
+## Owner department list
+
+Follow [owner onboarding](owner-onboarding.md) to configure staging, link an
+account and consent on a Mac. With `owner-api` enabled, a linked owner can call
+`GET /api/v1/departments` or the argument-free MCP tool `departments.list`. Both
+return the same collection of active departments in name order.
+
+```json
+{"departments":[{"id":"66877b44-9fd7-48ec-862c-d39ecad6c3b1","name":"Synthetic Engineering"}]}
+```
+
+An empty collection returns `{"departments":[]}`. The tool returns the result as
+structured content and JSON text. MCP uses stateless Streamable HTTP with JSON
+responses. `initialize` and `tools/list` require the same owner credential as a
+tool call.
+
+The resource and token audience are the canonical `APP_ORIGIN/mcp`. The
+`401` response advertises `GET /.well-known/oauth-protected-resource`, which
+names JFP One and the `lantern:admin` scope. Invalid or missing credentials yield
+`401`; insufficient scope or owner authority yields `403`; the flag-off
+endpoints yield `404` before token validation. Discovery is public when enabled
+and describes only the OAuth resource.
+
+The [foundation design in #252](https://github.com/JesusFilm/lantern/issues/252)
+can build on three seams this read exercised: route-specific verifiers allow two
+credentials under `/api/v1`, a signed subject resolves to an existing Lantern
+account without an email claim, and the HTTP adapters share one
+permission-checked operation. Audit, rate limits, API-wide error codes and
+OpenAPI remain foundation or later-slice work.
 
 ## Team API and API-first
 

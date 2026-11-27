@@ -33,7 +33,13 @@ A flagged feature that needs a schema change must keep the migration compatible 
 | `preview` | Signed-in accounts whose email is in `LANTERN_PREVIEW_EMAILS` |
 | `on` | Everyone |
 
-Set states in the webapp's `LANTERN_FEATURES` variable, for example `focus-notes=preview,team-calendar=on`. A registered feature with no setting is off in production and on in stage and local environments. To hide a feature on stage or locally, set it to `off` there.
+Set states in the webapp's `LANTERN_FEATURES` variable, for example `focus-notes=preview,team-calendar=on`. A registered feature with no setting is off in production and on in stage and local environments by default. To hide a feature on stage or locally, set it to `off` there.
+
+`owner-api` requires explicit opt-in in staging and locally. Its owner list
+applies in both `on` and `preview`. The latter also checks the account against
+`LANTERN_PREVIEW_EMAILS` after OAuth, with public OAuth discovery in both enabled
+states. Follow the [slice release decision](../operations/releasing.md#owner-api-slice-1)
+and [owner onboarding](../api/owner-onboarding.md) for staging.
 
 The application refuses to start when either variable is malformed, names a state other than these three, repeats a feature, or puts a feature in preview with no preview accounts. It logs and ignores a setting for a name the release does not have.
 

@@ -50,3 +50,20 @@ test('feature operations owner is optional, normalized and validated', () => {
     assert.throws(() => resolveRuntime({ ...hosted, LANTERN_FLAG_OWNER_EMAIL: value }));
   }
 });
+
+test('owner API is opt-in for local and staging and cannot be configured in production or hosting-only stage', () => {
+  const stage = { ...hosted, LANTERN_ENV: 'stage' };
+  const settings = { LANTERN_FEATURES: 'owner-api=on', LANTERN_ADMIN_API_OWNER_EMAILS: ' Owner@Example.test, second@example.test ' };
+  assert.equal(resolveRuntime(stage).features.states.get('owner-api'), 'off');
+  assert.equal(resolveRuntime(stage).ownerApi, undefined);
+  assert.equal(resolveRuntime({ ...hosted, ...settings }).ownerApi, undefined);
+  assert.equal(resolveRuntime({ ...stage, ...settings, LANTERN_HOSTING_ONLY: '1', AUTH_CLIENT_ID: '' }).ownerApi, undefined);
+  assert.deepEqual(resolveRuntime({ ...stage, ...settings }).ownerApi, {
+    environment: 'staging', ownerEmails: new Set(['owner@example.test', 'second@example.test']),
+  });
+  assert.equal(resolveRuntime({ ...settings, LANTERN_ENV: 'local', DATABASE_URL: 'postgresql://unused' }).ownerApi?.environment, 'local');
+  for (const invalid of ['*@example.test', 'owner@example.test,,second@example.test']) {
+    assert.throws(() => resolveRuntime({ ...stage, ...settings, LANTERN_ADMIN_API_OWNER_EMAILS: invalid }), /LANTERN_ADMIN_API_OWNER_EMAILS/);
+    assert.equal(resolveRuntime({ ...stage, LANTERN_ADMIN_API_OWNER_EMAILS: invalid }).ownerApi, undefined);
+  }
+});
