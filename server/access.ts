@@ -30,7 +30,7 @@ const random = () => randomBytes(32).toString('base64url');
 function cookie(request: Request, name: string) {
   return request.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1);
 }
-export interface AccessConfig { pullRequest?: import("./changelog-pr.js").PullRequestLookup; origin: string; progressLog?: (event:ProgressDiagnostic)=>void; githubAvatars?: AvatarOptions; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean; coach?: CoachProvider; features?: FeatureConfig; flagOwnerEmail?: string; github?: { ownerId: string; source: GitHubConnection } }
+export interface AccessConfig { discoverPullRequests?: import("./changelog-pr.js").DiscoverPullRequests; pullRequest?: import("./changelog-pr.js").PullRequestLookup; origin: string; progressLog?: (event:ProgressDiagnostic)=>void; githubAvatars?: AvatarOptions; provider?: IdentityProvider; localUserId?: string; hostingOnly?: boolean; coach?: CoachProvider; features?: FeatureConfig; flagOwnerEmail?: string; github?: { ownerId: string; source: GitHubConnection } }
 export function accessRoutes(db: Pool, config: AccessConfig) {
   const router = Router();
   // Without explicit settings every registered feature is hidden, as production starts.
@@ -111,7 +111,7 @@ export function accessRoutes(db: Pool, config: AccessConfig) {
     const user = await currentUser(req);
     res.json({ coachAvailable: !!config.coach && featureEnabled(features, 'coach', user?.email), features: enabledFeatures(features, user?.email), user: user ?? null, department: user ? await membership(db, user.id) : undefined, signInAvailable: !config.hostingOnly && !!config.provider, localAccess: !!config.localUserId });
   });
-  router.use(changelogRoutes(db, requireUser, features, config.pullRequest));
+  router.use(changelogRoutes(db, requireUser, features, config.pullRequest, config.discoverPullRequests));
   router.use(reviewActivityRoutes(db, requireUser, features));
   router.use(coachRoutes(db, requireUser, config.coach, (user) => featureEnabled(features, 'coach', user.email), (user) => featureEnabled(features, 'coach-redesign', user.email)));
   router.use(focusRoutes(db, requireUser, features, config.progressLog));

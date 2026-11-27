@@ -10,7 +10,7 @@ import { hash } from "./access.js";
 export async function coachingFixture(
   coach?: import("./coach-provider.js").CoachProvider,
   features?: import("./features.js").FeatureConfig,
-  options: { pullRequest?: import("./changelog-pr.js").PullRequestLookup; localAccess?: boolean; defaultFeatures?: boolean; github?: import('./github.js').GitHubConnection; githubAvatars?: import('./github-avatars.js').AvatarOptions } = {},
+  options: { discoverPullRequests?: import("./changelog-pr.js").DiscoverPullRequests; pullRequest?: import("./changelog-pr.js").PullRequestLookup; localAccess?: boolean; defaultFeatures?: boolean; github?: import('./github.js').GitHubConnection; githubAvatars?: import('./github-avatars.js').AvatarOptions } = {},
 ) {
   const fixture = await privilegeFixture();
   await migrate(fixture.migration, fixture.roles);
@@ -53,7 +53,7 @@ export async function coachingFixture(
   const origin = `http://127.0.0.1:${a.port}`;
   // Coaching tests show the coach unless a test chooses its own feature settings.
   const shown = features ?? (options.defaultFeatures === false ? undefined : resolveFeatureConfig({ LANTERN_FEATURES: "coach-redesign=off" }, "local"));
-  const app = createApp(fixture.runtime, { origin, pullRequest:options.pullRequest, coach, features: shown,
+  const app = createApp(fixture.runtime, { origin, discoverPullRequests: options.discoverPullRequests, pullRequest:options.pullRequest, coach, features: shown,
     githubAvatars: options.githubAvatars, localUserId:options.localAccess?ids.member:undefined,
     github: options.github ? { ownerId: ids.lead, source: options.github } : undefined });
   server.on("request", app);

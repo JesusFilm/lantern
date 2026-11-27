@@ -26,3 +26,8 @@ export interface ChangelogView {
   products: Product[];
   entries: ChangelogEntry[];
 }
+
+export interface DiscoveryResults {
+  status: 'complete' | 'partial' | 'unavailable' | 'missing-username';
+  links: PullLink[];
+}

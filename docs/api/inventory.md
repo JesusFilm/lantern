@@ -115,7 +115,7 @@ Agent access is the planned per-person setting described in the [API and MCP gui
 
 ## Department changelog
 
-The `changelog` flag guards all four internal routes.
+The `changelog` flag guards all five internal routes.
 
 | ID | Operation | Op | Who | Path today | Route or command | API | MCP | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -123,6 +123,7 @@ The `changelog` flag guards all four internal routes.
 | CHG-2 | Add a department product | C | Active department member | UI | `POST /api/changelog/products` | — | — | Shared within the department. |
 | CHG-3 | Publish an entry | C | Active department member | UI | `POST /api/changelog/entries` | — | — | Requires verified default-branch merges. Retry with the same UUID publicationKey and draft to receive the original ID. A new key publishes a separate entry. |
 | CHG-4 | Edit an entry | U | Author with active membership in the original department | UI | `PUT /api/changelog/entries/:id` | — | — | Supply the revision read. Rechecks each PR before saving. A stale revision returns 409 and leaves the newer entry intact. |
+| CHG-5 | Find merged PRs for manual entry | R | Active department member | UI | `GET /api/changelog/pull-requests` | — | — | Uses the session member’s saved GitHub username, selected Monday and time zone. Returns titles, URLs and search status. |
 
 ## Team API tokens
 

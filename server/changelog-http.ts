@@ -4,6 +4,8 @@ import { requireFeature, type FeatureConfig } from './features.js';
 import { AccessError } from './membership.js';
 import { addProduct, readChangelog, saveEntry } from './changelog.js';
 
+import { discoverMemberPRs } from './changelog.js';
+import type { DiscoverPullRequests } from './changelog-pr.js';
 import type { EntryOperation } from './changelog.js';
 import type { PullRequestLookup } from './changelog-pr.js';
 
@@ -32,6 +34,7 @@ export function changelogRoutes(
   requireUser: (req: Request) => Promise<{ id: string; email: string }>,
   features: FeatureConfig,
   lookup?: PullRequestLookup,
+  discover?: DiscoverPullRequests,
 ) {
   const router = Router();
   async function actor(req: Request) {
@@ -44,6 +47,12 @@ export function changelogRoutes(
     res.json(
       await readChangelog(db, user, req.query.week, req.query.view === 'mine'),
     );
+  });
+  router.get('/api/changelog/pull-requests', async (req, res) => {
+    const user = await actor(req);
+    if (Object.keys(req.query).some(key => key !== 'week' && key !== 'timeZone'))
+      throw new AccessError(400, 'Supply only a week and time zone.');
+    res.set('Cache-Control', 'private, no-store').json(await discoverMemberPRs(db, user, req.query.week, req.query.timeZone, discover));
   });
   router.post('/api/changelog/products', async (req, res) => {
     const user = await actor(req);

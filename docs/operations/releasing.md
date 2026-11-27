@@ -113,5 +113,12 @@ Applications built for schemas 18 and 19 can keep serving during migration.
 Use the manual schema-release procedure, verify schema 20 in health, and retain
 the tables and columns on rollback. Retry and stale-edit protection require the
 schema-20 app. The `changelog` flag controls visibility. Publication requires an
-owner-approved hosted read-only GitHub connection. Until that connection is
-available, members can prepare entries and add products.
+installation of the [changelog GitHub App](../adrs/0022-changelog-github-app.md).
+For each hosted environment, install its dedicated app on **All repositories**
+in JesusFilm with read-only Pull requests and Metadata. Disable webhooks. Set
+`CHANGELOG_GITHUB_APP_ID`, `CHANGELOG_GITHUB_INSTALLATION_ID` and the multiline
+PEM `CHANGELOG_GITHUB_PRIVATE_KEY` in that environment's web service variables.
+Exclude these credentials from PR previews. Verify staging with a flagged
+member, a saved username and a known merged default-branch PR. Open the editor,
+select the PR and publish. Without the connection, members can prepare entries
+and add products, and publication waits for verification.
