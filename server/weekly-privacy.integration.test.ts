@@ -21,6 +21,10 @@ test('weekly visibility filters goals, links and statuses for peers, leads and T
  assert.equal((await f.request('member',path+'/plans','POST',{version:1,goals:changed})).status,201);
  assert.deepEqual((await view('peer')).goals,[]);assert.deepEqual((await view('peer')).update.goalStatuses,[]);
  assert.deepEqual((await view('lead')).goals,[]);
+ const carried=(await(await f.request('peer','/api/team-updates?date=2026-11-30')).json()).members.find((m:{id:string})=>m.id===f.ids.member);
+ const weekly=(await(await f.request('peer','/api/team-updates?week=2026-11-23')).json()).members.find((m:{id:string})=>m.id===f.ids.member);
+ assert.deepEqual(weekly.goals,[]);assert.deepEqual(weekly.update.goalStatuses,[]);
+ assert.equal(carried.update.body,'A team-visible daily update');assert.deepEqual(carried.goals,[]);assert.deepEqual(carried.update.goalStatuses,[]);
  assert.equal((await(await f.request('member',path)).json()).plans[0].goals.length,3);
  for(const visibility of ['everybody',['private'],['team'],{},true,1]) assert.equal((await f.request('member',path+'/plans','POST',{version:2,goals:[{text:'Invalid',visibility,links:[]}]})).status,400);
 });

@@ -216,10 +216,10 @@ export const chapters: Chapter[] = [
             await call("/api/weeks/2026-11-23/updates","POST",{date:"2026-11-23",body:"The guide is ready for review.",planVersion:plan.plans[0].version,goalStatuses:[{goalId:plan.plans[0].goals[0].id,status:"on-track"}]});
             await p.reload();
           },ready:(p)=>p.getByText("Review the release recovery guide",{exact:true}),mode:{kind:"element",target:'role=region[name="Linked weekly work"]'},caption:"Linked weekly work and suggested progress"}]},
-      {kind:"feature",title:"My team",roles:["Member","Career lead"],summary:"Read active teammates' dated updates and their saved goal statuses. Available to every active member.",
-        tryIt:["Open **My team**.","Move to an earlier date, then return to Today.","Compare the saved update and goal statuses."],
-        check:["Only active teammates in your department appear.","Goals and statuses respect Team / Lead / Only me.","A failed request offers Retry."],
-        shots:[{id:"team-updates",persona:"member",path:"/?page=team&date=2026-11-02",ready:(p)=>p.getByRole("heading",{name:"My team",exact:true}),mode:{kind:"viewport",crop:".workspace"},caption:"Dated team updates"}]},
+      {kind:"feature",title:"My team",roles:["Member","Career lead"],summary:"Read each teammate’s latest update for the week, newest first.",
+        tryIt:["Open **My team**; browse weeks and return to this week.","Compare dates with My week and elapsed time beneath names.","Read updates left, goals right; check the phone layout."],
+        check:["Only active department peers and permitted goals/statuses appear.","No update this week shows No update yet inside the update area.","Completed goals stay last in saved order; all-completed cards have no leading gap.","Avatar fallback and failed-load Retry work."],
+        shots:[{id:"team-updates",persona:"member",path:"/?page=team&week=2026-11-02",ready:(p)=>p.getByRole("heading",{name:"My team",exact:true}),mode:{kind:"viewport",crop:".workspace"},caption:"Latest weekly team updates"}]},
       {kind:"feature",title:"Department changelog",roles:["Member","Career lead"],summary:"Share what changed and why it helps. The changelog flag is hidden in production until released.",
         tryIt:["Open Changelog → Write an entry. Choose a week and select or add a product.","Enter the title, change, benefit and Jesus Film PR links. Try Publish.","After a lost reply, retry Publish in the same form. Check Team and Mine.","Edit the same entry in two tabs. Save each in turn."],
         check:["Until hosted verification is approved and available, input stays open. Only default-branch merges qualify.","Retries publish once. A stale edit keeps your draft and the first save.","Peers can read PR titles and reuse products. Only authors can edit. Former members’ entries stay."],

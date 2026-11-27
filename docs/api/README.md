@@ -30,7 +30,7 @@ Lantern moves toward API-first access gradually. In time, everything a person ca
 
 ## Team API and API-first
 
-The team API is Lantern's first public API, and it already follows the API-first pattern. One team-updates operation serves the web app's **My team** page at `/api/team-updates` with a session and the office TV at `/api/v1/team-updates` with a team API token; only the identity check differs.
+The team API is Lantern's first public API, and it already follows the API-first pattern. One team-updates operation serves the web app's **My team** page at `/api/team-updates` with a session and the office TV at `/api/v1/team-updates` with a team API token; the browser requests `?week=YYYY-MM-DD` (Monday) for each member’s latest update within that week, sorted by latest save, while the TV keeps exact-date snapshots using `?date=YYYY-MM-DD`.
 
 The team API token stays as Lantern's integration credential for unattended servers: a member issues it, it reads one department, and it never writes. See the [team API contract](../development/team-api.md) and [ADR 0020](../adrs/0020-team-api-bearer-tokens.md). A member who wants the same team data in an agent uses MCP with their own JFP One sign-in.
 

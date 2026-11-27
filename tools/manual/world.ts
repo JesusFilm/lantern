@@ -312,6 +312,7 @@ async function pinTimestamps(pool: import("pg").Pool) {
        FROM (SELECT id, row_number() OVER (ORDER BY updated_at, id) AS n FROM lantern.position_focuses) o WHERE o.id = f.id`,
       [base],
     );
+    await owner.query("UPDATE lantern.daily_updates SET created_at = update_date + time '09:00:00' AT TIME ZONE 'Pacific/Auckland'");
     await owner.query("UPDATE lantern.focus_progress_notes SET created_at = '2026-10-29T15:30:00+13:00'");
     await owner.query("UPDATE lantern.position_focuses SET confirmed_at = '2026-10-29T15:30:00+13:00' WHERE confirmed_at IS NOT NULL");
   } finally {

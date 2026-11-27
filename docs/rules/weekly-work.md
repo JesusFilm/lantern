@@ -41,3 +41,7 @@ Status: deferred (#206). Keep saved focus drafts, including personal development
 visible to the member and career lead, and send the whole focus for review. Add
 clear guidance. Separate approval/privacy rules for personal development remain
 an open owner decision.
+
+## WW-05 — Latest team updates by week
+
+Status: agreed; owner decisions in the 27 November 2026 My Team screen conversation. My team opens on the current week and navigates by week. Each active teammate’s latest update within the selected Monday–Sunday week is shown, sorted by last saved update timestamp with newest first and people without updates last. Updates do not carry forward from earlier weeks. The heading shows elapsed time instead of a GitHub handle; “No update yet” sits inside the update area when that week has no update. Desktop cards show updates on the left and saved goals on the right; phones stack the update first. Completed goals appear last under Completed, with saved order preserved within active and completed groups. The saved update status determines completion, falling back to the saved completion flag when no status exists. Snapshot wording and current privacy restrictions remain in effect. Members without updates show their latest plan for that week. The separate TV API retains its exact-date snapshots.

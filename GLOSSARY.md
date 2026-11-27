@@ -122,7 +122,7 @@ A member's short-term aim for a Monday–Sunday week. Weekly goals are separate 
 Optional context attached to a weekly goal: a saved position focus, project, repository, issue or other named web link. Saving a link does not change completion state or grant access to its target.
 
 **Daily update**:
-A dated record of progress, changed expectations or requests for help within a planned week. It refers to the plan version current when saved. Corrections retain internal revisions, while the UI shows one latest update per date. The author edits their own week; the flagged My team view lets active department members read their active teammates’ dated snapshots.
+A dated record of progress, changed expectations or requests for help within a planned week. It refers to the plan version current when saved. Corrections retain internal revisions, while the UI shows one latest update per date. The author edits their own week; the My team view lets active department members read their active teammates’ latest snapshots within the selected week.
 
 **Changelog entry**:
 A planned, member-reviewed record of one member's product or work change and why it helps. A published entry identifies a product. It links to at least one related pull request merged into its repository's default branch and can group related pull requests. A default-branch merge does not necessarily mean the change is live.
