@@ -61,6 +61,23 @@ test('team updates are available with production defaults', async () => {
   finally {await f.close();}
 });
 
+test('weekly team cards use the newest save even when retrying an earlier day', async () => {
+  const f=await coachingFixture();
+  try {
+    const path='/api/weeks/2026-11-23';
+    for(const role of ['member','peer'] as const) await f.request(role,path+'/plans','POST',{version:0,goals:[{text:role+' goal',links:[]}]});
+    for(const [role,date,body] of [
+      ['member','2026-11-27','Friday update'],
+      ['peer','2026-11-27','Peer update'],
+      ['member','2026-11-26','Retried Thursday update'],
+    ] as const) assert.equal((await f.request(role,path+'/updates','POST',{date,body,planVersion:1,goalStatuses:[]})).status,201);
+    const view=await(await f.request('member','/api/team-updates?week=2026-11-23')).json();
+    assert.deepEqual(view.members.map((member:{name:string})=>member.name),['member','peer','lead']);
+    assert.equal(view.members[0].update.body,'Retried Thursday update');
+    assert.equal(view.members[0].update.date,'2026-11-26');
+  } finally {await f.close();}
+});
+
 
 test('My team reads weekly summaries with each member’s latest update and validates week scope', async () => {
   const f=await coachingFixture();

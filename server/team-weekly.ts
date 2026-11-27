@@ -19,7 +19,7 @@ export function teamWeeklyStore(db: Pool) {
             'body',entry.body,'planVersion',entry.plan_version,'goalStatuses',entry.goal_statuses,'createdAt',entry.created_at) END AS update
           FROM memberships m JOIN users person ON person.id=m.user_id
           LEFT JOIN LATERAL (SELECT * FROM daily_updates u WHERE u.user_id=person.id AND u.department_id=$1 AND u.update_date <= $2::date AND ($3 OR u.update_date=$2::date) AND ($4::date IS NULL OR u.update_date >= $4::date)
-            ORDER BY u.update_date DESC,u.created_at DESC,u.id DESC LIMIT 1) entry ON true
+            ORDER BY CASE WHEN $4::date IS NULL THEN u.update_date END DESC,u.created_at DESC,u.id DESC LIMIT 1) entry ON true
           LEFT JOIN LATERAL (SELECT p.goals FROM weekly_plans p WHERE p.user_id=person.id AND p.department_id=$1
             AND p.week_start=date_trunc('week',coalesce(entry.update_date,$2::date))::date AND (entry.id IS NULL OR p.version=entry.plan_version)
             ORDER BY p.version DESC LIMIT 1) plan ON true

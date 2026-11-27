@@ -3,7 +3,7 @@
   "editionDate": "2026-11-27",
   "deck": "70efbbe7943bf9487775b219d8cea57e3258cb2a2cdf32f1a6a141b7c6d8cb69",
   "sources": {
-    "fingerprint": "5bfc77bcffc8395dd8ccd623c72e241a0d27fe08836ae8f25db3fc8ae526d9af",
+    "fingerprint": "e2e817704d2037e746bc323db743e6179d94a665bb7b0ea8600dd34a90077b5b",
     "files": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
       ".nvmrc": "5c293036fc0a61ad76e15d85f454c3c7cec157e181e035b69f95058a2c239144",
@@ -141,7 +141,7 @@
       "server/team-api-http.ts": "7f25c0a1dc6ad082ae9150f6de1aba424f90d9883ccd491e90e3298bdc86682e",
       "server/team-api-tokens.ts": "83a63be393b6d6af3229584d748e71d843e6fea7c8932277fef52de29355195e",
       "server/team-weekly-http.ts": "61f662ff0a5b6b239e2c328d87cc69bdbcc52b0174e63d2263b368bae2966506",
-      "server/team-weekly.ts": "eb288d072b2c183076b11431c0280ca7622cd924f4fe0453a62d5bfad6444f55",
+      "server/team-weekly.ts": "cf7a9808617a76663f2905e9032678d1bcd0369ba7666db0995bee40fd8cc6ef",
       "server/transition-database.ts": "b8e8eb9b982853b0225f71253841ba562a73049c737ad511e0836cd00a6bfff8",
       "server/verify-database.ts": "76a01de33a8d998c2a8c7cd6ac8d08679206f26c811fbdedce0b0159152df195",
       "server/week-date.ts": "38ea1f8623c74f38176b9157e6e13e161fc595166a4da177eb25aeb072bdfd6d",
@@ -175,7 +175,7 @@
       "tools/manual/release.sh": "041fd0bc639b3a8fa2f5089c408687ff183b00c06440395d0efab1f1bb0cb498",
       "tools/manual/render.ts": "f28432b743120a56c1f4136d1714d0e88c44230e4f1f6372e52e816b8a095eb0",
       "tools/manual/tsconfig.json": "b2c53bf7e0a9203acae2292d0215afb5abb1d3e90311ace1b9e8a11ec37ef1ac",
-      "tools/manual/world.ts": "f0301a40d14ea840e724e1a01c7744eb3b47e9dd3eb34de715e90eade807ed35",
+      "tools/manual/world.ts": "59386ee9b8a530bc2d56da31c53c087d6fee3459d33c3a83f68a07219e6d983d",
       "tsconfig.check.json": "f07b8adbc6445d2f74ce6d8e6ec62391daece2151044d5ef1ae7d328c44cebb5",
       "tsconfig.json": "d518f479b233718dea4dbf4c31dfe0a3d9c0dd74123bd7aa0b711c6d3867298f",
       "tsconfig.server.json": "d9c6adaf03339f8f46fb4783bf7ead008fdfd029e57555d902b8ea8c971f0c8f",
@@ -283,7 +283,7 @@
   },
   "pdf": "4d62b4b4cb72a69af54b19e739340487da6f0383b80bacd235514cddb5ab8e4e",
   "verification": {
-    "generatedAt": "2026-11-27T03:41:43.849Z",
+    "generatedAt": "2026-11-27T03:55:00.394Z",
     "policy": "manual-inputs/2",
     "rawSources": {
       ".env.example": "334859f9982f240494c16ab002cee8dc0f6154e614fd700835e8bd8288aee3ba",
@@ -422,7 +422,7 @@
       "server/team-api-http.ts": "7f25c0a1dc6ad082ae9150f6de1aba424f90d9883ccd491e90e3298bdc86682e",
       "server/team-api-tokens.ts": "83a63be393b6d6af3229584d748e71d843e6fea7c8932277fef52de29355195e",
       "server/team-weekly-http.ts": "61f662ff0a5b6b239e2c328d87cc69bdbcc52b0174e63d2263b368bae2966506",
-      "server/team-weekly.ts": "eb288d072b2c183076b11431c0280ca7622cd924f4fe0453a62d5bfad6444f55",
+      "server/team-weekly.ts": "cf7a9808617a76663f2905e9032678d1bcd0369ba7666db0995bee40fd8cc6ef",
       "server/transition-database.ts": "b8e8eb9b982853b0225f71253841ba562a73049c737ad511e0836cd00a6bfff8",
       "server/verify-database.ts": "76a01de33a8d998c2a8c7cd6ac8d08679206f26c811fbdedce0b0159152df195",
       "server/week-date.ts": "38ea1f8623c74f38176b9157e6e13e161fc595166a4da177eb25aeb072bdfd6d",
@@ -456,7 +456,7 @@
       "tools/manual/release.sh": "041fd0bc639b3a8fa2f5089c408687ff183b00c06440395d0efab1f1bb0cb498",
       "tools/manual/render.ts": "f28432b743120a56c1f4136d1714d0e88c44230e4f1f6372e52e816b8a095eb0",
       "tools/manual/tsconfig.json": "b2c53bf7e0a9203acae2292d0215afb5abb1d3e90311ace1b9e8a11ec37ef1ac",
-      "tools/manual/world.ts": "f0301a40d14ea840e724e1a01c7744eb3b47e9dd3eb34de715e90eade807ed35",
+      "tools/manual/world.ts": "59386ee9b8a530bc2d56da31c53c087d6fee3459d33c3a83f68a07219e6d983d",
       "tsconfig.check.json": "f07b8adbc6445d2f74ce6d8e6ec62391daece2151044d5ef1ae7d328c44cebb5",
       "tsconfig.json": "d518f479b233718dea4dbf4c31dfe0a3d9c0dd74123bd7aa0b711c6d3867298f",
       "tsconfig.server.json": "d9c6adaf03339f8f46fb4783bf7ead008fdfd029e57555d902b8ea8c971f0c8f",
